@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workflow Consultancy Partners | Future-Proof Operations</title>
+    <meta name="description" content="Technology-agnostic workflow optimization, data strategy, and technology selection. Build adaptive operational foundations that grow with you.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1E3A5F;
+            --primary-light: #2C5F7C;
+            --accent: #4A90A4;
+            --dark: #0F1C2E;
+            --text: #2F2F2F;
+            --text-light: #6B6B6B;
+            --bg-light: #F5F7FA;
+            --bg-white: #FFFFFF;
+            --border: #E0E4E8;
+        }
+
+        body {
+            font-family: 'Work Sans', sans-serif;
+            color: var(--text);
+            line-height: 1.6;
+            background: var(--bg-white);
+            overflow-x: hidden;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4 {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            z-index: 1000;
+            animation: slideDown 0.6s ease;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); }
+            to { transform: translateY(0); }
+        }
+
+        nav .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 2.5rem;
+            align-items: center;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: var(--text);
+            font-size: 0.95rem;
+            font-weight: 400;
+            transition: color 0.3s;
+            letter-spacing: 0.3px;
+        }
+
+        nav a:hover {
+            color: var(--accent);
+        }
+
+        .cta-button {
+            background: var(--primary);
+            color: white !important;
+            padding: 0.75rem 1.75rem;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .cta-button:hover {
+            background: var(--primary-light);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(30, 58, 95, 0.2);
+        }
+
+        /* Hero Section */
+        .hero {
+            margin-top: 80px;
+            min-height: 85vh;
+            display: flex;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #F5F7FA 0%, #FFFFFF 100%);
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: -20%;
+            width: 60%;
+            height: 100%;
+            background: radial-gradient(circle at 30% 50%, rgba(74, 144, 164, 0.08) 0%, transparent 70%);
+            z-index: 0;
+        }
+
+        .hero .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 3rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-content {
+            animation: fadeInUp 1s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero-label {
+            display: inline-block;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent);
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+            border-left: 3px solid var(--accent);
+            padding-left: 1rem;
+        }
+
+        .hero h1 {
+            font-size: 4.5rem;
+            color: var(--dark);
+            margin-bottom: 1.5rem;
+            line-height: 1.1;
+        }
+
+        .hero-subtitle {
+            font-size: 1.35rem;
+            color: var(--text-light);
+            margin-bottom: 2.5rem;
+            line-height: 1.7;
+            font-weight: 300;
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin-top: 3rem;
+            padding-top: 3rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .stat {
+            animation: fadeInUp 1s ease;
+            animation-fill-mode: both;
+        }
+
+        .stat:nth-child(1) { animation-delay: 0.2s; }
+        .stat:nth-child(2) { animation-delay: 0.4s; }
+        .stat:nth-child(3) { animation-delay: 0.6s; }
+
+        .stat-number {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: var(--primary);
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            font-weight: 300;
+        }
+
+        .hero-visual {
+            position: relative;
+            animation: fadeInUp 1s ease 0.3s both;
+        }
+
+        .visual-card {
+            background: white;
+            border-radius: 8px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            position: relative;
+        }
+
+        .visual-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--accent), var(--primary));
+            border-radius: 8px 0 0 8px;
+        }
+
+        .card-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.5rem;
+            color: var(--dark);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-list {
+            list-style: none;
+        }
+
+        .card-list li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.95rem;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card-list li:last-child {
+            border-bottom: none;
+        }
+
+        .checkmark {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.7rem;
+            flex-shrink: 0;
+        }
+
+        /* Section Base */
+        section {
+            padding: 6rem 3rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto 4rem;
+        }
+
+        .section-label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent);
+            font-weight: 500;
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-size: 3rem;
+            color: var(--dark);
+            margin-bottom: 1.5rem;
+        }
+
+        .section-description {
+            font-size: 1.15rem;
+            color: var(--text-light);
+            line-height: 1.8;
+            font-weight: 300;
+        }
+
+        /* Problem Section */
+        .problem-section {
+            background: var(--bg-light);
+        }
+
+        .problem-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+        }
+
+        .problem-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            transition: all 0.4s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .problem-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--accent);
+            transform: scaleX(0);
+            transition: transform 0.4s;
+        }
+
+        .problem-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+        }
+
+        .problem-card:hover::after {
+            transform: scaleX(1);
+        }
+
+        .problem-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .problem-card h3 {
+            font-size: 1.5rem;
+            color: var(--dark);
+            margin-bottom: 1rem;
+        }
+
+        .problem-card p {
+            color: var(--text-light);
+            line-height: 1.7;
+            font-size: 0.95rem;
+        }
+
+        /* Services Section */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+        }
+
+        .service-card {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 3rem 2rem;
+            transition: all 0.4s;
+            position: relative;
+        }
+
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(to right, var(--accent), var(--primary));
+            transform: scaleX(0);
+            transition: transform 0.4s;
+        }
+
+        .service-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .service-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .service-tier {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--accent);
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .service-card h3 {
+            font-size: 2rem;
+            color: var(--dark);
+            margin-bottom: 1rem;
+        }
+
+        .service-card .price {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .service-card .price-label {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-bottom: 1.5rem;
+            display: block;
+        }
+
+        .service-features {
+            list-style: none;
+            margin-bottom: 2rem;
+        }
+
+        .service-features li {
+            padding: 0.75rem 0;
+            color: var(--text);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .service-features li::before {
+            content: '→';
+            color: var(--accent);
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .service-deliverable {
+            background: var(--bg-light);
+            padding: 1rem 1.5rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: var(--text-light);
+            font-style: italic;
+            margin-top: 1.5rem;
+        }
+
+        /* Process Section */
+        .process-section {
+            background: var(--primary);
+            color: white;
+        }
+
+        .process-section .section-label {
+            color: var(--accent);
+        }
+
+        .process-section .section-title {
+            color: white;
+        }
+
+        .process-section .section-description {
+            color: rgba(255,255,255,0.8);
+        }
+
+        .process-timeline {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+            position: relative;
+            margin-top: 4rem;
+        }
+
+        .process-step {
+            position: relative;
+            padding: 2rem;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.4s;
+        }
+
+        .process-step:hover {
+            background: rgba(255,255,255,0.08);
+            transform: translateY(-5px);
+        }
+
+        .step-number {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 3rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 1rem;
+            opacity: 0.8;
+        }
+
+        .step-title {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: white;
+        }
+
+        .step-duration {
+            font-size: 0.85rem;
+            color: var(--accent);
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+
+        .step-description {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.7);
+            line-height: 1.6;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            background: var(--bg-light);
+            text-align: center;
+        }
+
+        .cta-box {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 4rem 3rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            position: relative;
+        }
+
+        .cta-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 4px;
+            background: linear-gradient(to right, var(--accent), var(--primary));
+        }
+
+        .cta-box h2 {
+            font-size: 2.5rem;
+            color: var(--dark);
+            margin-bottom: 1.5rem;
+        }
+
+        .cta-box p {
+            font-size: 1.15rem;
+            color: var(--text-light);
+            margin-bottom: 2.5rem;
+            line-height: 1.7;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            padding: 1rem 2.5rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: inline-block;
+            border: 2px solid var(--primary);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-light);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(30, 58, 95, 0.3);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--primary);
+            padding: 1rem 2.5rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: inline-block;
+            border: 2px solid var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--dark);
+            color: rgba(255,255,255,0.7);
+            padding: 4rem 3rem 2rem;
+        }
+
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 4rem;
+            margin-bottom: 3rem;
+        }
+
+        .footer-brand {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 1rem;
+        }
+
+        .footer-tagline {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        footer h4 {
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        footer ul {
+            list-style: none;
+        }
+
+        footer li {
+            margin-bottom: 0.75rem;
+        }
+
+        footer a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s;
+        }
+
+        footer a:hover {
+            color: var(--accent);
+        }
+
+        .footer-bottom {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+            font-size: 0.85rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .hero .container {
+                grid-template-columns: 1fr;
+                gap: 3rem;
+            }
+
+            .hero h1 {
+                font-size: 3.5rem;
+            }
+
+            .hero-visual {
+                display: none;
+            }
+
+            .services-grid,
+            .problem-grid,
+            .process-timeline {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-content {
+                grid-template-columns: 1fr 1fr;
+                gap: 2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            nav .container {
+                padding: 1rem 1.5rem;
+            }
+
+            nav ul {
+                gap: 1.5rem;
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1.1rem;
+            }
+
+            .hero-stats {
+                grid-template-columns: 1fr;
+            }
+
+            section {
+                padding: 4rem 1.5rem;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .footer-content {
+                grid-template-columns: 1fr;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="container">
+            <a href="#" class="logo">Workflow Partners</a>
+            <ul>
+                <li><a href="#services">Services</a></li>
+                <li><a href="#process">Process</a></li>
+                <li><a href="#approach">Approach</a></li>
+                <li><a href="#contact" class="cta-button">Get Started</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-label">Technology-Agnostic Consulting</div>
+                <h1>Future-Proof Operations</h1>
+                <p class="hero-subtitle">Build adaptive operational foundations that grow with you, not against you. We optimize workflows and data strategy before recommending technology—preventing costly vendor lock-in and technical debt.</p>
+                
+                <div class="hero-stats">
+                    <div class="stat">
+                        <span class="stat-number">20-35%</span>
+                        <span class="stat-label">Reduced cycle times</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">60-80%</span>
+                        <span class="stat-label">Lower migration costs</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">6-9 mo</span>
+                        <span class="stat-label">Measurable ROI</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="hero-visual">
+                <div class="visual-card">
+                    <h3 class="card-title">The Legacy Technology Trap</h3>
+                    <ul class="card-list">
+                        <li><span class="checkmark">!</span>Platforms become obsolete faster than contracts</li>
+                        <li><span class="checkmark">!</span>Solution-first thinking automates broken processes</li>
+                        <li><span class="checkmark">!</span>Yesterday's innovation becomes tomorrow's burden</li>
+                        <li><span class="checkmark">!</span>68% of digital transformations fail</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Problem Section -->
+    <section class="problem-section" id="approach">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-label">Our Differentiation</div>
+                <h2 class="section-title">Why Organizations Choose Us</h2>
+                <p class="section-description">We're not another AI consultancy pushing today's hype. We're strategic advisors helping you build operations that adapt as technology evolves.</p>
+            </div>
+
+            <div class="problem-grid">
+                <div class="problem-card">
+                    <div class="problem-icon">🔍</div>
+                    <h3>Problem-First Diagnosis</h3>
+                    <p>We start by mapping your workflows and identifying inefficiencies—not by recommending platforms. Technology selection comes after we understand your operational reality.</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-icon">🔓</div>
+                    <h3>Technology Independence</h3>
+                    <p>Our solutions work with your existing platforms and enable future flexibility. No vendor lock-in, no proprietary dependencies, no platform-specific recommendations.</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-icon">🎯</div>
+                    <h3>Strategic Alignment</h3>
+                    <p>We don't implement, so we have no incentive to recommend expensive solutions. Our independence ensures recommendations are based on your needs, not our revenue.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section id="services">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-label">Service Offerings</div>
+                <h2 class="section-title">Three Tiers for Your Journey</h2>
+                <p class="section-description">From initial assessment to ongoing partnership, we meet you where you are</p>
+            </div>
+
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-tier">Tier 1 · Entry Point</div>
+                    <h3>Diagnostic Services</h3>
+                    <div class="price">£8K-15K</div>
+                    <span class="price-label">2-4 week engagement</span>
+                    
+                    <ul class="service-features">
+                        <li>Comprehensive workflow audit</li>
+                        <li>Data architecture review</li>
+                        <li>Technology stack assessment</li>
+                        <li>Quick-win identification</li>
+                    </ul>
+                    
+                    <div class="service-deliverable">
+                        30-40 page diagnostic report with prioritized recommendations
+                    </div>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-tier">Tier 2 · Transformation</div>
+                    <h3>Strategic Planning</h3>
+                    <div class="price">£25K-50K</div>
+                    <span class="price-label">4-8 week engagement</span>
+                    
+                    <ul class="service-features">
+                        <li>12-18 month transformation roadmap</li>
+                        <li>Change management framework</li>
+                        <li>Technology selection criteria</li>
+                        <li>Business case development</li>
+                    </ul>
+                    
+                    <div class="service-deliverable">
+                        Complete implementation roadmap with metrics and milestones
+                    </div>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-tier">Tier 3 · Partnership</div>
+                    <h3>Implementation Support</h3>
+                    <div class="price">£5K-15K</div>
+                    <span class="price-label">per month</span>
+                    
+                    <ul class="service-features">
+                        <li>Embedded strategic advisor role</li>
+                        <li>Vendor negotiation support</li>
+                        <li>Implementation oversight</li>
+                        <li>Quarterly optimization reviews</li>
+                    </ul>
+                    
+                    <div class="service-deliverable">
+                        3-12 month engagements with ongoing partnership
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Process Section -->
+    <section class="process-section" id="process">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-label">Methodology</div>
+                <h2 class="section-title">The 3D Optimization Method</h2>
+                <p class="section-description">A proven framework that inverts traditional consulting by starting with operational reality, not technology recommendations</p>
+            </div>
+
+            <div class="process-timeline">
+                <div class="process-step">
+                    <div class="step-number">01</div>
+                    <h3 class="step-title">Diagnose</h3>
+                    <div class="step-duration">4-6 weeks</div>
+                    <p class="step-description">Map current-state workflows, identify bottlenecks, measure cycle times, and document friction points before considering technology.</p>
+                </div>
+
+                <div class="process-step">
+                    <div class="step-number">02</div>
+                    <h3 class="step-title">Design</h3>
+                    <div class="step-duration">6-8 weeks</div>
+                    <p class="step-description">Create adaptable process architectures and data structures prioritizing interoperability, portability, and modularity.</p>
+                </div>
+
+                <div class="process-step">
+                    <div class="step-number">03</div>
+                    <h3 class="step-title">Deploy</h3>
+                    <div class="step-duration">8-12 weeks</div>
+                    <p class="step-description">Implement with technology independence as core principle. Integration patterns emphasize open standards and API-first architecture.</p>
+                </div>
+
+                <div class="process-step">
+                    <div class="step-number">04</div>
+                    <h3 class="step-title">Scale</h3>
+                    <div class="step-duration">12-16 weeks</div>
+                    <p class="step-description">Roll out proven solutions, build internal capabilities, and establish continuous improvement processes.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section" id="contact">
+        <div class="container">
+            <div class="cta-box">
+                <h2>Start Building Adaptive Operations</h2>
+                <p>Schedule a 30-minute discovery call to discuss your operational challenges and explore how we can help you avoid the legacy technology trap.</p>
+                <div class="cta-buttons">
+                    <a href="mailto:contact@workflow-partners.com" class="btn-primary">Schedule Discovery Call</a>
+                    <a href="#services" class="btn-secondary">View Services</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div>
+                <div class="footer-brand">Workflow Partners</div>
+                <p class="footer-tagline">Technology-agnostic workflow optimization and data strategy. Building adaptive operational foundations for lasting growth.</p>
+            </div>
+            
+            <div>
+                <h4>Services</h4>
+                <ul>
+                    <li><a href="#services">Diagnostic Services</a></li>
+                    <li><a href="#services">Strategic Planning</a></li>
+                    <li><a href="#services">Implementation Support</a></li>
+                </ul>
+            </div>
+            
+            <div>
+                <h4>Company</h4>
+                <ul>
+                    <li><a href="#approach">Our Approach</a></li>
+                    <li><a href="#process">Methodology</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+            </div>
+            
+            <div>
+                <h4>Contact</h4>
+                <ul>
+                    <li><a href="mailto:contact@workflow-partners.com">contact@workflow-partners.com</a></li>
+                    <li><a href="tel:+442012345678">+44 (0) 20 1234 5678</a></li>
+                    <li>London, United Kingdom</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="footer-bottom">
+            <p>&copy; 2026 Workflow Consultancy Partners. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add scroll-triggered animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observe elements for animation
+        document.querySelectorAll('.problem-card, .service-card, .process-step').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(30px)';
+            el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(el);
+        });
+
+        // Navbar background on scroll
+        window.addEventListener('scroll', () => {
+            const nav = document.querySelector('nav');
+            if (window.scrollY > 100) {
+                nav.style.boxShadow = '0 2px 20px rgba(0,0,0,0.1)';
+            } else {
+                nav.style.boxShadow = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
