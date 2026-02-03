@@ -555,6 +555,96 @@
             line-height: 1.6;
         }
 
+        /* Diagnostic CTA Section */
+        .diagnostic-cta {
+            background: linear-gradient(135deg, #4A90A4 0%, #2C5F7C 100%);
+            color: white;
+            padding: 4rem 3rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .diagnostic-cta::before {
+            content: '🤖';
+            position: absolute;
+            top: -30px;
+            right: -30px;
+            font-size: 200px;
+            opacity: 0.05;
+        }
+
+        .ai-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.5px;
+        }
+
+        .diagnostic-cta h2 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        .diagnostic-cta p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+            line-height: 1.7;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .diagnostic-stats {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin: 2rem 0;
+            padding: 2rem 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .diagnostic-stat {
+            text-align: center;
+        }
+
+        .diagnostic-stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .diagnostic-stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .diagnostic-button {
+            display: inline-block;
+            background: white;
+            color: var(--primary);
+            padding: 1.25rem 3rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .diagnostic-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 30px rgba(0, 0, 0, 0.3);
+        }
+
         /* CTA Section */
         .cta-section {
             background: var(--bg-light);
@@ -764,6 +854,15 @@
             .cta-buttons {
                 flex-direction: column;
             }
+
+            .diagnostic-stats {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+
+            .diagnostic-cta h2 {
+                font-size: 2rem;
+            }
         }
     </style>
 </head>
@@ -773,6 +872,7 @@
         <div class="container">
             <a href="#" class="logo">Workflow Partners</a>
             <ul>
+                <li><a href="#diagnostic">Free Diagnostic</a></li>
                 <li><a href="#services">Services</a></li>
                 <li><a href="#process">Process</a></li>
                 <li><a href="#approach">Approach</a></li>
@@ -816,6 +916,38 @@
                     </ul>
                 </div>
             </div>
+        </div>
+    </section>
+
+    <!-- AI Diagnostic CTA Section -->
+    <section class="diagnostic-cta" id="diagnostic">
+        <div class="container">
+            <div class="ai-badge">🤖 AI-POWERED ANALYSIS</div>
+            <h2>Discover What's Actually Broken</h2>
+            <p>Most companies can describe their frustrations but not their workflows. Our AI diagnostic translates your symptoms into specific structural problems—revealing £100K-500K in hidden inefficiencies.</p>
+            
+            <div class="diagnostic-stats">
+                <div class="diagnostic-stat">
+                    <span class="diagnostic-stat-number">8 minutes</span>
+                    <span class="diagnostic-stat-label">Symptom-based assessment</span>
+                </div>
+                <div class="diagnostic-stat">
+                    <span class="diagnostic-stat-number">AI-powered</span>
+                    <span class="diagnostic-stat-label">Root cause analysis</span>
+                </div>
+                <div class="diagnostic-stat">
+                    <span class="diagnostic-stat-number">Free</span>
+                    <span class="diagnostic-stat-label">Comprehensive report</span>
+                </div>
+            </div>
+            
+            <a href="/diagnostic.html" class="diagnostic-button">
+                Start Free AI Diagnostic →
+            </a>
+            
+            <p style="margin-top: 1.5rem; opacity: 0.8; font-size: 0.9rem;">
+                No workflow knowledge required • Get your efficiency score • See hidden costs
+            </p>
         </div>
     </section>
 
