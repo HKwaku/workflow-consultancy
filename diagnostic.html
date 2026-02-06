@@ -3,12 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Operational Health Check | What's Actually Happening</title>
+    <title>AI-Powered Operational Diagnostic | Evidence-Based Analysis</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1E3A5F;
+            --primary-light: #2C5F7C;
+            --accent: #4A90A4;
+            --dark: #0F1C2E;
+            --text: #2F2F2F;
+            --text-light: #6B6B6B;
+            --bg-light: #F5F7FA;
+            --bg-white: #FFFFFF;
+            --border: #E0E4E8;
+            --success: #2D7A3E;
+            --warning: #FF8C00;
+            --danger: #E63946;
         }
 
         body {
@@ -32,6 +47,16 @@
             color: white;
             padding: 3rem 2rem;
             text-align: center;
+        }
+
+        .ai-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
         }
 
         .header h1 {
@@ -70,26 +95,21 @@
             }
         }
 
-        .intro-section {
-            text-align: center;
-            max-width: 700px;
-            margin: 0 auto 3rem;
+        .progress-bar {
+            height: 6px;
+            background: #E0E4E8;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 2rem;
         }
 
-        .intro-section h2 {
-            font-size: 2rem;
-            color: #1E3A5F;
-            margin-bottom: 1rem;
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4A90A4 0%, #1E3A5F 100%);
+            transition: width 0.4s ease;
         }
 
-        .intro-section p {
-            font-size: 1.1rem;
-            color: #6B6B6B;
-            line-height: 1.7;
-            margin-bottom: 1rem;
-        }
-
-        .symptom-category {
+        .question-group {
             background: #F5F7FA;
             padding: 2rem;
             border-radius: 12px;
@@ -97,142 +117,86 @@
             border-left: 4px solid #4A90A4;
         }
 
-        .category-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .category-icon {
-            font-size: 2.5rem;
-        }
-
-        .category-title {
-            font-size: 1.5rem;
-            font-weight: 700;
+        .question-label {
+            font-size: 1.2rem;
+            font-weight: 600;
             color: #1E3A5F;
+            margin-bottom: 1rem;
+            line-height: 1.4;
         }
 
-        .category-description {
-            font-size: 0.95rem;
+        .question-help {
+            font-size: 0.9rem;
             color: #6B6B6B;
             margin-bottom: 1.5rem;
             font-style: italic;
         }
 
-        .symptom-checklist {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
+        .input-group {
+            margin-bottom: 1.5rem;
         }
 
-        .symptom-item {
-            background: white;
-            padding: 1.25rem;
-            border-radius: 8px;
+        .input-label {
+            display: block;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #2F2F2F;
+            margin-bottom: 0.5rem;
+        }
+
+        select, input[type="number"], input[type="text"], input[type="email"] {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1rem;
             border: 2px solid #E0E4E8;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: flex-start;
-            gap: 1rem;
+            border-radius: 8px;
+            transition: border-color 0.3s;
+            background: white;
         }
 
-        .symptom-item:hover {
+        select:focus, input:focus {
+            outline: none;
             border-color: #4A90A4;
-            background: #FAFBFC;
         }
 
-        .symptom-item.checked {
-            border-color: #1E3A5F;
-            background: #E8F4F8;
+        .slider-container {
+            margin-top: 1rem;
         }
 
-        .symptom-checkbox {
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #E0E4E8;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
             width: 24px;
             height: 24px;
-            min-width: 24px;
-            border: 2px solid #4A90A4;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-        }
-
-        .symptom-item.checked .symptom-checkbox {
+            border-radius: 50%;
             background: #1E3A5F;
-            border-color: #1E3A5F;
-        }
-
-        .symptom-checkbox::after {
-            content: '✓';
-            color: white;
-            font-weight: bold;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .symptom-item.checked .symptom-checkbox::after {
-            opacity: 1;
-        }
-
-        .symptom-content {
-            flex: 1;
-        }
-
-        .symptom-text {
-            font-size: 1.05rem;
-            color: #2F2F2F;
-            font-weight: 500;
-            margin-bottom: 0.25rem;
-        }
-
-        .symptom-detail {
-            font-size: 0.9rem;
-            color: #6B6B6B;
-        }
-
-        .frequency-selector {
-            margin-top: 1.5rem;
-            padding: 1.5rem;
-            background: white;
-            border-radius: 8px;
-        }
-
-        .frequency-label {
-            font-size: 1rem;
-            font-weight: 600;
-            color: #2F2F2F;
-            margin-bottom: 1rem;
-        }
-
-        .frequency-options {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 0.75rem;
-        }
-
-        .frequency-option {
-            padding: 0.875rem;
-            background: #F5F7FA;
-            border: 2px solid #E0E4E8;
-            border-radius: 6px;
-            text-align: center;
             cursor: pointer;
-            transition: all 0.3s;
-            font-size: 0.95rem;
         }
 
-        .frequency-option:hover {
-            border-color: #4A90A4;
+        .slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #1E3A5F;
+            cursor: pointer;
+            border: none;
         }
 
-        .frequency-option.selected {
-            border-color: #1E3A5F;
-            background: #E8F4F8;
-            font-weight: 600;
+        .slider-value {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1E3A5F;
+            margin-top: 0.5rem;
         }
 
         .button-group {
@@ -262,6 +226,11 @@
             box-shadow: 0 6px 20px rgba(30, 58, 95, 0.3);
         }
 
+        .button-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         .button-secondary {
             background: white;
             color: #1E3A5F;
@@ -270,53 +239,6 @@
 
         .button-secondary:hover {
             background: #F5F7FA;
-        }
-
-        .progress-bar {
-            height: 6px;
-            background: #E0E4E8;
-            border-radius: 3px;
-            overflow: hidden;
-            margin-bottom: 2rem;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #4A90A4 0%, #1E3A5F 100%);
-            transition: width 0.4s ease;
-        }
-
-        .form-section {
-            background: #F5F7FA;
-            padding: 2.5rem;
-            border-radius: 12px;
-            margin-top: 2rem;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: #2F2F2F;
-            margin-bottom: 0.5rem;
-        }
-
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 1rem;
-            font-size: 1rem;
-            border: 2px solid #E0E4E8;
-            border-radius: 8px;
-            transition: border-color 0.3s;
-        }
-
-        .form-group input:focus, .form-group select:focus {
-            outline: none;
-            border-color: #4A90A4;
         }
 
         /* Results Styles */
@@ -329,36 +251,47 @@
             animation: fadeIn 0.6s ease;
         }
 
-        .diagnosis-card {
+        .diagnosis-header {
             background: linear-gradient(135deg, #1E3A5F 0%, #2C5F7C 100%);
             color: white;
-            padding: 3rem;
+            padding: 3rem 2rem;
             border-radius: 12px;
             margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
         }
 
-        .diagnosis-title {
+        .diagnosis-header::before {
+            content: '🎯';
+            position: absolute;
+            top: -30px;
+            right: -30px;
+            font-size: 200px;
+            opacity: 0.1;
+        }
+
+        .diagnosis-header h2 {
             font-size: 2rem;
             margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
         }
 
-        .diagnosis-subtitle {
-            font-size: 1.2rem;
-            opacity: 0.9;
-            margin-bottom: 2rem;
-        }
-
-        .diagnosis-score {
+        .diagnosis-score-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1.5rem;
+            margin-top: 2rem;
+            position: relative;
+            z-index: 1;
         }
 
-        .score-item {
+        .score-card {
             background: rgba(255, 255, 255, 0.15);
             padding: 1.5rem;
             border-radius: 8px;
             text-align: center;
+            backdrop-filter: blur(10px);
         }
 
         .score-value {
@@ -372,67 +305,144 @@
             opacity: 0.9;
         }
 
-        .hidden-problems {
+        .evidence-section {
             background: #FFF3CD;
-            border-left: 4px solid #FFC107;
             padding: 2rem;
-            border-radius: 8px;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            border-left: 4px solid #FF8C00;
+        }
+
+        .evidence-title {
+            font-size: 1.5rem;
+            color: #856404;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .evidence-item {
+            padding: 0.75rem 0;
+            color: #856404;
+            font-size: 1rem;
+        }
+
+        .evidence-item strong {
+            color: #664103;
+        }
+
+        .calculation-section {
+            background: #E8F4F8;
+            padding: 2rem;
+            border-radius: 12px;
             margin-bottom: 2rem;
         }
 
-        .hidden-problems h3 {
+        .calculation-title {
             font-size: 1.5rem;
-            color: #2F2F2F;
-            margin-bottom: 1rem;
-        }
-
-        .problem-item {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 8px;
+            color: #1E3A5F;
             margin-bottom: 1.5rem;
-        }
-
-        .problem-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .problem-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .problem-icon {
-            font-size: 1.75rem;
-        }
-
-        .problem-title {
-            font-size: 1.2rem;
             font-weight: 600;
-            color: #1E3A5F;
         }
 
-        .problem-description {
-            color: #6B6B6B;
-            line-height: 1.6;
-            margin-bottom: 1rem;
+        .cost-breakdown {
+            display: grid;
+            gap: 1rem;
         }
 
-        .problem-evidence {
-            background: #F5F7FA;
-            padding: 1rem;
-            border-radius: 6px;
-            font-size: 0.9rem;
+        .cost-item {
+            background: white;
+            padding: 1.25rem;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cost-description {
+            font-size: 1rem;
             color: #2F2F2F;
         }
 
-        .problem-evidence strong {
-            color: #1E3A5F;
+        .cost-formula {
+            font-size: 0.85rem;
+            color: #6B6B6B;
+            margin-top: 0.25rem;
         }
 
-        .discovery-cta {
+        .cost-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #E63946;
+        }
+
+        .total-cost {
+            background: #FFE5E5;
+            padding: 2rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            text-align: center;
+            border: 2px solid #E63946;
+        }
+
+        .total-cost-label {
+            font-size: 1rem;
+            color: #C41E3A;
+            margin-bottom: 0.5rem;
+        }
+
+        .total-cost-value {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #C41E3A;
+        }
+
+        .findings-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            border: 2px solid #4A90A4;
+        }
+
+        .finding-item {
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid #E0E4E8;
+        }
+
+        .finding-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .finding-title {
+            font-size: 1.3rem;
+            color: #1E3A5F;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .confidence-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .confidence-high {
+            background: #E8F5E9;
+            color: #2D7A3E;
+        }
+
+        .confidence-medium {
+            background: #FFF3E0;
+            color: #E65100;
+        }
+
+        .cta-section {
             background: linear-gradient(135deg, #1E3A5F 0%, #2C5F7C 100%);
             color: white;
             padding: 3rem;
@@ -440,16 +450,9 @@
             text-align: center;
         }
 
-        .discovery-cta h3 {
+        .cta-section h3 {
             font-size: 2rem;
             margin-bottom: 1rem;
-        }
-
-        .discovery-cta p {
-            font-size: 1.1rem;
-            opacity: 0.9;
-            margin-bottom: 2rem;
-            line-height: 1.7;
         }
 
         .cta-button {
@@ -462,6 +465,7 @@
             font-weight: 600;
             font-size: 1.1rem;
             transition: all 0.3s;
+            margin-top: 1.5rem;
         }
 
         .cta-button:hover {
@@ -486,7 +490,7 @@
                 flex-direction: column-reverse;
             }
 
-            .frequency-options {
+            .diagnosis-score-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -495,90 +499,74 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Operational Health Check</h1>
-            <p>Based on what's actually happening in your business, not what should be happening</p>
+            <div class="ai-badge">🎯 EVIDENCE-BASED ANALYSIS</div>
+            <h1>Operational Health Diagnostic</h1>
+            <p>Answer questions about your actual recent experiences. We'll calculate the real cost from your data—no guessing.</p>
         </div>
 
         <div class="content">
-            <!-- Progress Bar -->
             <div class="progress-bar">
                 <div class="progress-fill" id="progressFill" style="width: 0%"></div>
             </div>
 
-            <!-- Introduction -->
-            <div class="section active" id="intro">
-                <div class="intro-section">
-                    <h2>Here's the truth...</h2>
-                    <p>Most companies can't describe their workflows in detail. They don't know how many handoffs they have, or which systems are actually integrated.</p>
-                    <p><strong>But they do know what's frustrating them every day.</strong></p>
-                    <p>This diagnostic is different. Instead of asking you to analyze your processes, we'll ask about the symptoms you're experiencing. From there, we'll diagnose what's actually broken underneath.</p>
-                    <p style="color: #4A90A4; font-weight: 600; margin-top: 2rem;">Takes 8-10 minutes. Answer based on what you actually observe, not what you think should be happening.</p>
-                </div>
-                
-                <div class="button-group">
-                    <button class="button button-primary" onclick="startDiagnostic()">Start Diagnostic →</button>
-                </div>
-            </div>
-
-            <!-- Section 1: Time Waste Symptoms -->
-            <div class="section" id="section1">
-                <div class="symptom-category">
-                    <div class="category-header">
-                        <span class="category-icon">⏰</span>
-                        <h2 class="category-title">Time Waste & Delays</h2>
-                    </div>
-                    <p class="category-description">Check all the situations your team experiences regularly</p>
+            <!-- Section 1: Workflow Timing -->
+            <div class="section active" id="section1">
+                <div class="question-group">
+                    <div class="question-label">Think of the last time you completed a full workflow (e.g., processed an order, onboarded a client, fulfilled a request). From start to finish, how many days did it take?</div>
+                    <div class="question-help">Be specific about one recent example</div>
                     
-                    <div class="symptom-checklist">
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'time_waiting')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">People waiting on others to respond or complete their part</div>
-                                <div class="symptom-detail">Tasks sit in someone's inbox for days before moving forward</div>
-                            </div>
-                        </div>
-
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'time_meetings')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">"Status update" meetings that could be an email</div>
-                                <div class="symptom-detail">Regular meetings just to find out where things are</div>
-                            </div>
-                        </div>
-
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'time_searching')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">Hunting for information that should be easy to find</div>
-                                <div class="symptom-detail">"Where is that file?" "Who has the latest version?" "What's the status?"</div>
-                            </div>
-                        </div>
-
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'time_rework')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">Redoing work because something was missed or wrong</div>
-                                <div class="symptom-detail">Having to go back and fix things that should have been right the first time</div>
-                            </div>
-                        </div>
-
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'time_reports')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">Spending hours/days creating reports from scratch</div>
-                                <div class="symptom-detail">Manual data gathering, formatting, and distribution every time</div>
-                            </div>
-                        </div>
+                    <div class="input-group">
+                        <label class="input-label">Actual time (days)</label>
+                        <select id="actualTime">
+                            <option value="">Select...</option>
+                            <option value="0.5">Same day (< 8 hours)</option>
+                            <option value="2">2-3 days</option>
+                            <option value="5">4-7 days</option>
+                            <option value="10">1-2 weeks</option>
+                            <option value="21">3-4 weeks</option>
+                            <option value="45">1-2 months</option>
+                            <option value="90">2+ months</option>
+                        </select>
                     </div>
 
-                    <div class="frequency-selector">
-                        <div class="frequency-label">How often do these time-wasters occur?</div>
-                        <div class="frequency-options">
-                            <div class="frequency-option" onclick="selectFrequency(this, 'time', 10)">Rarely</div>
-                            <div class="frequency-option" onclick="selectFrequency(this, 'time', 30)">Weekly</div>
-                            <div class="frequency-option" onclick="selectFrequency(this, 'time', 60)">Daily</div>
-                            <div class="frequency-option" onclick="selectFrequency(this, 'time', 90)">Constantly</div>
-                        </div>
+                    <div class="input-group">
+                        <label class="input-label">Ideal time (how long SHOULD it take?)</label>
+                        <select id="idealTime">
+                            <option value="">Select...</option>
+                            <option value="0.5">Same day</option>
+                            <option value="2">2-3 days</option>
+                            <option value="5">1 week</option>
+                            <option value="10">2 weeks</option>
+                            <option value="21">3-4 weeks</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="question-group">
+                    <div class="question-label">In the last week, what's the longest you waited for someone to respond to something you needed to move forward?</div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Longest wait time</label>
+                        <select id="waitTime">
+                            <option value="">Select...</option>
+                            <option value="0.1">Less than 2 hours</option>
+                            <option value="0.5">Same day</option>
+                            <option value="1.5">1-2 days</option>
+                            <option value="4">3-5 days</option>
+                            <option value="7">1 week</option>
+                            <option value="14">2+ weeks</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">How often does waiting like this happen?</label>
+                        <select id="waitFrequency">
+                            <option value="">Select...</option>
+                            <option value="monthly">Rarely (monthly or less)</option>
+                            <option value="weekly">Sometimes (weekly)</option>
+                            <option value="daily">Frequently (daily)</option>
+                            <option value="multiple">Constantly (multiple times/day)</option>
+                        </select>
                     </div>
                 </div>
 
@@ -587,65 +575,38 @@
                 </div>
             </div>
 
-            <!-- Section 2: Data & Information Problems -->
+            <!-- Section 2: Coordination & Meetings -->
             <div class="section" id="section2">
-                <div class="symptom-category">
-                    <div class="category-header">
-                        <span class="category-icon">📊</span>
-                        <h2 class="category-title">Data & Information Chaos</h2>
-                    </div>
-                    <p class="category-description">What problems do you encounter with data and information?</p>
+                <div class="question-group">
+                    <div class="question-label">Last week, how many hours did you spend in meetings where the main purpose was to figure out status or "where are we on X"?</div>
+                    <div class="question-help">Include standups, status updates, sync meetings</div>
                     
-                    <div class="symptom-checklist">
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'data_inconsistent')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">Different systems showing different numbers</div>
-                                <div class="symptom-detail">"Which number is right?" becomes a common question</div>
-                            </div>
-                        </div>
-
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'data_spreadsheets')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">Key data living in someone's personal spreadsheet</div>
-                                <div class="symptom-detail">If that person is out, no one knows where the data is</div>
-                            </div>
-                        </div>
-
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'data_manual')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">Copy-pasting data between systems</div>
-                                <div class="symptom-detail">Same data entered multiple times in different places</div>
-                            </div>
-                        </div>
-
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'data_outdated')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">Making decisions on old or incomplete data</div>
-                                <div class="symptom-detail">By the time you get the report, the situation has changed</div>
-                            </div>
-                        </div>
-
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'data_trust')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">People don't trust the data</div>
-                                <div class="symptom-detail">"Let me verify that..." becomes standard practice</div>
-                            </div>
-                        </div>
+                    <div class="slider-container">
+                        <input type="range" min="0" max="20" value="0" class="slider" id="meetingHours">
+                        <div class="slider-value"><span id="meetingHoursValue">0</span> hours</div>
                     </div>
+                </div>
 
-                    <div class="frequency-selector">
-                        <div class="frequency-label">How often do these data problems occur?</div>
-                        <div class="frequency-options">
-                            <div class="frequency-option" onclick="selectFrequency(this, 'data', 10)">Rarely</div>
-                            <div class="frequency-option" onclick="selectFrequency(this, 'data', 30)">Weekly</div>
-                            <div class="frequency-option" onclick="selectFrequency(this, 'data', 60)">Daily</div>
-                            <div class="frequency-option" onclick="selectFrequency(this, 'data', 90)">Constantly</div>
-                        </div>
+                <div class="question-group">
+                    <div class="question-label">How many people were typically in these status meetings?</div>
+                    
+                    <div class="input-group">
+                        <select id="meetingPeople">
+                            <option value="">Select...</option>
+                            <option value="2">2-3 people</option>
+                            <option value="5">4-6 people</option>
+                            <option value="8">7-10 people</option>
+                            <option value="15">10+ people</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="question-group">
+                    <div class="question-label">Yesterday, how much time did you spend looking for information (files, data, answers, approvals)?</div>
+                    
+                    <div class="slider-container">
+                        <input type="range" min="0" max="180" step="15" value="0" class="slider" id="searchTime">
+                        <div class="slider-value"><span id="searchTimeValue">0</span> minutes</div>
                     </div>
                 </div>
 
@@ -655,64 +616,62 @@
                 </div>
             </div>
 
-            <!-- Section 3: Communication & Collaboration Issues -->
+            <!-- Section 3: Data & Systems -->
             <div class="section" id="section3">
-                <div class="symptom-category">
-                    <div class="category-header">
-                        <span class="category-icon">💬</span>
-                        <h2 class="category-title">Communication Breakdowns</h2>
-                    </div>
-                    <p class="category-description">What friction exists in how teams work together?</p>
+                <div class="question-group">
+                    <div class="question-label">In the last month, have you seen the same metric show different numbers in different places?</div>
                     
-                    <div class="symptom-checklist">
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'comm_silos')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">Different departments working in isolation</div>
-                                <div class="symptom-detail">Sales doesn't know what delivery is doing, ops surprised by what sales promised</div>
-                            </div>
-                        </div>
-
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'comm_channels')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">Important info scattered across email, Slack, Teams, etc.</div>
-                                <div class="symptom-detail">"Did you see my message?" "Which channel was that in?"</div>
-                            </div>
-                        </div>
-
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'comm_handoffs')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">Things getting lost when passed between people/teams</div>
-                                <div class="symptom-detail">Context, urgency, or details disappear in the handoff</div>
-                            </div>
-                        </div>
-
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'comm_tribal')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">Only certain people know how to do certain things</div>
-                                <div class="symptom-detail">"We need to wait for Sarah to be back" is a regular occurrence</div>
-                            </div>
-                        </div>
-
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'comm_unclear')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">Unclear who's responsible for what</div>
-                                <div class="symptom-detail">Things fall through cracks because everyone thought someone else was handling it</div>
-                            </div>
-                        </div>
+                    <div class="input-group">
+                        <select id="dataDiscrepancy">
+                            <option value="">Select...</option>
+                            <option value="never">No, never</option>
+                            <option value="once">Yes, once</option>
+                            <option value="few">Yes, a few times</option>
+                            <option value="frequent">Yes, frequently (weekly)</option>
+                            <option value="always">Yes, we always have to reconcile</option>
+                        </select>
                     </div>
 
-                    <div class="frequency-selector">
-                        <div class="frequency-label">How often do communication issues slow you down?</div>
-                        <div class="frequency-options">
-                            <div class="frequency-option" onclick="selectFrequency(this, 'comm', 10)">Rarely</div>
-                            <div class="frequency-option" onclick="selectFrequency(this, 'comm', 30)">Weekly</div>
-                            <div class="frequency-option" onclick="selectFrequency(this, 'comm', 60)">Daily</div>
-                            <div class="frequency-option" onclick="selectFrequency(this, 'comm', 90)">Constantly</div>
+                    <div class="input-group" id="reconcileTimeGroup" style="display: none;">
+                        <label class="input-label">How long does it typically take to figure out which number is right?</label>
+                        <select id="reconcileTime">
+                            <option value="">Select...</option>
+                            <option value="10">5-15 minutes</option>
+                            <option value="22">15-30 minutes</option>
+                            <option value="45">30-60 minutes</option>
+                            <option value="120">1-2 hours</option>
+                            <option value="240">2+ hours</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="question-group">
+                    <div class="question-label">In a typical day, roughly how many times do you copy data from one system and paste it into another?</div>
+                    
+                    <div class="slider-container">
+                        <input type="range" min="0" max="50" value="0" class="slider" id="copyPaste">
+                        <div class="slider-value"><span id="copyPasteValue">0</span> times</div>
+                    </div>
+                </div>
+
+                <div class="question-group">
+                    <div class="question-label">Do you maintain spreadsheets that are NOT connected to your official systems but that you NEED to do your job?</div>
+                    
+                    <div class="input-group">
+                        <select id="shadowSpreadsheets">
+                            <option value="">Select...</option>
+                            <option value="0">No</option>
+                            <option value="1">Yes - 1 spreadsheet</option>
+                            <option value="2.5">Yes - 2-3 spreadsheets</option>
+                            <option value="5">Yes - 4+ spreadsheets</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group" id="spreadsheetTimeGroup" style="display: none;">
+                        <label class="input-label">How many hours per week updating these spreadsheets?</label>
+                        <div class="slider-container">
+                            <input type="range" min="0" max="20" value="0" class="slider" id="spreadsheetTime">
+                            <div class="slider-value"><span id="spreadsheetTimeValue">0</span> hours</div>
                         </div>
                     </div>
                 </div>
@@ -723,65 +682,50 @@
                 </div>
             </div>
 
-            <!-- Section 4: Tools & Technology Frustrations -->
+            <!-- Section 4: Tools & Work -->
             <div class="section" id="section4">
-                <div class="symptom-category">
-                    <div class="category-header">
-                        <span class="category-icon">🔧</span>
-                        <h2 class="category-title">Tool & Technology Pain</h2>
-                    </div>
-                    <p class="category-description">What frustrates your team about the tools they use?</p>
+                <div class="question-group">
+                    <div class="question-label">Think of a task you completed recently. How many different tools/systems did you have to use?</div>
                     
-                    <div class="symptom-checklist">
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'tech_switching')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">Constantly switching between multiple tools</div>
-                                <div class="symptom-detail">CRM to project management to spreadsheet to email...</div>
-                            </div>
-                        </div>
-
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'tech_login')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">Logging into many different systems daily</div>
-                                <div class="symptom-detail">Can't remember all the passwords, always resetting</div>
-                            </div>
-                        </div>
-
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'tech_slow')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">Tools are slow, clunky, or crash regularly</div>
-                                <div class="symptom-detail">Waiting for things to load, losing work, workarounds needed</div>
-                            </div>
-                        </div>
-
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'tech_dont_talk')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">Systems don't talk to each other</div>
-                                <div class="symptom-detail">Have to manually move information between tools</div>
-                            </div>
-                        </div>
-
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'tech_workarounds')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">People finding workarounds because tools don't work well</div>
-                                <div class="symptom-detail">Personal spreadsheets, side apps, manual processes</div>
-                            </div>
-                        </div>
+                    <div class="input-group">
+                        <select id="toolCount">
+                            <option value="">Select...</option>
+                            <option value="1">1-2 tools</option>
+                            <option value="3">3-4 tools</option>
+                            <option value="6">5-7 tools</option>
+                            <option value="10">8+ tools</option>
+                        </select>
                     </div>
 
-                    <div class="frequency-selector">
-                        <div class="frequency-label">How much do tool issues slow your team down?</div>
-                        <div class="frequency-options">
-                            <div class="frequency-option" onclick="selectFrequency(this, 'tech', 10)">Minimal</div>
-                            <div class="frequency-option" onclick="selectFrequency(this, 'tech', 30)">Noticeable</div>
-                            <div class="frequency-option" onclick="selectFrequency(this, 'tech', 60)">Significant</div>
-                            <div class="frequency-option" onclick="selectFrequency(this, 'tech', 90)">Major drain</div>
-                        </div>
+                    <div class="input-group">
+                        <label class="input-label">How many times did you switch between these tools?</label>
+                        <select id="toolSwitches">
+                            <option value="">Select...</option>
+                            <option value="2">Once or twice</option>
+                            <option value="4">3-5 times</option>
+                            <option value="8">6-10 times</option>
+                            <option value="15">10+ times</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="question-group">
+                    <div class="question-label">Think of the last report you created from scratch (not automated). How long did it take to gather the data?</div>
+                    
+                    <div class="slider-container">
+                        <input type="range" min="0" max="20" value="0" class="slider" id="reportHours">
+                        <div class="slider-value"><span id="reportHoursValue">0</span> hours</div>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">How often do you create reports like this?</label>
+                        <select id="reportFrequency">
+                            <option value="">Select...</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="daily">Daily</option>
+                            <option value="multiple">Multiple times/day</option>
+                        </select>
                     </div>
                 </div>
 
@@ -791,105 +735,98 @@
                 </div>
             </div>
 
-            <!-- Section 5: Strategic Impact & Contact Info -->
+            <!-- Section 5: Company Context -->
             <div class="section" id="section5">
-                <div class="symptom-category">
-                    <div class="category-header">
-                        <span class="category-icon">🎯</span>
-                        <h2 class="category-title">The Real Cost</h2>
-                    </div>
-                    <p class="category-description">What bigger problems do these issues create?</p>
+                <div class="question-group">
+                    <div class="question-label">How long did it take your most recent hire to become fully productive (no hand-holding)?</div>
                     
-                    <div class="symptom-checklist">
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'impact_slow')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">Can't move fast enough to capitalize on opportunities</div>
-                                <div class="symptom-detail">By the time we're ready, the moment has passed</div>
-                            </div>
-                        </div>
-
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'impact_customers')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">Internal problems creating customer friction</div>
-                                <div class="symptom-detail">Slow responses, errors, inconsistent information</div>
-                            </div>
-                        </div>
-
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'impact_talent')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">Good people frustrated by inefficient processes</div>
-                                <div class="symptom-detail">"I didn't sign up to spend my day on this admin work"</div>
-                            </div>
-                        </div>
-
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'impact_decisions')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">Making decisions without good data</div>
-                                <div class="symptom-detail">Flying blind because we can't get the insights we need</div>
-                            </div>
-                        </div>
-
-                        <div class="symptom-item" onclick="toggleSymptom(this, 'impact_growth')">
-                            <div class="symptom-checkbox"></div>
-                            <div class="symptom-content">
-                                <div class="symptom-text">Current processes won't scale as we grow</div>
-                                <div class="symptom-detail">Already breaking, and we haven't doubled yet</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="frequency-selector">
-                        <div class="frequency-label">How much is this impacting your business?</div>
-                        <div class="frequency-options">
-                            <div class="frequency-option" onclick="selectFrequency(this, 'impact', 20)">Minor annoyance</div>
-                            <div class="frequency-option" onclick="selectFrequency(this, 'impact', 50)">Real problem</div>
-                            <div class="frequency-option" onclick="selectFrequency(this, 'impact', 80)">Major blocker</div>
-                            <div class="frequency-option" onclick="selectFrequency(this, 'impact', 100)">Critical issue</div>
-                        </div>
+                    <div class="input-group">
+                        <select id="onboardingTime">
+                            <option value="">Select...</option>
+                            <option value="0.5">Less than 1 week</option>
+                            <option value="1.5">1-2 weeks</option>
+                            <option value="4">1 month</option>
+                            <option value="10">2-3 months</option>
+                            <option value="18">3-6 months</option>
+                            <option value="30">6+ months</option>
+                        </select>
                     </div>
                 </div>
 
-                <div class="form-section">
-                    <h3 style="font-size: 1.5rem; color: #2F2F2F; margin-bottom: 1.5rem;">Get Your Diagnostic Report</h3>
-                    <p style="color: #6B6B6B; margin-bottom: 1.5rem;">We'll translate these symptoms into specific workflow problems and show you exactly what's broken</p>
+                <div class="question-group">
+                    <div class="question-label">In the last quarter, did you miss an opportunity (sale, partnership, hire) because you couldn't move fast enough?</div>
                     
-                    <div class="form-group">
-                        <label for="name">Full Name *</label>
+                    <div class="input-group">
+                        <select id="missedOpportunities">
+                            <option value="">Select...</option>
+                            <option value="0">No</option>
+                            <option value="1">Yes - 1 time</option>
+                            <option value="2.5">Yes - 2-3 times</option>
+                            <option value="5">Yes - 4+ times</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group" id="opportunityValueGroup" style="display: none;">
+                        <label class="input-label">Approximate average value per missed opportunity (£)</label>
+                        <input type="number" id="opportunityValue" placeholder="50000" min="0" step="1000">
+                    </div>
+                </div>
+
+                <div class="question-group">
+                    <div class="question-label">Your company information</div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Full Name *</label>
                         <input type="text" id="name" required placeholder="John Smith">
                     </div>
-                    <div class="form-group">
-                        <label for="email">Work Email *</label>
+
+                    <div class="input-group">
+                        <label class="input-label">Work Email *</label>
                         <input type="email" id="email" required placeholder="john@company.com">
                     </div>
-                    <div class="form-group">
-                        <label for="company">Company Name *</label>
+
+                    <div class="input-group">
+                        <label class="input-label">Company Name *</label>
                         <input type="text" id="company" required placeholder="Acme Corporation">
                     </div>
-                    <div class="form-group">
-                        <label for="companySize">Company Size *</label>
-                        <select id="companySize" required>
-                            <option value="">Select size...</option>
-                            <option value="small">1-50 employees</option>
-                            <option value="medium">51-200 employees</option>
-                            <option value="large">201-1000 employees</option>
-                            <option value="enterprise">1000+ employees</option>
+
+                    <div class="input-group">
+                        <label class="input-label">Team Size *</label>
+                        <select id="teamSize" required>
+                            <option value="">Select...</option>
+                            <option value="10">1-20 people</option>
+                            <option value="35">21-50 people</option>
+                            <option value="75">51-100 people</option>
+                            <option value="150">101-200 people</option>
+                            <option value="350">201-500 people</option>
+                            <option value="750">500+ people</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Industry</label>
+                        <select id="industry">
+                            <option value="">Select...</option>
+                            <option value="technology">Technology / SaaS</option>
+                            <option value="finance">Financial Services</option>
+                            <option value="healthcare">Healthcare</option>
+                            <option value="retail">Retail / E-commerce</option>
+                            <option value="manufacturing">Manufacturing</option>
+                            <option value="professional">Professional Services</option>
+                            <option value="other">Other</option>
                         </select>
                     </div>
                 </div>
 
                 <div class="button-group">
                     <button class="button button-secondary" onclick="previousSection(4)">← Back</button>
-                    <button class="button button-primary" onclick="generateDiagnosis()">Show Me What's Broken →</button>
+                    <button class="button button-primary" onclick="generateDiagnosis()">Generate Analysis →</button>
                 </div>
             </div>
 
             <!-- Results Container -->
             <div class="results-container" id="resultsContainer">
-                <!-- Results will be dynamically generated -->
+                <!-- Results will be rendered here -->
             </div>
         </div>
     </div>
@@ -897,287 +834,577 @@
     <script>
         // State management
         const state = {
-            symptoms: {
-                time: [],
-                data: [],
-                comm: [],
-                tech: [],
-                impact: []
-            },
-            frequencies: {},
-            currentSection: 'intro',
-            contact: {}
+            currentSection: 1,
+            responses: {}
         };
 
-        function startDiagnostic() {
-            document.getElementById('intro').classList.remove('active');
-            document.getElementById('section1').classList.add('active');
-            state.currentSection = 'section1';
-            updateProgress();
-        }
+        // Update slider displays
+        document.getElementById('meetingHours').addEventListener('input', function() {
+            document.getElementById('meetingHoursValue').textContent = this.value;
+        });
 
-        function toggleSymptom(element, symptomId) {
-            element.classList.toggle('checked');
-            
-            // Determine category from symptomId
-            const category = symptomId.split('_')[0];
-            
-            if (element.classList.contains('checked')) {
-                if (!state.symptoms[category]) state.symptoms[category] = [];
-                if (!state.symptoms[category].includes(symptomId)) {
-                    state.symptoms[category].push(symptomId);
-                }
-            } else {
-                if (state.symptoms[category]) {
-                    state.symptoms[category] = state.symptoms[category].filter(id => id !== symptomId);
-                }
-            }
-        }
+        document.getElementById('searchTime').addEventListener('input', function() {
+            document.getElementById('searchTimeValue').textContent = this.value;
+        });
 
-        function selectFrequency(element, category, value) {
-            // Remove selected class from siblings
-            element.parentElement.querySelectorAll('.frequency-option').forEach(opt => {
-                opt.classList.remove('selected');
-            });
-            
-            // Add selected class
-            element.classList.add('selected');
-            
-            // Store frequency
-            state.frequencies[category] = value;
-        }
+        document.getElementById('copyPaste').addEventListener('input', function() {
+            document.getElementById('copyPasteValue').textContent = this.value;
+        });
+
+        document.getElementById('spreadsheetTime').addEventListener('input', function() {
+            document.getElementById('spreadsheetTimeValue').textContent = this.value;
+        });
+
+        document.getElementById('reportHours').addEventListener('input', function() {
+            document.getElementById('reportHoursValue').textContent = this.value;
+        });
+
+        // Conditional displays
+        document.getElementById('dataDiscrepancy').addEventListener('change', function() {
+            const group = document.getElementById('reconcileTimeGroup');
+            group.style.display = this.value && this.value !== 'never' ? 'block' : 'none';
+        });
+
+        document.getElementById('shadowSpreadsheets').addEventListener('change', function() {
+            const group = document.getElementById('spreadsheetTimeGroup');
+            group.style.display = this.value && parseFloat(this.value) > 0 ? 'block' : 'none';
+        });
+
+        document.getElementById('missedOpportunities').addEventListener('change', function() {
+            const group = document.getElementById('opportunityValueGroup');
+            group.style.display = this.value && parseFloat(this.value) > 0 ? 'block' : 'none';
+        });
 
         function nextSection(sectionNum) {
-            const current = document.querySelector('.section.active');
-            current.classList.remove('active');
-            
-            const next = document.getElementById(`section${sectionNum}`);
-            next.classList.add('active');
-            
-            state.currentSection = `section${sectionNum}`;
+            document.getElementById(`section${state.currentSection}`).classList.remove('active');
+            document.getElementById(`section${sectionNum}`).classList.add('active');
+            state.currentSection = sectionNum;
             updateProgress();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function previousSection(sectionNum) {
-            const current = document.querySelector('.section.active');
-            current.classList.remove('active');
-            
-            const prev = document.getElementById(`section${sectionNum}`);
-            prev.classList.add('active');
-            
-            state.currentSection = `section${sectionNum}`;
+            document.getElementById(`section${state.currentSection}`).classList.remove('active');
+            document.getElementById(`section${sectionNum}`).classList.add('active');
+            state.currentSection = sectionNum;
             updateProgress();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function updateProgress() {
-            const sections = ['intro', 'section1', 'section2', 'section3', 'section4', 'section5'];
-            const currentIndex = sections.indexOf(state.currentSection);
-            const progress = (currentIndex / (sections.length - 1)) * 100;
+            const progress = (state.currentSection / 5) * 100;
             document.getElementById('progressFill').style.width = progress + '%';
         }
 
         function generateDiagnosis() {
-            // Validate form
+            // Validate required fields
             const name = document.getElementById('name').value;
             const email = document.getElementById('email').value;
             const company = document.getElementById('company').value;
-            const companySize = document.getElementById('companySize').value;
-            
-            if (!name || !email || !company || !companySize) {
+            const teamSize = document.getElementById('teamSize').value;
+
+            if (!name || !email || !company || !teamSize) {
                 alert('Please fill in all required fields');
                 return;
             }
-            
-            state.contact = { name, email, company, companySize };
-            
-            // Analyze symptoms
-            const diagnosis = analyzeSystems(state.symptoms, state.frequencies);
-            
+
+            // Collect all responses
+            state.responses = {
+                actualTime: parseFloat(document.getElementById('actualTime').value) || 0,
+                idealTime: parseFloat(document.getElementById('idealTime').value) || 0,
+                waitTime: parseFloat(document.getElementById('waitTime').value) || 0,
+                waitFrequency: document.getElementById('waitFrequency').value,
+                meetingHours: parseFloat(document.getElementById('meetingHours').value) || 0,
+                meetingPeople: parseFloat(document.getElementById('meetingPeople').value) || 0,
+                searchTime: parseFloat(document.getElementById('searchTime').value) || 0,
+                dataDiscrepancy: document.getElementById('dataDiscrepancy').value,
+                reconcileTime: parseFloat(document.getElementById('reconcileTime').value) || 0,
+                copyPaste: parseFloat(document.getElementById('copyPaste').value) || 0,
+                shadowSpreadsheets: parseFloat(document.getElementById('shadowSpreadsheets').value) || 0,
+                spreadsheetTime: parseFloat(document.getElementById('spreadsheetTime').value) || 0,
+                toolCount: parseFloat(document.getElementById('toolCount').value) || 0,
+                toolSwitches: parseFloat(document.getElementById('toolSwitches').value) || 0,
+                reportHours: parseFloat(document.getElementById('reportHours').value) || 0,
+                reportFrequency: document.getElementById('reportFrequency').value,
+                onboardingTime: parseFloat(document.getElementById('onboardingTime').value) || 0,
+                missedOpportunities: parseFloat(document.getElementById('missedOpportunities').value) || 0,
+                opportunityValue: parseFloat(document.getElementById('opportunityValue').value) || 50000,
+                name: name,
+                email: email,
+                company: company,
+                teamSize: parseFloat(teamSize),
+                industry: document.getElementById('industry').value
+            };
+
+            // Generate diagnosis
+            const diagnosis = analyzeEvidence(state.responses);
+
             // Display results
-            displayDiagnosis(diagnosis);
-            
-            // Log for CRM integration
-            console.log('Diagnostic complete:', {
-                contact: state.contact,
-                symptoms: state.symptoms,
-                frequencies: state.frequencies,
-                diagnosis: diagnosis
-            });
-            
+            displayResults(diagnosis);
+
             // Hide form, show results
             document.getElementById('section5').classList.remove('active');
             document.getElementById('resultsContainer').classList.add('show');
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function analyzeSystems(symptoms, frequencies) {
-            const problems = [];
-            
-            // Diagnose workflow fragmentation
-            const fragmentationScore = 
-                (symptoms.time.length * (frequencies.time || 50) / 100) +
-                (symptoms.comm.length * (frequencies.comm || 50) / 100);
-            
-            if (fragmentationScore > 3) {
-                problems.push({
-                    icon: '🔄',
-                    title: 'Severe Workflow Fragmentation',
-                    description: 'Your symptoms indicate excessive handoffs and unclear ownership. Work is bouncing between too many people and systems, creating delays and errors.',
-                    evidence: `Evidence: ${symptoms.time.filter(s => s.includes('waiting')).length > 0 ? 'Tasks sitting idle,' : ''} ${symptoms.comm.filter(s => s.includes('handoffs')).length > 0 ? 'context loss in handoffs,' : ''} ${symptoms.comm.filter(s => s.includes('unclear')).length > 0 ? 'unclear accountability' : ''}`,
-                    recommendation: 'Map end-to-end workflows to identify and eliminate unnecessary handoffs. Consolidate ownership and create clear swim lanes.',
-                    estimatedImpact: '40-60% reduction in cycle time'
-                });
-            }
-            
-            // Diagnose data architecture problems
-            const dataScore = symptoms.data.length * (frequencies.data || 50) / 100;
-            
-            if (dataScore > 2.5) {
-                problems.push({
-                    icon: '📊',
-                    title: 'Broken Data Architecture',
-                    description: 'Multiple sources of truth, manual data movement, and trust issues indicate fundamental data architecture problems. You don\'t have a single source of truth.',
-                    evidence: `Evidence: ${symptoms.data.filter(s => s.includes('inconsistent')).length > 0 ? 'Different systems showing different numbers,' : ''} ${symptoms.data.filter(s => s.includes('spreadsheets')).length > 0 ? 'critical data in personal files,' : ''} ${symptoms.data.filter(s => s.includes('trust')).length > 0 ? 'widespread data distrust' : ''}`,
-                    recommendation: 'Implement data governance framework with unified data layer. Establish single source of truth with automated validation.',
-                    estimatedImpact: '70% reduction in data reconciliation time'
-                });
-            }
-            
-            // Diagnose integration gaps
-            const integrationScore = 
-                (symptoms.tech.filter(s => s.includes('dont_talk')).length * (frequencies.tech || 50) / 100) +
-                (symptoms.data.filter(s => s.includes('manual')).length * (frequencies.data || 50) / 100);
-            
-            if (integrationScore > 1.5) {
-                problems.push({
-                    icon: '🔗',
-                    title: 'Critical Integration Gaps',
-                    description: 'Your systems operate in silos, forcing manual data transfer and creating disconnected workflow islands. Each system is optimized in isolation.',
-                    evidence: `Evidence: ${symptoms.tech.filter(s => s.includes('switching')).length > 0 ? 'Constant context switching,' : ''} ${symptoms.data.filter(s => s.includes('manual')).length > 0 ? 'copy-pasting between systems,' : ''} ${symptoms.tech.filter(s => s.includes('dont_talk')).length > 0 ? 'no system interoperability' : ''}`,
-                    recommendation: 'Design API-first integration architecture. Create middleware layer to connect core systems with data synchronization.',
-                    estimatedImpact: '50% reduction in manual data handling'
-                });
-            }
-            
-            // Diagnose tribal knowledge
-            if (symptoms.comm.filter(s => s.includes('tribal')).length > 0) {
-                problems.push({
-                    icon: '🧠',
-                    title: 'Dangerous Tribal Knowledge',
-                    description: 'Critical processes live in people\'s heads rather than documented systems. This creates bottlenecks and single points of failure.',
-                    evidence: 'Evidence: Work stops when key people are unavailable, no documentation for critical processes',
-                    recommendation: 'Implement knowledge management system with process documentation. Create redundancy for critical functions.',
-                    estimatedImpact: '80% reduction in "waiting for Sarah" situations'
-                });
-            }
-            
-            // Diagnose tool sprawl
-            if (symptoms.tech.length >= 4 && frequencies.tech > 50) {
-                problems.push({
-                    icon: '🔧',
-                    title: 'Tool Sprawl & System Overload',
-                    description: 'Too many disconnected tools create context-switching overhead, credential fatigue, and integration nightmares. Each new tool added compounds the problem.',
-                    evidence: `Evidence: ${symptoms.tech.filter(s => s.includes('switching')).length > 0 ? 'Constant app switching,' : ''} ${symptoms.tech.filter(s => s.includes('login')).length > 0 ? 'password management problems,' : ''} ${symptoms.tech.filter(s => s.includes('workarounds')).length > 0 ? 'widespread workarounds' : ''}`,
-                    recommendation: 'Consolidate to 4-6 core platforms with deep integration. Eliminate redundant tools and standardize on unified stack.',
-                    estimatedImpact: '30% increase in productivity from reduced switching'
-                });
-            }
-            
-            // Calculate overall health score
-            const totalSymptoms = Object.values(symptoms).reduce((sum, arr) => sum + arr.length, 0);
-            const avgFrequency = Object.values(frequencies).reduce((sum, val) => sum + val, 0) / Object.keys(frequencies).length;
-            const healthScore = Math.max(0, 100 - (totalSymptoms * 5) - (avgFrequency * 0.3));
-            
-            // Calculate estimated cost
-            const teamSizeMap = {
-                'small': 25,
-                'medium': 100,
-                'large': 500,
-                'enterprise': 2000
+        // EVIDENCE-BASED ANALYSIS ENGINE
+        function analyzeEvidence(data) {
+            const analysis = {
+                evidence: {},
+                calculations: {},
+                findings: [],
+                healthScore: 100,
+                totalCost: 0,
+                confidence: 'HIGH'
             };
-            const teamSize = teamSizeMap[state.contact.companySize] || 50;
-            const avgSalary = 50000;
-            const inefficiencyRate = (100 - healthScore) / 100;
-            const annualCost = Math.round(teamSize * avgSalary * inefficiencyRate * 0.4);
-            
-            return {
-                healthScore: Math.round(healthScore),
-                problems: problems,
-                symptomCount: totalSymptoms,
-                annualCost: annualCost,
-                criticalCount: problems.length
-            };
+
+            // Constants
+            const AVG_HOURLY_RATE = 25; // £25/hour conservative estimate
+            const WORKDAYS_YEAR = 250;
+            const WEEKS_YEAR = 50;
+
+            // 1. WORKFLOW TIMING ANALYSIS
+            if (data.actualTime > 0 && data.idealTime > 0) {
+                const delayFactor = data.actualTime / data.idealTime;
+                analysis.evidence.cycleTime = {
+                    actual: data.actualTime,
+                    ideal: data.idealTime,
+                    delayFactor: delayFactor.toFixed(1)
+                };
+
+                if (delayFactor >= 2) {
+                    const estimatedHandoffs = Math.ceil(data.waitTime * 2);
+                    analysis.findings.push({
+                        title: 'Severe Workflow Fragmentation',
+                        confidence: 'HIGH',
+                        evidence: `Actual cycle time: ${data.actualTime} days vs ideal: ${data.idealTime} days = ${delayFactor.toFixed(1)}x delay`,
+                        impact: `Estimated ${estimatedHandoffs}+ handoffs based on ${data.waitTime} day wait times`,
+                        description: `Work bounces through ${estimatedHandoffs}+ touchpoints without clear ownership. Each handoff introduces delays and errors.`
+                    });
+
+                    analysis.healthScore -= 15;
+                }
+            }
+
+            // 2. COORDINATION COST ANALYSIS
+            if (data.meetingHours > 0 && data.meetingPeople > 0) {
+                const weeklyMeetingCost = data.meetingHours * data.meetingPeople * AVG_HOURLY_RATE;
+                const annualMeetingCost = weeklyMeetingCost * WEEKS_YEAR;
+                
+                analysis.calculations.meetingCost = {
+                    formula: `${data.meetingHours} hrs/wk × ${data.meetingPeople} people × £${AVG_HOURLY_RATE}/hr × ${WEEKS_YEAR} weeks`,
+                    weeklyValue: weeklyMeetingCost,
+                    annualValue: annualMeetingCost
+                };
+
+                analysis.totalCost += annualMeetingCost;
+
+                if (data.meetingHours >= 5) {
+                    analysis.findings.push({
+                        title: 'Excessive Coordination Overhead',
+                        confidence: 'HIGH',
+                        evidence: `${data.meetingHours} hours/week in status meetings with ${data.meetingPeople} people`,
+                        impact: `£${Math.round(annualMeetingCost).toLocaleString()}/year in direct meeting time`,
+                        description: `Team spends ${Math.round((data.meetingHours / 40) * 100)}% of time coordinating vs executing. This is pure overhead that shouldn't exist.`
+                    });
+
+                    analysis.healthScore -= 12;
+                }
+            }
+
+            // 3. SEARCH TIME COST
+            if (data.searchTime > 0) {
+                const dailySearchCost = (data.searchTime / 60) * AVG_HOURLY_RATE * data.teamSize;
+                const annualSearchCost = dailySearchCost * WORKDAYS_YEAR;
+
+                analysis.calculations.searchCost = {
+                    formula: `${data.searchTime} min/day × ${data.teamSize} people × £${AVG_HOURLY_RATE}/hr × ${WORKDAYS_YEAR} days`,
+                    dailyValue: dailySearchCost,
+                    annualValue: annualSearchCost
+                };
+
+                analysis.totalCost += annualSearchCost;
+
+                if (data.searchTime >= 30) {
+                    analysis.findings.push({
+                        title: 'Information Discovery Problem',
+                        confidence: 'HIGH',
+                        evidence: `${data.searchTime} minutes/day spent hunting for information`,
+                        impact: `£${Math.round(annualSearchCost).toLocaleString()}/year in search time across team`,
+                        description: `Information isn't where people expect it. This suggests poor organization, scattered data, or lack of documentation.`
+                    });
+
+                    analysis.healthScore -= 10;
+                }
+            }
+
+            // 4. DATA RECONCILIATION COST
+            if (data.dataDiscrepancy && data.dataDiscrepancy !== 'never' && data.reconcileTime > 0) {
+                const frequencyMultiplier = {
+                    'once': 1,
+                    'few': 3,
+                    'frequent': 12,
+                    'always': 50
+                }[data.dataDiscrepancy] || 1;
+
+                const annualReconciliationCost = (data.reconcileTime / 60) * AVG_HOURLY_RATE * frequencyMultiplier * data.teamSize * 0.3;
+
+                analysis.calculations.reconciliationCost = {
+                    formula: `${data.reconcileTime} min × ${frequencyMultiplier} times/yr × ${Math.round(data.teamSize * 0.3)} people × £${AVG_HOURLY_RATE}/hr`,
+                    annualValue: annualReconciliationCost
+                };
+
+                analysis.totalCost += annualReconciliationCost;
+
+                if (data.dataDiscrepancy === 'frequent' || data.dataDiscrepancy === 'always') {
+                    analysis.findings.push({
+                        title: 'Broken Data Architecture',
+                        confidence: 'HIGH',
+                        evidence: `Data reconciliation needed ${data.dataDiscrepancy === 'frequent' ? 'weekly' : 'constantly'}, taking ${data.reconcileTime} minutes each time`,
+                        impact: `£${Math.round(annualReconciliationCost).toLocaleString()}/year in reconciliation time`,
+                        description: `Multiple sources of truth exist. No unified data layer means constant manual verification and widespread data distrust.`
+                    });
+
+                    analysis.healthScore -= 14;
+                }
+            }
+
+            // 5. MANUAL DATA TRANSFER COST
+            if (data.copyPaste > 0) {
+                const dailyTransferTime = (data.copyPaste * 2) / 60; // 2 min per copy-paste
+                const annualTransferCost = dailyTransferTime * AVG_HOURLY_RATE * data.teamSize * WORKDAYS_YEAR;
+
+                analysis.calculations.transferCost = {
+                    formula: `${data.copyPaste} copies/day × 2 min × ${data.teamSize} people × £${AVG_HOURLY_RATE}/hr × ${WORKDAYS_YEAR} days`,
+                    annualValue: annualTransferCost
+                };
+
+                analysis.totalCost += annualTransferCost;
+
+                if (data.copyPaste >= 10) {
+                    analysis.findings.push({
+                        title: 'Critical Integration Gaps',
+                        confidence: 'HIGH',
+                        evidence: `${data.copyPaste} manual data transfers per day`,
+                        impact: `£${Math.round(annualTransferCost).toLocaleString()}/year in manual data movement`,
+                        description: `Systems operate in isolation, forcing manual data bridges. This is proof of disconnected tools requiring constant human intervention.`
+                    });
+
+                    analysis.healthScore -= 11;
+                }
+            }
+
+            // 6. SHADOW SPREADSHEET COST
+            if (data.shadowSpreadsheets > 0 && data.spreadsheetTime > 0) {
+                const weeklySpreadsheetCost = data.spreadsheetTime * AVG_HOURLY_RATE * data.teamSize * 0.4;
+                const annualSpreadsheetCost = weeklySpreadsheetCost * WEEKS_YEAR;
+
+                analysis.calculations.spreadsheetCost = {
+                    formula: `${data.spreadsheetTime} hrs/wk × ${Math.round(data.teamSize * 0.4)} people × £${AVG_HOURLY_RATE}/hr × ${WEEKS_YEAR} weeks`,
+                    annualValue: annualSpreadsheetCost
+                };
+
+                analysis.totalCost += annualSpreadsheetCost;
+
+                if (data.shadowSpreadsheets >= 2) {
+                    analysis.findings.push({
+                        title: 'Shadow Database Economy',
+                        confidence: 'HIGH',
+                        evidence: `${data.shadowSpreadsheets} unofficial spreadsheets requiring ${data.spreadsheetTime} hours/week maintenance`,
+                        impact: `£${Math.round(annualSpreadsheetCost).toLocaleString()}/year maintaining shadow systems`,
+                        description: `Team has built parallel unofficial system because official systems don't work. These shadow databases are brittle and leave when people leave.`
+                    });
+
+                    analysis.healthScore -= 13;
+                }
+            }
+
+            // 7. TOOL PROLIFERATION COST
+            if (data.toolCount > 0 && data.toolSwitches > 0) {
+                const dailySwitchingTime = (data.toolSwitches * 3) / 60; // 3 min context switching cost per switch
+                const annualSwitchingCost = dailySwitchingTime * AVG_HOURLY_RATE * data.teamSize * WORKDAYS_YEAR;
+
+                analysis.calculations.switchingCost = {
+                    formula: `${data.toolSwitches} switches/task × 3 min × ${data.teamSize} people × £${AVG_HOURLY_RATE}/hr × ${WORKDAYS_YEAR} days`,
+                    annualValue: annualSwitchingCost
+                };
+
+                analysis.totalCost += annualSwitchingCost;
+
+                if (data.toolCount >= 6) {
+                    analysis.findings.push({
+                        title: 'Tool Sprawl & Context Switching',
+                        confidence: 'HIGH',
+                        evidence: `${data.toolCount} tools used per task with ${data.toolSwitches} context switches`,
+                        impact: `£${Math.round(annualSwitchingCost).toLocaleString()}/year in cognitive switching costs`,
+                        description: `Too many disconnected tools create constant context switching. Each switch has a cognitive cost - it takes time to reorient.`
+                    });
+
+                    analysis.healthScore -= 9;
+                }
+            }
+
+            // 8. REPORTING COST
+            if (data.reportHours > 0 && data.reportFrequency) {
+                const frequencyMultiplier = {
+                    'monthly': 12,
+                    'weekly': 52,
+                    'daily': 250,
+                    'multiple': 500
+                }[data.reportFrequency] || 12;
+
+                const reportersCount = Math.max(1, Math.round(data.teamSize * 0.2));
+                const annualReportCost = data.reportHours * AVG_HOURLY_RATE * frequencyMultiplier * reportersCount;
+
+                analysis.calculations.reportCost = {
+                    formula: `${data.reportHours} hrs × ${reportersCount} people × ${frequencyMultiplier} times/yr × £${AVG_HOURLY_RATE}/hr`,
+                    annualValue: annualReportCost
+                };
+
+                analysis.totalCost += annualReportCost;
+
+                if (data.reportHours >= 3 && (data.reportFrequency === 'weekly' || data.reportFrequency === 'daily')) {
+                    analysis.findings.push({
+                        title: 'Manual Reporting Burden',
+                        confidence: 'HIGH',
+                        evidence: `${data.reportHours} hours per report, created ${data.reportFrequency}`,
+                        impact: `£${Math.round(annualReportCost).toLocaleString()}/year in manual report creation`,
+                        description: `Reporting is manual and time-consuming. This suggests no automated dashboards or BI infrastructure.`
+                    });
+
+                    analysis.healthScore -= 8;
+                }
+            }
+
+            // 9. TRIBAL KNOWLEDGE INDICATOR
+            if (data.onboardingTime >= 10) {
+                analysis.findings.push({
+                    title: 'Dangerous Tribal Knowledge Dependency',
+                    confidence: 'MEDIUM',
+                    evidence: `${data.onboardingTime} weeks for new hire to reach productivity`,
+                    impact: 'High bus factor risk - knowledge in people\'s heads, not systems',
+                    description: `Long onboarding suggests undocumented processes. Critical knowledge lives in people's heads rather than systems, creating bottlenecks and single points of failure.`
+                });
+
+                analysis.healthScore -= 10;
+            }
+
+            // 10. OPPORTUNITY COST
+            if (data.missedOpportunities > 0) {
+                const quarterlyOpportunityCost = data.missedOpportunities * data.opportunityValue;
+                const annualOpportunityCost = quarterlyOpportunityCost * 4;
+
+                analysis.calculations.opportunityCost = {
+                    formula: `${data.missedOpportunities} opportunities/qtr × £${data.opportunityValue.toLocaleString()} × 4 quarters`,
+                    annualValue: annualOpportunityCost
+                };
+
+                analysis.totalCost += annualOpportunityCost;
+
+                analysis.findings.push({
+                    title: 'Operational Friction Costing Revenue',
+                    confidence: 'HIGH',
+                    evidence: `${data.missedOpportunities} opportunities missed last quarter due to speed`,
+                    impact: `£${Math.round(annualOpportunityCost).toLocaleString()}/year in missed opportunities`,
+                    description: `Internal operational problems are directly costing revenue. Can't move fast enough to capitalize on opportunities.`
+                });
+
+                analysis.healthScore -= 15;
+            }
+
+            // Calculate final health score
+            analysis.healthScore = Math.max(0, Math.min(100, analysis.healthScore));
+
+            // Determine criticality
+            if (analysis.healthScore < 40) {
+                analysis.criticality = 'CRITICAL';
+            } else if (analysis.healthScore < 55) {
+                analysis.criticality = 'HIGH';
+            } else if (analysis.healthScore < 70) {
+                analysis.criticality = 'MEDIUM';
+            } else {
+                analysis.criticality = 'LOW';
+            }
+
+            return analysis;
         }
 
-        function displayDiagnosis(diagnosis) {
+        function displayResults(analysis) {
             const container = document.getElementById('resultsContainer');
-            
-            const html = `
-                <div class="diagnosis-card">
-                    <h2 class="diagnosis-title">Your Operational Health Diagnosis</h2>
-                    <p class="diagnosis-subtitle">Based on ${diagnosis.symptomCount} symptoms you're experiencing</p>
-                    <div class="diagnosis-score">
-                        <div class="score-item">
-                            <div class="score-value">${diagnosis.healthScore}</div>
-                            <div class="score-label">Health Score (out of 100)</div>
+
+            const criticalityColors = {
+                'LOW': '#2D7A3E',
+                'MEDIUM': '#FF8C00',
+                'HIGH': '#E63946',
+                'CRITICAL': '#C41E3A'
+            };
+
+            const color = criticalityColors[analysis.criticality];
+
+            let html = `
+                <div class="diagnosis-header" style="background: linear-gradient(135deg, ${color} 0%, ${color}dd 100%);">
+                    <h2>Evidence-Based Operational Diagnosis</h2>
+                    <p>Calculated from your actual time and cost data—not estimates.</p>
+                    
+                    <div class="diagnosis-score-grid">
+                        <div class="score-card">
+                            <div class="score-value">${Math.round(analysis.healthScore)}</div>
+                            <div class="score-label">Health Score</div>
                         </div>
-                        <div class="score-item">
-                            <div class="score-value">${diagnosis.criticalCount}</div>
-                            <div class="score-label">Critical Problems Identified</div>
+                        <div class="score-card">
+                            <div class="score-value">${analysis.criticality}</div>
+                            <div class="score-label">Urgency Level</div>
                         </div>
-                        <div class="score-item">
-                            <div class="score-value">£${diagnosis.annualCost.toLocaleString()}</div>
-                            <div class="score-label">Estimated Annual Cost</div>
+                        <div class="score-card">
+                            <div class="score-value">${analysis.findings.length}</div>
+                            <div class="score-label">Issues Found</div>
+                        </div>
+                        <div class="score-card">
+                            <div class="score-value">${analysis.confidence}</div>
+                            <div class="score-label">Data Confidence</div>
                         </div>
                     </div>
                 </div>
 
-                <div class="hidden-problems">
-                    <h3>🔍 What's Actually Broken (That You Didn't Know)</h3>
-                    <p style="color: #6B6B6B; margin-bottom: 1.5rem;">These symptoms reveal specific structural problems in your operations:</p>
-                    
-                    ${diagnosis.problems.map(problem => `
-                        <div class="problem-item">
-                            <div class="problem-header">
-                                <span class="problem-icon">${problem.icon}</span>
-                                <span class="problem-title">${problem.title}</span>
-                            </div>
-                            <div class="problem-description">${problem.description}</div>
-                            <div class="problem-evidence">${problem.evidence}</div>
-                            <div style="margin-top: 1rem; padding: 1rem; background: #E8F4F8; border-radius: 6px;">
-                                <strong style="color: #1E3A5F;">What to do:</strong> ${problem.recommendation}
-                                <div style="margin-top: 0.5rem; color: #2D7A3E; font-weight: 600;">
-                                    Expected impact: ${problem.estimatedImpact}
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
+                <div class="evidence-section">
+                    <h3 class="evidence-title">📊 Evidence From Your Responses</h3>
+            `;
 
-                <div class="discovery-cta">
-                    <h3>Want to Fix This?</h3>
-                    <p>
-                        These problems won't fix themselves - they compound over time. 
-                        <br><br>
-                        Schedule a 30-minute discovery call where we'll:
-                        <br><br>
-                        ✓ Walk through your specific symptoms in detail<br>
-                        ✓ Map what's actually happening in your workflows<br>
-                        ✓ Identify the 2-3 highest-impact fixes<br>
-                        ✓ Create a roadmap to operational health
+            // Show key evidence
+            if (analysis.evidence.cycleTime) {
+                html += `
+                    <div class="evidence-item">
+                        <strong>Cycle Time:</strong> ${analysis.evidence.cycleTime.actual} days actual vs ${analysis.evidence.cycleTime.ideal} days ideal = <strong>${analysis.evidence.cycleTime.delayFactor}x delay</strong>
+                    </div>
+                `;
+            }
+
+            if (state.responses.meetingHours > 0) {
+                html += `
+                    <div class="evidence-item">
+                        <strong>Status Meetings:</strong> ${state.responses.meetingHours} hours/week with ${state.responses.meetingPeople} people
+                    </div>
+                `;
+            }
+
+            if (state.responses.searchTime > 0) {
+                html += `
+                    <div class="evidence-item">
+                        <strong>Information Hunt Time:</strong> ${state.responses.searchTime} minutes/day looking for files/data
+                    </div>
+                `;
+            }
+
+            if (state.responses.copyPaste > 0) {
+                html += `
+                    <div class="evidence-item">
+                        <strong>Manual Data Transfers:</strong> ${state.responses.copyPaste} copy-paste operations per day
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+
+            // Cost calculations
+            html += `
+                <div class="calculation-section">
+                    <h3 class="calculation-title">💰 Calculated Costs (From Your Data)</h3>
+                    <div class="cost-breakdown">
+            `;
+
+            for (const [key, calc] of Object.entries(analysis.calculations)) {
+                if (calc.annualValue > 0) {
+                    html += `
+                        <div class="cost-item">
+                            <div>
+                                <div class="cost-description">${formatCostLabel(key)}</div>
+                                <div class="cost-formula">${calc.formula}</div>
+                            </div>
+                            <div class="cost-value">£${Math.round(calc.annualValue).toLocaleString()}</div>
+                        </div>
+                    `;
+                }
+            }
+
+            html += `
+                    </div>
+                    <div class="total-cost">
+                        <div class="total-cost-label">Total Annual Cost (Evidence-Based)</div>
+                        <div class="total-cost-value">£${Math.round(analysis.totalCost).toLocaleString()}</div>
+                        <p style="margin-top: 1rem; font-size: 0.9rem;">This is NOT estimated. This is calculated from the hours you provided.</p>
+                    </div>
+                </div>
+            `;
+
+            // Findings
+            html += `
+                <div class="findings-section">
+                    <h3 style="font-size: 1.8rem; color: #1E3A5F; margin-bottom: 2rem;">🎯 Structural Problems Identified</h3>
+            `;
+
+            analysis.findings.forEach((finding, idx) => {
+                html += `
+                    <div class="finding-item">
+                        <div class="finding-title">
+                            ${idx + 1}. ${finding.title}
+                            <span class="confidence-badge confidence-${finding.confidence.toLowerCase()}">${finding.confidence} CONFIDENCE</span>
+                        </div>
+                        
+                        <p style="color: #6B6B6B; margin: 1rem 0; line-height: 1.7;">${finding.description}</p>
+                        
+                        <div style="background: #FFF3CD; padding: 1rem; border-radius: 6px; margin: 1rem 0;">
+                            <strong style="color: #856404;">Evidence:</strong>
+                            <p style="color: #856404; margin-top: 0.5rem;">${finding.evidence}</p>
+                        </div>
+                        
+                        <div style="background: #FFE5E5; padding: 1rem; border-radius: 6px;">
+                            <strong style="color: #C41E3A;">Impact:</strong>
+                            <p style="color: #C41E3A; margin-top: 0.5rem;">${finding.impact}</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+
+            // CTA
+            html += `
+                <div class="cta-section">
+                    <h3>Let's Fix This Together</h3>
+                    <p>This analysis reveals the problems and quantifies the cost. Fixing them requires workflow mapping and strategic planning.</p>
+                    <p style="margin-top: 1rem;">In our discovery call, we'll:</p>
+                    <p style="font-size: 0.95rem; margin-top: 1rem;">
+                        ✓ Validate these findings against your specific context<br>
+                        ✓ Map your actual workflows in detail<br>
+                        ✓ Create an implementation roadmap<br>
+                        ✓ Prioritize fixes by ROI
                     </p>
-                    <a href="mailto:contact@workflowpartners.co.uk?subject=Discovery Call - Diagnostic Results&body=Hi, I just completed the operational health check and would like to discuss the findings.%0D%0A%0D%0ACompany: ${state.contact.company}%0D%0AName: ${state.contact.name}%0D%0AHealth Score: ${diagnosis.healthScore}/100%0D%0ACritical Problems: ${diagnosis.criticalCount}" class="cta-button">
+                    <a href="mailto:contact@workflowpartners.co.uk?subject=Diagnostic Follow-up - ${state.responses.company}&body=Hi, I completed the diagnostic and want to discuss the findings.%0D%0A%0D%0ACompany: ${state.responses.company}%0D%0AHealth Score: ${Math.round(analysis.healthScore)}/100%0D%0ATotal Cost: £${Math.round(analysis.totalCost).toLocaleString()}%0D%0AUrgency: ${analysis.criticality}" 
+                       class="cta-button">
                         📅 Schedule Discovery Call
                     </a>
                     <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 1.5rem;">
-                        We'll send a detailed copy of this diagnosis to ${state.contact.email}
+                        Full diagnostic report sent to ${state.responses.email}
                     </p>
                 </div>
             `;
-            
+
             container.innerHTML = html;
+        }
+
+        function formatCostLabel(key) {
+            const labels = {
+                meetingCost: 'Status Meeting Time',
+                searchCost: 'Information Search Time',
+                reconciliationCost: 'Data Reconciliation',
+                transferCost: 'Manual Data Transfers',
+                spreadsheetCost: 'Shadow Spreadsheet Maintenance',
+                switchingCost: 'Tool Context Switching',
+                reportCost: 'Manual Report Creation',
+                opportunityCost: 'Missed Opportunities'
+            };
+            return labels[key] || key;
         }
     </script>
 </body>
