@@ -1,1411 +1,860 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI-Powered Operational Diagnostic | Evidence-Based Analysis</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --primary: #1E3A5F;
-            --primary-light: #2C5F7C;
-            --accent: #4A90A4;
-            --dark: #0F1C2E;
-            --text: #2F2F2F;
-            --text-light: #6B6B6B;
-            --bg-light: #F5F7FA;
-            --bg-white: #FFFFFF;
-            --border: #E0E4E8;
-            --success: #2D7A3E;
-            --warning: #FF8C00;
-            --danger: #E63946;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #1E3A5F 0%, #2C5F7C 100%);
-            min-height: 100vh;
-            padding: 2rem;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #1E3A5F 0%, #2C5F7C 100%);
-            color: white;
-            padding: 3rem 2rem;
-            text-align: center;
-        }
-
-        .ai-badge {
-            display: inline-block;
-            background: rgba(255, 255, 255, 0.2);
-            padding: 0.5rem 1.5rem;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
-            font-weight: 600;
-        }
-
-        .header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-        }
-
-        .header p {
-            font-size: 1.15rem;
-            opacity: 0.9;
-            line-height: 1.6;
-        }
-
-        .content {
-            padding: 3rem 2rem;
-        }
-
-        .section {
-            display: none;
-        }
-
-        .section.active {
-            display: block;
-            animation: fadeIn 0.5s ease;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .progress-bar {
-            height: 6px;
-            background: #E0E4E8;
-            border-radius: 3px;
-            overflow: hidden;
-            margin-bottom: 2rem;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #4A90A4 0%, #1E3A5F 100%);
-            transition: width 0.4s ease;
-        }
-
-        .question-group {
-            background: #F5F7FA;
-            padding: 2rem;
-            border-radius: 12px;
-            margin-bottom: 2rem;
-            border-left: 4px solid #4A90A4;
-        }
-
-        .question-label {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #1E3A5F;
-            margin-bottom: 1rem;
-            line-height: 1.4;
-        }
-
-        .question-help {
-            font-size: 0.9rem;
-            color: #6B6B6B;
-            margin-bottom: 1.5rem;
-            font-style: italic;
-        }
-
-        .input-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .input-label {
-            display: block;
-            font-size: 0.95rem;
-            font-weight: 500;
-            color: #2F2F2F;
-            margin-bottom: 0.5rem;
-        }
-
-        select, input[type="number"], input[type="text"], input[type="email"] {
-            width: 100%;
-            padding: 1rem;
-            font-size: 1rem;
-            border: 2px solid #E0E4E8;
-            border-radius: 8px;
-            transition: border-color 0.3s;
-            background: white;
-        }
-
-        select:focus, input:focus {
-            outline: none;
-            border-color: #4A90A4;
-        }
-
-        .slider-container {
-            margin-top: 1rem;
-        }
-
-        .slider {
-            width: 100%;
-            height: 8px;
-            border-radius: 4px;
-            background: #E0E4E8;
-            outline: none;
-            -webkit-appearance: none;
-        }
-
-        .slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: #1E3A5F;
-            cursor: pointer;
-        }
-
-        .slider::-moz-range-thumb {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: #1E3A5F;
-            cursor: pointer;
-            border: none;
-        }
-
-        .slider-value {
-            text-align: center;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #1E3A5F;
-            margin-top: 0.5rem;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 1rem;
-            margin-top: 3rem;
-        }
-
-        .button {
-            flex: 1;
-            padding: 1.25rem;
-            font-size: 1.1rem;
-            font-weight: 600;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .button-primary {
-            background: linear-gradient(135deg, #1E3A5F 0%, #2C5F7C 100%);
-            color: white;
-        }
-
-        .button-primary:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(30, 58, 95, 0.3);
-        }
-
-        .button-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .button-secondary {
-            background: white;
-            color: #1E3A5F;
-            border: 2px solid #1E3A5F;
-        }
-
-        .button-secondary:hover {
-            background: #F5F7FA;
-        }
-
-        /* Results Styles */
-        .results-container {
-            display: none;
-        }
-
-        .results-container.show {
-            display: block;
-            animation: fadeIn 0.6s ease;
-        }
-
-        .diagnosis-header {
-            background: linear-gradient(135deg, #1E3A5F 0%, #2C5F7C 100%);
-            color: white;
-            padding: 3rem 2rem;
-            border-radius: 12px;
-            margin-bottom: 2rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .diagnosis-header::before {
-            content: '🎯';
-            position: absolute;
-            top: -30px;
-            right: -30px;
-            font-size: 200px;
-            opacity: 0.1;
-        }
-
-        .diagnosis-header h2 {
-            font-size: 2rem;
-            margin-bottom: 1rem;
-            position: relative;
-            z-index: 1;
-        }
-
-        .diagnosis-score-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-top: 2rem;
-            position: relative;
-            z-index: 1;
-        }
-
-        .score-card {
-            background: rgba(255, 255, 255, 0.15);
-            padding: 1.5rem;
-            border-radius: 8px;
-            text-align: center;
-            backdrop-filter: blur(10px);
-        }
-
-        .score-value {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-
-        .score-label {
-            font-size: 0.95rem;
-            opacity: 0.9;
-        }
-
-        .evidence-section {
-            background: #FFF3CD;
-            padding: 2rem;
-            border-radius: 12px;
-            margin-bottom: 2rem;
-            border-left: 4px solid #FF8C00;
-        }
-
-        .evidence-title {
-            font-size: 1.5rem;
-            color: #856404;
-            margin-bottom: 1rem;
-            font-weight: 600;
-        }
-
-        .evidence-item {
-            padding: 0.75rem 0;
-            color: #856404;
-            font-size: 1rem;
-        }
-
-        .evidence-item strong {
-            color: #664103;
-        }
-
-        .calculation-section {
-            background: #E8F4F8;
-            padding: 2rem;
-            border-radius: 12px;
-            margin-bottom: 2rem;
-        }
-
-        .calculation-title {
-            font-size: 1.5rem;
-            color: #1E3A5F;
-            margin-bottom: 1.5rem;
-            font-weight: 600;
-        }
-
-        .cost-breakdown {
-            display: grid;
-            gap: 1rem;
-        }
-
-        .cost-item {
-            background: white;
-            padding: 1.25rem;
-            border-radius: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .cost-description {
-            font-size: 1rem;
-            color: #2F2F2F;
-        }
-
-        .cost-formula {
-            font-size: 0.85rem;
-            color: #6B6B6B;
-            margin-top: 0.25rem;
-        }
-
-        .cost-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #E63946;
-        }
-
-        .total-cost {
-            background: #FFE5E5;
-            padding: 2rem;
-            border-radius: 8px;
-            margin-top: 1rem;
-            text-align: center;
-            border: 2px solid #E63946;
-        }
-
-        .total-cost-label {
-            font-size: 1rem;
-            color: #C41E3A;
-            margin-bottom: 0.5rem;
-        }
-
-        .total-cost-value {
-            font-size: 3rem;
-            font-weight: 700;
-            color: #C41E3A;
-        }
-
-        .findings-section {
-            background: white;
-            padding: 2rem;
-            border-radius: 12px;
-            margin-bottom: 2rem;
-            border: 2px solid #4A90A4;
-        }
-
-        .finding-item {
-            margin-bottom: 2rem;
-            padding-bottom: 2rem;
-            border-bottom: 1px solid #E0E4E8;
-        }
-
-        .finding-item:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-            padding-bottom: 0;
-        }
-
-        .finding-title {
-            font-size: 1.3rem;
-            color: #1E3A5F;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-        }
-
-        .confidence-badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-left: 0.5rem;
-        }
-
-        .confidence-high {
-            background: #E8F5E9;
-            color: #2D7A3E;
-        }
-
-        .confidence-medium {
-            background: #FFF3E0;
-            color: #E65100;
-        }
-
-        .cta-section {
-            background: linear-gradient(135deg, #1E3A5F 0%, #2C5F7C 100%);
-            color: white;
-            padding: 3rem;
-            border-radius: 12px;
-            text-align: center;
-        }
-
-        .cta-section h3 {
-            font-size: 2rem;
-            margin-bottom: 1rem;
-        }
-
-        .cta-button {
-            display: inline-block;
-            padding: 1.25rem 2.5rem;
-            background: white;
-            color: #1E3A5F;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 1.1rem;
-            transition: all 0.3s;
-            margin-top: 1.5rem;
-        }
-
-        .cta-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3);
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding: 1rem;
-            }
-
-            .header h1 {
-                font-size: 2rem;
-            }
-
-            .content {
-                padding: 2rem 1.5rem;
-            }
-
-            .button-group {
-                flex-direction: column-reverse;
-            }
-
-            .diagnosis-score-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <div class="ai-badge">🎯 EVIDENCE-BASED ANALYSIS</div>
-            <h1>Operational Health Diagnostic</h1>
-            <p>Answer questions about your actual recent experiences. We'll calculate the real cost from your data—no guessing.</p>
+<!-- This file shows ONLY the sections to ADD to your existing diagnostic.html -->
+<!-- Insert these sections BEFORE the Contact Information section (Section 6) -->
+
+<!-- NEW SECTION 6: Workflow Identification -->
+<div class="section" id="section6">
+    <div class="question-group">
+        <div class="question-label">What are your 3 most critical workflows that need improvement?</div>
+        <div class="question-help">Examples: Customer onboarding, Sales to delivery handoff, Approval processes, Order fulfillment</div>
+        
+        <div class="workflow-input-block">
+            <div class="workflow-input-row">
+                <div class="input-group" style="flex: 2;">
+                    <label class="input-label">Workflow 1</label>
+                    <input type="text" id="workflow1Name" placeholder="e.g., Customer Onboarding">
+                </div>
+                <div class="input-group" style="flex: 1;">
+                    <label class="input-label">How does it happen?</label>
+                    <select id="workflow1Type">
+                        <option value="">Select...</option>
+                        <option value="online">Mostly online (email, Slack, systems)</option>
+                        <option value="offline">Mostly offline (meetings, calls, documents)</option>
+                        <option value="hybrid">Mix of online and offline</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label class="input-label">Which departments/teams are involved?</label>
+                <input type="text" id="workflow1Depts" placeholder="e.g., Sales, Operations, Finance">
+            </div>
         </div>
 
-        <div class="content">
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-            </div>
-
-            <!-- Section 1: Workflow Timing -->
-            <div class="section active" id="section1">
-                <div class="question-group">
-                    <div class="question-label">Think of the last time you completed a full workflow (e.g., processed an order, onboarded a client, fulfilled a request). From start to finish, how many days did it take?</div>
-                    <div class="question-help">Be specific about one recent example</div>
-                    
-                    <div class="input-group">
-                        <label class="input-label">Actual time (days)</label>
-                        <select id="actualTime">
-                            <option value="">Select...</option>
-                            <option value="0.5">Same day (< 8 hours)</option>
-                            <option value="2">2-3 days</option>
-                            <option value="5">4-7 days</option>
-                            <option value="10">1-2 weeks</option>
-                            <option value="21">3-4 weeks</option>
-                            <option value="45">1-2 months</option>
-                            <option value="90">2+ months</option>
-                        </select>
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label">Ideal time (how long SHOULD it take?)</label>
-                        <select id="idealTime">
-                            <option value="">Select...</option>
-                            <option value="0.5">Same day</option>
-                            <option value="2">2-3 days</option>
-                            <option value="5">1 week</option>
-                            <option value="10">2 weeks</option>
-                            <option value="21">3-4 weeks</option>
-                        </select>
-                    </div>
+        <div class="workflow-input-block">
+            <div class="workflow-input-row">
+                <div class="input-group" style="flex: 2;">
+                    <label class="input-label">Workflow 2</label>
+                    <input type="text" id="workflow2Name" placeholder="e.g., Deal Approval">
                 </div>
-
-                <div class="question-group">
-                    <div class="question-label">In the last week, what's the longest you waited for someone to respond to something you needed to move forward?</div>
-                    
-                    <div class="input-group">
-                        <label class="input-label">Longest wait time</label>
-                        <select id="waitTime">
-                            <option value="">Select...</option>
-                            <option value="0.1">Less than 2 hours</option>
-                            <option value="0.5">Same day</option>
-                            <option value="1.5">1-2 days</option>
-                            <option value="4">3-5 days</option>
-                            <option value="7">1 week</option>
-                            <option value="14">2+ weeks</option>
-                        </select>
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label">How often does waiting like this happen?</label>
-                        <select id="waitFrequency">
-                            <option value="">Select...</option>
-                            <option value="monthly">Rarely (monthly or less)</option>
-                            <option value="weekly">Sometimes (weekly)</option>
-                            <option value="daily">Frequently (daily)</option>
-                            <option value="multiple">Constantly (multiple times/day)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="button-group">
-                    <button class="button button-primary" onclick="nextSection(2)">Continue →</button>
+                <div class="input-group" style="flex: 1;">
+                    <label class="input-label">How does it happen?</label>
+                    <select id="workflow2Type">
+                        <option value="">Select...</option>
+                        <option value="online">Mostly online</option>
+                        <option value="offline">Mostly offline</option>
+                        <option value="hybrid">Mix</option>
+                    </select>
                 </div>
             </div>
 
-            <!-- Section 2: Coordination & Meetings -->
-            <div class="section" id="section2">
-                <div class="question-group">
-                    <div class="question-label">Last week, how many hours did you spend in meetings where the main purpose was to figure out status or "where are we on X"?</div>
-                    <div class="question-help">Include standups, status updates, sync meetings</div>
-                    
-                    <div class="slider-container">
-                        <input type="range" min="0" max="20" value="0" class="slider" id="meetingHours">
-                        <div class="slider-value"><span id="meetingHoursValue">0</span> hours</div>
-                    </div>
-                </div>
+            <div class="input-group">
+                <label class="input-label">Which departments/teams?</label>
+                <input type="text" id="workflow2Depts" placeholder="e.g., Sales, Finance, Leadership">
+            </div>
+        </div>
 
-                <div class="question-group">
-                    <div class="question-label">How many people were typically in these status meetings?</div>
-                    
-                    <div class="input-group">
-                        <select id="meetingPeople">
-                            <option value="">Select...</option>
-                            <option value="2">2-3 people</option>
-                            <option value="5">4-6 people</option>
-                            <option value="8">7-10 people</option>
-                            <option value="15">10+ people</option>
-                        </select>
-                    </div>
+        <div class="workflow-input-block">
+            <div class="workflow-input-row">
+                <div class="input-group" style="flex: 2;">
+                    <label class="input-label">Workflow 3 (optional)</label>
+                    <input type="text" id="workflow3Name" placeholder="e.g., Employee Onboarding">
                 </div>
-
-                <div class="question-group">
-                    <div class="question-label">Yesterday, how much time did you spend looking for information (files, data, answers, approvals)?</div>
-                    
-                    <div class="slider-container">
-                        <input type="range" min="0" max="180" step="15" value="0" class="slider" id="searchTime">
-                        <div class="slider-value"><span id="searchTimeValue">0</span> minutes</div>
-                    </div>
-                </div>
-
-                <div class="button-group">
-                    <button class="button button-secondary" onclick="previousSection(1)">← Back</button>
-                    <button class="button button-primary" onclick="nextSection(3)">Continue →</button>
+                <div class="input-group" style="flex: 1;">
+                    <label class="input-label">How does it happen?</label>
+                    <select id="workflow3Type">
+                        <option value="">Select...</option>
+                        <option value="online">Mostly online</option>
+                        <option value="offline">Mostly offline</option>
+                        <option value="hybrid">Mix</option>
+                    </select>
                 </div>
             </div>
 
-            <!-- Section 3: Data & Systems -->
-            <div class="section" id="section3">
-                <div class="question-group">
-                    <div class="question-label">In the last month, have you seen the same metric show different numbers in different places?</div>
-                    
-                    <div class="input-group">
-                        <select id="dataDiscrepancy">
-                            <option value="">Select...</option>
-                            <option value="never">No, never</option>
-                            <option value="once">Yes, once</option>
-                            <option value="few">Yes, a few times</option>
-                            <option value="frequent">Yes, frequently (weekly)</option>
-                            <option value="always">Yes, we always have to reconcile</option>
-                        </select>
-                    </div>
-
-                    <div class="input-group" id="reconcileTimeGroup" style="display: none;">
-                        <label class="input-label">How long does it typically take to figure out which number is right?</label>
-                        <select id="reconcileTime">
-                            <option value="">Select...</option>
-                            <option value="10">5-15 minutes</option>
-                            <option value="22">15-30 minutes</option>
-                            <option value="45">30-60 minutes</option>
-                            <option value="120">1-2 hours</option>
-                            <option value="240">2+ hours</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="question-group">
-                    <div class="question-label">In a typical day, roughly how many times do you copy data from one system and paste it into another?</div>
-                    
-                    <div class="slider-container">
-                        <input type="range" min="0" max="50" value="0" class="slider" id="copyPaste">
-                        <div class="slider-value"><span id="copyPasteValue">0</span> times</div>
-                    </div>
-                </div>
-
-                <div class="question-group">
-                    <div class="question-label">Do you maintain spreadsheets that are NOT connected to your official systems but that you NEED to do your job?</div>
-                    
-                    <div class="input-group">
-                        <select id="shadowSpreadsheets">
-                            <option value="">Select...</option>
-                            <option value="0">No</option>
-                            <option value="1">Yes - 1 spreadsheet</option>
-                            <option value="2.5">Yes - 2-3 spreadsheets</option>
-                            <option value="5">Yes - 4+ spreadsheets</option>
-                        </select>
-                    </div>
-
-                    <div class="input-group" id="spreadsheetTimeGroup" style="display: none;">
-                        <label class="input-label">How many hours per week updating these spreadsheets?</label>
-                        <div class="slider-container">
-                            <input type="range" min="0" max="20" value="0" class="slider" id="spreadsheetTime">
-                            <div class="slider-value"><span id="spreadsheetTimeValue">0</span> hours</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="button-group">
-                    <button class="button button-secondary" onclick="previousSection(2)">← Back</button>
-                    <button class="button button-primary" onclick="nextSection(4)">Continue →</button>
-                </div>
-            </div>
-
-            <!-- Section 4: Tools & Work -->
-            <div class="section" id="section4">
-                <div class="question-group">
-                    <div class="question-label">Think of a task you completed recently. How many different tools/systems did you have to use?</div>
-                    
-                    <div class="input-group">
-                        <select id="toolCount">
-                            <option value="">Select...</option>
-                            <option value="1">1-2 tools</option>
-                            <option value="3">3-4 tools</option>
-                            <option value="6">5-7 tools</option>
-                            <option value="10">8+ tools</option>
-                        </select>
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label">How many times did you switch between these tools?</label>
-                        <select id="toolSwitches">
-                            <option value="">Select...</option>
-                            <option value="2">Once or twice</option>
-                            <option value="4">3-5 times</option>
-                            <option value="8">6-10 times</option>
-                            <option value="15">10+ times</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="question-group">
-                    <div class="question-label">Think of the last report you created from scratch (not automated). How long did it take to gather the data?</div>
-                    
-                    <div class="slider-container">
-                        <input type="range" min="0" max="20" value="0" class="slider" id="reportHours">
-                        <div class="slider-value"><span id="reportHoursValue">0</span> hours</div>
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label">How often do you create reports like this?</label>
-                        <select id="reportFrequency">
-                            <option value="">Select...</option>
-                            <option value="monthly">Monthly</option>
-                            <option value="weekly">Weekly</option>
-                            <option value="daily">Daily</option>
-                            <option value="multiple">Multiple times/day</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="button-group">
-                    <button class="button button-secondary" onclick="previousSection(3)">← Back</button>
-                    <button class="button button-primary" onclick="nextSection(5)">Continue →</button>
-                </div>
-            </div>
-
-            <!-- Section 5: Company Context -->
-            <div class="section" id="section5">
-                <div class="question-group">
-                    <div class="question-label">How long did it take your most recent hire to become fully productive (no hand-holding)?</div>
-                    
-                    <div class="input-group">
-                        <select id="onboardingTime">
-                            <option value="">Select...</option>
-                            <option value="0.5">Less than 1 week</option>
-                            <option value="1.5">1-2 weeks</option>
-                            <option value="4">1 month</option>
-                            <option value="10">2-3 months</option>
-                            <option value="18">3-6 months</option>
-                            <option value="30">6+ months</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="question-group">
-                    <div class="question-label">In the last quarter, did you miss an opportunity (sale, partnership, hire) because you couldn't move fast enough?</div>
-                    
-                    <div class="input-group">
-                        <select id="missedOpportunities">
-                            <option value="">Select...</option>
-                            <option value="0">No</option>
-                            <option value="1">Yes - 1 time</option>
-                            <option value="2.5">Yes - 2-3 times</option>
-                            <option value="5">Yes - 4+ times</option>
-                        </select>
-                    </div>
-
-                    <div class="input-group" id="opportunityValueGroup" style="display: none;">
-                        <label class="input-label">Approximate average value per missed opportunity (£)</label>
-                        <input type="number" id="opportunityValue" placeholder="50000" min="0" step="1000">
-                    </div>
-                </div>
-
-                <div class="question-group">
-                    <div class="question-label">Your company information</div>
-                    
-                    <div class="input-group">
-                        <label class="input-label">Full Name *</label>
-                        <input type="text" id="name" required placeholder="John Smith">
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label">Work Email *</label>
-                        <input type="email" id="email" required placeholder="john@company.com">
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label">Company Name *</label>
-                        <input type="text" id="company" required placeholder="Acme Corporation">
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label">Team Size *</label>
-                        <select id="teamSize" required>
-                            <option value="">Select...</option>
-                            <option value="10">1-20 people</option>
-                            <option value="35">21-50 people</option>
-                            <option value="75">51-100 people</option>
-                            <option value="150">101-200 people</option>
-                            <option value="350">201-500 people</option>
-                            <option value="750">500+ people</option>
-                        </select>
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label">Industry</label>
-                        <select id="industry">
-                            <option value="">Select...</option>
-                            <option value="technology">Technology / SaaS</option>
-                            <option value="finance">Financial Services</option>
-                            <option value="healthcare">Healthcare</option>
-                            <option value="retail">Retail / E-commerce</option>
-                            <option value="manufacturing">Manufacturing</option>
-                            <option value="professional">Professional Services</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="button-group">
-                    <button class="button button-secondary" onclick="previousSection(4)">← Back</button>
-                    <button class="button button-primary" onclick="generateDiagnosis()">Generate Analysis →</button>
-                </div>
-            </div>
-
-            <!-- Results Container -->
-            <div class="results-container" id="resultsContainer">
-                <!-- Results will be rendered here -->
+            <div class="input-group">
+                <label class="input-label">Which departments/teams?</label>
+                <input type="text" id="workflow3Depts" placeholder="e.g., HR, IT, Operations">
             </div>
         </div>
     </div>
 
-    <script>
-        // State management
-        const state = {
-            currentSection: 1,
-            responses: {}
-        };
+    <div class="question-group">
+        <div class="question-label">Where does information flow for these workflows?</div>
+        <div class="question-help">Select all that apply</div>
+        
+        <div class="checkbox-grid">
+            <label class="checkbox-label">
+                <input type="checkbox" value="email" name="channels">
+                <span class="checkbox-text">📧 Email</span>
+            </label>
+            <label class="checkbox-label">
+                <input type="checkbox" value="slack" name="channels">
+                <span class="checkbox-text">💬 Slack</span>
+            </label>
+            <label class="checkbox-label">
+                <input type="checkbox" value="teams" name="channels">
+                <span class="checkbox-text">👥 Microsoft Teams</span>
+            </label>
+            <label class="checkbox-label">
+                <input type="checkbox" value="crm" name="channels">
+                <span class="checkbox-text">📊 CRM (Salesforce/HubSpot)</span>
+            </label>
+            <label class="checkbox-label">
+                <input type="checkbox" value="project" name="channels">
+                <span class="checkbox-text">✅ Project Tools (Asana/Jira/Monday)</span>
+            </label>
+            <label class="checkbox-label">
+                <input type="checkbox" value="spreadsheets" name="channels">
+                <span class="checkbox-text">📑 Spreadsheets</span>
+            </label>
+            <label class="checkbox-label">
+                <input type="checkbox" value="meetings" name="channels">
+                <span class="checkbox-text">🤝 In-person Meetings</span>
+            </label>
+            <label class="checkbox-label">
+                <input type="checkbox" value="calls" name="channels">
+                <span class="checkbox-text">📞 Phone Calls</span>
+            </label>
+        </div>
+    </div>
 
-        // Update slider displays
-        document.getElementById('meetingHours').addEventListener('input', function() {
-            document.getElementById('meetingHoursValue').textContent = this.value;
-        });
+    <div class="button-group">
+        <button class="button button-secondary" onclick="previousSection(5)">← Back</button>
+        <button class="button button-primary" onclick="nextSection(7)">Continue →</button>
+    </div>
+</div>
 
-        document.getElementById('searchTime').addEventListener('input', function() {
-            document.getElementById('searchTimeValue').textContent = this.value;
-        });
+<!-- NEW SECTION 7: Tool Connection Consent -->
+<div class="section" id="section7">
+    <div class="consent-hero">
+        <div class="consent-icon">🚀</div>
+        <h2 class="consent-title">Get Your Workflows Auto-Mapped</h2>
+        <p class="consent-subtitle">Instead of 6-8 weeks of manual interviews, connect your tools and we'll auto-generate precise swimlane diagrams from your actual data in 3 days.</p>
+    </div>
 
-        document.getElementById('copyPaste').addEventListener('input', function() {
-            document.getElementById('copyPasteValue').textContent = this.value;
-        });
+    <div class="question-group">
+        <div class="question-label">Connect tools for automated workflow mapping</div>
+        <div class="question-help">We'll analyze your workflows and create visual diagrams showing exactly where time is lost</div>
+        
+        <div class="tool-consent-grid">
+            <label class="tool-consent-card">
+                <input type="checkbox" id="consentGmail" name="toolConsent">
+                <div class="tool-consent-content">
+                    <div class="tool-consent-header">
+                        <span class="tool-consent-icon">📧</span>
+                        <span class="tool-consent-name">Gmail / Outlook</span>
+                    </div>
+                    <div class="tool-consent-description">
+                        Map email-based workflows, detect handoff patterns, measure response times
+                    </div>
+                    <div class="tool-consent-badge">Read-only access</div>
+                </div>
+            </label>
 
-        document.getElementById('spreadsheetTime').addEventListener('input', function() {
-            document.getElementById('spreadsheetTimeValue').textContent = this.value;
-        });
+            <label class="tool-consent-card">
+                <input type="checkbox" id="consentSlack" name="toolConsent">
+                <div class="tool-consent-content">
+                    <div class="tool-consent-header">
+                        <span class="tool-consent-icon">💬</span>
+                        <span class="tool-consent-name">Slack</span>
+                    </div>
+                    <div class="tool-consent-description">
+                        Identify workflow triggers, measure delays, find bottlenecks in team communication
+                    </div>
+                    <div class="tool-consent-badge">Read-only access</div>
+                </div>
+            </label>
 
-        document.getElementById('reportHours').addEventListener('input', function() {
-            document.getElementById('reportHoursValue').textContent = this.value;
-        });
+            <label class="tool-consent-card">
+                <input type="checkbox" id="consentCRM" name="toolConsent">
+                <div class="tool-consent-content">
+                    <div class="tool-consent-header">
+                        <span class="tool-consent-icon">📊</span>
+                        <span class="tool-consent-name">CRM (Salesforce/HubSpot)</span>
+                    </div>
+                    <div class="tool-consent-description">
+                        Analyze pipeline stages, measure conversion times, detect stage delays
+                    </div>
+                    <div class="tool-consent-badge">Read-only access</div>
+                </div>
+            </label>
 
-        // Conditional displays
-        document.getElementById('dataDiscrepancy').addEventListener('change', function() {
-            const group = document.getElementById('reconcileTimeGroup');
-            group.style.display = this.value && this.value !== 'never' ? 'block' : 'none';
-        });
+            <label class="tool-consent-card">
+                <input type="checkbox" id="consentCalendar" name="toolConsent">
+                <div class="tool-consent-content">
+                    <div class="tool-consent-header">
+                        <span class="tool-consent-icon">📅</span>
+                        <span class="tool-consent-name">Google Calendar</span>
+                    </div>
+                    <div class="tool-consent-description">
+                        Measure meeting overhead, identify coordination costs, analyze time allocation
+                    </div>
+                    <div class="tool-consent-badge">Read-only access</div>
+                </div>
+            </label>
+        </div>
 
-        document.getElementById('shadowSpreadsheets').addEventListener('change', function() {
-            const group = document.getElementById('spreadsheetTimeGroup');
-            group.style.display = this.value && parseFloat(this.value) > 0 ? 'block' : 'none';
-        });
+        <div class="privacy-notice">
+            <div class="privacy-icon">🔒</div>
+            <div class="privacy-content">
+                <strong>Your Privacy & Security:</strong>
+                <ul>
+                    <li>We only READ data, never write or modify anything</li>
+                    <li>You can revoke access anytime from your tool settings</li>
+                    <li>All data is encrypted in transit and at rest</li>
+                    <li>Data is automatically deleted after 7 days</li>
+                    <li>SOC 2 Type II certified infrastructure</li>
+                </ul>
+            </div>
+        </div>
+    </div>
 
-        document.getElementById('missedOpportunities').addEventListener('change', function() {
-            const group = document.getElementById('opportunityValueGroup');
-            group.style.display = this.value && parseFloat(this.value) > 0 ? 'block' : 'none';
-        });
+    <div class="question-group">
+        <div class="alternative-option">
+            <div class="alternative-header">
+                <span class="alternative-icon">📝</span>
+                <strong>Prefer not to connect tools?</strong>
+            </div>
+            <p>No problem! We'll send you a 5-minute guided survey to map your workflows manually instead.</p>
+            <label class="checkbox-label">
+                <input type="checkbox" id="preferManual">
+                <span class="checkbox-text">Skip tool connection, use guided survey instead</span>
+            </label>
+        </div>
+    </div>
 
-        function nextSection(sectionNum) {
-            document.getElementById(`section${state.currentSection}`).classList.remove('active');
-            document.getElementById(`section${sectionNum}`).classList.add('active');
-            state.currentSection = sectionNum;
-            updateProgress();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+    <div class="button-group">
+        <button class="button button-secondary" onclick="previousSection(6)">← Back</button>
+        <button class="button button-primary" onclick="nextSection(8)">Continue →</button>
+    </div>
+</div>
+
+<!-- Update Contact section number to 8 -->
+<div class="section" id="section8">
+    <!-- Existing contact form fields remain the same -->
+    <!-- Just change the section ID from 7 to 8 -->
+</div>
+
+<!-- ADD THESE STYLES to the <style> section -->
+<style>
+/* Workflow Input Styles */
+.workflow-input-block {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    border: 2px solid #E0E4E8;
+}
+
+.workflow-input-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* Checkbox Grid */
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    background: white;
+    border: 2px solid #E0E4E8;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.checkbox-label:hover {
+    border-color: #4A90A4;
+    background: #F5F7FA;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-right: 0.75rem;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkbox-text {
+    color: #1E3A5F;
+    font-weight: 600;
+}
+
+.checkbox-text {
+    font-size: 1rem;
+}
+
+/* Tool Consent Styles */
+.consent-hero {
+    text-align: center;
+    padding: 2rem;
+    background: linear-gradient(135deg, #E8F4F8 0%, #F5F7FA 100%);
+    border-radius: 12px;
+    margin-bottom: 2rem;
+}
+
+.consent-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.consent-title {
+    font-size: 2rem;
+    color: #1E3A5F;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+}
+
+.consent-subtitle {
+    font-size: 1.1rem;
+    color: #6B6B6B;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.tool-consent-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.tool-consent-card {
+    position: relative;
+    display: block;
+    background: white;
+    border: 3px solid #E0E4E8;
+    border-radius: 12px;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.tool-consent-card:hover {
+    border-color: #4A90A4;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(74, 144, 164, 0.15);
+}
+
+.tool-consent-card input[type="checkbox"] {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+}
+
+.tool-consent-card input[type="checkbox"]:checked ~ .tool-consent-content {
+    opacity: 1;
+}
+
+.tool-consent-card input[type="checkbox"]:checked {
+    accent-color: #1E3A5F;
+}
+
+.tool-consent-content {
+    opacity: 0.7;
+    transition: opacity 0.3s;
+}
+
+.tool-consent-card:hover .tool-consent-content {
+    opacity: 1;
+}
+
+.tool-consent-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.tool-consent-icon {
+    font-size: 2rem;
+}
+
+.tool-consent-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #1E3A5F;
+}
+
+.tool-consent-description {
+    font-size: 0.95rem;
+    color: #6B6B6B;
+    line-height: 1.5;
+    margin-bottom: 0.75rem;
+}
+
+.tool-consent-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #E8F5E9;
+    color: #2D7A3E;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.privacy-notice {
+    display: flex;
+    gap: 1rem;
+    background: #FFF3E0;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-top: 2rem;
+    border-left: 4px solid #FF8C00;
+}
+
+.privacy-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.privacy-content {
+    font-size: 0.95rem;
+    color: #6B6B6B;
+}
+
+.privacy-content strong {
+    color: #856404;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.privacy-content ul {
+    margin-left: 1.5rem;
+    margin-top: 0.5rem;
+}
+
+.privacy-content li {
+    margin-bottom: 0.25rem;
+}
+
+.alternative-option {
+    background: #F5F7FA;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid #4A90A4;
+}
+
+.alternative-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 1.1rem;
+    color: #1E3A5F;
+}
+
+.alternative-icon {
+    font-size: 1.5rem;
+}
+
+.alternative-option p {
+    color: #6B6B6B;
+    margin-bottom: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .workflow-input-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .checkbox-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .tool-consent-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<!-- ADD THIS JAVASCRIPT UPDATE -->
+<!-- Find the generateAnalysis() function and UPDATE it: -->
+
+<script>
+// UPDATE the generateAnalysis function to collect workflow and consent data
+
+async function generateAnalysis() {
+    // Show loading
+    showLoading();
+    
+    // Collect evidence data (existing code)
+    const evidence = {
+        actualTime: parseFloat(document.getElementById('actualTime').value),
+        idealTime: parseFloat(document.getElementById('idealTime').value),
+        waitTime: parseFloat(document.getElementById('waitTime').value),
+        waitFrequency: document.getElementById('waitFrequency').value,
+        meetingHours: parseFloat(document.getElementById('meetingHours').value),
+        meetingPeople: parseFloat(document.getElementById('meetingPeople').value),
+        searchTime: parseFloat(document.getElementById('searchTime').value),
+        dataInconsistent: document.getElementById('dataInconsistent').value,
+        dataFigureOutTime: parseFloat(document.getElementById('dataFigureOutTime').value),
+        copyPaste: parseFloat(document.getElementById('copyPaste').value),
+        shadowSpreadsheets: parseFloat(document.getElementById('shadowSpreadsheets').value),
+        spreadsheetHours: parseFloat(document.getElementById('spreadsheetHours').value),
+        toolCount: parseFloat(document.getElementById('toolCount').value),
+        toolSwitches: parseFloat(document.getElementById('toolSwitches').value),
+        reportHours: parseFloat(document.getElementById('reportHours').value),
+        reportFrequency: document.getElementById('reportFrequency').value,
+        onboardingWeeks: parseFloat(document.getElementById('onboardingWeeks').value),
+        missedOpportunities: parseFloat(document.getElementById('missedOpportunities').value),
+        opportunityValue: parseFloat(document.getElementById('opportunityValue').value || 0),
+        crossDeptWork: document.getElementById('crossDeptWork').value
+    };
+    
+    // NEW: Collect workflow data
+    const workflows = [
+        {
+            name: document.getElementById('workflow1Name').value,
+            type: document.getElementById('workflow1Type').value,
+            departments: document.getElementById('workflow1Depts').value.split(',').map(d => d.trim()).filter(d => d)
+        },
+        {
+            name: document.getElementById('workflow2Name').value,
+            type: document.getElementById('workflow2Type').value,
+            departments: document.getElementById('workflow2Depts').value.split(',').map(d => d.trim()).filter(d => d)
+        },
+        {
+            name: document.getElementById('workflow3Name').value,
+            type: document.getElementById('workflow3Type').value,
+            departments: document.getElementById('workflow3Depts').value.split(',').map(d => d.trim()).filter(d => d)
         }
-
-        function previousSection(sectionNum) {
-            document.getElementById(`section${state.currentSection}`).classList.remove('active');
-            document.getElementById(`section${sectionNum}`).classList.add('active');
-            state.currentSection = sectionNum;
-            updateProgress();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+    ].filter(wf => wf.name); // Only include workflows with names
+    
+    // NEW: Collect channels
+    const channels = Array.from(document.querySelectorAll('input[name="channels"]:checked')).map(cb => cb.value);
+    
+    // NEW: Collect tool consent
+    const toolConsent = {
+        gmail: document.getElementById('consentGmail')?.checked || false,
+        slack: document.getElementById('consentSlack')?.checked || false,
+        crm: document.getElementById('consentCRM')?.checked || false,
+        calendar: document.getElementById('consentCalendar')?.checked || false,
+        preferManual: document.getElementById('preferManual')?.checked || false
+    };
+    
+    // Collect contact data (existing)
+    const contact = {
+        name: document.getElementById('name').value,
+        email: document.getElementById('email').value,
+        company: document.getElementById('company').value,
+        teamSize: parseInt(document.getElementById('teamSize').value),
+        industry: document.getElementById('industry')?.value || ''
+    };
+    
+    const diagnosticData = {
+        evidence,
+        workflows,      // NEW
+        channels,       // NEW
+        toolConsent,    // NEW
+        contact
+    };
+    
+    try {
+        // Call Claude API for analysis
+        const aiResponse = await fetch('/api/analyze-symptoms', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(diagnosticData)
+        });
+        
+        if (!aiResponse.ok) {
+            throw new Error('Analysis failed');
         }
+        
+        const analysis = await aiResponse.json();
+        
+        // Display results
+        displayResults(analysis);
+        
+        // NEW: Send to n8n for workflow mapping
+        const n8nUrl = 'https://your-n8n-url.com/webhook/diagnostic-complete';
+        
+        fetch(n8nUrl, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                ...diagnosticData,
+                analysis: analysis.analysis  // Include AI results
+            })
+        }).then(() => {
+            // Show mapping status after results
+            showMappingStatus(toolConsent, workflows);
+        }).catch(err => {
+            console.error('n8n webhook error:', err);
+            // Continue anyway - user still gets AI analysis
+        });
+        
+    } catch (error) {
+        console.error('Analysis error:', error);
+        alert('Analysis failed. Please try again or contact support.');
+    }
+}
 
-        function updateProgress() {
-            const progress = (state.currentSection / 5) * 100;
-            document.getElementById('progressFill').style.width = progress + '%';
-        }
-
-        function generateDiagnosis() {
-            // Validate required fields
-            const name = document.getElementById('name').value;
-            const email = document.getElementById('email').value;
-            const company = document.getElementById('company').value;
-            const teamSize = document.getElementById('teamSize').value;
-
-            if (!name || !email || !company || !teamSize) {
-                alert('Please fill in all required fields');
-                return;
-            }
-
-            // Collect all responses
-            state.responses = {
-                actualTime: parseFloat(document.getElementById('actualTime').value) || 0,
-                idealTime: parseFloat(document.getElementById('idealTime').value) || 0,
-                waitTime: parseFloat(document.getElementById('waitTime').value) || 0,
-                waitFrequency: document.getElementById('waitFrequency').value,
-                meetingHours: parseFloat(document.getElementById('meetingHours').value) || 0,
-                meetingPeople: parseFloat(document.getElementById('meetingPeople').value) || 0,
-                searchTime: parseFloat(document.getElementById('searchTime').value) || 0,
-                dataDiscrepancy: document.getElementById('dataDiscrepancy').value,
-                reconcileTime: parseFloat(document.getElementById('reconcileTime').value) || 0,
-                copyPaste: parseFloat(document.getElementById('copyPaste').value) || 0,
-                shadowSpreadsheets: parseFloat(document.getElementById('shadowSpreadsheets').value) || 0,
-                spreadsheetTime: parseFloat(document.getElementById('spreadsheetTime').value) || 0,
-                toolCount: parseFloat(document.getElementById('toolCount').value) || 0,
-                toolSwitches: parseFloat(document.getElementById('toolSwitches').value) || 0,
-                reportHours: parseFloat(document.getElementById('reportHours').value) || 0,
-                reportFrequency: document.getElementById('reportFrequency').value,
-                onboardingTime: parseFloat(document.getElementById('onboardingTime').value) || 0,
-                missedOpportunities: parseFloat(document.getElementById('missedOpportunities').value) || 0,
-                opportunityValue: parseFloat(document.getElementById('opportunityValue').value) || 50000,
-                name: name,
-                email: email,
-                company: company,
-                teamSize: parseFloat(teamSize),
-                industry: document.getElementById('industry').value
-            };
-
-            // Generate diagnosis
-            const diagnosis = analyzeEvidence(state.responses);
-
-            // Display results
-            displayResults(diagnosis);
-
-            // Hide form, show results
-            document.getElementById('section5').classList.remove('active');
-            document.getElementById('resultsContainer').classList.add('show');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        // EVIDENCE-BASED ANALYSIS ENGINE
-        function analyzeEvidence(data) {
-            const analysis = {
-                evidence: {},
-                calculations: {},
-                findings: [],
-                healthScore: 100,
-                totalCost: 0,
-                confidence: 'HIGH'
-            };
-
-            // Constants
-            const AVG_HOURLY_RATE = 25; // £25/hour conservative estimate
-            const WORKDAYS_YEAR = 250;
-            const WEEKS_YEAR = 50;
-
-            // 1. WORKFLOW TIMING ANALYSIS
-            if (data.actualTime > 0 && data.idealTime > 0) {
-                const delayFactor = data.actualTime / data.idealTime;
-                analysis.evidence.cycleTime = {
-                    actual: data.actualTime,
-                    ideal: data.idealTime,
-                    delayFactor: delayFactor.toFixed(1)
-                };
-
-                if (delayFactor >= 2) {
-                    const estimatedHandoffs = Math.ceil(data.waitTime * 2);
-                    analysis.findings.push({
-                        title: 'Severe Workflow Fragmentation',
-                        confidence: 'HIGH',
-                        evidence: `Actual cycle time: ${data.actualTime} days vs ideal: ${data.idealTime} days = ${delayFactor.toFixed(1)}x delay`,
-                        impact: `Estimated ${estimatedHandoffs}+ handoffs based on ${data.waitTime} day wait times`,
-                        description: `Work bounces through ${estimatedHandoffs}+ touchpoints without clear ownership. Each handoff introduces delays and errors.`
-                    });
-
-                    analysis.healthScore -= 15;
-                }
-            }
-
-            // 2. COORDINATION COST ANALYSIS
-            if (data.meetingHours > 0 && data.meetingPeople > 0) {
-                const weeklyMeetingCost = data.meetingHours * data.meetingPeople * AVG_HOURLY_RATE;
-                const annualMeetingCost = weeklyMeetingCost * WEEKS_YEAR;
+// NEW: Show mapping status function
+function showMappingStatus(consent, workflows) {
+    const resultsDiv = document.getElementById('results');
+    
+    let statusHTML = `
+        <div class="mapping-status-section">
+            <div class="status-header">
+                <h2>📊 Workflow Mapping in Progress</h2>
+                <p>We're analyzing your workflows to create detailed swimlane diagrams</p>
+            </div>
+            
+            <div class="status-timeline">
+                <div class="status-step complete">
+                    <div class="status-icon">✓</div>
+                    <div class="status-content">
+                        <div class="status-title">Diagnostic Complete</div>
+                        <div class="status-time">Just now</div>
+                    </div>
+                </div>
+    `;
+    
+    if (consent.gmail || consent.slack || consent.crm || consent.calendar) {
+        statusHTML += `
+                <div class="status-step pending">
+                    <div class="status-icon">⏳</div>
+                    <div class="status-content">
+                        <div class="status-title">Tool Connection</div>
+                        <div class="status-time">Check your email for connection links</div>
+                    </div>
+                </div>
                 
-                analysis.calculations.meetingCost = {
-                    formula: `${data.meetingHours} hrs/wk × ${data.meetingPeople} people × £${AVG_HOURLY_RATE}/hr × ${WEEKS_YEAR} weeks`,
-                    weeklyValue: weeklyMeetingCost,
-                    annualValue: annualMeetingCost
-                };
-
-                analysis.totalCost += annualMeetingCost;
-
-                if (data.meetingHours >= 5) {
-                    analysis.findings.push({
-                        title: 'Excessive Coordination Overhead',
-                        confidence: 'HIGH',
-                        evidence: `${data.meetingHours} hours/week in status meetings with ${data.meetingPeople} people`,
-                        impact: `£${Math.round(annualMeetingCost).toLocaleString()}/year in direct meeting time`,
-                        description: `Team spends ${Math.round((data.meetingHours / 40) * 100)}% of time coordinating vs executing. This is pure overhead that shouldn't exist.`
-                    });
-
-                    analysis.healthScore -= 12;
-                }
-            }
-
-            // 3. SEARCH TIME COST
-            if (data.searchTime > 0) {
-                const dailySearchCost = (data.searchTime / 60) * AVG_HOURLY_RATE * data.teamSize;
-                const annualSearchCost = dailySearchCost * WORKDAYS_YEAR;
-
-                analysis.calculations.searchCost = {
-                    formula: `${data.searchTime} min/day × ${data.teamSize} people × £${AVG_HOURLY_RATE}/hr × ${WORKDAYS_YEAR} days`,
-                    dailyValue: dailySearchCost,
-                    annualValue: annualSearchCost
-                };
-
-                analysis.totalCost += annualSearchCost;
-
-                if (data.searchTime >= 30) {
-                    analysis.findings.push({
-                        title: 'Information Discovery Problem',
-                        confidence: 'HIGH',
-                        evidence: `${data.searchTime} minutes/day spent hunting for information`,
-                        impact: `£${Math.round(annualSearchCost).toLocaleString()}/year in search time across team`,
-                        description: `Information isn't where people expect it. This suggests poor organization, scattered data, or lack of documentation.`
-                    });
-
-                    analysis.healthScore -= 10;
-                }
-            }
-
-            // 4. DATA RECONCILIATION COST
-            if (data.dataDiscrepancy && data.dataDiscrepancy !== 'never' && data.reconcileTime > 0) {
-                const frequencyMultiplier = {
-                    'once': 1,
-                    'few': 3,
-                    'frequent': 12,
-                    'always': 50
-                }[data.dataDiscrepancy] || 1;
-
-                const annualReconciliationCost = (data.reconcileTime / 60) * AVG_HOURLY_RATE * frequencyMultiplier * data.teamSize * 0.3;
-
-                analysis.calculations.reconciliationCost = {
-                    formula: `${data.reconcileTime} min × ${frequencyMultiplier} times/yr × ${Math.round(data.teamSize * 0.3)} people × £${AVG_HOURLY_RATE}/hr`,
-                    annualValue: annualReconciliationCost
-                };
-
-                analysis.totalCost += annualReconciliationCost;
-
-                if (data.dataDiscrepancy === 'frequent' || data.dataDiscrepancy === 'always') {
-                    analysis.findings.push({
-                        title: 'Broken Data Architecture',
-                        confidence: 'HIGH',
-                        evidence: `Data reconciliation needed ${data.dataDiscrepancy === 'frequent' ? 'weekly' : 'constantly'}, taking ${data.reconcileTime} minutes each time`,
-                        impact: `£${Math.round(annualReconciliationCost).toLocaleString()}/year in reconciliation time`,
-                        description: `Multiple sources of truth exist. No unified data layer means constant manual verification and widespread data distrust.`
-                    });
-
-                    analysis.healthScore -= 14;
-                }
-            }
-
-            // 5. MANUAL DATA TRANSFER COST
-            if (data.copyPaste > 0) {
-                const dailyTransferTime = (data.copyPaste * 2) / 60; // 2 min per copy-paste
-                const annualTransferCost = dailyTransferTime * AVG_HOURLY_RATE * data.teamSize * WORKDAYS_YEAR;
-
-                analysis.calculations.transferCost = {
-                    formula: `${data.copyPaste} copies/day × 2 min × ${data.teamSize} people × £${AVG_HOURLY_RATE}/hr × ${WORKDAYS_YEAR} days`,
-                    annualValue: annualTransferCost
-                };
-
-                analysis.totalCost += annualTransferCost;
-
-                if (data.copyPaste >= 10) {
-                    analysis.findings.push({
-                        title: 'Critical Integration Gaps',
-                        confidence: 'HIGH',
-                        evidence: `${data.copyPaste} manual data transfers per day`,
-                        impact: `£${Math.round(annualTransferCost).toLocaleString()}/year in manual data movement`,
-                        description: `Systems operate in isolation, forcing manual data bridges. This is proof of disconnected tools requiring constant human intervention.`
-                    });
-
-                    analysis.healthScore -= 11;
-                }
-            }
-
-            // 6. SHADOW SPREADSHEET COST
-            if (data.shadowSpreadsheets > 0 && data.spreadsheetTime > 0) {
-                const weeklySpreadsheetCost = data.spreadsheetTime * AVG_HOURLY_RATE * data.teamSize * 0.4;
-                const annualSpreadsheetCost = weeklySpreadsheetCost * WEEKS_YEAR;
-
-                analysis.calculations.spreadsheetCost = {
-                    formula: `${data.spreadsheetTime} hrs/wk × ${Math.round(data.teamSize * 0.4)} people × £${AVG_HOURLY_RATE}/hr × ${WEEKS_YEAR} weeks`,
-                    annualValue: annualSpreadsheetCost
-                };
-
-                analysis.totalCost += annualSpreadsheetCost;
-
-                if (data.shadowSpreadsheets >= 2) {
-                    analysis.findings.push({
-                        title: 'Shadow Database Economy',
-                        confidence: 'HIGH',
-                        evidence: `${data.shadowSpreadsheets} unofficial spreadsheets requiring ${data.spreadsheetTime} hours/week maintenance`,
-                        impact: `£${Math.round(annualSpreadsheetCost).toLocaleString()}/year maintaining shadow systems`,
-                        description: `Team has built parallel unofficial system because official systems don't work. These shadow databases are brittle and leave when people leave.`
-                    });
-
-                    analysis.healthScore -= 13;
-                }
-            }
-
-            // 7. TOOL PROLIFERATION COST
-            if (data.toolCount > 0 && data.toolSwitches > 0) {
-                const dailySwitchingTime = (data.toolSwitches * 3) / 60; // 3 min context switching cost per switch
-                const annualSwitchingCost = dailySwitchingTime * AVG_HOURLY_RATE * data.teamSize * WORKDAYS_YEAR;
-
-                analysis.calculations.switchingCost = {
-                    formula: `${data.toolSwitches} switches/task × 3 min × ${data.teamSize} people × £${AVG_HOURLY_RATE}/hr × ${WORKDAYS_YEAR} days`,
-                    annualValue: annualSwitchingCost
-                };
-
-                analysis.totalCost += annualSwitchingCost;
-
-                if (data.toolCount >= 6) {
-                    analysis.findings.push({
-                        title: 'Tool Sprawl & Context Switching',
-                        confidence: 'HIGH',
-                        evidence: `${data.toolCount} tools used per task with ${data.toolSwitches} context switches`,
-                        impact: `£${Math.round(annualSwitchingCost).toLocaleString()}/year in cognitive switching costs`,
-                        description: `Too many disconnected tools create constant context switching. Each switch has a cognitive cost - it takes time to reorient.`
-                    });
-
-                    analysis.healthScore -= 9;
-                }
-            }
-
-            // 8. REPORTING COST
-            if (data.reportHours > 0 && data.reportFrequency) {
-                const frequencyMultiplier = {
-                    'monthly': 12,
-                    'weekly': 52,
-                    'daily': 250,
-                    'multiple': 500
-                }[data.reportFrequency] || 12;
-
-                const reportersCount = Math.max(1, Math.round(data.teamSize * 0.2));
-                const annualReportCost = data.reportHours * AVG_HOURLY_RATE * frequencyMultiplier * reportersCount;
-
-                analysis.calculations.reportCost = {
-                    formula: `${data.reportHours} hrs × ${reportersCount} people × ${frequencyMultiplier} times/yr × £${AVG_HOURLY_RATE}/hr`,
-                    annualValue: annualReportCost
-                };
-
-                analysis.totalCost += annualReportCost;
-
-                if (data.reportHours >= 3 && (data.reportFrequency === 'weekly' || data.reportFrequency === 'daily')) {
-                    analysis.findings.push({
-                        title: 'Manual Reporting Burden',
-                        confidence: 'HIGH',
-                        evidence: `${data.reportHours} hours per report, created ${data.reportFrequency}`,
-                        impact: `£${Math.round(annualReportCost).toLocaleString()}/year in manual report creation`,
-                        description: `Reporting is manual and time-consuming. This suggests no automated dashboards or BI infrastructure.`
-                    });
-
-                    analysis.healthScore -= 8;
-                }
-            }
-
-            // 9. TRIBAL KNOWLEDGE INDICATOR
-            if (data.onboardingTime >= 10) {
-                analysis.findings.push({
-                    title: 'Dangerous Tribal Knowledge Dependency',
-                    confidence: 'MEDIUM',
-                    evidence: `${data.onboardingTime} weeks for new hire to reach productivity`,
-                    impact: 'High bus factor risk - knowledge in people\'s heads, not systems',
-                    description: `Long onboarding suggests undocumented processes. Critical knowledge lives in people's heads rather than systems, creating bottlenecks and single points of failure.`
-                });
-
-                analysis.healthScore -= 10;
-            }
-
-            // 10. OPPORTUNITY COST
-            if (data.missedOpportunities > 0) {
-                const quarterlyOpportunityCost = data.missedOpportunities * data.opportunityValue;
-                const annualOpportunityCost = quarterlyOpportunityCost * 4;
-
-                analysis.calculations.opportunityCost = {
-                    formula: `${data.missedOpportunities} opportunities/qtr × £${data.opportunityValue.toLocaleString()} × 4 quarters`,
-                    annualValue: annualOpportunityCost
-                };
-
-                analysis.totalCost += annualOpportunityCost;
-
-                analysis.findings.push({
-                    title: 'Operational Friction Costing Revenue',
-                    confidence: 'HIGH',
-                    evidence: `${data.missedOpportunities} opportunities missed last quarter due to speed`,
-                    impact: `£${Math.round(annualOpportunityCost).toLocaleString()}/year in missed opportunities`,
-                    description: `Internal operational problems are directly costing revenue. Can't move fast enough to capitalize on opportunities.`
-                });
-
-                analysis.healthScore -= 15;
-            }
-
-            // Calculate final health score
-            analysis.healthScore = Math.max(0, Math.min(100, analysis.healthScore));
-
-            // Determine criticality
-            if (analysis.healthScore < 40) {
-                analysis.criticality = 'CRITICAL';
-            } else if (analysis.healthScore < 55) {
-                analysis.criticality = 'HIGH';
-            } else if (analysis.healthScore < 70) {
-                analysis.criticality = 'MEDIUM';
-            } else {
-                analysis.criticality = 'LOW';
-            }
-
-            return analysis;
-        }
-
-        function displayResults(analysis) {
-            const container = document.getElementById('resultsContainer');
-
-            const criticalityColors = {
-                'LOW': '#2D7A3E',
-                'MEDIUM': '#FF8C00',
-                'HIGH': '#E63946',
-                'CRITICAL': '#C41E3A'
-            };
-
-            const color = criticalityColors[analysis.criticality];
-
-            let html = `
-                <div class="diagnosis-header" style="background: linear-gradient(135deg, ${color} 0%, ${color}dd 100%);">
-                    <h2>Evidence-Based Operational Diagnosis</h2>
-                    <p>Calculated from your actual time and cost data—not estimates.</p>
-                    
-                    <div class="diagnosis-score-grid">
-                        <div class="score-card">
-                            <div class="score-value">${Math.round(analysis.healthScore)}</div>
-                            <div class="score-label">Health Score</div>
-                        </div>
-                        <div class="score-card">
-                            <div class="score-value">${analysis.criticality}</div>
-                            <div class="score-label">Urgency Level</div>
-                        </div>
-                        <div class="score-card">
-                            <div class="score-value">${analysis.findings.length}</div>
-                            <div class="score-label">Issues Found</div>
-                        </div>
-                        <div class="score-card">
-                            <div class="score-value">${analysis.confidence}</div>
-                            <div class="score-label">Data Confidence</div>
-                        </div>
+                <div class="status-step pending">
+                    <div class="status-icon">○</div>
+                    <div class="status-content">
+                        <div class="status-title">Analyzing Workflows</div>
+                        <div class="status-time">Next 48 hours</div>
                     </div>
                 </div>
-
-                <div class="evidence-section">
-                    <h3 class="evidence-title">📊 Evidence From Your Responses</h3>
-            `;
-
-            // Show key evidence
-            if (analysis.evidence.cycleTime) {
-                html += `
-                    <div class="evidence-item">
-                        <strong>Cycle Time:</strong> ${analysis.evidence.cycleTime.actual} days actual vs ${analysis.evidence.cycleTime.ideal} days ideal = <strong>${analysis.evidence.cycleTime.delayFactor}x delay</strong>
-                    </div>
-                `;
-            }
-
-            if (state.responses.meetingHours > 0) {
-                html += `
-                    <div class="evidence-item">
-                        <strong>Status Meetings:</strong> ${state.responses.meetingHours} hours/week with ${state.responses.meetingPeople} people
-                    </div>
-                `;
-            }
-
-            if (state.responses.searchTime > 0) {
-                html += `
-                    <div class="evidence-item">
-                        <strong>Information Hunt Time:</strong> ${state.responses.searchTime} minutes/day looking for files/data
-                    </div>
-                `;
-            }
-
-            if (state.responses.copyPaste > 0) {
-                html += `
-                    <div class="evidence-item">
-                        <strong>Manual Data Transfers:</strong> ${state.responses.copyPaste} copy-paste operations per day
-                    </div>
-                `;
-            }
-
-            html += `</div>`;
-
-            // Cost calculations
-            html += `
-                <div class="calculation-section">
-                    <h3 class="calculation-title">💰 Calculated Costs (From Your Data)</h3>
-                    <div class="cost-breakdown">
-            `;
-
-            for (const [key, calc] of Object.entries(analysis.calculations)) {
-                if (calc.annualValue > 0) {
-                    html += `
-                        <div class="cost-item">
-                            <div>
-                                <div class="cost-description">${formatCostLabel(key)}</div>
-                                <div class="cost-formula">${calc.formula}</div>
-                            </div>
-                            <div class="cost-value">£${Math.round(calc.annualValue).toLocaleString()}</div>
-                        </div>
-                    `;
-                }
-            }
-
-            html += `
-                    </div>
-                    <div class="total-cost">
-                        <div class="total-cost-label">Total Annual Cost (Evidence-Based)</div>
-                        <div class="total-cost-value">£${Math.round(analysis.totalCost).toLocaleString()}</div>
-                        <p style="margin-top: 1rem; font-size: 0.9rem;">This is NOT estimated. This is calculated from the hours you provided.</p>
+                
+                <div class="status-step pending">
+                    <div class="status-icon">○</div>
+                    <div class="status-content">
+                        <div class="status-title">Generating Swimlane Diagrams</div>
+                        <div class="status-time">Day 3</div>
                     </div>
                 </div>
-            `;
-
-            // Findings
-            html += `
-                <div class="findings-section">
-                    <h3 style="font-size: 1.8rem; color: #1E3A5F; margin-bottom: 2rem;">🎯 Structural Problems Identified</h3>
-            `;
-
-            analysis.findings.forEach((finding, idx) => {
-                html += `
-                    <div class="finding-item">
-                        <div class="finding-title">
-                            ${idx + 1}. ${finding.title}
-                            <span class="confidence-badge confidence-${finding.confidence.toLowerCase()}">${finding.confidence} CONFIDENCE</span>
-                        </div>
-                        
-                        <p style="color: #6B6B6B; margin: 1rem 0; line-height: 1.7;">${finding.description}</p>
-                        
-                        <div style="background: #FFF3CD; padding: 1rem; border-radius: 6px; margin: 1rem 0;">
-                            <strong style="color: #856404;">Evidence:</strong>
-                            <p style="color: #856404; margin-top: 0.5rem;">${finding.evidence}</p>
-                        </div>
-                        
-                        <div style="background: #FFE5E5; padding: 1rem; border-radius: 6px;">
-                            <strong style="color: #C41E3A;">Impact:</strong>
-                            <p style="color: #C41E3A; margin-top: 0.5rem;">${finding.impact}</p>
-                        </div>
+                
+                <div class="status-step pending">
+                    <div class="status-icon">○</div>
+                    <div class="status-content">
+                        <div class="status-title">Report Delivered</div>
+                        <div class="status-time">Day 3-4</div>
                     </div>
-                `;
-            });
-
-            html += `</div>`;
-
-            // CTA
-            html += `
-                <div class="cta-section">
-                    <h3>Let's Fix This Together</h3>
-                    <p>This analysis reveals the problems and quantifies the cost. Fixing them requires workflow mapping and strategic planning.</p>
-                    <p style="margin-top: 1rem;">In our discovery call, we'll:</p>
-                    <p style="font-size: 0.95rem; margin-top: 1rem;">
-                        ✓ Validate these findings against your specific context<br>
-                        ✓ Map your actual workflows in detail<br>
-                        ✓ Create an implementation roadmap<br>
-                        ✓ Prioritize fixes by ROI
-                    </p>
-                    <a href="mailto:contact@workflowpartners.co.uk?subject=Diagnostic Follow-up - ${state.responses.company}&body=Hi, I completed the diagnostic and want to discuss the findings.%0D%0A%0D%0ACompany: ${state.responses.company}%0D%0AHealth Score: ${Math.round(analysis.healthScore)}/100%0D%0ATotal Cost: £${Math.round(analysis.totalCost).toLocaleString()}%0D%0AUrgency: ${analysis.criticality}" 
-                       class="cta-button">
-                        📅 Schedule Discovery Call
-                    </a>
-                    <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 1.5rem;">
-                        Full diagnostic report sent to ${state.responses.email}
-                    </p>
                 </div>
-            `;
+        `;
+    } else if (consent.preferManual) {
+        statusHTML += `
+                <div class="status-step pending">
+                    <div class="status-icon">⏳</div>
+                    <div class="status-content">
+                        <div class="status-title">Survey Sent</div>
+                        <div class="status-time">Check your email</div>
+                    </div>
+                </div>
+        `;
+    }
+    
+    statusHTML += `
+            </div>
+            
+            <div class="what-to-expect">
+                <h3>What to Expect:</h3>
+                <ul>
+    `;
+    
+    if (consent.gmail || consent.slack || consent.crm || consent.calendar) {
+        statusHTML += `
+                    <li>✉️ <strong>Today:</strong> Email with tool connection links</li>
+                    <li>🔗 <strong>Day 1:</strong> Connect tools (3 minutes each)</li>
+                    <li>🤖 <strong>Days 1-3:</strong> We analyze your data automatically</li>
+                    <li>📊 <strong>Day 3:</strong> Complete swimlane diagrams delivered</li>
+        `;
+    } else if (consent.preferManual) {
+        statusHTML += `
+                    <li>✉️ <strong>Today:</strong> Guided survey email (5 minutes to complete)</li>
+                    <li>📊 <strong>Day 2-3:</strong> We create your workflow maps</li>
+        `;
+    }
+    
+    statusHTML += `
+                    <li>📞 <strong>Day 4:</strong> Optional discovery call to discuss transformation</li>
+                </ul>
+            </div>
+            
+            <div class="workflows-being-mapped">
+                <h3>Workflows Being Mapped:</h3>
+                <div class="workflow-tags">
+    `;
+    
+    workflows.forEach(wf => {
+        statusHTML += `
+                    <div class="workflow-tag">
+                        <span class="workflow-name">${wf.name}</span>
+                        <span class="workflow-type">${wf.type}</span>
+                    </div>
+        `;
+    });
+    
+    statusHTML += `
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Insert after results
+    const statusDiv = document.createElement('div');
+    statusDiv.innerHTML = statusHTML;
+    resultsDiv.appendChild(statusDiv);
+}
 
-            container.innerHTML = html;
-        }
+// ADD THESE STYLES for mapping status
+const additionalStyles = `
+<style>
+.mapping-status-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-top: 2rem;
+    border-left: 4px solid #4A90A4;
+}
 
-        function formatCostLabel(key) {
-            const labels = {
-                meetingCost: 'Status Meeting Time',
-                searchCost: 'Information Search Time',
-                reconciliationCost: 'Data Reconciliation',
-                transferCost: 'Manual Data Transfers',
-                spreadsheetCost: 'Shadow Spreadsheet Maintenance',
-                switchingCost: 'Tool Context Switching',
-                reportCost: 'Manual Report Creation',
-                opportunityCost: 'Missed Opportunities'
-            };
-            return labels[key] || key;
-        }
-    </script>
-</body>
-</html>
+.status-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.status-header h2 {
+    color: #1E3A5F;
+    margin-bottom: 0.5rem;
+}
+
+.status-header p {
+    color: #6B6B6B;
+}
+
+.status-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.status-step {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #F5F7FA;
+    border-radius: 8px;
+}
+
+.status-step.complete {
+    background: #E8F5E9;
+}
+
+.status-step.pending {
+    opacity: 0.7;
+}
+
+.status-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    background: white;
+    flex-shrink: 0;
+}
+
+.status-content {
+    flex: 1;
+}
+
+.status-title {
+    font-weight: 600;
+    color: #1E3A5F;
+    margin-bottom: 0.25rem;
+}
+
+.status-time {
+    font-size: 0.9rem;
+    color: #6B6B6B;
+}
+
+.what-to-expect {
+    background: #E8F4F8;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.what-to-expect h3 {
+    color: #1E3A5F;
+    margin-bottom: 1rem;
+}
+
+.what-to-expect ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.what-to-expect li {
+    padding: 0.5rem 0;
+    color: #2F2F2F;
+}
+
+.workflows-being-mapped h3 {
+    color: #1E3A5F;
+    margin-bottom: 1rem;
+}
+
+.workflow-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.workflow-tag {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: #F5F7FA;
+    border-radius: 8px;
+    border: 2px solid #E0E4E8;
+}
+
+.workflow-name {
+    font-weight: 600;
+    color: #1E3A5F;
+}
+
+.workflow-type {
+    font-size: 0.85rem;
+    color: #6B6B6B;
+    padding: 0.25rem 0.5rem;
+    background: white;
+    border-radius: 4px;
+}
+</style>
+`;
+
+</script>
