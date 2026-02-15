@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Diagnostic Report | Workflow Partners</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #1a2f4a;
+            --primary-light: #2a4a6b;
+            --accent: #3d8ea6;
+            --accent-light: #5bb8d4;
+            --text: #1e293b;
+            --text-mid: #475569;
+            --text-light: #64748b;
+            --bg: #fafbfc;
+            --bg-alt: #f1f5f9;
+            --white: #ffffff;
+            --border: #e2e8f0;
+            --shadow-md: 0 4px 20px rgba(0,0,0,0.06);
+            --shadow-lg: 0 12px 40px rgba(0,0,0,0.08);
+        }
+
+        body {
+            font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Header ─────────────────────────────────── */
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+        }
+        .header h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .header p {
+            opacity: 0.75;
+            font-size: 0.95rem;
+        }
+
+        /* ── Container ──────────────────────────────── */
+        .container {
+            max-width: 720px;
+            margin: -30px auto 60px;
+            padding: 0 20px;
+            flex: 1;
+        }
+
+        /* ── Card ────────────────────────────────────── */
+        .card {
+            background: var(--white);
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+        }
+        .card-body {
+            padding: 40px;
+        }
+
+        /* ── States ──────────────────────────────────── */
+        .state { text-align: center; padding: 60px 20px; }
+
+        /* Loading */
+        .loading-spinner {
+            width: 48px; height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .state h2 { font-size: 1.3rem; margin-bottom: 8px; color: var(--text); }
+        .state p  { color: var(--text-mid); font-size: 0.95rem; }
+
+        /* Error */
+        .error-icon {
+            width: 56px; height: 56px;
+            background: #fef2f2;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 24px;
+        }
+
+        /* ── Report Content ──────────────────────────── */
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .report-header .meta {
+            font-size: 0.88rem;
+            color: var(--text-light);
+        }
+        .report-header .meta strong {
+            display: block;
+            font-size: 1.15rem;
+            color: var(--text);
+            margin-bottom: 2px;
+        }
+
+        /* Metrics */
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .metric-card {
+            background: var(--bg-alt);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .metric-value.blue   { color: #1e40af; }
+        .metric-value.green  { color: #16a34a; }
+        .metric-value.purple { color: #7c3aed; }
+        .metric-value.amber  { color: #d97706; }
+        .metric-label {
+            font-size: 0.78rem;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Recommendations */
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border);
+        }
+        .rec-list { list-style: none; margin-bottom: 32px; }
+        .rec-list li {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            background: var(--bg-alt);
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+        .rec-list li .rec-type {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: var(--accent);
+            color: white;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        /* Download Section */
+        .download-section {
+            background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+            border-radius: 12px;
+            padding: 32px;
+            text-align: center;
+            margin-top: 8px;
+        }
+        .download-section h3 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+        .download-section p {
+            font-size: 0.9rem;
+            color: var(--text-mid);
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 14px 36px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+        .btn:active { transform: translateY(0); }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+        }
+        .btn-accent {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: white;
+        }
+        .btn-outline {
+            background: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            padding: 12px 32px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* ── Footer ──────────────────────────────────── */
+        .footer {
+            text-align: center;
+            padding: 30px 20px;
+            font-size: 0.82rem;
+            color: var(--text-light);
+        }
+        .footer a { color: var(--accent); text-decoration: none; }
+
+        /* ── Responsive ──────────────────────────────── */
+        @media (max-width: 600px) {
+            .card-body { padding: 24px; }
+            .header h1 { font-size: 1.5rem; }
+            .metric-value { font-size: 1.3rem; }
+            .download-section { padding: 24px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Workflow Partners</h1>
+        <p>Process Diagnostic Report</p>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-body">
+
+                <!-- Loading State -->
+                <div id="stateLoading" class="state">
+                    <div class="loading-spinner"></div>
+                    <h2>Retrieving your report...</h2>
+                    <p>This will only take a moment.</p>
+                </div>
+
+                <!-- Error State -->
+                <div id="stateError" class="state" style="display:none;">
+                    <div class="error-icon">&#9888;</div>
+                    <h2 id="errorTitle">Report Not Found</h2>
+                    <p id="errorMsg">This report link may have expired or is invalid.</p>
+                    <br>
+                    <a href="/diagnostic" class="btn btn-outline">Start a New Diagnostic</a>
+                </div>
+
+                <!-- Report Content -->
+                <div id="stateReport" style="display:none;">
+                    <div class="report-header">
+                        <div class="meta">
+                            <strong id="reportCompany">—</strong>
+                            <span id="reportContact">—</span>
+                        </div>
+                        <div class="meta" style="text-align: right;">
+                            <span id="reportDate">—</span>
+                        </div>
+                    </div>
+
+                    <!-- Metrics -->
+                    <div class="metrics">
+                        <div class="metric-card">
+                            <div class="metric-value blue" id="metricProcesses">0</div>
+                            <div class="metric-label">Processes Analysed</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value green" id="metricCost">£0</div>
+                            <div class="metric-label">Annual Process Cost</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value green" id="metricSavings">£0</div>
+                            <div class="metric-label">Potential Savings</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value purple" id="metricAuto">0%</div>
+                            <div class="metric-label">Automation Ready</div>
+                        </div>
+                    </div>
+
+                    <!-- Recommendations -->
+                    <div id="recsSection">
+                        <h3 class="section-title">Key Recommendations</h3>
+                        <ul class="rec-list" id="recsList"></ul>
+                    </div>
+
+                    <!-- Download -->
+                    <div class="download-section">
+                        <h3>Download Your Full Report</h3>
+                        <p>Your complete diagnostic report including process breakdowns, cost analysis, flow diagrams, and implementation roadmap.</p>
+                        <div class="btn-group">
+                            <button class="btn btn-primary" id="downloadBtn" onclick="downloadPDF()">
+                                &#128196; Download PDF Report
+                            </button>
+                            <a href="mailto:hopektettey@gmail.com?subject=Discovery%20Call%20-%20Process%20Diagnostic" class="btn btn-accent">
+                                Book Discovery Call
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Workflow Partners &middot; <a href="/">Home</a> &middot; <a href="/diagnostic">New Diagnostic</a></p>
+        <p style="margin-top: 6px;">Questions? <a href="mailto:hopektettey@gmail.com">hopektettey@gmail.com</a></p>
+    </div>
+
+    <script>
+        // ── Globals ─────────────────────────────────────
+        let reportData = null;
+        let pdfBase64  = null;
+
+        // ── Init ────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get('id');
+
+            if (!id) {
+                showError('No Report ID', 'Please use the link from your email to access your report.');
+                return;
+            }
+
+            fetchReport(id);
+        });
+
+        // ── Fetch Report ────────────────────────────────
+        async function fetchReport(id) {
+            try {
+                const resp = await fetch(`/api/get-diagnostic?id=${encodeURIComponent(id)}`);
+                const data = await resp.json();
+
+                if (!resp.ok || !data.success) {
+                    showError('Report Not Found', data.error || 'This report link may have expired or is invalid.');
+                    return;
+                }
+
+                reportData = data.report;
+                pdfBase64  = data.report.pdfBase64;
+
+                renderReport(reportData);
+
+            } catch (err) {
+                console.error('Fetch error:', err);
+                showError('Connection Error', 'Unable to reach the server. Please try again later.');
+            }
+        }
+
+        // ── Render Report ───────────────────────────────
+        function renderReport(report) {
+            const d = report.diagnosticData || {};
+            const s = d.summary || {};
+            const auto = d.automationScore || {};
+            const c = d.contact || {};
+            const recs = d.recommendations || [];
+
+            // Header
+            document.getElementById('reportCompany').textContent = report.company || c.company || 'Your Company';
+            document.getElementById('reportContact').textContent = `${report.contactName || c.name || ''} — ${report.contactEmail || c.email || ''}`;
+            document.getElementById('reportDate').textContent = formatDate(report.createdAt);
+
+            // Metrics
+            document.getElementById('metricProcesses').textContent = s.totalProcesses || 0;
+            document.getElementById('metricCost').textContent = formatCurrency(s.totalAnnualCost || 0);
+            document.getElementById('metricSavings').textContent = formatCurrency(s.potentialSavings || 0);
+            document.getElementById('metricAuto').textContent = (auto.percentage || 0) + '%';
+
+            // Recommendations
+            const recsList = document.getElementById('recsList');
+            if (recs.length > 0) {
+                recsList.innerHTML = recs.map(r =>
+                    `<li><span class="rec-type">${escHtml(r.type || 'general')}</span>${escHtml(r.text || '')}</li>`
+                ).join('');
+            } else {
+                document.getElementById('recsSection').style.display = 'none';
+            }
+
+            // Disable download if no PDF
+            if (!pdfBase64) {
+                const btn = document.getElementById('downloadBtn');
+                btn.textContent = 'PDF not available';
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+            }
+
+            // Show report
+            document.getElementById('stateLoading').style.display = 'none';
+            document.getElementById('stateReport').style.display = 'block';
+        }
+
+        // ── Download PDF ────────────────────────────────
+        function downloadPDF() {
+            if (!pdfBase64) return;
+
+            try {
+                // Decode base64 → binary → Blob → download
+                const byteChars = atob(pdfBase64);
+                const byteNumbers = new Array(byteChars.length);
+                for (let i = 0; i < byteChars.length; i++) {
+                    byteNumbers[i] = byteChars.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Diagnostic-Report-${(reportData?.company || 'Report').replace(/[^a-zA-Z0-9]/g, '-')}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                // Update button
+                const btn = document.getElementById('downloadBtn');
+                btn.innerHTML = '&#10003; Downloaded!';
+                btn.style.background = 'linear-gradient(135deg, #16a34a, #15803d)';
+            } catch (err) {
+                console.error('PDF download error:', err);
+                alert('Unable to download PDF. Please try again.');
+            }
+        }
+
+        // ── Helpers ─────────────────────────────────────
+        function showError(title, msg) {
+            document.getElementById('stateLoading').style.display = 'none';
+            document.getElementById('errorTitle').textContent = title;
+            document.getElementById('errorMsg').textContent = msg;
+            document.getElementById('stateError').style.display = 'block';
+        }
+
+        function formatCurrency(val) {
+            if (val >= 1000000) return '£' + (val / 1000000).toFixed(1) + 'M';
+            if (val >= 1000) return '£' + (val / 1000).toFixed(0) + 'K';
+            return '£' + val;
+        }
+
+        function formatDate(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+
+        function escHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
