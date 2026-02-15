@@ -428,10 +428,11 @@
         .int-ext-toggle label:first-child {
             border-right: 1px solid var(--border);
         }
-        .int-ext-toggle input { display: none; }
+        .int-ext-toggle input { position: absolute; opacity: 0; pointer-events: none; }
         .int-ext-toggle input:checked + span {
             font-weight: 600;
         }
+        .int-ext-toggle label.active,
         .int-ext-toggle label:has(input:checked) {
             background: var(--primary);
             color: var(--white);
@@ -2401,6 +2402,18 @@
             `;
             list.appendChild(div);
 
+            // Wire up INT/EXT toggle styling via JS (robust cross-browser)
+            div.querySelectorAll('.int-ext-toggle input[type="radio"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const toggle = this.closest('.int-ext-toggle');
+                    toggle.querySelectorAll('label').forEach(lbl => lbl.classList.remove('active'));
+                    this.closest('label').classList.add('active');
+                });
+            });
+            // Set initial active state
+            const checkedRadio = div.querySelector('.int-ext-toggle input:checked');
+            if (checkedRadio) checkedRadio.closest('label').classList.add('active');
+
             if (stepCount >= 25) document.getElementById('addStepBtn').style.display = 'none';
         }
 
@@ -2462,11 +2475,13 @@
 
                 const block = document.createElement('div');
                 block.className = 'handoff-block';
+                const fromBadge = from.isExternal ? '<span style="font-size:0.7rem;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:3px;margin-left:4px;">EXT</span>' : '';
+                const toBadge = to.isExternal ? '<span style="font-size:0.7rem;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:3px;margin-left:4px;">EXT</span>' : '';
                 block.innerHTML = `
                     <div class="handoff-header">
-                        Step ${from.number}: ${from.name} (${from.department || '?'})
+                        Step ${from.number}: ${from.name} (${from.department || '?'})${fromBadge}
                         <span class="handoff-arrow"> &rarr; </span>
-                        Step ${to.number}: ${to.name} (${to.department || '?'})
+                        Step ${to.number}: ${to.name} (${to.department || '?'})${toBadge}
                     </div>
                     <div class="form-group">
                         <label>How did ${from.department || 'Step ' + from.number} notify ${to.department || 'Step ' + to.number}?</label>
@@ -3705,6 +3720,8 @@
             const parts = [];
             const depts = [...new Set(steps.map(s => s.department).filter(Boolean))];
             const handoffCount = steps.length - 1;
+            const extSteps = steps.filter(s => s.isExternal);
+            const intSteps = steps.filter(s => !s.isExternal);
 
             if (depts.length >= 3) {
                 parts.push(`Your process spans <strong>${depts.length} departments</strong> across ${steps.length} steps. Each department transition is a potential delay point — cross-functional processes benefit most from orchestration automation.`);
@@ -3712,6 +3729,21 @@
 
             if (steps.length > 10) {
                 parts.push(`With <strong>${steps.length} steps</strong>, this is a complex process. Research shows processes with 10+ steps have 3x more failure points than simpler ones. Consider whether any steps can be combined or eliminated.`);
+            }
+
+            // External party insights
+            if (extSteps.length > 0) {
+                const extDepts = [...new Set(extSteps.map(s => s.department).filter(Boolean))];
+                parts.push(`<strong>${extSteps.length} of ${steps.length} steps involve external parties</strong> (${extDepts.join(', ')}). External handoffs are typically 2-5x slower than internal ones — these are prime candidates for automated tracking and SLA monitoring.`);
+            }
+
+            // Internal-to-external transitions (high-friction points)
+            let intExtTransitions = 0;
+            for (let i = 1; i < steps.length; i++) {
+                if (steps[i].isExternal !== steps[i-1].isExternal) intExtTransitions++;
+            }
+            if (intExtTransitions >= 3) {
+                parts.push(`Your process crosses the <strong>internal/external boundary ${intExtTransitions} times</strong>. Each boundary crossing introduces communication latency, data format mismatches, and compliance checkpoints. An orchestration agent can bridge these gaps.`);
             }
 
             // Check for duplicate departments (back-and-forth)
@@ -3874,11 +3906,12 @@
                 steps: (p.steps || []).map(s => ({
                     number: s.number,
                     name: s.name,
-                    department: s.department
+                    department: s.department,
+                    isExternal: s.isExternal || false
                 })),
                 handoffs: (p.handoffs || []).map(h => ({
-                    from: { name: h.from?.name, department: h.from?.department },
-                    to: { name: h.to?.name, department: h.to?.department },
+                    from: { name: h.from?.name, department: h.from?.department, isExternal: h.from?.isExternal },
+                    to: { name: h.to?.name, department: h.to?.department, isExternal: h.to?.isExternal },
                     method: h.method,
                     clarity: h.clarity
                 })),
@@ -4249,14 +4282,22 @@
 
             // Title
             svg += `<text x="${totalW / 2}" y="30" text-anchor="middle" font-size="17" font-weight="600" fill="#1a2f4a">${escSvg(p.processName || 'Process Flow')}</text>`;
-            svg += `<text x="${totalW / 2}" y="48" text-anchor="middle" font-size="10" fill="#94a3b8">Cross-functional process flow · ${allSteps.length} steps · ${deptOrder.length} departments</text>`;
+            const extStepCount = allSteps.filter(s => s.isExternal).length;
+            const intExtNote = extStepCount > 0 ? ` · ${extStepCount} external` : '';
+            svg += `<text x="${totalW / 2}" y="48" text-anchor="middle" font-size="10" fill="#94a3b8">Cross-functional process flow · ${allSteps.length} steps · ${deptOrder.length} departments${intExtNote}</text>`;
 
             // Lane bands
             lanes.forEach(l => {
-                svg += `<rect x="0" y="${l.y}" width="${totalW}" height="${l.h}" fill="${l.bg}" stroke="${l.stroke}" stroke-width="1" rx="0"/>`;
-                svg += `<rect x="0" y="${l.y}" width="${LANE_LABEL_W}" height="${l.h}" fill="${l.stroke}" opacity="0.12" rx="0"/>`;
-                svg += `<rect x="0" y="${l.y}" width="4" height="${l.h}" fill="${l.stroke}" rx="0"/>`;
-                svg += `<text x="${LANE_LABEL_W / 2 + 2}" y="${l.y + l.h / 2 + 5}" text-anchor="middle" font-size="13" font-weight="600" fill="${l.stroke}">${escSvg(l.dept)}</text>`;
+                // Check if this lane has any external steps
+                const laneSteps = deptMap[l.dept] || [];
+                const hasExternal = laneSteps.some(s => s.isExternal);
+                svg += `<rect x="0" y="${l.y}" width="${totalW}" height="${l.h}" fill="${hasExternal ? '#fffbeb' : l.bg}" stroke="${hasExternal ? '#d97706' : l.stroke}" stroke-width="1" rx="0"/>`;
+                svg += `<rect x="0" y="${l.y}" width="${LANE_LABEL_W}" height="${l.h}" fill="${hasExternal ? '#d97706' : l.stroke}" opacity="0.12" rx="0"/>`;
+                svg += `<rect x="0" y="${l.y}" width="4" height="${l.h}" fill="${hasExternal ? '#d97706' : l.stroke}" rx="0"/>`;
+                svg += `<text x="${LANE_LABEL_W / 2 + 2}" y="${l.y + l.h / 2 + (hasExternal ? 2 : 5)}" text-anchor="middle" font-size="13" font-weight="600" fill="${hasExternal ? '#92400e' : l.stroke}">${escSvg(l.dept)}</text>`;
+                if (hasExternal) {
+                    svg += `<text x="${LANE_LABEL_W / 2 + 2}" y="${l.y + l.h / 2 + 16}" text-anchor="middle" font-size="8" font-weight="600" fill="#d97706">EXTERNAL</text>`;
+                }
             });
 
             // Defs
@@ -5051,7 +5092,8 @@
                         doc.setFont('helvetica', 'bold');
                         doc.text('#', margin + 3, y + 5.5);
                         doc.text('Step Name', margin + 15, y + 5.5);
-                        doc.text('Department', margin + 115, y + 5.5);
+                        doc.text('Department', margin + 105, y + 5.5);
+                        doc.text('Type', margin + 155, y + 5.5);
                         y += 8;
 
                         // Table rows
@@ -5065,8 +5107,23 @@
                             doc.setFont('helvetica', 'normal');
                             doc.setFontSize(8);
                             doc.text(String(s.number), margin + 3, y + 5.5);
-                            doc.text(String(s.name || '').substring(0, 55), margin + 15, y + 5.5);
-                            doc.text(String(s.department || ''), margin + 115, y + 5.5);
+                            doc.text(String(s.name || '').substring(0, 48), margin + 15, y + 5.5);
+                            doc.text(String(s.department || '').substring(0, 22), margin + 105, y + 5.5);
+                            // Internal/External badge
+                            if (s.isExternal) {
+                                doc.setFillColor(254, 243, 199);
+                                doc.roundedRect(margin + 155, y + 1, 14, 5, 1, 1, 'F');
+                                doc.setFontSize(6);
+                                doc.setFont('helvetica', 'bold');
+                                doc.setTextColor(146, 64, 14);
+                                doc.text('EXT', margin + 156, y + 4.8);
+                            } else {
+                                doc.setFontSize(6);
+                                doc.setFont('helvetica', 'normal');
+                                doc.setTextColor(...textLight);
+                                doc.text('INT', margin + 156, y + 4.8);
+                            }
+                            doc.setFontSize(8);
                             y += 8;
                         });
 
@@ -5567,6 +5624,110 @@
                     savings: { targetReduction: '50', savingsUse: ['speed', 'cost'] },
                     priority: { priority: 'medium', urgency: 'this-quarter' },
                     bottleneck: { longestStep: 'step-3', reason: 'approval-delays' }
+                },
+                // ── COMPLEXITY 10: Enterprise Capital Expenditure Procurement ──
+                // Based on real-world enterprise procurement with 20 steps,
+                // 11 departments, internal + external teams, multiple approval gates,
+                // regulatory compliance, and cross-border considerations.
+                {
+                    processType: 'other',
+                    processName: 'Enterprise CapEx Procurement (IT Infrastructure)',
+                    definition: {
+                        startsWhen: 'Business unit submits capital expenditure request for IT infrastructure over £50K',
+                        completesWhen: 'Equipment delivered, installed, asset-tagged, and first invoice reconciled in ERP',
+                        complexity: 'very-complex',
+                        departments: ['IT', 'Finance', 'Procurement', 'Legal', 'Compliance', 'Leadership', 'Operations', 'Engineering', 'Quality Assurance']
+                    },
+                    lastExample: {
+                        name: 'Data Centre Expansion — 40 Server Racks + Networking',
+                        startDate: '2025-09-15',
+                        endDate: '2026-01-20',
+                        elapsedDays: 127
+                    },
+                    userTime: { meetings: 28, emails: 35, execution: 22, waiting: 85, total: 170 },
+                    timeAccuracy: 'somewhat-confident',
+                    performance: 'this-was-worse',
+                    issues: ['delays-waiting', 'too-many-steps', 'approval-bottlenecks', 'rework-errors', 'information-gaps', 'compliance-requirements'],
+                    biggestDelay: 'Multi-level approval chain — CFO + Board sign-off for CapEx over £250K takes 3-6 weeks',
+                    delayDetails: 'Board meets monthly. If you miss the submission window, the entire project slips by 4+ weeks. Meanwhile, vendor quotes expire and need renegotiation.',
+                    steps: [
+                        { number: 1, name: 'Business case drafted by requesting department', department: 'IT', isExternal: false },
+                        { number: 2, name: 'Technical architecture review & sizing', department: 'Engineering', isExternal: false },
+                        { number: 3, name: 'Security & compliance impact assessment', department: 'Compliance', isExternal: false },
+                        { number: 4, name: 'Budget validation & cost centre allocation', department: 'Finance', isExternal: false },
+                        { number: 5, name: 'Departmental head approval (IT Director)', department: 'IT', isExternal: false },
+                        { number: 6, name: 'Procurement creates RFP / RFQ package', department: 'Procurement', isExternal: false },
+                        { number: 7, name: 'RFP distributed to shortlisted vendors', department: 'External Vendor', isExternal: true },
+                        { number: 8, name: 'Vendor proposals received & evaluated', department: 'Procurement', isExternal: false },
+                        { number: 9, name: 'Technical evaluation by engineering team', department: 'Engineering', isExternal: false },
+                        { number: 10, name: 'Vendor reference checks & site visits', department: 'External Vendor', isExternal: true },
+                        { number: 11, name: 'Commercial negotiation & terms review', department: 'Procurement', isExternal: false },
+                        { number: 12, name: 'Legal contract review & redlining', department: 'Legal', isExternal: false },
+                        { number: 13, name: 'External legal review (vendor T&Cs)', department: 'External Legal', isExternal: true },
+                        { number: 14, name: 'Data protection impact assessment (DPIA)', department: 'Compliance', isExternal: false },
+                        { number: 15, name: 'CFO approval for CapEx budget', department: 'Finance', isExternal: false },
+                        { number: 16, name: 'Board approval (CapEx > £250K)', department: 'Leadership', isExternal: false },
+                        { number: 17, name: 'Purchase order raised in ERP', department: 'Procurement', isExternal: false },
+                        { number: 18, name: 'Vendor confirms order & delivery schedule', department: 'External Vendor', isExternal: true },
+                        { number: 19, name: 'Goods received, inspected & asset-tagged', department: 'Operations', isExternal: false },
+                        { number: 20, name: 'Installation, testing & QA sign-off', department: 'Quality Assurance', isExternal: false }
+                    ],
+                    handoffs: [
+                        { from: { name: 'Business case drafted' }, to: { name: 'Technical architecture review' }, method: 'email', clarity: 'mostly-clear' },
+                        { from: { name: 'Technical architecture review' }, to: { name: 'Security & compliance assessment' }, method: 'email', clarity: 'yes-multiple' },
+                        { from: { name: 'Security & compliance assessment' }, to: { name: 'Budget validation' }, method: 'email', clarity: 'yes-multiple' },
+                        { from: { name: 'Budget validation' }, to: { name: 'IT Director approval' }, method: 'email', clarity: 'mostly-clear' },
+                        { from: { name: 'IT Director approval' }, to: { name: 'Procurement creates RFP' }, method: 'ticket-system', clarity: 'mostly-clear' },
+                        { from: { name: 'Procurement creates RFP' }, to: { name: 'RFP distributed to vendors' }, method: 'email', clarity: 'mostly-clear' },
+                        { from: { name: 'RFP distributed to vendors' }, to: { name: 'Vendor proposals received' }, method: 'email', clarity: 'yes-multiple' },
+                        { from: { name: 'Vendor proposals received' }, to: { name: 'Technical evaluation' }, method: 'email', clarity: 'yes-multiple' },
+                        { from: { name: 'Technical evaluation' }, to: { name: 'Vendor reference checks' }, method: 'meeting', clarity: 'mostly-clear' },
+                        { from: { name: 'Vendor reference checks' }, to: { name: 'Commercial negotiation' }, method: 'email', clarity: 'mostly-clear' },
+                        { from: { name: 'Commercial negotiation' }, to: { name: 'Legal contract review' }, method: 'email', clarity: 'yes-multiple' },
+                        { from: { name: 'Legal contract review' }, to: { name: 'External legal review' }, method: 'email', clarity: 'yes-multiple' },
+                        { from: { name: 'External legal review' }, to: { name: 'DPIA assessment' }, method: 'email', clarity: 'yes-multiple' },
+                        { from: { name: 'DPIA assessment' }, to: { name: 'CFO approval' }, method: 'email', clarity: 'mostly-clear' },
+                        { from: { name: 'CFO approval' }, to: { name: 'Board approval' }, method: 'meeting', clarity: 'mostly-clear' },
+                        { from: { name: 'Board approval' }, to: { name: 'Purchase order raised' }, method: 'email', clarity: 'mostly-clear' },
+                        { from: { name: 'Purchase order raised' }, to: { name: 'Vendor confirms order' }, method: 'email', clarity: 'yes-multiple' },
+                        { from: { name: 'Vendor confirms order' }, to: { name: 'Goods received & inspected' }, method: 'email', clarity: 'mostly-clear' },
+                        { from: { name: 'Goods received & inspected' }, to: { name: 'Installation & QA sign-off' }, method: 'they-knew', clarity: 'yes-multiple' }
+                    ],
+                    systems: [
+                        { name: 'SAP S/4HANA', purpose: 'ERP - purchase orders, asset management', actions: ['create', 'update', 'lookup', 'copy-out'] },
+                        { name: 'Coupa', purpose: 'Procurement platform - RFPs & vendor management', actions: ['create', 'update', 'lookup'] },
+                        { name: 'DocuSign', purpose: 'Contract signatures', actions: ['create', 'update'] },
+                        { name: 'ServiceNow', purpose: 'IT request & approval workflow', actions: ['create', 'update', 'lookup'] },
+                        { name: 'SharePoint', purpose: 'Document storage & collaboration', actions: ['create', 'update', 'share'] },
+                        { name: 'Power BI', purpose: 'Budget tracking dashboards', actions: ['lookup'] },
+                        { name: 'Outlook / Teams', purpose: 'Communication & meetings', actions: ['copy-in', 'copy-out'] },
+                        { name: 'OneTrust', purpose: 'DPIA & compliance assessments', actions: ['create', 'update'] }
+                    ],
+                    approvals: [
+                        { name: 'IT Director sign-off', who: 'IT Director', rounds: '1', assessment: 'necessary', avgDays: '3' },
+                        { name: 'Legal contract approval', who: 'General Counsel', rounds: '2-3', assessment: 'necessary', avgDays: '10' },
+                        { name: 'DPIA sign-off', who: 'Data Protection Officer', rounds: '1', assessment: 'necessary', avgDays: '5' },
+                        { name: 'CFO budget approval', who: 'CFO', rounds: '1-2', assessment: 'necessary', avgDays: '7' },
+                        { name: 'Board approval (>£250K)', who: 'Board of Directors', rounds: '1', assessment: 'could-reduce', avgDays: '21' }
+                    ],
+                    knowledge: {
+                        documentation: 'partial',
+                        singlePointOfFailure: 'yes',
+                        spofPerson: 'James (Senior Procurement Manager) — only person who knows the full end-to-end flow and vendor relationships',
+                        workarounds: 'yes',
+                        workaroundDetails: 'Teams split orders under £50K to avoid the full CapEx process. Finance calls these "shadow purchases" and estimates 15% of IT spend bypasses procurement.'
+                    },
+                    newHire: {
+                        learningWeeks: '16',
+                        learningMethod: 'shadow',
+                        firstTimeErrors: 'yes',
+                        errorDetails: 'New procurement staff routinely miss the Board submission deadline, select wrong GL codes, or forget the DPIA step for data-handling vendors. Average of 3 rework cycles per first attempt.'
+                    },
+                    frequency: { type: 'monthly', annual: 12, inFlight: 5, progressing: 2, stuck: 2, waiting: 1 },
+                    costs: { hourlyRate: 75, instanceCost: 12750, annualUserCost: 153000, totalAnnualCost: 459000, teamSize: 3 },
+                    savings: { targetReduction: '35', savingsUse: ['speed', 'quality', 'compliance'] },
+                    priority: { priority: 'critical', urgency: 'this-quarter' },
+                    bottleneck: { longestStep: 'step-15', reason: 'approval-delays' }
                 }
             ];
         }
@@ -5579,8 +5740,8 @@
                 email: 'hopektettey@gmail.com',
                 company: 'Demo Corp',
                 title: 'Operations Manager',
-                teamSize: '11-50',
-                industry: 'Professional Services'
+                teamSize: '201-500',
+                industry: 'Manufacturing'
             };
 
             goToScreen(19);

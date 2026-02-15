@@ -1,0 +1,16 @@
+{
+  "name": "workflow-consultancy",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "serve .",
+    "start": "serve . -l 3000"
+  },
+  "devDependencies": {
+    "serve": "^14.2.5",
+    "vercel": "^39.0.0"
+  },
+  "dependencies": {
+    "jspdf": "^4.1.0"
+  }
+}

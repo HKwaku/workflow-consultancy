@@ -1,7 +1,7 @@
 // api/analyze-symptoms.js - UPDATED VERSION
 // Vercel Serverless Function for AI-Powered Diagnostic Analysis with Workflow Context
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -110,11 +110,11 @@ ${channels && channels.length > 0 ? channels.join(', ') : 'Manual survey only'}
 
 TOOL CONNECTION STATUS:
 ${toolConsent ? `
-- Gmail: ${toolConsent.gmail ? 'Authorized' : 'Not connected'}
-- Slack: ${toolConsent.slack ? 'Authorized' : 'Not connected'}
-- CRM: ${toolConsent.crm ? 'Authorized' : 'Not connected'}
-- Calendar: ${toolConsent.calendar ? 'Authorized' : 'Not connected'}
+- Total tools selected: ${toolConsent.totalSelected || 0}
+- Selected tools: ${toolConsent.selectedTools && toolConsent.selectedTools.length > 0 ? toolConsent.selectedTools.map(t => t.name || t.tool).join(', ') : 'None'}
+- Has tool connections: ${toolConsent.hasTools ? 'Yes' : 'No'}
 - Manual survey preferred: ${toolConsent.preferManual ? 'Yes' : 'No'}
+- Categories covered: Email (${toolConsent.gmail ? 'Yes' : 'No'}), Messaging (${toolConsent.slack ? 'Yes' : 'No'}), CRM (${toolConsent.crm ? 'Yes' : 'No'}), Calendar (${toolConsent.calendar ? 'Yes' : 'No'})
 ` : 'Not specified'}
 
 TASK:
@@ -288,15 +288,10 @@ ${workflows && workflows.length > 0 && workflows[0].departments ? workflows[0].d
   
   "nextSteps": {
     "immediate": "You'll receive workflow mapping results in 3 days",
-    "automated": ${toolConsent && (toolConsent.gmail || toolConsent.slack || toolConsent.crm || toolConsent.calendar) ? 
-      `"We're analyzing: ${[
-        toolConsent.gmail ? 'Gmail' : null,
-        toolConsent.slack ? 'Slack' : null,
-        toolConsent.crm ? 'CRM' : null,
-        toolConsent.calendar ? 'Calendar' : null
-      ].filter(Boolean).join(', ')}"` : 
+    "automated": ${toolConsent && toolConsent.hasTools ? 
+      `"We're analyzing ${toolConsent.totalSelected} connected tools: ${toolConsent.selectedTools ? toolConsent.selectedTools.map(t => t.name || t.tool).join(', ') : 'selected tools'}"` : 
       '"Not applicable - manual survey preferred"'},
-    "manual": ${toolConsent && toolConsent.preferManual ? '"5-minute guided survey sent to your email"' : '"Not applicable - tool analysis enabled"'},
+    "manual": ${toolConsent && toolConsent.preferManual ? '"Comprehensive 25-minute workflow mapping survey will be available for detailed step-by-step documentation"' : '"Not applicable - tool analysis enabled"'},
     "timeline": "Complete workflow maps with swimlane diagrams in 3 days",
     "recommendation": "Schedule discovery call to review findings and discuss implementation"
   }
