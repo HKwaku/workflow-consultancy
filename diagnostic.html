@@ -6747,7 +6747,7 @@
                     body.progressId = cloudProgressId;
                 }
 
-                const resp = await fetch('/api/save-progress', {
+                const resp = await fetch('/api/progress', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
@@ -6822,7 +6822,7 @@
             if (!resumeId) return false;
 
             try {
-                const resp = await fetch('/api/load-progress?id=' + encodeURIComponent(resumeId));
+                const resp = await fetch('/api/progress?id=' + encodeURIComponent(resumeId));
                 const result = await resp.json();
 
                 if (!resp.ok || !result.success) {
@@ -6908,7 +6908,7 @@
             btn.textContent = 'Creating...';
 
             try {
-                const resp = await fetch('/api/create-team-diagnostic', {
+                const resp = await fetch('/api/team?action=create', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -6990,7 +6990,7 @@
                 const contactEmail = document.getElementById('contactEmail')?.value?.trim() || '';
                 const contactDept = processData.definition?.departments?.[0] || '';
 
-                await fetch('/api/submit-team-response', {
+                await fetch('/api/team?action=submit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

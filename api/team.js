@@ -1,31 +1,194 @@
-// api/get-team-results.js
-// Fetches all team responses and computes aggregated comparison
-// Shows where perceptions differ across departments
+// api/team.js
+// Consolidated endpoint for team diagnostics
+// Routes by query param ?action=create|submit|results
+// Combines former create-team-diagnostic.js, submit-team-response.js, get-team-results.js
+
+const crypto = require('crypto');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
   res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  const action = req.query.action || (req.method === 'GET' ? 'results' : '');
+
+  switch (action) {
+    case 'create':  return createTeam(req, res);
+    case 'submit':  return submitResponse(req, res);
+    case 'results': return getResults(req, res);
+    default:
+      return res.status(400).json({ error: 'Missing or invalid action. Use ?action=create, ?action=submit, or ?action=results' });
+  }
+};
+
+
+// ── POST ?action=create ─────────────────────────────────────────
+async function createTeam(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  try {
+    const { createdByEmail, createdByName, processName, company, description } = req.body;
+
+    if (!processName) {
+      return res.status(400).json({ error: 'Process name is required.' });
+    }
+
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+    if (!supabaseUrl || !supabaseKey) return res.status(503).json({ error: 'Storage not configured.' });
+
+    const teamId = crypto.randomUUID();
+    const teamCode = crypto.randomBytes(3).toString('hex').toUpperCase();
+
+    const protocol = req.headers['x-forwarded-proto'] || 'http';
+    const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000';
+    const joinUrl = `${protocol}://${host}/diagnostic?team=${teamCode}`;
+    const resultsUrl = `${protocol}://${host}/team-results?code=${teamCode}`;
+
+    const payload = {
+      id: teamId,
+      team_code: teamCode,
+      created_by_email: createdByEmail || null,
+      created_by_name: createdByName || null,
+      process_name: processName,
+      company: company || null,
+      description: description || null,
+      status: 'open',
+      created_at: new Date().toISOString()
+    };
+
+    const sbResp = await fetch(`${supabaseUrl}/rest/v1/team_diagnostics`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!sbResp.ok && sbResp.status !== 201) {
+      const errText = await sbResp.text();
+      console.error('Supabase insert failed:', sbResp.status, errText);
+      return res.status(502).json({ error: 'Failed to create team diagnostic.' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      teamId,
+      teamCode,
+      joinUrl,
+      resultsUrl,
+      processName,
+      message: `Team diagnostic created. Share code ${teamCode} with your team.`
+    });
+
+  } catch (error) {
+    console.error('Create team diagnostic error:', error);
+    return res.status(500).json({ error: 'Failed to create team diagnostic.' });
+  }
+}
+
+
+// ── POST ?action=submit ─────────────────────────────────────────
+async function submitResponse(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  try {
+    const { teamCode, respondentName, respondentEmail, respondentDepartment, responseData } = req.body;
+
+    if (!teamCode) return res.status(400).json({ error: 'Team code is required.' });
+    if (!respondentName) return res.status(400).json({ error: 'Your name is required.' });
+    if (!responseData) return res.status(400).json({ error: 'Response data is required.' });
+
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+    if (!supabaseUrl || !supabaseKey) return res.status(503).json({ error: 'Storage not configured.' });
+
+    const lookupUrl = `${supabaseUrl}/rest/v1/team_diagnostics?team_code=eq.${encodeURIComponent(teamCode)}&select=id,process_name,status`;
+    const lookupResp = await fetch(lookupUrl, {
+      method: 'GET',
+      headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Accept': 'application/json' }
+    });
+
+    const teams = await lookupResp.json();
+    if (!teams || teams.length === 0) {
+      return res.status(404).json({ error: 'Team diagnostic not found. Check the code and try again.' });
+    }
+
+    const team = teams[0];
+    if (team.status === 'closed') {
+      return res.status(400).json({ error: 'This team diagnostic is closed and no longer accepting responses.' });
+    }
+
+    const responseId = crypto.randomUUID();
+
+    const payload = {
+      id: responseId,
+      team_id: team.id,
+      team_code: teamCode,
+      respondent_name: respondentName,
+      respondent_email: respondentEmail || null,
+      respondent_department: respondentDepartment || null,
+      response_data: responseData,
+      created_at: new Date().toISOString()
+    };
+
+    const sbResp = await fetch(`${supabaseUrl}/rest/v1/team_responses`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!sbResp.ok && sbResp.status !== 201) {
+      const errText = await sbResp.text();
+      console.error('Supabase insert failed:', sbResp.status, errText);
+      return res.status(502).json({ error: 'Failed to submit response.' });
+    }
+
+    const protocol = req.headers['x-forwarded-proto'] || 'http';
+    const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000';
+    const resultsUrl = `${protocol}://${host}/team-results?code=${teamCode}`;
+
+    return res.status(200).json({
+      success: true,
+      responseId,
+      processName: team.process_name,
+      resultsUrl,
+      message: 'Your perspective has been submitted. View the team comparison when everyone has responded.'
+    });
+
+  } catch (error) {
+    console.error('Submit team response error:', error);
+    return res.status(500).json({ error: 'Failed to submit response.' });
+  }
+}
+
+
+// ── GET ?action=results&code=XXX ────────────────────────────────
+async function getResults(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
     const { code } = req.query;
 
     if (!code) {
-      return res.status(400).json({ error: 'Team code is required. Use ?code=xxx' });
+      return res.status(400).json({ error: 'Team code is required. Use ?action=results&code=xxx' });
     }
 
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+    if (!supabaseUrl || !supabaseKey) return res.status(503).json({ error: 'Storage not configured.' });
 
-    if (!supabaseUrl || !supabaseKey) {
-      return res.status(503).json({ error: 'Storage not configured.' });
-    }
-
-    // Fetch team diagnostic
     const teamUrl = `${supabaseUrl}/rest/v1/team_diagnostics?team_code=eq.${encodeURIComponent(code)}&select=*`;
     const teamResp = await fetch(teamUrl, {
       method: 'GET',
@@ -38,7 +201,6 @@ module.exports = async function handler(req, res) {
     }
     const team = teams[0];
 
-    // Fetch all responses
     const respUrl = `${supabaseUrl}/rest/v1/team_responses?team_code=eq.${encodeURIComponent(code)}&select=*&order=created_at.asc`;
     const respResp = await fetch(respUrl, {
       method: 'GET',
@@ -56,7 +218,6 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // Build individual summaries
     const individuals = responses.map(r => {
       const d = r.response_data || {};
       const p = d.processData || d;
@@ -85,7 +246,6 @@ module.exports = async function handler(req, res) {
       };
     });
 
-    // Compute aggregation — averages, ranges, and disagreements
     const nums = (key) => individuals.map(i => i.metrics[key]).filter(v => typeof v === 'number' && v > 0);
     const avg = (arr) => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
     const spread = (arr) => arr.length > 1 ? Math.max(...arr) - Math.min(...arr) : 0;
@@ -95,7 +255,6 @@ module.exports = async function handler(req, res) {
     const handoffArr = nums('handoffCount');
     const hoursArr = nums('totalUserHours');
 
-    // Find perception gaps — where responses differ significantly
     const gaps = [];
 
     if (spread(elapsedDaysArr) > 5) {
@@ -120,7 +279,6 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // Performance perception gap
     const perfVotes = {};
     individuals.forEach(i => {
       if (i.metrics.performance) {
@@ -138,7 +296,6 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // Biggest delay gap — different bottleneck descriptions
     const delays = individuals.filter(i => i.metrics.biggestDelay).map(i => ({
       name: i.name, department: i.department, delay: i.metrics.biggestDelay
     }));
@@ -154,7 +311,6 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // Issues frequency
     const issueFreq = {};
     individuals.forEach(i => {
       (i.metrics.issues || []).forEach(issue => {
@@ -192,4 +348,4 @@ module.exports = async function handler(req, res) {
     console.error('Get team results error:', error);
     return res.status(500).json({ error: 'Failed to retrieve team results.' });
   }
-};
+}

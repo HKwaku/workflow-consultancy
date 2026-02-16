@@ -196,7 +196,7 @@
             history.replaceState(null, '', '/team-results?code=' + code);
 
             try {
-                const resp = await fetch('/api/get-team-results?code=' + encodeURIComponent(code));
+                const resp = await fetch('/api/team?action=results&code=' + encodeURIComponent(code));
                 const data = await resp.json();
 
                 if (!resp.ok) {
