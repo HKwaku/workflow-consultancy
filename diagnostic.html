@@ -7011,34 +7011,41 @@
             const decisionPoints = process.steps.filter(s => s.isDecision);
             const deptList = [...new Set(process.steps.map(s => s.department))];
             const poorHandoffs = (process.handoffs || []).filter(h => h.clarity === 'yes-multiple' || h.clarity === 'yes-major');
+            const copySystems = (process.systems || []).filter(s => s.actions.includes('copy-in') || s.actions.includes('copy-out'));
+            const teamSizeNum = parseInt(contact.teamSize) || 500;
 
+            // Build evidence object with ALL fields that analyze-symptoms.js expects
             const evidence = {
                 actualTime: process.lastExample.elapsedDays,
-                idealTime: Math.round(process.lastExample.elapsedDays * 0.4),
+                idealTime: Math.max(1, Math.round(process.lastExample.elapsedDays * 0.4)),
                 waitTime: process.userTime.waiting,
                 waitFrequency: 'every-time',
                 meetingHours: process.userTime.meetings,
-                emailHours: process.userTime.emails,
-                statusUpdates: 'daily',
-                missingInfo: 'frequently',
-                handoffCount: (process.handoffs || []).length,
-                poorHandoffs: poorHandoffs.length,
-                systemCount: (process.systems || []).length,
-                manualTransfer: (process.systems || []).filter(s => s.actions.includes('copy-in') || s.actions.includes('copy-out')).length,
-                approvalCount: (process.approvals || []).length,
-                approvalAvgDays: process.approvals.reduce((sum, a) => sum + parseInt(a.avgDays || 0), 0),
-                processSteps: process.steps.length,
-                departments: deptList.length,
-                decisionPoints: decisionPoints.length,
-                branchingComplexity: decisionPoints.reduce((sum, d) => sum + (d.branches || []).length, 0),
-                loopBacks: decisionPoints.filter(d => (d.branches || []).some(b => {
-                    const targetNum = parseInt((b.target || '').replace(/\D/g, ''));
-                    return targetNum < d.number;
-                })).length,
-                documentation: process.knowledge.documentation,
-                spof: process.knowledge.singlePointOfFailure === 'yes',
-                workarounds: process.knowledge.workarounds === 'yes'
+                meetingPeople: deptList.length,
+                searchTime: 25,
+                dataInconsistent: 'weekly',
+                dataFigureOutTime: 30,
+                copyPaste: copySystems.length * 3,
+                shadowSpreadsheets: 3,
+                spreadsheetHours: 4,
+                toolCount: (process.systems || []).length,
+                toolSwitches: (process.systems || []).length * 5,
+                reportHours: 6,
+                reportFrequency: 'weekly',
+                onboardingWeeks: parseInt(process.newHire?.learningWeeks) || 12,
+                missedOpportunities: 2,
+                opportunityValue: 50000,
+                crossDeptWork: 'handoff'
             };
+
+            // Build workflows array in the format the API expects
+            const workflows = [{
+                name: process.processName,
+                type: process.processType || 'procurement',
+                departments: deptList
+            }];
+
+            const channels = (process.systems || []).map(s => s.name);
 
             try {
                 const resp = await fetch('/api/analyze-symptoms', {
@@ -7046,20 +7053,19 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         evidence,
-                        workflows: process.steps.map(s => ({
-                            name: s.name,
-                            department: s.department,
-                            isDecision: s.isDecision || false,
-                            branches: s.branches || [],
-                            isExternal: s.isExternal || false
-                        })),
-                        channels: (process.systems || []).map(s => s.name),
-                        toolConsent: true,
+                        workflows,
+                        channels,
+                        toolConsent: {
+                            totalSelected: 0,
+                            selectedTools: [],
+                            hasTools: false,
+                            preferManual: true
+                        },
                         contact: {
                             name: contact.name,
                             email: contact.email,
                             company: contact.company,
-                            teamSize: contact.teamSize,
+                            teamSize: teamSizeNum,
                             industry: contact.industry
                         }
                     })
@@ -7071,7 +7077,25 @@
                 }
 
                 const data = await resp.json();
-                renderAIDiagnostic(target, data, process);
+                // analyze-symptoms returns { success, analysis, metrics, operatingModel }
+                // Normalise to what renderAIDiagnostic expects
+                const normalized = {
+                    diagnosis: {
+                        executiveSummary: data.analysis?.executiveSummary || '',
+                        rootCauses: data.analysis?.rootCauses || []
+                    },
+                    recommendations: data.analysis?.transformationPlan?.phases?.flatMap(p =>
+                        (p.weeks || []).flatMap(w =>
+                            (w.keyTasks || []).map(t => typeof t === 'string' ? { action: t, timeframe: p.title } : { action: t.task, impact: t.deliverable, owner: (t.attendees || [])[0], timeframe: p.title })
+                        )
+                    ) || [],
+                    operatingModel: data.analysis?.operatingModel || data.operatingModel || null,
+                    workflowInsights: data.analysis?.workflowInsights || [],
+                    calculatedCosts: data.analysis?.calculatedCosts || data.metrics?.costs || null,
+                    healthScore: data.analysis?.healthScore || null,
+                    urgencyLevel: data.analysis?.urgencyLevel || null
+                };
+                renderAIDiagnostic(target, normalized, process);
             } catch (err) {
                 console.error('AI diagnostic error:', err);
                 target.innerHTML += `<div style="padding:16px;background:#fef2f2;border-radius:8px;border-left:4px solid #dc2626;margin-top:12px;">
@@ -7085,6 +7109,24 @@
         function renderAIDiagnostic(container, data, process) {
             const decisionPoints = process.steps.filter(s => s.isDecision);
             let html = `<h3 style="margin-bottom: 1rem;">AI Deep Analysis <span style="display:inline-block;font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;padding:3px 10px;border-radius:100px;background:linear-gradient(135deg,#7c3aed,#1e40af);color:white;vertical-align:middle;margin-left:8px;">AI-Powered</span></h3>`;
+
+            // Health Score & Urgency
+            if (data.healthScore || data.urgencyLevel) {
+                const score = data.healthScore || 0;
+                const urgency = data.urgencyLevel || 'medium';
+                const scoreColor = score >= 70 ? '#16a34a' : score >= 40 ? '#d97706' : '#dc2626';
+                const urgencyColor = { critical: '#dc2626', high: '#d97706', medium: '#1e40af', low: '#16a34a' }[urgency] || '#1e40af';
+                html += `<div style="display:flex;gap:16px;margin-bottom:20px;">
+                    <div style="flex:1;background:#f8fafc;border-radius:12px;padding:18px;text-align:center;border:1px solid #e2e8f0;">
+                        <div style="font-size:2rem;font-weight:700;color:${scoreColor};">${score}/100</div>
+                        <div style="font-size:0.78rem;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Health Score</div>
+                    </div>
+                    <div style="flex:1;background:#f8fafc;border-radius:12px;padding:18px;text-align:center;border:1px solid #e2e8f0;">
+                        <div style="font-size:1.2rem;font-weight:700;color:${urgencyColor};text-transform:uppercase;">${urgency}</div>
+                        <div style="font-size:0.78rem;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Urgency Level</div>
+                    </div>
+                </div>`;
+            }
 
             // Decision Points Summary
             if (decisionPoints.length > 0) {
