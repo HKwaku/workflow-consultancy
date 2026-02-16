@@ -331,6 +331,15 @@
                             </a>
                         </div>
                     </div>
+
+                    <!-- Dashboard link -->
+                    <div id="dashboardLink" class="download-section" style="display: none; margin-top: 16px; background: linear-gradient(135deg, #faf5ff, #eff6ff);">
+                        <h3>Track Your Progress Over Time</h3>
+                        <p>Run another diagnostic in the future and compare results side-by-side on your dashboard.</p>
+                        <a id="dashboardBtn" href="/dashboard" class="btn btn-accent" style="text-decoration: none;">
+                            View Your Dashboard
+                        </a>
+                    </div>
                 </div>
 
             </div>
@@ -418,6 +427,15 @@
                 btn.disabled = true;
                 btn.style.opacity = '0.5';
                 btn.style.cursor = 'not-allowed';
+            }
+
+            // Dashboard link — set email in href
+            const dashEmail = report.contactEmail || c.email || '';
+            if (dashEmail) {
+                const dashLink = document.getElementById('dashboardLink');
+                const dashBtn = document.getElementById('dashboardBtn');
+                dashBtn.href = '/dashboard?email=' + encodeURIComponent(dashEmail);
+                dashLink.style.display = '';
             }
 
             // Show report

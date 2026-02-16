@@ -133,6 +133,247 @@
             text-align: center;
         }
 
+        .progress-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .progress-bar-row .progress-track {
+            flex: 1;
+        }
+
+        .save-progress-btn {
+            display: none;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.4rem 0.85rem;
+            background: transparent;
+            color: var(--accent);
+            border: 1.5px solid var(--accent);
+            border-radius: 100px;
+            font-size: 0.78rem;
+            font-family: 'Work Sans', sans-serif;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .save-progress-btn:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        .save-progress-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* ===== Save Progress Modal ===== */
+        .save-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            animation: modalOverlayIn 0.2s ease;
+        }
+
+        .save-modal-overlay.show {
+            display: flex;
+        }
+
+        @keyframes modalOverlayIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .save-modal {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 2rem 2.25rem;
+            max-width: 480px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+            animation: modalSlideIn 0.25s ease;
+            position: relative;
+        }
+
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .save-modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.4rem;
+            color: var(--text-light);
+            cursor: pointer;
+            line-height: 1;
+            padding: 0.2rem;
+        }
+
+        .save-modal-close:hover {
+            color: var(--text);
+        }
+
+        .save-modal h3 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0 0 0.5rem;
+        }
+
+        .save-modal p {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin: 0 0 1.25rem;
+            line-height: 1.5;
+        }
+
+        .save-modal-input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            font-size: 0.95rem;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'Work Sans', sans-serif;
+            margin-bottom: 0.75rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        .save-modal-input:focus {
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        .save-modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .save-modal-actions .button {
+            flex: 1;
+            text-align: center;
+        }
+
+        .save-modal-link-box {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--bg-alt);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+        }
+
+        .save-modal-link-box.show {
+            display: block;
+        }
+
+        .save-modal-link-box label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-light);
+            margin-bottom: 0.4rem;
+        }
+
+        .save-modal-link-row {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .save-modal-link-row input {
+            flex: 1;
+            padding: 0.6rem 0.75rem;
+            font-size: 0.85rem;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'Work Sans', sans-serif;
+            background: white;
+            color: var(--text);
+        }
+
+        .save-modal-link-row button {
+            padding: 0.6rem 1rem;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            font-family: 'Work Sans', sans-serif;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+
+        .save-modal-link-row button:hover {
+            background: var(--accent-dark, #2d7a90);
+        }
+
+        .save-modal-success {
+            display: none;
+            text-align: center;
+            padding: 1rem 0;
+        }
+
+        .save-modal-success.show {
+            display: block;
+        }
+
+        .save-modal-success .checkmark {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .save-modal-success h4 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0 0 0.4rem;
+        }
+
+        .save-modal-success p {
+            font-size: 0.88rem;
+            margin: 0;
+        }
+
+        /* Resume banner (shown when restoring from link) */
+        .resume-banner {
+            display: none;
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            color: white;
+            padding: 0.75rem 1.25rem;
+            border-radius: var(--radius-sm);
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            text-align: center;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .resume-banner.show {
+            display: block;
+        }
+
+        .resume-banner strong {
+            font-weight: 600;
+        }
+
         /* ===== Screens ===== */
         .screen {
             display: none;
@@ -350,6 +591,105 @@
             margin-right: 0.75rem;
             cursor: pointer;
             accent-color: var(--accent);
+        }
+
+        /* ===== Custom Department Tags ===== */
+        .custom-dept-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .custom-dept-tags:empty {
+            display: none;
+        }
+
+        .custom-dept-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: var(--accent);
+            color: white;
+            padding: 0.4rem 0.65rem 0.4rem 0.8rem;
+            border-radius: 100px;
+            font-size: 0.85rem;
+            font-family: 'Work Sans', sans-serif;
+            font-weight: 500;
+            animation: tagIn 0.2s ease;
+        }
+
+        @keyframes tagIn {
+            from { opacity: 0; transform: scale(0.85); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .custom-dept-tag button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.25);
+            border: none;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 0.75rem;
+            line-height: 1;
+            padding: 0;
+            transition: background 0.15s;
+        }
+
+        .custom-dept-tag button:hover {
+            background: rgba(255,255,255,0.45);
+        }
+
+        .custom-dept-input-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.25rem;
+        }
+
+        .custom-dept-text-input {
+            flex: 1;
+            padding: 0.7rem 0.9rem;
+            font-size: 0.95rem;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'Work Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            transition: border-color 0.2s;
+        }
+
+        .custom-dept-text-input:focus {
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        .custom-dept-add-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 1.4rem;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            flex-shrink: 0;
+        }
+
+        .custom-dept-add-btn:hover {
+            background: var(--accent-dark, #2d7a90);
+            transform: scale(1.05);
+        }
+
+        .custom-dept-add-btn:active {
+            transform: scale(0.95);
         }
 
         /* ===== Dynamic Lists ===== */
@@ -1069,6 +1409,91 @@
             font-size: 0.85rem;
             font-weight: 600;
         }
+
+        /* ROI Calculator */
+        .roi-card {
+            background: linear-gradient(135deg, #f0f9ff, #f0fdf4);
+            border: 1px solid #bbf7d0;
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+        .roi-card h3 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        .roi-slider-group {
+            margin: 1.5rem 0;
+        }
+        .roi-slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.88rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        .roi-slider-label .roi-pct {
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .roi-slider {
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            outline: none;
+        }
+        .roi-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px; height: 24px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .roi-slider::-moz-range-thumb {
+            width: 24px; height: 24px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+        .roi-projections {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 1.25rem;
+        }
+        .roi-projection {
+            text-align: center;
+            padding: 16px 12px;
+            background: white;
+            border-radius: var(--radius-md);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .roi-projection .roi-month {
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-light);
+            margin-bottom: 4px;
+        }
+        .roi-projection .roi-amount {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #16a34a;
+        }
+        .roi-projection .roi-cumulative {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            margin-top: 2px;
+        }
     </style>
 </head>
 <body>
@@ -1083,10 +1508,21 @@
     <div class="container">
         <!-- Progress Bar -->
         <div class="progress-bar">
-            <div class="progress-track">
-                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            <div class="progress-bar-row">
+                <div class="progress-track">
+                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                </div>
+                <button type="button" class="save-progress-btn" id="saveProgressBtn" onclick="openSaveModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    Save &amp; get link
+                </button>
             </div>
             <div class="progress-text" id="progressText">Getting Started</div>
+        </div>
+
+        <!-- Resume banner (shown when restoring from link) -->
+        <div class="resume-banner" id="resumeBanner">
+            <strong>Welcome back!</strong> Your progress has been restored.
         </div>
 
         <!-- Live Process Health Score -->
@@ -1121,6 +1557,15 @@
 
                 <div class="button-group" style="border-top: none; padding-top: 0;">
                     <button class="button button-primary" onclick="goToScreen(1)">Start Diagnostic &rarr;</button>
+                </div>
+
+                <div style="text-align: center; margin-top: 1rem;">
+                    <button class="button button-secondary" onclick="openTeamModal()" style="font-size: 0.88rem; padding: 0.6rem 1.5rem; border-radius: 100px;">
+                        &#128101; Start a Team Diagnostic
+                    </button>
+                    <p style="font-size: 0.78rem; color: var(--text-light); margin-top: 0.5rem;">
+                        Get multiple perspectives on the same process from different team members.
+                    </p>
                 </div>
 
                 <!-- DEV: Skip to results with sample data -->
@@ -1252,8 +1697,12 @@
                         <label class="checkbox-option"><input type="checkbox" name="departments" value="Product"> Product</label>
                         <label class="checkbox-option"><input type="checkbox" name="departments" value="Leadership"> Leadership</label>
                         <label class="checkbox-option"><input type="checkbox" name="departments" value="HR"> HR</label>
-                        <label class="checkbox-option"><input type="checkbox" name="departments" value="Other" onchange="toggleOtherInput(this, 'departmentsOther')"> Other</label>
-                        <input type="text" id="departmentsOther" placeholder="Please specify..." style="display: none; margin-top: 0.5rem;">
+                        <!-- Custom departments -->
+                        <div id="customDeptTags" class="custom-dept-tags"></div>
+                        <div class="custom-dept-input-row">
+                            <input type="text" id="customDeptInput" placeholder="Add a custom department or team..." class="custom-dept-text-input" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomDepartment();}">
+                            <button type="button" class="custom-dept-add-btn" onclick="addCustomDepartment()" title="Add department">+</button>
+                        </div>
                     </div>
                 </div>
 
@@ -2016,6 +2465,9 @@
                     <!-- 90-Day Roadmap -->
                     <div id="roadmapSection" style="display: none;"></div>
 
+                    <!-- ROI Projection Calculator -->
+                    <div id="roiCalculator" style="display: none;"></div>
+
                     <div class="button-group" style="flex-direction: column; gap: 1rem;">
                         <button class="button button-primary" onclick="downloadPDFReport()" id="downloadPdfBtn">
                             <span id="pdfBtnText">Download PDF Report</span>
@@ -2023,6 +2475,12 @@
                         <button class="button button-accent" onclick="emailDiagnosticReport()" id="emailReportBtn" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); border: none;">
                             <span id="emailBtnText">&#9993; Email Report to Me</span>
                         </button>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;">
+                            <button class="button button-secondary" onclick="exportCSV()" style="flex: 1; min-width: 120px; font-size: 0.85rem;">&#128202; CSV</button>
+                            <button class="button button-secondary" onclick="exportNotionMarkdown()" style="flex: 1; min-width: 120px; font-size: 0.85rem;">&#128221; Notion</button>
+                            <button class="button button-secondary" onclick="exportJSON()" style="flex: 1; min-width: 120px; font-size: 0.85rem;">&#128196; JSON</button>
+                            <button class="button button-secondary" onclick="exportBPMN()" style="flex: 1; min-width: 120px; font-size: 0.85rem;">&#9881; BPMN</button>
+                        </div>
                         <a href="mailto:hopektettey@gmail.com?subject=Process%20Diagnostic%20-%20Discovery%20Call" class="button button-secondary" style="text-align: center; text-decoration: none;">Book Discovery Call</a>
                         <a href="index.html" class="button button-secondary" style="text-align: center; text-decoration: none;">Back to Home</a>
                     </div>
@@ -2306,6 +2764,100 @@
             }
         }
 
+        // ============================================================
+        // CUSTOM DEPARTMENTS
+        // ============================================================
+        const customDepartments = [];
+
+        function addCustomDepartment() {
+            const input = document.getElementById('customDeptInput');
+            const name = input.value.trim();
+            if (!name) return;
+
+            // Prevent duplicates (case-insensitive)
+            const nameLower = name.toLowerCase();
+            const builtInDepts = ['sales','operations','finance','it','customer success','product','leadership','hr'];
+            if (builtInDepts.includes(nameLower)) {
+                // Check the built-in checkbox instead
+                const cb = document.querySelector(`input[name="departments"][value="${name}"]`) ||
+                           [...document.querySelectorAll('input[name="departments"]')].find(c => c.value.toLowerCase() === nameLower);
+                if (cb && !cb.checked) cb.click();
+                input.value = '';
+                return;
+            }
+            if (customDepartments.some(d => d.toLowerCase() === nameLower)) {
+                input.value = '';
+                return;
+            }
+
+            customDepartments.push(name);
+            input.value = '';
+            renderCustomDeptTags();
+            syncCustomDeptsToStepDropdowns();
+        }
+
+        function removeCustomDepartment(name) {
+            const idx = customDepartments.indexOf(name);
+            if (idx > -1) customDepartments.splice(idx, 1);
+            renderCustomDeptTags();
+            syncCustomDeptsToStepDropdowns();
+        }
+
+        function renderCustomDeptTags() {
+            const container = document.getElementById('customDeptTags');
+            container.innerHTML = '';
+            customDepartments.forEach(name => {
+                const tag = document.createElement('span');
+                tag.className = 'custom-dept-tag';
+                tag.textContent = name + ' ';
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.title = 'Remove';
+                btn.innerHTML = '&times;';
+                btn.addEventListener('click', () => removeCustomDepartment(name));
+                tag.appendChild(btn);
+                container.appendChild(tag);
+            });
+        }
+
+        function syncCustomDeptsToStepDropdowns() {
+            // Update all existing step department selects with custom departments
+            document.querySelectorAll('select[id^="step_"][id$="_dept"]').forEach(select => {
+                const currentVal = select.value;
+                // Remove old custom optgroup if present
+                const oldGroup = select.querySelector('optgroup[label="Custom"]');
+                if (oldGroup) oldGroup.remove();
+
+                if (customDepartments.length > 0) {
+                    // Insert custom optgroup before the "Custom..." option
+                    const customOptgroup = document.createElement('optgroup');
+                    customOptgroup.label = 'Custom';
+                    customDepartments.forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d;
+                        opt.textContent = d;
+                        customOptgroup.appendChild(opt);
+                    });
+                    const otherOpt = select.querySelector('option[value="Other"]');
+                    if (otherOpt) select.insertBefore(customOptgroup, otherOpt);
+                    else select.appendChild(customOptgroup);
+                }
+                // Restore selection
+                select.value = currentVal;
+            });
+        }
+
+        function getDeptOptionsHTML() {
+            let html = DEPT_OPTIONS;
+            if (customDepartments.length > 0) {
+                const customGroup = '<optgroup label="Custom">' +
+                    customDepartments.map(d => `<option value="${d}">${d}</option>`).join('') +
+                    '</optgroup>';
+                html = html.replace('<option value="Other">Custom...</option>', customGroup + '<option value="Other">Custom...</option>');
+            }
+            return html;
+        }
+
         // Toggle "Other" text input for radio groups
         function toggleRadioOther(radioName, inputId) {
             const selected = document.querySelector('input[name="' + radioName + '"]:checked');
@@ -2385,7 +2937,7 @@
                 <div class="list-item-content">
                     <input type="text" id="step_${idx}_name" placeholder="Step name, e.g., Create customer account">
                     <div class="step-dept-row">
-                        <select id="step_${idx}_dept" onchange="toggleStepDeptOther(this, ${idx})">${DEPT_OPTIONS}</select>
+                        <select id="step_${idx}_dept" onchange="toggleStepDeptOther(this, ${idx})">${getDeptOptionsHTML()}</select>
                         <div class="int-ext-toggle">
                             <label title="Internal team/department">
                                 <input type="radio" name="step_${idx}_ext" value="internal" checked>
@@ -2823,7 +3375,12 @@
                 document.getElementById('systemsList').innerHTML = '';
                 goToScreen(1);
             } else {
-                goToScreen(18);
+                // Show dependency mapping if multiple processes
+                if (completedProcesses.length >= 2) {
+                    showDependencyMapping();
+                } else {
+                    goToScreen(18);
+                }
             }
         }
 
@@ -2875,6 +3432,9 @@
                     ? (document.getElementById('industryOther')?.value?.trim() || 'Other')
                     : document.getElementById('contactIndustry').value
             };
+
+            // Submit team response if in team mode
+            submitTeamResponse();
 
             goToScreen(19);
             document.getElementById('loadingState').style.display = 'block';
@@ -3224,6 +3784,187 @@
             return { phases, cumulative, annualSavings };
         }
 
+        // ============================================================
+        // ROI PROJECTION CALCULATOR
+        // ============================================================
+        function buildROICalculator(totalCost, potentialSavings) {
+            const section = document.getElementById('roiCalculator');
+            if (!totalCost || totalCost <= 0) { section.style.display = 'none'; return; }
+
+            const maxSavings = potentialSavings || totalCost * 0.5;
+
+            section.innerHTML = `
+                <div class="roi-card">
+                    <h3>ROI Projection</h3>
+                    <p style="color: var(--text-mid); font-size: 0.9rem; margin-bottom: 0.5rem;">
+                        Drag the slider to estimate what percentage of recommendations your team will implement.
+                    </p>
+                    <div class="roi-slider-group">
+                        <div class="roi-slider-label">
+                            <span>Implementation level</span>
+                            <span class="roi-pct" id="roiPctLabel">50%</span>
+                        </div>
+                        <input type="range" class="roi-slider" id="roiSlider" min="10" max="100" step="5" value="50"
+                               oninput="updateROIProjection(this.value, ${maxSavings})">
+                    </div>
+                    <div class="roi-projections" id="roiProjections"></div>
+                    <p style="font-size: 0.78rem; color: var(--text-light); margin-top: 12px; text-align: center;">
+                        Based on your annual process cost of ${formatCurrency(totalCost)} and ${formatCurrency(maxSavings)} potential savings.
+                    </p>
+                </div>`;
+
+            section.style.display = 'block';
+            updateROIProjection(50, maxSavings);
+        }
+
+        function updateROIProjection(pct, maxSavings) {
+            document.getElementById('roiPctLabel').textContent = pct + '%';
+            const factor = pct / 100;
+
+            // Month 3: quick wins only (~30% of savings realised)
+            const m3 = Math.round(maxSavings * factor * 0.3 / 12 * 3);
+            // Month 6: agents + quick wins (~60% realised)
+            const m6 = Math.round(maxSavings * factor * 0.6 / 12 * 6);
+            // Month 12: full annual projection
+            const m12 = Math.round(maxSavings * factor);
+
+            const grid = document.getElementById('roiProjections');
+            grid.innerHTML = `
+                <div class="roi-projection">
+                    <div class="roi-month">Month 3</div>
+                    <div class="roi-amount">${formatCurrency(m3)}</div>
+                    <div class="roi-cumulative">Quick wins</div>
+                </div>
+                <div class="roi-projection">
+                    <div class="roi-month">Month 6</div>
+                    <div class="roi-amount">${formatCurrency(m6)}</div>
+                    <div class="roi-cumulative">+ Agent automation</div>
+                </div>
+                <div class="roi-projection">
+                    <div class="roi-month">Year 1</div>
+                    <div class="roi-amount">${formatCurrency(m12)}</div>
+                    <div class="roi-cumulative">Full implementation</div>
+                </div>`;
+        }
+
+        // ============================================================
+        // PROCESS DEPENDENCY MAPPING
+        // ============================================================
+        let processDependencies = [];
+
+        function showDependencyMapping() {
+            const names = completedProcesses.map(p => p.processName);
+            let html = '<div class="screen-card"><h2 class="screen-title">Process Dependencies</h2>';
+            html += '<p class="screen-subtitle">Do any of these processes depend on each other? Select all that apply.</p>';
+
+            let pairIdx = 0;
+            for (let i = 0; i < names.length; i++) {
+                for (let j = i + 1; j < names.length; j++) {
+                    html += `<div class="form-group" style="padding: 1rem; background: var(--bg-alt); border-radius: var(--radius-sm); margin-bottom: 0.75rem;">
+                        <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">${names[i]} &harr; ${names[j]}</label>
+                        <div class="radio-group">
+                            <label class="radio-option"><input type="radio" name="dep_${pairIdx}" value="a-blocks-b" data-from="${i}" data-to="${j}"> "${names[i]}" must complete before "${names[j]}" can start</label>
+                            <label class="radio-option"><input type="radio" name="dep_${pairIdx}" value="b-blocks-a" data-from="${j}" data-to="${i}"> "${names[j]}" must complete before "${names[i]}" can start</label>
+                            <label class="radio-option"><input type="radio" name="dep_${pairIdx}" value="shared-resource"> They compete for the same people/resources</label>
+                            <label class="radio-option"><input type="radio" name="dep_${pairIdx}" value="none"> No dependency</label>
+                        </div>
+                    </div>`;
+                    pairIdx++;
+                }
+            }
+
+            html += `<div class="button-group">
+                <button class="button button-secondary" onclick="goToScreen(17)">&larr; Back</button>
+                <button class="button button-primary" onclick="collectDependencies(${pairIdx}); goToScreen(18);">Continue &rarr;</button>
+            </div></div>`;
+
+            // Inject into a temp container in Screen 17's area
+            const screen17 = document.getElementById('screen17');
+            let depDiv = document.getElementById('dependencyMapping');
+            if (!depDiv) {
+                depDiv = document.createElement('div');
+                depDiv.id = 'dependencyMapping';
+                depDiv.className = 'screen';
+                screen17.parentNode.insertBefore(depDiv, screen17.nextSibling);
+            }
+            depDiv.innerHTML = html;
+
+            // Show dependency screen
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            depDiv.classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function collectDependencies(pairCount) {
+            processDependencies = [];
+            const names = completedProcesses.map(p => p.processName);
+
+            for (let k = 0; k < pairCount; k++) {
+                const selected = document.querySelector(`input[name="dep_${k}"]:checked`);
+                if (!selected || selected.value === 'none') continue;
+
+                const from = parseInt(selected.dataset.from);
+                const to = parseInt(selected.dataset.to);
+
+                if (selected.value === 'a-blocks-b') {
+                    processDependencies.push({ from: names[from], to: names[to], type: 'blocks' });
+                } else if (selected.value === 'b-blocks-a') {
+                    processDependencies.push({ from: names[to], to: names[from], type: 'blocks' });
+                } else if (selected.value === 'shared-resource') {
+                    processDependencies.push({ from: names[from], to: names[to], type: 'shared-resource' });
+                }
+            }
+        }
+
+        function renderDependencyGraph() {
+            if (processDependencies.length === 0) return '';
+            const names = [...new Set(completedProcesses.map(p => p.processName))];
+
+            // Build a simple SVG dependency graph
+            const W = 600, H = Math.max(200, names.length * 80 + 60);
+            const nodeW = 180, nodeH = 40;
+            const positions = names.map((n, i) => ({
+                name: n,
+                x: i % 2 === 0 ? 60 : W - nodeW - 60,
+                y: 40 + i * 70
+            }));
+
+            let svg = `<svg viewBox="0 0 ${W} ${H}" style="width: 100%; max-height: 320px;" xmlns="http://www.w3.org/2000/svg">`;
+            svg += `<defs><marker id="arrowDep" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#3d8ea6"/></marker></defs>`;
+
+            // Draw edges
+            processDependencies.forEach(dep => {
+                const fromNode = positions.find(p => p.name === dep.from);
+                const toNode = positions.find(p => p.name === dep.to);
+                if (!fromNode || !toNode) return;
+
+                const x1 = fromNode.x + nodeW / 2, y1 = fromNode.y + nodeH / 2;
+                const x2 = toNode.x + nodeW / 2, y2 = toNode.y + nodeH / 2;
+                const color = dep.type === 'blocks' ? '#3d8ea6' : '#d97706';
+                const dash = dep.type === 'shared-resource' ? 'stroke-dasharray="6,4"' : '';
+                const marker = dep.type === 'blocks' ? 'marker-end="url(#arrowDep)"' : '';
+                svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="2" ${dash} ${marker}/>`;
+
+                const mx = (x1 + x2) / 2, my = (y1 + y2) / 2 - 8;
+                const label = dep.type === 'blocks' ? 'blocks' : 'shared resource';
+                svg += `<text x="${mx}" y="${my}" text-anchor="middle" font-size="10" fill="${color}" font-family="Work Sans, sans-serif">${label}</text>`;
+            });
+
+            // Draw nodes
+            positions.forEach(p => {
+                svg += `<rect x="${p.x}" y="${p.y}" width="${nodeW}" height="${nodeH}" rx="8" fill="white" stroke="#e2e8f0" stroke-width="1.5"/>`;
+                svg += `<text x="${p.x + nodeW / 2}" y="${p.y + nodeH / 2 + 4}" text-anchor="middle" font-size="12" fill="#1e293b" font-weight="500" font-family="Work Sans, sans-serif">${p.name.length > 22 ? p.name.slice(0, 20) + '...' : p.name}</text>`;
+            });
+
+            svg += '</svg>';
+
+            return `<div style="margin: 2rem 0; padding: 1.5rem; background: var(--bg-alt); border-radius: var(--radius-lg); border: 1px solid var(--border);">
+                <h3 style="font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; font-weight: 700; color: var(--primary); margin-bottom: 0.75rem;">Process Dependency Map</h3>
+                <p style="font-size: 0.85rem; color: var(--text-mid); margin-bottom: 1rem;">Solid arrows = blocking dependency. Dashed lines = shared resource contention.</p>
+                ${svg}
+            </div>`;
+        }
+
         function displayResults(result, contact) {
             lastResult = result;
             lastContact = contact;
@@ -3306,6 +4047,16 @@
             // 90-Day Roadmap
             const roadmapData = buildRoadmap(completedProcesses, result.totalCost);
 
+            // ROI Projection Calculator
+            buildROICalculator(result.totalCost, result.potentialSavings);
+
+            // Process Dependency Graph
+            const depGraphHtml = renderDependencyGraph();
+            if (depGraphHtml) {
+                const roiSection = document.getElementById('roiCalculator');
+                roiSection.insertAdjacentHTML('afterend', depGraphHtml);
+            }
+
             // Store for PDF
             lastScoreData = scoreData;
             lastRoadmapData = roadmapData;
@@ -3377,13 +4128,10 @@
             processData.definition.startsWhen = document.getElementById('processStarts')?.value?.trim() || '';
             processData.definition.completesWhen = document.getElementById('processCompletes')?.value?.trim() || '';
             processData.definition.complexity = getRadioValue('complexity');
-            processData.definition.departments = getCheckedValues('departments').map(d => {
-                if (d === 'Other') {
-                    const otherVal = document.getElementById('departmentsOther')?.value?.trim();
-                    return otherVal || 'Other';
-                }
-                return d;
-            });
+            processData.definition.departments = [
+                ...getCheckedValues('departments'),
+                ...customDepartments
+            ];
 
             // Screen 4
             processData.lastExample.name = document.getElementById('exampleName')?.value?.trim() || '';
@@ -4782,6 +5530,160 @@
         //   2. CRM lead capture
         //   3. Team notification
         // ============================================================
+        // ============================================================
+        // EXPORT FUNCTIONS (CSV, Notion, JSON)
+        // ============================================================
+        function getExportData() {
+            if (!lastResult) return { recommendations: [], processes: [] };
+            const recs = lastResult.recommendations || [];
+            const procs = completedProcesses.map(p => ({
+                name: p.processName,
+                annualCost: p.costs?.totalAnnualCost || 0,
+                elapsedDays: p.lastExample?.elapsedDays || 0,
+                steps: (p.steps || []).length,
+                handoffs: (p.handoffs || []).length,
+                performance: p.performance || ''
+            }));
+            return { recommendations: recs, processes: procs, totalCost: lastResult.totalCost, potentialSavings: lastResult.potentialSavings };
+        }
+
+        function downloadFile(content, filename, type) {
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a); URL.revokeObjectURL(url);
+        }
+
+        function exportCSV() {
+            const data = getExportData();
+            let csv = 'Type,Process,Recommendation,Priority\n';
+            data.recommendations.forEach((r, i) => {
+                const text = (r.text || '').replace(/"/g, '""');
+                csv += `"${r.type || 'general'}","${r.process || ''}","${text}","${i < 3 ? 'High' : 'Medium'}"\n`;
+            });
+            csv += '\n\nProcess,Annual Cost,Cycle Days,Steps,Handoffs\n';
+            data.processes.forEach(p => {
+                csv += `"${p.name}",${p.annualCost},${p.elapsedDays},${p.steps},${p.handoffs}\n`;
+            });
+            downloadFile(csv, 'diagnostic-recommendations.csv', 'text/csv');
+        }
+
+        function exportNotionMarkdown() {
+            const data = getExportData();
+            let md = '# Process Diagnostic — Action Items\n\n';
+            md += `Total annual process cost: £${(data.totalCost / 1000).toFixed(0)}K | Potential savings: £${((data.potentialSavings || 0) / 1000).toFixed(0)}K\n\n`;
+            md += '## Recommendations\n\n';
+            data.recommendations.forEach((r, i) => {
+                md += `- [ ] **[${(r.type || 'general').toUpperCase()}]** ${r.text || ''}`;
+                if (r.process) md += ` _(${r.process})_`;
+                md += '\n';
+            });
+            md += '\n## Processes Analysed\n\n';
+            md += '| Process | Annual Cost | Cycle Time | Steps |\n|---|---|---|---|\n';
+            data.processes.forEach(p => {
+                md += `| ${p.name} | £${(p.annualCost / 1000).toFixed(0)}K | ${p.elapsedDays} days | ${p.steps} |\n`;
+            });
+            downloadFile(md, 'diagnostic-notion-tasks.md', 'text/markdown');
+        }
+
+        function exportJSON() {
+            const data = getExportData();
+            const exportObj = {
+                exportedAt: new Date().toISOString(),
+                summary: { totalAnnualCost: data.totalCost, potentialSavings: data.potentialSavings },
+                recommendations: data.recommendations.map((r, i) => ({
+                    type: r.type || 'general',
+                    process: r.process || '',
+                    text: r.text || '',
+                    priority: i < 3 ? 'high' : 'medium',
+                    status: 'todo'
+                })),
+                processes: data.processes
+            };
+            downloadFile(JSON.stringify(exportObj, null, 2), 'diagnostic-export.json', 'application/json');
+        }
+
+        function exportBPMN() {
+            if (!completedProcesses || completedProcesses.length === 0) return;
+            const p = completedProcesses[0];
+            const steps = p.steps || [];
+            const handoffs = p.handoffs || [];
+            const depts = [...new Set(steps.map(s => s.department).filter(Boolean))];
+            const processId = 'Process_' + (p.processName || 'Main').replace(/[^a-zA-Z0-9]/g, '_');
+
+            let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             id="Definitions_1"
+             targetNamespace="http://workflowpartners.com/bpmn"
+             exporter="Workflow Partners Diagnostic"
+             exporterVersion="1.0">
+  <collaboration id="Collaboration_1">
+    <participant id="Participant_1" name="${escXml(p.processName || 'Process')}" processRef="${processId}" />\n`;
+
+            // Add lanes for each department
+            depts.forEach((dept, i) => {
+                xml += `    <participant id="Lane_${i}" name="${escXml(dept)}" />\n`;
+            });
+
+            xml += `  </collaboration>
+  <process id="${processId}" name="${escXml(p.processName || 'Process')}" isExecutable="false">\n`;
+
+            // Start event
+            xml += `    <startEvent id="Start_1" name="Process Start" />\n`;
+
+            // Tasks
+            steps.forEach((s, i) => {
+                const taskType = (s.isExternal) ? 'serviceTask' : 'userTask';
+                xml += `    <${taskType} id="Task_${i + 1}" name="${escXml(s.name || 'Step ' + (i + 1))}" />\n`;
+            });
+
+            // End event
+            xml += `    <endEvent id="End_1" name="Process Complete" />\n`;
+
+            // Sequence flows
+            xml += `    <sequenceFlow id="Flow_start" sourceRef="Start_1" targetRef="Task_1" />\n`;
+            steps.forEach((s, i) => {
+                const nextRef = i < steps.length - 1 ? `Task_${i + 2}` : 'End_1';
+                xml += `    <sequenceFlow id="Flow_${i + 1}" sourceRef="Task_${i + 1}" targetRef="${nextRef}" />\n`;
+            });
+
+            xml += `  </process>\n`;
+
+            // Basic diagram layout
+            xml += `  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_1">
+      <bpmndi:BPMNShape id="Start_1_di" bpmnElement="Start_1">
+        <dc:Bounds x="160" y="100" width="36" height="36" />
+      </bpmndi:BPMNShape>\n`;
+
+            steps.forEach((s, i) => {
+                const x = 260 + i * 160;
+                xml += `      <bpmndi:BPMNShape id="Task_${i + 1}_di" bpmnElement="Task_${i + 1}">
+        <dc:Bounds x="${x}" y="80" width="120" height="80" />
+      </bpmndi:BPMNShape>\n`;
+            });
+
+            const endX = 260 + steps.length * 160;
+            xml += `      <bpmndi:BPMNShape id="End_1_di" bpmnElement="End_1">
+        <dc:Bounds x="${endX}" y="100" width="36" height="36" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>`;
+
+            const filename = (p.processName || 'process').replace(/[^a-zA-Z0-9]/g, '-') + '.bpmn';
+            downloadFile(xml, filename, 'application/xml');
+        }
+
+        function escXml(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+        }
+
         async function emailDiagnosticReport() {
             const btn = document.getElementById('emailReportBtn');
             const btnText = document.getElementById('emailBtnText');
@@ -5756,7 +6658,7 @@
         // ============================================================
         // INIT
         // ============================================================
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             setDateLimits();
 
             // Show dev toolbar on localhost / local dev
@@ -5772,12 +6674,427 @@
                 return;
             }
 
+            // Check for team mode (?team=CODE)
+            await checkForTeamMode();
+
+            // Check for cloud resume link (?resume=xxx)
+            const cloudResumed = await checkForCloudResume();
+            if (cloudResumed) return;
+
             if (!loadProgress()) {
                 updateProgress();
             }
         });
 
         setInterval(saveProgress, 30000);
+
+        // ============================================================
+        // SAVE PROGRESS TO CLOUD & RESUME VIA EMAIL LINK
+        // ============================================================
+        let cloudProgressId = null;
+
+        function openSaveModal() {
+            collectAllProcessData();
+            const modal = document.getElementById('saveModalOverlay');
+            const form = document.getElementById('saveModalForm');
+            const success = document.getElementById('saveModalSuccess');
+            const linkBox = document.getElementById('saveModalLinkBox');
+            form.style.display = 'block';
+            success.classList.remove('show');
+            linkBox.classList.remove('show');
+            document.getElementById('saveModalEmail').value = '';
+            document.getElementById('saveModalSaveBtn').disabled = false;
+            document.getElementById('saveModalSaveBtn').textContent = 'Save & Email Link';
+            modal.classList.add('show');
+        }
+
+        function closeSaveModal() {
+            document.getElementById('saveModalOverlay').classList.remove('show');
+        }
+
+        async function saveProgressToCloud(withEmail) {
+            const btn = document.getElementById('saveModalSaveBtn');
+            const skipBtn = document.getElementById('saveModalSkipBtn');
+            const email = withEmail ? document.getElementById('saveModalEmail').value.trim() : '';
+
+            if (withEmail && !email) {
+                document.getElementById('saveModalEmail').style.borderColor = '#dc3545';
+                document.getElementById('saveModalEmail').focus();
+                return;
+            }
+
+            btn.disabled = true;
+            if (skipBtn) skipBtn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            try {
+                collectAllProcessData();
+
+                const body = {
+                    email: email || null,
+                    progressData: {
+                        currentScreen,
+                        processData,
+                        completedProcesses,
+                        customDepartments,
+                        stepCount: typeof stepCount !== 'undefined' ? stepCount : 0
+                    },
+                    currentScreen,
+                    processName: processData.processName || ''
+                };
+
+                if (cloudProgressId) {
+                    body.progressId = cloudProgressId;
+                }
+
+                const resp = await fetch('/api/save-progress', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                const result = await resp.json();
+
+                if (!resp.ok || !result.success) {
+                    throw new Error(result.error || 'Save failed');
+                }
+
+                cloudProgressId = result.progressId;
+
+                // Show success state
+                const form = document.getElementById('saveModalForm');
+                const success = document.getElementById('saveModalSuccess');
+                const linkBox = document.getElementById('saveModalLinkBox');
+
+                form.style.display = 'none';
+                success.classList.add('show');
+                linkBox.classList.add('show');
+
+                document.getElementById('saveModalLinkInput').value = result.resumeUrl;
+
+                if (email) {
+                    document.getElementById('saveModalSuccessMsg').textContent =
+                        'A resume link has been sent to ' + email;
+                } else {
+                    document.getElementById('saveModalSuccessMsg').textContent =
+                        'Copy the link below to continue on any device.';
+                }
+
+            } catch (err) {
+                console.error('Save progress error:', err);
+                btn.textContent = 'Error — try again';
+                btn.disabled = false;
+                if (skipBtn) skipBtn.disabled = false;
+                setTimeout(() => { btn.textContent = 'Save & Email Link'; }, 3000);
+            }
+        }
+
+        function copySaveLink() {
+            const input = document.getElementById('saveModalLinkInput');
+            input.select();
+            navigator.clipboard.writeText(input.value).then(() => {
+                const btn = input.nextElementSibling;
+                const orig = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => { btn.textContent = orig; }, 2000);
+            });
+        }
+
+        // Show save button once user is past screen 2
+        function updateSaveButtonVisibility() {
+            const btn = document.getElementById('saveProgressBtn');
+            if (btn) {
+                btn.style.display = currentScreen >= 2 ? 'inline-flex' : 'none';
+            }
+        }
+
+        // Patch goToScreen to show/hide save button
+        const _origGoToScreen = goToScreen;
+        goToScreen = function(screenNum) {
+            _origGoToScreen(screenNum);
+            updateSaveButtonVisibility();
+        };
+
+        // ── Resume from cloud link ─────────────────────────────────
+        async function checkForCloudResume() {
+            const params = new URLSearchParams(location.search);
+            const resumeId = params.get('resume');
+            if (!resumeId) return false;
+
+            try {
+                const resp = await fetch('/api/load-progress?id=' + encodeURIComponent(resumeId));
+                const result = await resp.json();
+
+                if (!resp.ok || !result.success) {
+                    console.warn('Resume failed:', result.error);
+                    return false;
+                }
+
+                const data = result.progress.progressData;
+                if (!data) return false;
+
+                // Restore state
+                processData = data.processData || createEmptyProcess();
+                completedProcesses = data.completedProcesses || [];
+                cloudProgressId = result.progress.id;
+
+                // Restore custom departments
+                if (data.customDepartments && data.customDepartments.length > 0) {
+                    customDepartments.length = 0;
+                    data.customDepartments.forEach(d => customDepartments.push(d));
+                    renderCustomDeptTags();
+                    syncCustomDeptsToStepDropdowns();
+                }
+
+                // Restore step count
+                if (typeof data.stepCount === 'number' && data.stepCount > 0) {
+                    stepCount = 0;
+                }
+
+                // Navigate to saved screen
+                const targetScreen = data.currentScreen || 0;
+                goToScreen(targetScreen);
+
+                // Show resume banner
+                const banner = document.getElementById('resumeBanner');
+                if (banner) {
+                    const processName = result.progress.processName;
+                    if (processName) {
+                        banner.innerHTML = '<strong>Welcome back!</strong> Your progress on "' +
+                            processName.replace(/</g, '&lt;') + '" has been restored.';
+                    }
+                    banner.classList.add('show');
+                    setTimeout(() => banner.classList.remove('show'), 8000);
+                }
+
+                // Clean URL without reloading
+                const cleanUrl = location.pathname;
+                history.replaceState(null, '', cleanUrl);
+
+                return true;
+
+            } catch (err) {
+                console.error('Cloud resume error:', err);
+                return false;
+            }
+        }
+
+        // ============================================================
+        // TEAM DIAGNOSTIC MODE
+        // ============================================================
+        let teamMode = null; // { code, processName }
+
+        function openTeamModal() {
+            document.getElementById('teamModalCreate').style.display = 'block';
+            document.getElementById('teamModalSuccess').style.display = 'none';
+            document.getElementById('teamLinkBox').style.display = 'none';
+            document.getElementById('teamModalOverlay').classList.add('show');
+        }
+
+        function closeTeamModal() {
+            document.getElementById('teamModalOverlay').classList.remove('show');
+        }
+
+        async function createTeamDiagnostic() {
+            const processName = document.getElementById('teamProcessName').value.trim();
+            if (!processName) {
+                document.getElementById('teamProcessName').style.borderColor = '#dc3545';
+                document.getElementById('teamProcessName').focus();
+                return;
+            }
+
+            const btn = document.getElementById('teamCreateBtn');
+            btn.disabled = true;
+            btn.textContent = 'Creating...';
+
+            try {
+                const resp = await fetch('/api/create-team-diagnostic', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        processName,
+                        company: document.getElementById('teamCompany').value.trim(),
+                        createdByName: document.getElementById('teamCreatorName').value.trim(),
+                        createdByEmail: document.getElementById('teamCreatorEmail').value.trim()
+                    })
+                });
+
+                const result = await resp.json();
+                if (!resp.ok || !result.success) throw new Error(result.error || 'Failed');
+
+                // Show success
+                document.getElementById('teamModalCreate').style.display = 'none';
+                document.getElementById('teamModalSuccess').style.display = 'block';
+                document.getElementById('teamLinkBox').style.display = 'block';
+                document.getElementById('teamSuccessMsg').textContent =
+                    `Share the code below with your team. Each person visits the link and completes the diagnostic for "${processName}".`;
+                document.getElementById('teamCodeDisplay').textContent = result.teamCode;
+                document.getElementById('teamJoinLink').value = result.joinUrl;
+                document.getElementById('teamResultsLink').href = result.resultsUrl;
+
+                // Also start this user in team mode
+                teamMode = { code: result.teamCode, processName };
+
+            } catch (err) {
+                console.error('Create team error:', err);
+                btn.textContent = 'Error — try again';
+                setTimeout(() => { btn.textContent = 'Create Team Session'; btn.disabled = false; }, 3000);
+            }
+        }
+
+        function joinTeamDiagnostic() {
+            const code = document.getElementById('teamJoinCode').value.trim().toUpperCase();
+            if (!code) return;
+            // Redirect to ?team=CODE which will be picked up on load
+            location.href = '/diagnostic?team=' + code;
+        }
+
+        function copyTeamLink() {
+            const input = document.getElementById('teamJoinLink');
+            input.select();
+            navigator.clipboard.writeText(input.value).then(() => {
+                const btn = input.nextElementSibling;
+                const orig = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => { btn.textContent = orig; }, 2000);
+            });
+        }
+
+        // Check for ?team=CODE on load — enter team mode
+        async function checkForTeamMode() {
+            const params = new URLSearchParams(location.search);
+            const code = params.get('team');
+            if (!code) return false;
+
+            teamMode = { code: code.toUpperCase(), processName: '' };
+
+            // Show banner
+            const banner = document.getElementById('resumeBanner');
+            if (banner) {
+                banner.innerHTML = '<strong>Team Diagnostic Mode</strong> — Your response will be compared with your colleagues\' perspectives.';
+                banner.classList.add('show');
+            }
+
+            // Clean URL
+            history.replaceState(null, '', location.pathname);
+            return false; // don't skip normal init
+        }
+
+        // Submit team response when diagnostic completes (hook into submitForAnalysis)
+        async function submitTeamResponse() {
+            if (!teamMode) return;
+
+            try {
+                collectAllProcessData();
+                const contactName = document.getElementById('contactName')?.value?.trim() || 'Anonymous';
+                const contactEmail = document.getElementById('contactEmail')?.value?.trim() || '';
+                const contactDept = processData.definition?.departments?.[0] || '';
+
+                await fetch('/api/submit-team-response', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        teamCode: teamMode.code,
+                        respondentName: contactName,
+                        respondentEmail: contactEmail,
+                        respondentDepartment: contactDept,
+                        responseData: {
+                            processData,
+                            completedProcesses,
+                            customDepartments
+                        }
+                    })
+                });
+            } catch (err) {
+                console.warn('Team response submission error:', err);
+            }
+        }
     </script>
+
+    <!-- Save Progress Modal -->
+    <div class="save-modal-overlay" id="saveModalOverlay" onclick="if(event.target===this)closeSaveModal()">
+        <div class="save-modal">
+            <button class="save-modal-close" onclick="closeSaveModal()">&times;</button>
+
+            <div id="saveModalForm">
+                <h3>Save Your Progress</h3>
+                <p>Enter your email to receive a link, or save without email to get a shareable link you can bookmark.</p>
+
+                <input type="email" class="save-modal-input" id="saveModalEmail"
+                       placeholder="your@email.com (optional)"
+                       onkeydown="if(event.key==='Enter'){event.preventDefault();saveProgressToCloud(true);}"
+                       onfocus="this.style.borderColor='var(--accent)'">
+
+                <div class="save-modal-actions">
+                    <button class="button button-primary" id="saveModalSaveBtn"
+                            onclick="saveProgressToCloud(true)">Save &amp; Email Link</button>
+                    <button class="button button-secondary" id="saveModalSkipBtn"
+                            onclick="saveProgressToCloud(false)">Just get link</button>
+                </div>
+            </div>
+
+            <div class="save-modal-success" id="saveModalSuccess">
+                <div class="checkmark">&#10003;</div>
+                <h4>Progress Saved!</h4>
+                <p id="saveModalSuccessMsg"></p>
+            </div>
+
+            <div class="save-modal-link-box" id="saveModalLinkBox">
+                <label>Your resume link</label>
+                <div class="save-modal-link-row">
+                    <input type="text" id="saveModalLinkInput" readonly onclick="this.select()">
+                    <button onclick="copySaveLink()">Copy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team Diagnostic Modal -->
+    <div class="save-modal-overlay" id="teamModalOverlay" onclick="if(event.target===this)closeTeamModal()">
+        <div class="save-modal">
+            <button class="save-modal-close" onclick="closeTeamModal()">&times;</button>
+
+            <div id="teamModalCreate">
+                <h3>Team Diagnostic</h3>
+                <p>Create a team session and share the code with colleagues. Each person fills out the diagnostic independently, then you compare perspectives.</p>
+
+                <input type="text" class="save-modal-input" id="teamProcessName" placeholder="Process name, e.g. Client Onboarding">
+                <input type="text" class="save-modal-input" id="teamCompany" placeholder="Company name (optional)">
+                <input type="text" class="save-modal-input" id="teamCreatorName" placeholder="Your name">
+                <input type="email" class="save-modal-input" id="teamCreatorEmail" placeholder="Your email (optional)">
+
+                <div class="save-modal-actions">
+                    <button class="button button-primary" id="teamCreateBtn" onclick="createTeamDiagnostic()">Create Team Session</button>
+                </div>
+
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); text-align: center;">
+                    <p style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 0.5rem;">Already have a team code?</p>
+                    <div style="display: flex; gap: 8px; max-width: 280px; margin: 0 auto;">
+                        <input type="text" class="save-modal-input" id="teamJoinCode" placeholder="ABC123" maxlength="6" style="text-transform: uppercase; text-align: center; letter-spacing: 0.1em; margin-bottom: 0;">
+                        <button class="button button-secondary" onclick="joinTeamDiagnostic()" style="white-space: nowrap;">Join</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="save-modal-success" id="teamModalSuccess" style="display: none;">
+                <div class="checkmark">&#128101;</div>
+                <h4>Team Session Created!</h4>
+                <p id="teamSuccessMsg"></p>
+            </div>
+
+            <div class="save-modal-link-box" id="teamLinkBox" style="display: none;">
+                <label>Share this code with your team</label>
+                <div style="text-align: center; font-size: 2rem; letter-spacing: 0.2em; font-weight: 700; color: var(--accent); margin: 8px 0;" id="teamCodeDisplay"></div>
+                <label style="margin-top: 12px;">Or share this link</label>
+                <div class="save-modal-link-row">
+                    <input type="text" id="teamJoinLink" readonly onclick="this.select()">
+                    <button onclick="copyTeamLink()">Copy</button>
+                </div>
+                <div style="margin-top: 12px; text-align: center;">
+                    <a id="teamResultsLink" href="#" style="font-size: 0.85rem; color: var(--accent);">View team results page &rarr;</a>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

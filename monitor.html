@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Monitor | Workflow Partners</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --primary: #1a2f4a; --accent: #3d8ea6; --text: #1e293b; --text-mid: #475569; --text-light: #64748b; --bg: #fafbfc; --bg-alt: #f1f5f9; --white: #fff; --border: #e2e8f0; --green: #16a34a; --red: #dc2626; --amber: #d97706; --blue: #1e40af; --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --shadow-lg: 0 12px 40px rgba(0,0,0,0.08); }
+        body { font-family: 'Work Sans', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+        .header { background: linear-gradient(135deg, var(--primary), #2a4a6b); color: white; padding: 40px 0; text-align: center; }
+        .header h1 { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 600; margin-bottom: 6px; }
+        .header p { opacity: 0.75; font-size: 0.95rem; }
+        .container { max-width: 900px; margin: -30px auto 60px; padding: 0 20px; }
+        .card { background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 40px; margin-bottom: 24px; }
+        .state { text-align: center; padding: 40px 20px; }
+
+        .lookup-form { display: flex; gap: 12px; max-width: 480px; margin: 0 auto 24px; }
+        .lookup-form input { flex: 1; padding: 12px 16px; font-size: 1rem; border: 2px solid var(--border); border-radius: var(--radius-sm); font-family: inherit; }
+        .lookup-form input:focus { border-color: var(--accent); outline: none; }
+        .lookup-form button { padding: 12px 28px; background: linear-gradient(135deg, var(--accent), var(--primary)); color: white; border: none; border-radius: var(--radius-sm); font-family: inherit; font-weight: 500; cursor: pointer; }
+
+        /* Log form */
+        .log-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; padding: 20px; background: var(--bg-alt); border-radius: var(--radius-md); }
+        .log-form input, .log-form select { padding: 10px 14px; font-size: 0.9rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: inherit; }
+        .log-form input:focus, .log-form select:focus { border-color: var(--accent); outline: none; }
+        .log-form button { grid-column: 1 / -1; padding: 12px; background: var(--accent); color: white; border: none; border-radius: var(--radius-sm); font-family: inherit; font-weight: 500; font-size: 0.95rem; cursor: pointer; }
+
+        /* Stats */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
+        .stat-card { background: var(--bg-alt); border-radius: var(--radius-md); padding: 16px; text-align: center; }
+        .stat-value { font-size: 1.5rem; font-weight: 700; }
+        .stat-label { font-size: 0.72rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+        /* Status badges */
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 100px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; }
+        .badge-started { background: #dbeafe; color: var(--blue); }
+        .badge-completed { background: #dcfce7; color: var(--green); }
+        .badge-stuck { background: #fef2f2; color: var(--red); }
+        .badge-waiting { background: #fffbeb; color: var(--amber); }
+        .badge-in-progress { background: #f0f9ff; color: var(--accent); }
+        .badge-cancelled { background: var(--bg-alt); color: var(--text-light); }
+
+        /* Event log */
+        .event-log { list-style: none; }
+        .event-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+        .event-item:last-child { border-bottom: none; }
+        .event-time { font-size: 0.78rem; color: var(--text-light); min-width: 90px; }
+        .event-name { font-weight: 500; flex: 1; }
+        .event-notes { font-size: 0.82rem; color: var(--text-mid); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .section-title { font-size: 1rem; font-weight: 600; color: var(--primary); margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid var(--border); }
+        .footer { text-align: center; padding: 24px; font-size: 0.82rem; color: var(--text-light); }
+        .footer a { color: var(--accent); text-decoration: none; }
+        @media (max-width: 600px) { .card { padding: 24px; } .log-form { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Process Monitor</h1>
+        <p>Track process instances in real time and spot trends</p>
+    </div>
+    <div class="container">
+        <div class="card" id="lookupCard">
+            <div class="state">
+                <h2 style="margin-bottom: 16px;">Enter your email to view your processes</h2>
+                <form class="lookup-form" onsubmit="event.preventDefault(); loadMonitor();">
+                    <input type="email" id="monitorEmail" placeholder="your@email.com" required>
+                    <button type="submit">Load</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="monitorContent" style="display: none;">
+            <!-- Log new instance -->
+            <div class="card">
+                <h3 class="section-title">Log a Process Instance</h3>
+                <div class="log-form" id="logForm">
+                    <input type="text" id="logProcessName" placeholder="Process name">
+                    <input type="text" id="logInstanceName" placeholder="Instance name (e.g. Acme Corp)">
+                    <select id="logStatus">
+                        <option value="started">Started</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="waiting">Waiting</option>
+                        <option value="stuck">Stuck</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                    <input type="text" id="logNotes" placeholder="Notes (optional)">
+                    <button onclick="logInstance()">Log Instance</button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="card">
+                <h3 class="section-title">Process Overview</h3>
+                <div class="stats-grid" id="statsGrid"></div>
+            </div>
+
+            <!-- Recent events -->
+            <div class="card">
+                <h3 class="section-title">Recent Activity</h3>
+                <ul class="event-log" id="eventLog"></ul>
+            </div>
+        </div>
+    </div>
+    <div class="footer"><a href="/">Workflow Partners</a> &middot; Technology-agnostic workflow optimisation</div>
+
+    <script>
+        let currentEmail = '';
+
+        function formatDate(d) { return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); }
+        function formatTime(d) { return new Date(d).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
+
+        async function loadMonitor() {
+            currentEmail = document.getElementById('monitorEmail').value.trim();
+            if (!currentEmail) return;
+
+            try {
+                const resp = await fetch('/api/process-instances?email=' + encodeURIComponent(currentEmail));
+                const data = await resp.json();
+                if (!resp.ok) { alert(data.error || 'Failed'); return; }
+
+                renderMonitor(data);
+                document.getElementById('lookupCard').style.display = 'none';
+                document.getElementById('monitorContent').style.display = '';
+                history.replaceState(null, '', '/monitor?email=' + encodeURIComponent(currentEmail));
+            } catch (err) { console.error(err); alert('Connection error.'); }
+        }
+
+        function renderMonitor(data) {
+            // Stats
+            const grid = document.getElementById('statsGrid');
+            const procs = Object.entries(data.processes);
+            let html = '';
+
+            if (procs.length === 0) {
+                html = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-light); padding: 20px;">No instances logged yet. Use the form above to start tracking.</div>';
+            } else {
+                procs.forEach(([name, stats]) => {
+                    html += `<div class="stat-card">
+                        <div class="stat-value" style="color: var(--accent);">${stats.totalInstances}</div>
+                        <div class="stat-label">${name}</div>
+                        ${stats.avgCompletionDays ? `<div style="font-size: 0.78rem; color: var(--green); margin-top: 4px;">Avg: ${stats.avgCompletionDays} days</div>` : ''}
+                    </div>`;
+                });
+            }
+            grid.innerHTML = html;
+
+            // Event log
+            const log = document.getElementById('eventLog');
+            if (data.recentEvents.length === 0) {
+                log.innerHTML = '<li class="event-item" style="justify-content: center; color: var(--text-light);">No events yet</li>';
+            } else {
+                log.innerHTML = data.recentEvents.map(e => `
+                    <li class="event-item">
+                        <span class="event-time">${formatDate(e.logged_at)} ${formatTime(e.logged_at)}</span>
+                        <span class="badge badge-${e.status}">${e.status}</span>
+                        <span class="event-name">${e.instance_name || e.process_name}</span>
+                        <span class="event-notes">${e.notes || ''}</span>
+                    </li>`).join('');
+            }
+        }
+
+        async function logInstance() {
+            const processName = document.getElementById('logProcessName').value.trim();
+            const instanceName = document.getElementById('logInstanceName').value.trim();
+            const status = document.getElementById('logStatus').value;
+            const notes = document.getElementById('logNotes').value.trim();
+
+            if (!processName) { document.getElementById('logProcessName').focus(); return; }
+
+            try {
+                const resp = await fetch('/api/process-instances', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: currentEmail, processName, instanceName, status, notes })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    document.getElementById('logInstanceName').value = '';
+                    document.getElementById('logNotes').value = '';
+                    loadMonitor();
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const email = new URLSearchParams(location.search).get('email');
+            if (email) { document.getElementById('monitorEmail').value = email; loadMonitor(); }
+        });
+    </script>
+</body>
+</html>

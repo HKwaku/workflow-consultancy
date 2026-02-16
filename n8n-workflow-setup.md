@@ -365,6 +365,102 @@ Full JSON structure sent to the webhook:
 
 ---
 
+## Save Progress & Resume via Email Link
+
+When a user is mid-way through a diagnostic (especially complex processes with 10+ steps that take 30+ minutes), they can click **"Save & get link"** in the progress bar. This:
+
+1. Stores their partial progress in Supabase (`diagnostic_progress` table)
+2. Optionally sends a resume link to their email via the same n8n webhook
+3. Returns a shareable URL they can bookmark or copy
+
+### How It Works
+
+```
+User clicks "Save & get link"
+        │
+        ▼
+/api/save-progress  (Vercel serverless)
+  ├── Generates progressId (UUID) or reuses existing
+  ├── Upserts partial data into Supabase (diagnostic_progress)
+  ├── Builds resumeUrl: /diagnostic?resume={progressId}
+  └── If email provided → sends to n8n webhook
+        │
+        ▼
+n8n Webhook Trigger (requestType: "save-progress")
+  └── Send email with resume link to user
+
+---
+
+User clicks resume link or visits /diagnostic?resume=xxx
+        │
+        ▼
+/api/load-progress?id=xxx  (Vercel serverless)
+  ├── Fetches progress from Supabase
+  ├── Validates age (expires after 30 days)
+  └── Returns progressData → client restores form state
+```
+
+### n8n Webhook: Save Progress Payload
+
+The webhook receives a payload with `requestType: "save-progress"`. You can route this in n8n using a Switch node on `requestType`:
+
+```json
+{
+  "requestType": "save-progress",
+  "progressId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "resumeUrl": "https://your-site.vercel.app/diagnostic?resume=a1b2c3d4-...",
+  "email": "john@acme.com",
+  "processName": "Client Onboarding",
+  "currentScreen": 7,
+  "screenLabel": "Step Breakdown",
+  "timestamp": "2026-02-16T12:00:00.000Z"
+}
+```
+
+### n8n Email Template (Code node for save-progress)
+
+Add a Switch node after the webhook trigger that checks `{{ $json.body.requestType }}`:
+- `diagnostic-complete` → existing email/CRM/notification paths
+- `save-progress` → new email path below
+
+```javascript
+const d = $input.first().json.body || $input.first().json;
+
+const emailHtml = `
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; background: #f8fafc; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #1e293b, #334155); color: white; padding: 24px; border-radius: 12px 12px 0 0;">
+    <h1 style="margin: 0; font-size: 20px;">Continue Your Diagnostic</h1>
+    <p style="margin: 8px 0 0; opacity: 0.8;">Progress saved — pick up where you left off</p>
+  </div>
+  <div style="background: white; padding: 24px; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+    <p>Hi there,</p>
+    <p>Your progress on <strong>"${d.processName || 'your diagnostic'}"</strong> has been saved.
+       You were on step: <strong>${d.screenLabel || 'In Progress'}</strong>.</p>
+
+    <div style="margin: 24px 0; text-align: center;">
+      <a href="${d.resumeUrl}"
+         style="display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #3d8ea6, #1e293b); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+        Continue Diagnostic →
+      </a>
+    </div>
+
+    <p style="font-size: 13px; color: #94a3b8;">This link will work for 30 days. You can continue on any device.</p>
+  </div>
+</div>`;
+
+return {
+  json: {
+    to: d.email,
+    subject: 'Continue your diagnostic — ' + (d.processName || 'progress saved'),
+    html: emailHtml
+  }
+};
+```
+
+Then send via the same Gmail/SMTP node as the report email.
+
+---
+
 ## Supabase Setup (for Report Storage)
 
 The API stores diagnostic reports directly in Supabase so they can be downloaded later
@@ -397,7 +493,33 @@ CREATE POLICY "Service key full access" ON diagnostic_reports
   FOR ALL USING (true) WITH CHECK (true);
 ```
 
-### 2. Add Supabase credentials to `.env`
+### 2. Create the `diagnostic_progress` table (for Save & Resume)
+
+```sql
+CREATE TABLE IF NOT EXISTS diagnostic_progress (
+  id text PRIMARY KEY,
+  email text,
+  process_name text,
+  current_screen integer DEFAULT 0,
+  progress_data jsonb,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Index for email lookups (future dashboard feature)
+CREATE INDEX idx_diagnostic_progress_email ON diagnostic_progress (email);
+CREATE INDEX idx_diagnostic_progress_updated ON diagnostic_progress (updated_at DESC);
+
+-- Auto-expire old progress (optional: run as a cron or pg_cron job)
+-- DELETE FROM diagnostic_progress WHERE updated_at < now() - interval '30 days';
+
+-- Allow service key to read/write
+ALTER TABLE diagnostic_progress ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Service key full access" ON diagnostic_progress
+  FOR ALL USING (true) WITH CHECK (true);
+```
+
+### 3. Add Supabase credentials to `.env`
 
 Go to **Supabase Dashboard → Project Settings → API** and copy:
 
@@ -412,15 +534,25 @@ Use the **service_role** key (not the anon key) so the API can insert/read witho
 
 ## Testing
 
+### Report Delivery
 1. Start the dev server: `vercel dev`
 2. Complete a diagnostic (or use the test data button)
 3. Click **"Email Report to Me"** on the results page
 4. Without n8n configured: you'll see "Report generated (email delivery pending setup)"
 5. With n8n configured: you'll see "Report sent successfully!"
-6. **New:** If Supabase is configured, you'll also see a "View & Download Report Online" link
+6. If Supabase is configured, you'll also see a "View & Download Report Online" link
 7. Click the link → opens `/report?id=xxx` with a summary + PDF download button
 
-Check the n8n execution log to verify all three paths fire correctly.
+### Save Progress & Resume
+1. Start a diagnostic and progress past the process name screen (screen 2+)
+2. The **"Save & get link"** button appears in the progress bar
+3. Click it → enter an email (or skip) → click Save
+4. You'll get a resume URL — copy it
+5. Open a new browser tab/incognito → paste the URL
+6. Your progress should be restored with a "Welcome back!" banner
+7. If you entered an email, check the n8n execution log for the `save-progress` webhook
+
+Check the n8n execution log to verify all paths fire correctly.
 
 ---
 

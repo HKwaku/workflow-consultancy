@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Diagnostic Results | Workflow Partners</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #1a2f4a; --primary-light: #2a4a6b;
+            --accent: #3d8ea6; --accent-light: #5bb8d4;
+            --text: #1e293b; --text-mid: #475569; --text-light: #64748b;
+            --bg: #fafbfc; --bg-alt: #f1f5f9; --white: #ffffff; --border: #e2e8f0;
+            --green: #16a34a; --green-bg: #f0fdf4;
+            --red: #dc2626; --red-bg: #fef2f2;
+            --blue: #1e40af; --blue-bg: #f0f9ff;
+            --purple: #7c3aed; --purple-bg: #faf5ff;
+            --amber: #d97706; --amber-bg: #fffbeb;
+            --shadow-md: 0 4px 20px rgba(0,0,0,0.06);
+            --shadow-lg: 0 12px 40px rgba(0,0,0,0.08);
+            --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
+        }
+        body { font-family: 'Work Sans', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+        .header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 40px 0; text-align: center; }
+        .header h1 { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 600; margin-bottom: 6px; }
+        .header p { opacity: 0.75; font-size: 0.95rem; }
+        .container { max-width: 900px; margin: -30px auto 60px; padding: 0 20px; flex: 1; }
+        .card { background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); overflow: hidden; }
+        .card-body { padding: 40px; }
+
+        .state { text-align: center; padding: 60px 20px; }
+        .state h2 { font-size: 1.3rem; margin-bottom: 8px; }
+        .state p { color: var(--text-mid); font-size: 0.95rem; }
+        .loading-spinner { width: 48px; height: 48px; border: 4px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 20px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Lookup */
+        .lookup-form { display: flex; gap: 12px; max-width: 420px; margin: 0 auto; }
+        .lookup-form input { flex: 1; padding: 12px 16px; font-size: 1rem; border: 2px solid var(--border); border-radius: var(--radius-sm); font-family: inherit; text-transform: uppercase; letter-spacing: 0.1em; text-align: center; }
+        .lookup-form input:focus { border-color: var(--accent); outline: none; }
+        .lookup-form button { padding: 12px 28px; background: linear-gradient(135deg, var(--accent), var(--primary)); color: white; border: none; border-radius: var(--radius-sm); font-family: inherit; font-weight: 500; cursor: pointer; }
+
+        .section-title { font-size: 1.1rem; font-weight: 600; color: var(--primary); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+
+        /* Consensus score */
+        .consensus-bar { margin-bottom: 32px; }
+        .consensus-track { height: 10px; background: var(--bg-alt); border-radius: 5px; overflow: hidden; margin-bottom: 6px; }
+        .consensus-fill { height: 100%; border-radius: 5px; transition: width 0.6s ease; }
+        .consensus-label { display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--text-light); }
+
+        /* Metrics grid */
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; margin-bottom: 32px; }
+        .metric-card { background: var(--bg-alt); border-radius: var(--radius-md); padding: 20px; text-align: center; }
+        .metric-value { font-size: 1.5rem; font-weight: 700; margin-bottom: 2px; }
+        .metric-value.blue { color: var(--blue); }
+        .metric-value.green { color: var(--green); }
+        .metric-value.purple { color: var(--purple); }
+        .metric-value.amber { color: var(--amber); }
+        .metric-label { font-size: 0.75rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; }
+        .metric-range { font-size: 0.72rem; color: var(--text-light); margin-top: 4px; }
+
+        /* Perception gaps */
+        .gap-card { background: var(--white); border: 2px solid var(--border); border-radius: var(--radius-md); padding: 20px; margin-bottom: 16px; }
+        .gap-card.high { border-color: var(--red); background: var(--red-bg); }
+        .gap-card.medium { border-color: var(--amber); background: var(--amber-bg); }
+        .gap-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .gap-metric { font-weight: 600; font-size: 1rem; }
+        .gap-severity { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding: 3px 10px; border-radius: 100px; }
+        .gap-severity.high { background: var(--red); color: white; }
+        .gap-severity.medium { background: var(--amber); color: white; }
+        .gap-detail { font-size: 0.9rem; color: var(--text-mid); margin-bottom: 10px; }
+        .gap-people { list-style: none; font-size: 0.85rem; }
+        .gap-people li { padding: 4px 0; color: var(--text-mid); border-top: 1px solid rgba(0,0,0,0.06); }
+        .gap-people li:first-child { border-top: none; }
+
+        /* Respondents */
+        .respondent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 32px; }
+        .respondent-chip { display: flex; align-items: center; gap: 10px; background: var(--bg-alt); padding: 12px 16px; border-radius: var(--radius-sm); }
+        .respondent-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem; flex-shrink: 0; }
+        .respondent-info { font-size: 0.85rem; }
+        .respondent-info strong { display: block; color: var(--text); }
+        .respondent-info span { color: var(--text-light); font-size: 0.78rem; }
+
+        /* Issues heatmap */
+        .issue-bar-chart { margin-bottom: 32px; }
+        .issue-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+        .issue-label { width: 180px; font-size: 0.85rem; color: var(--text-mid); text-align: right; flex-shrink: 0; }
+        .issue-track { flex: 1; height: 24px; background: var(--bg-alt); border-radius: 4px; overflow: hidden; position: relative; }
+        .issue-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--primary)); border-radius: 4px; transition: width 0.5s ease; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; }
+        .issue-fill span { font-size: 0.72rem; font-weight: 600; color: white; }
+
+        /* Comparison table */
+        .comp-table { width: 100%; border-collapse: collapse; margin-bottom: 32px; font-size: 0.88rem; }
+        .comp-table th { text-align: left; padding: 10px 12px; background: var(--bg-alt); color: var(--text-light); font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .comp-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+        .comp-table tr:last-child td { border-bottom: none; }
+
+        .cta-section { background: linear-gradient(135deg, #eff6ff, #f0fdf4); border-radius: var(--radius-md); padding: 32px; text-align: center; margin-top: 8px; }
+        .cta-section h3 { font-size: 1.1rem; margin-bottom: 8px; }
+        .cta-section p { font-size: 0.9rem; color: var(--text-mid); margin-bottom: 20px; }
+        .cta-button { display: inline-block; padding: 12px 32px; background: linear-gradient(135deg, var(--accent), var(--primary)); color: white; text-decoration: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 0.95rem; }
+        .cta-button.secondary { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); margin-left: 12px; }
+
+        .footer { text-align: center; padding: 24px; font-size: 0.82rem; color: var(--text-light); }
+        .footer a { color: var(--accent); text-decoration: none; }
+
+        @media (max-width: 600px) {
+            .card-body { padding: 24px; }
+            .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+            .lookup-form { flex-direction: column; }
+            .issue-label { width: 120px; font-size: 0.78rem; }
+            .respondent-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Team Diagnostic Comparison</h1>
+        <p>See how your team's perspectives align — and where they diverge</p>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-body">
+
+                <!-- Lookup -->
+                <div id="lookupState" class="state">
+                    <h2>Enter Your Team Code</h2>
+                    <p style="margin-bottom: 24px;">Your team lead shared a 6-character code when they created this diagnostic.</p>
+                    <form class="lookup-form" onsubmit="event.preventDefault(); loadResults();">
+                        <input type="text" id="codeInput" placeholder="ABC123" maxlength="6" required autofocus>
+                        <button type="submit">View Results</button>
+                    </form>
+                </div>
+
+                <!-- Loading -->
+                <div id="loadingState" class="state" style="display: none;">
+                    <div class="loading-spinner"></div>
+                    <h2>Aggregating team perspectives...</h2>
+                </div>
+
+                <!-- Error -->
+                <div id="errorState" class="state" style="display: none;">
+                    <h2 id="errorTitle">Not Found</h2>
+                    <p id="errorMsg">Check the code and try again.</p>
+                    <button onclick="showState('lookup')" style="margin-top: 20px; padding: 10px 24px; background: var(--accent); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; font-family: inherit;">Try Again</button>
+                </div>
+
+                <!-- Waiting for responses -->
+                <div id="waitingState" class="state" style="display: none;">
+                    <h2 id="waitingTitle">Waiting for Responses</h2>
+                    <p id="waitingMsg">Share the team code with your colleagues. Results will appear once at least 2 people have responded.</p>
+                    <p style="margin-top: 16px;"><strong>Team Code:</strong> <span id="waitingCode" style="font-size: 1.3rem; letter-spacing: 0.15em; color: var(--accent);"></span></p>
+                </div>
+
+                <!-- Results -->
+                <div id="resultsContent" style="display: none;"></div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="footer"><a href="/">Workflow Partners</a> &middot; Technology-agnostic workflow optimisation</div>
+
+    <script>
+        const issueLabels = {
+            'approval-delay': 'Approval delays',
+            'slow-response': 'Slow stakeholder response',
+            'missing-info': 'Missing information',
+            'wrong-person': 'Wrong person assigned',
+            'system-issues': 'System issues',
+            'unavailable': 'Someone unavailable',
+            'escalation': 'Unexpected escalation',
+            'external': 'External dependency',
+            'rework': 'Rework needed',
+            'unclear-process': 'Process unclear',
+            'other': 'Other'
+        };
+
+        function showState(name) {
+            ['lookupState', 'loadingState', 'errorState', 'waitingState', 'resultsContent'].forEach(id => {
+                document.getElementById(id).style.display = 'none';
+            });
+            document.getElementById(name + 'State' === 'resultsContentState' ? 'resultsContent' : name + 'State').style.display = '';
+        }
+
+        function formatDate(d) { return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
+
+        async function loadResults() {
+            const code = document.getElementById('codeInput').value.trim().toUpperCase();
+            if (!code) return;
+            showState('loading');
+            history.replaceState(null, '', '/team-results?code=' + code);
+
+            try {
+                const resp = await fetch('/api/get-team-results?code=' + encodeURIComponent(code));
+                const data = await resp.json();
+
+                if (!resp.ok) {
+                    document.getElementById('errorTitle').textContent = 'Not Found';
+                    document.getElementById('errorMsg').textContent = data.error || 'Team not found.';
+                    showState('error');
+                    return;
+                }
+
+                if (data.responseCount < 2) {
+                    document.getElementById('waitingTitle').textContent = data.responseCount === 0
+                        ? 'No Responses Yet'
+                        : '1 Response So Far';
+                    document.getElementById('waitingMsg').textContent = data.responseCount === 0
+                        ? `Share the join link: /diagnostic?team=${code} — results appear after 2+ responses.`
+                        : `${data.responses[0].name} has responded. Waiting for more perspectives before comparison.`;
+                    document.getElementById('waitingCode').textContent = code;
+                    showState('waiting');
+                    return;
+                }
+
+                renderResults(data);
+            } catch (err) {
+                console.error(err);
+                document.getElementById('errorTitle').textContent = 'Connection Error';
+                document.getElementById('errorMsg').textContent = 'Could not reach the server.';
+                showState('error');
+            }
+        }
+
+        function renderResults(data) {
+            const { team, responses, aggregation } = data;
+            const a = aggregation;
+
+            let html = '';
+
+            // Header
+            html += `<div style="margin-bottom: 24px;">
+                <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 700; color: var(--primary);">${team.processName}</h2>
+                <p style="color: var(--text-light); font-size: 0.9rem;">${team.company ? team.company + ' &middot; ' : ''}${data.responseCount} team members responded &middot; Created ${formatDate(team.createdAt)}</p>
+            </div>`;
+
+            // Consensus score
+            const csColor = a.consensusScore >= 70 ? 'var(--green)' : a.consensusScore >= 40 ? 'var(--amber)' : 'var(--red)';
+            const csLabel = a.consensusScore >= 70 ? 'Strong Alignment' : a.consensusScore >= 40 ? 'Partial Alignment' : 'Significant Disagreement';
+            html += `<h3 class="section-title">Team Consensus: ${a.consensusScore}% — ${csLabel}</h3>
+            <div class="consensus-bar">
+                <div class="consensus-track"><div class="consensus-fill" style="width: ${a.consensusScore}%; background: ${csColor};"></div></div>
+                <div class="consensus-label"><span>Disagreement</span><span>Full alignment</span></div>
+            </div>`;
+
+            // Respondents
+            html += `<h3 class="section-title">Respondents</h3><div class="respondent-grid">`;
+            responses.forEach(r => {
+                const initials = r.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+                html += `<div class="respondent-chip">
+                    <div class="respondent-avatar">${initials}</div>
+                    <div class="respondent-info"><strong>${r.name}</strong><span>${r.department || 'No department'}</span></div>
+                </div>`;
+            });
+            html += `</div>`;
+
+            // Aggregated metrics
+            html += `<h3 class="section-title">Aggregated Metrics</h3><div class="metrics-grid">`;
+            const metrics = [
+                { value: a.elapsedDays.avg + ' days', label: 'Avg Cycle Time', color: 'blue', range: `${a.elapsedDays.min}–${a.elapsedDays.max} day range` },
+                { value: a.steps.avg, label: 'Avg Steps Seen', color: 'purple', range: `${a.steps.min}–${a.steps.max} step range` },
+                { value: a.handoffs.avg, label: 'Avg Handoffs', color: 'amber', range: `${a.handoffs.min}–${a.handoffs.max} range` },
+                { value: a.totalHours.avg + 'h', label: 'Avg Time Invested', color: 'green', range: `${a.totalHours.min}–${a.totalHours.max}h range` }
+            ];
+            metrics.forEach(m => {
+                html += `<div class="metric-card">
+                    <div class="metric-value ${m.color}">${m.value}</div>
+                    <div class="metric-label">${m.label}</div>
+                    <div class="metric-range">${m.range}</div>
+                </div>`;
+            });
+            html += `</div>`;
+
+            // Perception gaps
+            if (a.perceptionGaps.length > 0) {
+                html += `<h3 class="section-title">Perception Gaps &#9888;</h3>
+                <p style="font-size: 0.88rem; color: var(--text-mid); margin-bottom: 16px;">These are areas where team members see the process differently. High gaps often reveal hidden inefficiencies.</p>`;
+                a.perceptionGaps.forEach(g => {
+                    html += `<div class="gap-card ${g.severity}">
+                        <div class="gap-header">
+                            <span class="gap-metric">${g.metric}</span>
+                            <span class="gap-severity ${g.severity}">${g.severity} gap</span>
+                        </div>
+                        <div class="gap-detail">${g.detail}</div>
+                        <ul class="gap-people">${g.byPerson.map(p => `<li>${p}</li>`).join('')}</ul>
+                    </div>`;
+                });
+            }
+
+            // Issues heatmap
+            if (a.issueFrequency.length > 0) {
+                html += `<h3 class="section-title">Issue Frequency</h3>
+                <p style="font-size: 0.88rem; color: var(--text-mid); margin-bottom: 16px;">How many team members reported each issue type.</p>
+                <div class="issue-bar-chart">`;
+                a.issueFrequency.forEach(issue => {
+                    const label = issueLabels[issue.issue] || issue.issue;
+                    html += `<div class="issue-row">
+                        <div class="issue-label">${label}</div>
+                        <div class="issue-track"><div class="issue-fill" style="width: ${issue.pct}%;"><span>${issue.count}/${data.responseCount}</span></div></div>
+                    </div>`;
+                });
+                html += `</div>`;
+            }
+
+            // Side-by-side comparison table
+            html += `<h3 class="section-title">Individual Responses</h3>
+            <div style="overflow-x: auto;">
+            <table class="comp-table">
+                <thead><tr><th>Metric</th>`;
+            responses.forEach(r => { html += `<th>${r.name}<br><span style="font-weight:400;text-transform:none;letter-spacing:0;">${r.department || ''}</span></th>`; });
+            html += `</tr></thead><tbody>`;
+
+            const rows = [
+                { label: 'Cycle Time', key: 'elapsedDays', suffix: ' days' },
+                { label: 'Steps', key: 'stepsCount', suffix: '' },
+                { label: 'Handoffs', key: 'handoffCount', suffix: '' },
+                { label: 'Poor Handoffs', key: 'poorHandoffs', suffix: '' },
+                { label: 'Time Invested', key: 'totalUserHours', suffix: 'h' },
+                { label: 'Performance', key: 'performance', suffix: '' },
+                { label: 'Biggest Delay', key: 'biggestDelay', suffix: '' }
+            ];
+            rows.forEach(row => {
+                html += `<tr><td style="font-weight:500;">${row.label}</td>`;
+                responses.forEach(r => {
+                    const val = r.metrics[row.key];
+                    const display = val ? val + row.suffix : '—';
+                    html += `<td>${display}</td>`;
+                });
+                html += `</tr>`;
+            });
+            html += `</tbody></table></div>`;
+
+            // CTA
+            html += `<div class="cta-section">
+                <h3>Turn These Insights Into Action</h3>
+                <p>Perception gaps are the #1 signal of process improvement opportunity. Let's discuss what your team's results reveal.</p>
+                <a href="mailto:hopektettey@gmail.com?subject=Team Diagnostic Discussion — ${encodeURIComponent(team.processName)}" class="cta-button">Book a Call</a>
+                <a href="/diagnostic" class="cta-button secondary">Run Full Diagnostic</a>
+            </div>`;
+
+            const container = document.getElementById('resultsContent');
+            container.innerHTML = html;
+            container.style.display = '';
+            ['lookupState', 'loadingState', 'errorState', 'waitingState'].forEach(id => {
+                document.getElementById(id).style.display = 'none';
+            });
+        }
+
+        // Init: check URL param
+        document.addEventListener('DOMContentLoaded', function() {
+            const code = new URLSearchParams(location.search).get('code');
+            if (code) {
+                document.getElementById('codeInput').value = code;
+                loadResults();
+            }
+        });
+    </script>
+</body>
+</html>
