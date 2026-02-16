@@ -1705,6 +1705,9 @@
                     <button class="button" onclick="loadSampleData()" style="background: #475569; color: white; font-size: 0.85rem; padding: 0.6rem 1.5rem;">
                         Load Sample Data &amp; Skip to Results &rarr;
                     </button>
+                    <button class="button" onclick="loadTeamSampleToConsole()" style="background: #7c3aed; color: white; font-size: 0.85rem; padding: 0.6rem 1.5rem; margin-top: 0.5rem;">
+                        Copy Team Sample JSON to Console
+                    </button>
                 </div>
             </div>
         </div>
@@ -6776,10 +6779,10 @@
                     priority: { priority: 'medium', urgency: 'this-quarter' },
                     bottleneck: { longestStep: 'step-3', reason: 'approval-delays' }
                 },
-                // ── COMPLEXITY 10: Enterprise Capital Expenditure Procurement ──
-                // Based on real-world enterprise procurement with 20 steps,
-                // 11 departments, internal + external teams, multiple approval gates,
-                // regulatory compliance, and cross-border considerations.
+                // ── COMPLEXITY 10: Enterprise CapEx Procurement with Routing ──
+                // 22 steps, 12 departments, 6 decision/branch points, 5 approval gates,
+                // external parties, regulatory compliance, cross-border routing,
+                // conditional paths, exception handling, and loop-back flows.
                 {
                     processType: 'other',
                     processName: 'Enterprise CapEx Procurement (IT Infrastructure)',
@@ -6787,7 +6790,7 @@
                         startsWhen: 'Business unit submits capital expenditure request for IT infrastructure over £50K',
                         completesWhen: 'Equipment delivered, installed, asset-tagged, and first invoice reconciled in ERP',
                         complexity: 'very-complex',
-                        departments: ['IT', 'Finance', 'Procurement', 'Legal', 'Compliance', 'Leadership', 'Operations', 'Engineering', 'Quality Assurance']
+                        departments: ['IT', 'Finance', 'Procurement', 'Legal', 'Compliance', 'Leadership', 'Operations', 'Engineering', 'Quality Assurance', 'Risk', 'Data Protection', 'Facilities']
                     },
                     lastExample: {
                         name: 'Data Centre Expansion — 40 Server Racks + Networking',
@@ -6795,7 +6798,7 @@
                         endDate: '2026-01-20',
                         elapsedDays: 127
                     },
-                    userTime: { meetings: 28, emails: 35, execution: 22, waiting: 85, total: 170 },
+                    userTime: { meetings: 32, emails: 40, execution: 25, waiting: 90, total: 187 },
                     timeAccuracy: 'somewhat-confident',
                     performance: 'this-was-worse',
                     issues: ['delays-waiting', 'too-many-steps', 'approval-bottlenecks', 'rework-errors', 'information-gaps', 'compliance-requirements'],
@@ -6804,24 +6807,62 @@
                     steps: [
                         { number: 1, name: 'Business case drafted by requesting department', department: 'IT', isExternal: false },
                         { number: 2, name: 'Technical architecture review & sizing', department: 'Engineering', isExternal: false },
-                        { number: 3, name: 'Security & compliance impact assessment', department: 'Compliance', isExternal: false },
-                        { number: 4, name: 'Budget validation & cost centre allocation', department: 'Finance', isExternal: false },
-                        { number: 5, name: 'Departmental head approval (IT Director)', department: 'IT', isExternal: false },
+                        { number: 3, name: 'Security & compliance impact assessment', department: 'Compliance', isExternal: false,
+                          isDecision: true, branches: [
+                            { label: 'Low risk — proceed', target: 'Step 4' },
+                            { label: 'High risk — full audit', target: 'Step 14' },
+                            { label: 'Data handling — trigger DPIA', target: 'Step 15' }
+                          ]
+                        },
+                        { number: 4, name: 'Budget validation & cost centre allocation', department: 'Finance', isExternal: false,
+                          isDecision: true, branches: [
+                            { label: 'Under £50K — fast track to Step 8', target: 'Step 8' },
+                            { label: '£50K–£250K — standard route', target: 'Step 5' },
+                            { label: 'Over £250K — full governance', target: 'Step 5' }
+                          ]
+                        },
+                        { number: 5, name: 'Departmental head approval (IT Director)', department: 'IT', isExternal: false,
+                          isDecision: true, branches: [
+                            { label: 'Approved', target: 'Step 6' },
+                            { label: 'Rejected — revise business case', target: 'Step 1' },
+                            { label: 'Deferred — resubmit next quarter', target: '' }
+                          ]
+                        },
                         { number: 6, name: 'Procurement creates RFP / RFQ package', department: 'Procurement', isExternal: false },
                         { number: 7, name: 'RFP distributed to shortlisted vendors', department: 'External Vendor', isExternal: true },
-                        { number: 8, name: 'Vendor proposals received & evaluated', department: 'Procurement', isExternal: false },
-                        { number: 9, name: 'Technical evaluation by engineering team', department: 'Engineering', isExternal: false },
-                        { number: 10, name: 'Vendor reference checks & site visits', department: 'External Vendor', isExternal: true },
+                        { number: 8, name: 'Vendor proposals received & scored', department: 'Procurement', isExternal: false },
+                        { number: 9, name: 'Technical evaluation by engineering team', department: 'Engineering', isExternal: false,
+                          isDecision: true, branches: [
+                            { label: 'Single vendor qualifies', target: 'Step 11' },
+                            { label: 'Multiple qualify — competitive round', target: 'Step 10' },
+                            { label: 'None qualify — re-issue RFP', target: 'Step 6' }
+                          ]
+                        },
+                        { number: 10, name: 'Vendor reference checks, demos & site visits', department: 'External Vendor', isExternal: true },
                         { number: 11, name: 'Commercial negotiation & terms review', department: 'Procurement', isExternal: false },
                         { number: 12, name: 'Legal contract review & redlining', department: 'Legal', isExternal: false },
-                        { number: 13, name: 'External legal review (vendor T&Cs)', department: 'External Legal', isExternal: true },
-                        { number: 14, name: 'Data protection impact assessment (DPIA)', department: 'Compliance', isExternal: false },
-                        { number: 15, name: 'CFO approval for CapEx budget', department: 'Finance', isExternal: false },
-                        { number: 16, name: 'Board approval (CapEx > £250K)', department: 'Leadership', isExternal: false },
-                        { number: 17, name: 'Purchase order raised in ERP', department: 'Procurement', isExternal: false },
-                        { number: 18, name: 'Vendor confirms order & delivery schedule', department: 'External Vendor', isExternal: true },
-                        { number: 19, name: 'Goods received, inspected & asset-tagged', department: 'Operations', isExternal: false },
-                        { number: 20, name: 'Installation, testing & QA sign-off', department: 'Quality Assurance', isExternal: false }
+                        { number: 13, name: 'External legal review (vendor T&Cs)', department: 'External Legal', isExternal: true,
+                          isDecision: true, branches: [
+                            { label: 'Terms accepted', target: 'Step 16' },
+                            { label: 'Unacceptable clauses — renegotiate', target: 'Step 11' },
+                            { label: 'Risk escalation — board review', target: 'Step 18' }
+                          ]
+                        },
+                        { number: 14, name: 'Full security audit & penetration test', department: 'Risk', isExternal: false },
+                        { number: 15, name: 'Data protection impact assessment (DPIA)', department: 'Data Protection', isExternal: false },
+                        { number: 16, name: 'CFO approval for CapEx budget', department: 'Finance', isExternal: false,
+                          isDecision: true, branches: [
+                            { label: 'Approved (under £250K)', target: 'Step 19' },
+                            { label: 'Approved — but needs Board (over £250K)', target: 'Step 17' },
+                            { label: 'Rejected — reduce scope', target: 'Step 1' }
+                          ]
+                        },
+                        { number: 17, name: 'Investment Committee pre-review', department: 'Leadership', isExternal: false },
+                        { number: 18, name: 'Board approval (CapEx > £250K)', department: 'Leadership', isExternal: false },
+                        { number: 19, name: 'Purchase order raised in ERP', department: 'Procurement', isExternal: false },
+                        { number: 20, name: 'Vendor confirms order & delivery schedule', department: 'External Vendor', isExternal: true },
+                        { number: 21, name: 'Goods received, inspected & asset-tagged', department: 'Facilities', isExternal: false },
+                        { number: 22, name: 'Installation, testing, UAT & QA sign-off', department: 'Quality Assurance', isExternal: false }
                     ],
                     handoffs: [
                         { from: { name: 'Business case drafted' }, to: { name: 'Technical architecture review' }, method: 'email', clarity: 'mostly-clear' },
@@ -6836,23 +6877,27 @@
                         { from: { name: 'Vendor reference checks' }, to: { name: 'Commercial negotiation' }, method: 'email', clarity: 'mostly-clear' },
                         { from: { name: 'Commercial negotiation' }, to: { name: 'Legal contract review' }, method: 'email', clarity: 'yes-multiple' },
                         { from: { name: 'Legal contract review' }, to: { name: 'External legal review' }, method: 'email', clarity: 'yes-multiple' },
-                        { from: { name: 'External legal review' }, to: { name: 'DPIA assessment' }, method: 'email', clarity: 'yes-multiple' },
+                        { from: { name: 'External legal review' }, to: { name: 'Full security audit' }, method: 'email', clarity: 'yes-multiple' },
+                        { from: { name: 'Full security audit' }, to: { name: 'DPIA assessment' }, method: 'email', clarity: 'mostly-clear' },
                         { from: { name: 'DPIA assessment' }, to: { name: 'CFO approval' }, method: 'email', clarity: 'mostly-clear' },
-                        { from: { name: 'CFO approval' }, to: { name: 'Board approval' }, method: 'meeting', clarity: 'mostly-clear' },
+                        { from: { name: 'CFO approval' }, to: { name: 'Investment Committee pre-review' }, method: 'meeting', clarity: 'mostly-clear' },
+                        { from: { name: 'Investment Committee pre-review' }, to: { name: 'Board approval' }, method: 'meeting', clarity: 'mostly-clear' },
                         { from: { name: 'Board approval' }, to: { name: 'Purchase order raised' }, method: 'email', clarity: 'mostly-clear' },
                         { from: { name: 'Purchase order raised' }, to: { name: 'Vendor confirms order' }, method: 'email', clarity: 'yes-multiple' },
                         { from: { name: 'Vendor confirms order' }, to: { name: 'Goods received & inspected' }, method: 'email', clarity: 'mostly-clear' },
                         { from: { name: 'Goods received & inspected' }, to: { name: 'Installation & QA sign-off' }, method: 'they-knew', clarity: 'yes-multiple' }
                     ],
                     systems: [
-                        { name: 'SAP S/4HANA', purpose: 'ERP - purchase orders, asset management', actions: ['create', 'update', 'lookup', 'copy-out'] },
-                        { name: 'Coupa', purpose: 'Procurement platform - RFPs & vendor management', actions: ['create', 'update', 'lookup'] },
-                        { name: 'DocuSign', purpose: 'Contract signatures', actions: ['create', 'update'] },
-                        { name: 'ServiceNow', purpose: 'IT request & approval workflow', actions: ['create', 'update', 'lookup'] },
-                        { name: 'SharePoint', purpose: 'Document storage & collaboration', actions: ['create', 'update', 'share'] },
-                        { name: 'Power BI', purpose: 'Budget tracking dashboards', actions: ['lookup'] },
-                        { name: 'Outlook / Teams', purpose: 'Communication & meetings', actions: ['copy-in', 'copy-out'] },
-                        { name: 'OneTrust', purpose: 'DPIA & compliance assessments', actions: ['create', 'update'] }
+                        { name: 'SAP S/4HANA', purpose: 'ERP - purchase orders, asset management, GL codes', actions: ['create', 'update', 'lookup', 'copy-out'] },
+                        { name: 'Coupa', purpose: 'Procurement platform - RFPs, vendor scoring, contracts', actions: ['create', 'update', 'lookup'] },
+                        { name: 'DocuSign', purpose: 'Contract & NDA signatures', actions: ['create', 'update'] },
+                        { name: 'ServiceNow', purpose: 'IT request, approval workflow & change management', actions: ['create', 'update', 'lookup'] },
+                        { name: 'SharePoint', purpose: 'Document storage, business cases & collaboration', actions: ['create', 'update', 'share'] },
+                        { name: 'Power BI', purpose: 'Budget tracking & spend analytics dashboards', actions: ['lookup'] },
+                        { name: 'Outlook / Teams', purpose: 'Communication, meetings & ad-hoc approvals', actions: ['copy-in', 'copy-out'] },
+                        { name: 'OneTrust', purpose: 'DPIA & privacy compliance assessments', actions: ['create', 'update'] },
+                        { name: 'Nessus / Qualys', purpose: 'Security vulnerability scanning & pen testing', actions: ['create', 'lookup'] },
+                        { name: 'Jira', purpose: 'Project tracking for installation & UAT', actions: ['create', 'update', 'lookup'] }
                     ],
                     approvals: [
                         { name: 'IT Director sign-off', who: 'IT Director', rounds: '1', assessment: 'necessary', avgDays: '3' },
@@ -6864,21 +6909,21 @@
                     knowledge: {
                         documentation: 'partial',
                         singlePointOfFailure: 'yes',
-                        spofPerson: 'James (Senior Procurement Manager) — only person who knows the full end-to-end flow and vendor relationships',
+                        spofPerson: 'James (Senior Procurement Manager) — only person who knows the full end-to-end flow, vendor relationships, and which approval thresholds apply',
                         workarounds: 'yes',
-                        workaroundDetails: 'Teams split orders under £50K to avoid the full CapEx process. Finance calls these "shadow purchases" and estimates 15% of IT spend bypasses procurement.'
+                        workaroundDetails: 'Teams split orders under £50K to avoid the full CapEx process. Finance calls these "shadow purchases" and estimates 15% of IT spend bypasses procurement. Some managers also route through OpEx to avoid Board threshold.'
                     },
                     newHire: {
                         learningWeeks: '16',
                         learningMethod: 'shadow',
                         firstTimeErrors: 'yes',
-                        errorDetails: 'New procurement staff routinely miss the Board submission deadline, select wrong GL codes, or forget the DPIA step for data-handling vendors. Average of 3 rework cycles per first attempt.'
+                        errorDetails: 'New procurement staff routinely miss the Board submission deadline, select wrong GL codes, skip the DPIA for data-handling vendors, or route to the wrong approval path based on value thresholds. Average of 3 rework cycles per first attempt.'
                     },
                     frequency: { type: 'monthly', annual: 12, inFlight: 5, progressing: 2, stuck: 2, waiting: 1 },
-                    costs: { hourlyRate: 75, instanceCost: 12750, annualUserCost: 153000, totalAnnualCost: 459000, teamSize: 3 },
+                    costs: { hourlyRate: 75, instanceCost: 14025, annualUserCost: 168300, totalAnnualCost: 504900, teamSize: 3 },
                     savings: { targetReduction: '35', savingsUse: ['speed', 'quality', 'compliance'] },
                     priority: { priority: 'critical', urgency: 'this-quarter' },
-                    bottleneck: { longestStep: 'step-15', reason: 'approval-delays' }
+                    bottleneck: { longestStep: 'step-17', reason: 'approval-delays' }
                 }
             ];
         }
@@ -6904,6 +6949,221 @@
             displayResults(result, contact);
         }
 
+        function loadTeamSampleToConsole() {
+            const data = getTeamSampleResponses();
+            console.log('=== TEAM SAMPLE DATA ===');
+            console.log('Process:', data.processName);
+            console.log('Company:', data.company);
+            console.log('Respondents:', data.responses.length);
+            data.responses.forEach((r, i) => {
+                console.log(`  ${i + 1}. ${r.respondentName} (${r.respondentDepartment}) — ${r.responseData.processData.steps.length} steps, ${r.responseData.processData.lastExample.elapsedDays} days, ${r.responseData.processData.userTime.total}h`);
+                const decisions = r.responseData.processData.steps.filter(s => s.isDecision);
+                if (decisions.length) console.log(`     Decision points: ${decisions.map(d => 'Step ' + d.number + ' (' + d.branches.length + ' routes)').join(', ')}`);
+            });
+            console.log('\nFull JSON (copy from below):');
+            console.log(JSON.stringify(data, null, 2));
+            alert('Team sample data logged to browser console (F12). Copy the JSON from there to test with /api/team endpoints.');
+        }
+
+        // Returns sample team response data (4 different perspectives on Enterprise CapEx Procurement)
+        // Used for testing team-results.html — can be POSTed via /api/team?action=submit
+        function getTeamSampleResponses() {
+            return {
+                processName: 'Enterprise CapEx Procurement (IT Infrastructure)',
+                company: 'GlobalTech Solutions',
+                description: 'End-to-end IT capital expenditure procurement for infrastructure investments over £50K. 12 departments, 6 decision points, 5 approval gates, external vendors, regulatory compliance.',
+                responses: [
+                    {
+                        respondentName: 'James Whitfield',
+                        respondentEmail: 'j.whitfield@globaltech.io',
+                        respondentDepartment: 'Procurement',
+                        responseData: {
+                            processData: {
+                                processName: 'Enterprise CapEx Procurement (IT Infrastructure)',
+                                definition: { startsWhen: 'Business unit submits CapEx request', completesWhen: 'Asset tagged and first invoice reconciled', complexity: 'very-complex', departments: ['IT', 'Finance', 'Procurement', 'Legal', 'Compliance', 'Leadership'] },
+                                lastExample: { name: 'Data Centre Server Expansion', elapsedDays: 127 },
+                                performance: 'this-was-worse',
+                                issues: ['delays-waiting', 'approval-bottlenecks', 'too-many-steps', 'compliance-requirements'],
+                                biggestDelay: 'Board approval cycle — monthly meetings mean a missed deadline adds 4+ weeks',
+                                steps: [
+                                    { number: 1, name: 'Business case drafted', department: 'IT', isExternal: false },
+                                    { number: 2, name: 'Technical architecture review', department: 'Engineering', isExternal: false },
+                                    { number: 3, name: 'Security & compliance review', department: 'Compliance', isExternal: false, isDecision: true, branches: [{ label: 'Low risk', target: 'Step 4' }, { label: 'High risk — full audit', target: 'Step 14' }] },
+                                    { number: 4, name: 'Budget validation', department: 'Finance', isExternal: false, isDecision: true, branches: [{ label: 'Under £50K — fast track', target: 'Step 8' }, { label: '£50K+ — full process', target: 'Step 5' }] },
+                                    { number: 5, name: 'IT Director approval', department: 'IT', isExternal: false, isDecision: true, branches: [{ label: 'Approved', target: 'Step 6' }, { label: 'Rejected — revise', target: 'Step 1' }] },
+                                    { number: 6, name: 'Create RFP package', department: 'Procurement', isExternal: false },
+                                    { number: 7, name: 'Distribute RFP to vendors', department: 'External Vendor', isExternal: true },
+                                    { number: 8, name: 'Evaluate vendor proposals', department: 'Procurement', isExternal: false },
+                                    { number: 9, name: 'Engineering technical scoring', department: 'Engineering', isExternal: false, isDecision: true, branches: [{ label: 'Single vendor qualifies', target: 'Step 11' }, { label: 'Multiple qualify', target: 'Step 10' }, { label: 'None qualify — re-issue RFP', target: 'Step 6' }] },
+                                    { number: 10, name: 'Vendor demos & reference checks', department: 'External Vendor', isExternal: true },
+                                    { number: 11, name: 'Commercial negotiation', department: 'Procurement', isExternal: false },
+                                    { number: 12, name: 'Legal contract review', department: 'Legal', isExternal: false },
+                                    { number: 13, name: 'External legal review', department: 'External Legal', isExternal: true, isDecision: true, branches: [{ label: 'Terms accepted', target: 'Step 16' }, { label: 'Renegotiate', target: 'Step 11' }] },
+                                    { number: 14, name: 'Full security audit', department: 'Risk', isExternal: false },
+                                    { number: 15, name: 'DPIA assessment', department: 'Data Protection', isExternal: false },
+                                    { number: 16, name: 'CFO approval', department: 'Finance', isExternal: false, isDecision: true, branches: [{ label: 'Approved (under £250K)', target: 'Step 19' }, { label: 'Needs Board', target: 'Step 17' }, { label: 'Rejected', target: 'Step 1' }] },
+                                    { number: 17, name: 'Investment Committee review', department: 'Leadership', isExternal: false },
+                                    { number: 18, name: 'Board approval', department: 'Leadership', isExternal: false },
+                                    { number: 19, name: 'Purchase order in ERP', department: 'Procurement', isExternal: false },
+                                    { number: 20, name: 'Vendor confirms order', department: 'External Vendor', isExternal: true },
+                                    { number: 21, name: 'Goods received & asset-tagged', department: 'Facilities', isExternal: false },
+                                    { number: 22, name: 'Installation, UAT & QA sign-off', department: 'Quality Assurance', isExternal: false }
+                                ],
+                                handoffs: [
+                                    { method: 'email', clarity: 'mostly-clear' }, { method: 'email', clarity: 'yes-multiple' }, { method: 'email', clarity: 'yes-multiple' },
+                                    { method: 'email', clarity: 'mostly-clear' }, { method: 'ticket-system', clarity: 'mostly-clear' }, { method: 'email', clarity: 'mostly-clear' },
+                                    { method: 'email', clarity: 'yes-multiple' }, { method: 'email', clarity: 'yes-multiple' }, { method: 'meeting', clarity: 'mostly-clear' },
+                                    { method: 'email', clarity: 'mostly-clear' }, { method: 'email', clarity: 'yes-multiple' }, { method: 'email', clarity: 'yes-multiple' },
+                                    { method: 'email', clarity: 'yes-multiple' }, { method: 'email', clarity: 'mostly-clear' }, { method: 'email', clarity: 'mostly-clear' },
+                                    { method: 'meeting', clarity: 'mostly-clear' }, { method: 'meeting', clarity: 'mostly-clear' }, { method: 'email', clarity: 'mostly-clear' },
+                                    { method: 'email', clarity: 'yes-multiple' }, { method: 'email', clarity: 'mostly-clear' }, { method: 'they-knew', clarity: 'yes-multiple' }
+                                ],
+                                approvals: [
+                                    { name: 'IT Director', rounds: '1', assessment: 'necessary', avgDays: '3' },
+                                    { name: 'Legal', rounds: '2-3', assessment: 'necessary', avgDays: '10' },
+                                    { name: 'DPO', rounds: '1', assessment: 'necessary', avgDays: '5' },
+                                    { name: 'CFO', rounds: '1-2', assessment: 'necessary', avgDays: '7' },
+                                    { name: 'Board', rounds: '1', assessment: 'could-reduce', avgDays: '21' }
+                                ],
+                                systems: [{ name: 'SAP S/4HANA' }, { name: 'Coupa' }, { name: 'DocuSign' }, { name: 'ServiceNow' }, { name: 'SharePoint' }, { name: 'Power BI' }, { name: 'Outlook/Teams' }, { name: 'OneTrust' }, { name: 'Nessus' }, { name: 'Jira' }],
+                                userTime: { total: 187 },
+                                bottleneck: { name: 'Board approval cycle', longestStep: 'step-17' }
+                            }
+                        }
+                    },
+                    {
+                        respondentName: 'Sarah Chen',
+                        respondentEmail: 's.chen@globaltech.io',
+                        respondentDepartment: 'Finance',
+                        responseData: {
+                            processData: {
+                                processName: 'Enterprise CapEx Procurement (IT Infrastructure)',
+                                definition: { startsWhen: 'Budget request lands in Finance queue', completesWhen: 'First invoice matched to PO in SAP', complexity: 'very-complex', departments: ['Finance', 'IT', 'Procurement', 'Leadership'] },
+                                lastExample: { name: 'Server Expansion Project', elapsedDays: 98 },
+                                performance: 'typical',
+                                issues: ['delays-waiting', 'information-gaps', 'approval-bottlenecks'],
+                                biggestDelay: 'Incomplete business cases from IT — 60% need rework before Finance can validate budget',
+                                steps: [
+                                    { number: 1, name: 'Receive business case from IT', department: 'Finance', isExternal: false },
+                                    { number: 2, name: 'Validate budget & GL codes', department: 'Finance', isExternal: false, isDecision: true, branches: [{ label: 'Valid', target: 'Step 3' }, { label: 'Incomplete — return to IT', target: 'Step 1' }] },
+                                    { number: 3, name: 'Check CapEx threshold routing', department: 'Finance', isExternal: false, isDecision: true, branches: [{ label: 'Under £50K — manager approval', target: 'Step 4' }, { label: '£50K-£250K — CFO approval', target: 'Step 5' }, { label: 'Over £250K — Board required', target: 'Step 6' }] },
+                                    { number: 4, name: 'Manager sign-off', department: 'IT', isExternal: false },
+                                    { number: 5, name: 'CFO review & approval', department: 'Finance', isExternal: false },
+                                    { number: 6, name: 'Board paper preparation', department: 'Finance', isExternal: false },
+                                    { number: 7, name: 'Board approval', department: 'Leadership', isExternal: false },
+                                    { number: 8, name: 'Release budget in SAP', department: 'Finance', isExternal: false },
+                                    { number: 9, name: 'Monitor PO creation', department: 'Finance', isExternal: false },
+                                    { number: 10, name: 'Three-way match: PO, GRN, Invoice', department: 'Finance', isExternal: false },
+                                    { number: 11, name: 'Payment authorisation', department: 'Finance', isExternal: false },
+                                    { number: 12, name: 'Asset capitalisation in fixed assets register', department: 'Finance', isExternal: false }
+                                ],
+                                handoffs: [
+                                    { method: 'email', clarity: 'yes-multiple' }, { method: 'email', clarity: 'mostly-clear' }, { method: 'email', clarity: 'mostly-clear' },
+                                    { method: 'email', clarity: 'mostly-clear' }, { method: 'meeting', clarity: 'mostly-clear' }, { method: 'email', clarity: 'mostly-clear' },
+                                    { method: 'email', clarity: 'mostly-clear' }, { method: 'ticket-system', clarity: 'mostly-clear' }, { method: 'email', clarity: 'yes-multiple' },
+                                    { method: 'email', clarity: 'mostly-clear' }, { method: 'email', clarity: 'mostly-clear' }
+                                ],
+                                approvals: [
+                                    { name: 'CFO', rounds: '1-2', assessment: 'necessary', avgDays: '5' },
+                                    { name: 'Board', rounds: '1', assessment: 'could-reduce', avgDays: '18' }
+                                ],
+                                systems: [{ name: 'SAP S/4HANA' }, { name: 'Power BI' }, { name: 'Outlook' }, { name: 'Excel' }],
+                                userTime: { total: 95 },
+                                bottleneck: { name: 'Incomplete business cases from IT', longestStep: 'step-1' }
+                            }
+                        }
+                    },
+                    {
+                        respondentName: 'David Okonkwo',
+                        respondentEmail: 'd.okonkwo@globaltech.io',
+                        respondentDepartment: 'Engineering',
+                        responseData: {
+                            processData: {
+                                processName: 'Enterprise CapEx Procurement (IT Infrastructure)',
+                                definition: { startsWhen: 'We need new infrastructure', completesWhen: 'Equipment is live and performing', complexity: 'complex', departments: ['Engineering', 'IT', 'Procurement'] },
+                                lastExample: { name: 'DC Expansion', elapsedDays: 142 },
+                                performance: 'this-was-worse',
+                                issues: ['delays-waiting', 'too-many-steps', 'approval-bottlenecks', 'wrong-tools'],
+                                biggestDelay: 'Procurement takes 6+ weeks to run the RFP process. We already know which vendors we want.',
+                                steps: [
+                                    { number: 1, name: 'Identify infrastructure need', department: 'Engineering', isExternal: false },
+                                    { number: 2, name: 'Size the solution & write specs', department: 'Engineering', isExternal: false },
+                                    { number: 3, name: 'Draft business case with IT', department: 'IT', isExternal: false },
+                                    { number: 4, name: 'Wait for Finance validation', department: 'Finance', isExternal: false },
+                                    { number: 5, name: 'Wait for approval chain', department: 'IT', isExternal: false },
+                                    { number: 6, name: 'Wait for Procurement to issue RFP', department: 'Procurement', isExternal: false },
+                                    { number: 7, name: 'Score vendor proposals (technical)', department: 'Engineering', isExternal: false, isDecision: true, branches: [{ label: 'Our preferred vendor wins', target: 'Step 8' }, { label: 'Unknown vendor — more diligence needed', target: 'Step 9' }] },
+                                    { number: 8, name: 'Wait for legal and compliance', department: 'Legal', isExternal: false },
+                                    { number: 9, name: 'Run POC / benchmark testing', department: 'Engineering', isExternal: false },
+                                    { number: 10, name: 'Wait for CFO / Board approval', department: 'Finance', isExternal: false },
+                                    { number: 11, name: 'Wait for vendor to deliver', department: 'External Vendor', isExternal: true },
+                                    { number: 12, name: 'Rack, stack & configure', department: 'Engineering', isExternal: false },
+                                    { number: 13, name: 'Run UAT & performance tests', department: 'Engineering', isExternal: false },
+                                    { number: 14, name: 'Handover to operations', department: 'Operations', isExternal: false }
+                                ],
+                                handoffs: [
+                                    { method: 'meeting', clarity: 'mostly-clear' }, { method: 'email', clarity: 'mostly-clear' }, { method: 'email', clarity: 'yes-multiple' },
+                                    { method: 'they-knew', clarity: 'yes-major' }, { method: 'email', clarity: 'yes-multiple' }, { method: 'email', clarity: 'yes-multiple' },
+                                    { method: 'email', clarity: 'yes-multiple' }, { method: 'email', clarity: 'yes-multiple' }, { method: 'email', clarity: 'mostly-clear' },
+                                    { method: 'email', clarity: 'yes-multiple' }, { method: 'email', clarity: 'mostly-clear' }, { method: 'meeting', clarity: 'mostly-clear' },
+                                    { method: 'they-knew', clarity: 'yes-multiple' }
+                                ],
+                                approvals: [
+                                    { name: 'IT Director', rounds: '1', assessment: 'necessary', avgDays: '5' },
+                                    { name: 'CFO', rounds: '1', assessment: 'could-reduce', avgDays: '10' },
+                                    { name: 'Board', rounds: '1', assessment: 'rubber-stamp', avgDays: '25' }
+                                ],
+                                systems: [{ name: 'Jira' }, { name: 'Confluence' }, { name: 'Teams' }, { name: 'ServiceNow' }],
+                                userTime: { total: 210 },
+                                bottleneck: { name: 'RFP and approval chain', longestStep: 'step-6' }
+                            }
+                        }
+                    },
+                    {
+                        respondentName: 'Lisa Morgan',
+                        respondentEmail: 'l.morgan@globaltech.io',
+                        respondentDepartment: 'Legal',
+                        responseData: {
+                            processData: {
+                                processName: 'Enterprise CapEx Procurement (IT Infrastructure)',
+                                definition: { startsWhen: 'Contract review request arrives', completesWhen: 'Contract executed and filed', complexity: 'complex', departments: ['Legal', 'Procurement', 'External Legal', 'Compliance'] },
+                                lastExample: { name: 'Dell EMC Storage Contract', elapsedDays: 85 },
+                                performance: 'typical',
+                                issues: ['delays-waiting', 'rework-errors', 'information-gaps'],
+                                biggestDelay: 'Vendor T&Cs are non-negotiable or arrive late. We spend 2-3 weeks in redlining cycles.',
+                                steps: [
+                                    { number: 1, name: 'Receive contract review request', department: 'Legal', isExternal: false },
+                                    { number: 2, name: 'Initial contract triage', department: 'Legal', isExternal: false, isDecision: true, branches: [{ label: 'Standard terms — fast track', target: 'Step 5' }, { label: 'Non-standard — full review', target: 'Step 3' }, { label: 'High value (>£500K) — partner review', target: 'Step 4' }] },
+                                    { number: 3, name: 'Detailed clause review & redlining', department: 'Legal', isExternal: false },
+                                    { number: 4, name: 'Senior partner review', department: 'Legal', isExternal: false },
+                                    { number: 5, name: 'Send redlines to vendor', department: 'External Legal', isExternal: true },
+                                    { number: 6, name: 'Vendor counter-proposals', department: 'External Legal', isExternal: true, isDecision: true, branches: [{ label: 'Accepted', target: 'Step 8' }, { label: 'Further negotiation needed', target: 'Step 3' }, { label: 'Deadlock — escalate to GC', target: 'Step 7' }] },
+                                    { number: 7, name: 'General Counsel escalation call', department: 'Legal', isExternal: false },
+                                    { number: 8, name: 'DPIA coordination (if data processing)', department: 'Compliance', isExternal: false },
+                                    { number: 9, name: 'Final contract approval', department: 'Legal', isExternal: false },
+                                    { number: 10, name: 'DocuSign execution', department: 'Legal', isExternal: false },
+                                    { number: 11, name: 'Contract filed & obligations logged', department: 'Legal', isExternal: false }
+                                ],
+                                handoffs: [
+                                    { method: 'email', clarity: 'yes-multiple' }, { method: 'email', clarity: 'mostly-clear' }, { method: 'meeting', clarity: 'mostly-clear' },
+                                    { method: 'email', clarity: 'mostly-clear' }, { method: 'email', clarity: 'yes-multiple' }, { method: 'email', clarity: 'yes-multiple' },
+                                    { method: 'meeting', clarity: 'mostly-clear' }, { method: 'email', clarity: 'mostly-clear' }, { method: 'email', clarity: 'mostly-clear' },
+                                    { method: 'email', clarity: 'mostly-clear' }
+                                ],
+                                approvals: [
+                                    { name: 'General Counsel', rounds: '1-2', assessment: 'necessary', avgDays: '5' },
+                                    { name: 'DPO (if data)', rounds: '1', assessment: 'necessary', avgDays: '3' }
+                                ],
+                                systems: [{ name: 'iManage' }, { name: 'DocuSign' }, { name: 'Outlook' }, { name: 'OneTrust' }, { name: 'SharePoint' }],
+                                userTime: { total: 120 },
+                                bottleneck: { name: 'Vendor redlining cycles', longestStep: 'step-5' }
+                            }
+                        }
+                    }
+                ]
+            };
+        }
+
         // ============================================================
         // INIT
         // ============================================================
@@ -6921,6 +7181,11 @@
             if (new URLSearchParams(location.search).has('sample')) {
                 loadSampleData();
                 return;
+            }
+
+            // ?team-sample outputs team sample data to console for easy copy
+            if (new URLSearchParams(location.search).has('team-sample')) {
+                loadTeamSampleToConsole();
             }
 
             // Check for team mode (?team=CODE)
