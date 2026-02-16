@@ -325,6 +325,36 @@
             background: var(--accent-dark, #2d7a90);
         }
 
+        /* Team process selection grid inside modal */
+        .team-process-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .team-process-chip {
+            padding: 0.45rem 0.9rem;
+            border: 1.5px solid var(--border);
+            border-radius: 100px;
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+            color: var(--text);
+            user-select: none;
+        }
+
+        .team-process-chip:hover {
+            border-color: var(--accent);
+            background: #f0fafb;
+        }
+
+        .team-process-chip.selected {
+            border-color: var(--accent);
+            background: var(--accent);
+            color: white;
+        }
+
         .save-modal-success {
             display: none;
             text-align: center;
@@ -779,6 +809,107 @@
         }
         .step-custom-dept {
             margin-top: 0.3rem;
+        }
+
+        /* Decision / branch point */
+        .step-decision-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            font-size: 0.82rem;
+            color: var(--text-mid);
+        }
+
+        .step-decision-toggle input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .step-decision-toggle label {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .step-branches {
+            margin-top: 0.6rem;
+            padding: 0.75rem;
+            background: #f0fafb;
+            border: 1.5px solid var(--accent);
+            border-radius: var(--radius-sm);
+            display: none;
+        }
+
+        .step-branches.show {
+            display: block;
+        }
+
+        .step-branches-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .branch-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 0.4rem;
+        }
+
+        .branch-row .branch-icon {
+            font-size: 0.75rem;
+            color: var(--accent);
+            flex-shrink: 0;
+            width: 20px;
+            text-align: center;
+        }
+
+        .branch-row input {
+            flex: 1;
+            padding: 0.4rem 0.6rem;
+            font-size: 0.85rem;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'Work Sans', sans-serif;
+        }
+
+        .branch-row input:focus {
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        .branch-row .branch-remove {
+            background: none;
+            border: none;
+            color: var(--danger);
+            font-size: 1.1rem;
+            cursor: pointer;
+            padding: 0 4px;
+            line-height: 1;
+        }
+
+        .add-branch-btn {
+            margin-top: 0.4rem;
+            padding: 0.3rem 0.75rem;
+            font-size: 0.78rem;
+            background: white;
+            border: 1px dashed var(--accent);
+            border-radius: var(--radius-sm);
+            color: var(--accent);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .add-branch-btn:hover {
+            background: var(--accent);
+            color: white;
+            border-style: solid;
         }
 
         .remove-item {
@@ -2949,6 +3080,26 @@
                             </label>
                         </div>
                     </div>
+                    <div class="step-decision-toggle">
+                        <input type="checkbox" id="step_${idx}_decision" onchange="toggleDecisionBranches(${idx})">
+                        <label for="step_${idx}_decision">This step has a decision / routing point</label>
+                    </div>
+                    <div class="step-branches" id="step_${idx}_branches">
+                        <div class="step-branches-label">&#9670; Define the possible routes from this step:</div>
+                        <div id="step_${idx}_branchList">
+                            <div class="branch-row">
+                                <span class="branch-icon">&#10132;</span>
+                                <input type="text" id="step_${idx}_branch_0_label" placeholder="Route label, e.g., Approved">
+                                <input type="text" id="step_${idx}_branch_0_target" placeholder="Goes to... e.g., Step 5 or Send Invoice" style="max-width: 180px;">
+                            </div>
+                            <div class="branch-row">
+                                <span class="branch-icon">&#10132;</span>
+                                <input type="text" id="step_${idx}_branch_1_label" placeholder="Route label, e.g., Rejected">
+                                <input type="text" id="step_${idx}_branch_1_target" placeholder="Goes to... e.g., Step 3 or Review" style="max-width: 180px;">
+                            </div>
+                        </div>
+                        <button type="button" class="add-branch-btn" onclick="addBranch(${idx})">+ Add another route</button>
+                    </div>
                 </div>
                 ${stepCount > 3 ? '<button type="button" class="remove-item" onclick="removeStep(' + idx + ')">Remove</button>' : ''}
             `;
@@ -2962,11 +3113,37 @@
                     this.closest('label').classList.add('active');
                 });
             });
-            // Set initial active state
             const checkedRadio = div.querySelector('.int-ext-toggle input:checked');
             if (checkedRadio) checkedRadio.closest('label').classList.add('active');
 
             if (stepCount >= 25) document.getElementById('addStepBtn').style.display = 'none';
+        }
+
+        function toggleDecisionBranches(idx) {
+            const cb = document.getElementById('step_' + idx + '_decision');
+            const panel = document.getElementById('step_' + idx + '_branches');
+            if (cb.checked) {
+                panel.classList.add('show');
+            } else {
+                panel.classList.remove('show');
+            }
+        }
+
+        const branchCounts = {};
+        function addBranch(stepIdx) {
+            if (!branchCounts[stepIdx]) branchCounts[stepIdx] = 2;
+            const bIdx = branchCounts[stepIdx];
+            branchCounts[stepIdx]++;
+
+            const row = document.createElement('div');
+            row.className = 'branch-row';
+            row.innerHTML = `
+                <span class="branch-icon">&#10132;</span>
+                <input type="text" id="step_${stepIdx}_branch_${bIdx}_label" placeholder="Route label">
+                <input type="text" id="step_${stepIdx}_branch_${bIdx}_target" placeholder="Goes to..." style="max-width: 180px;">
+                <button type="button" class="branch-remove" onclick="this.parentElement.remove()">&times;</button>
+            `;
+            document.getElementById('step_' + stepIdx + '_branchList').appendChild(row);
         }
 
         function removeStep(idx) {
@@ -2996,14 +3173,31 @@
                     const otherVal = document.getElementById('step_' + idx + '_deptOther')?.value?.trim();
                     if (otherVal) dept = otherVal;
                 }
-                // Check internal/external toggle
                 const extRadio = document.querySelector('input[name="step_' + idx + '_ext"]:checked');
                 const isExternal = extRadio ? extRadio.value === 'external' : false;
-                // Auto-detect: if department starts with "External", default to external
-                if (dept.startsWith('External') && !extRadio) {
-                    // Already external by department name
+
+                const isDecision = document.getElementById('step_' + idx + '_decision')?.checked || false;
+                let branches = [];
+                if (isDecision) {
+                    const branchList = document.getElementById('step_' + idx + '_branchList');
+                    if (branchList) {
+                        branchList.querySelectorAll('.branch-row').forEach(row => {
+                            const inputs = row.querySelectorAll('input[type="text"]');
+                            const label = inputs[0]?.value?.trim() || '';
+                            const target = inputs[1]?.value?.trim() || '';
+                            if (label) branches.push({ label, target });
+                        });
+                    }
                 }
-                if (name) steps.push({ number: i + 1, name, department: dept, isExternal });
+
+                if (name) {
+                    const step = { number: i + 1, name, department: dept, isExternal };
+                    if (isDecision && branches.length > 0) {
+                        step.isDecision = true;
+                        step.branches = branches;
+                    }
+                    steps.push(step);
+                }
             });
             return steps;
         }
@@ -3029,12 +3223,15 @@
                 block.className = 'handoff-block';
                 const fromBadge = from.isExternal ? '<span style="font-size:0.7rem;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:3px;margin-left:4px;">EXT</span>' : '';
                 const toBadge = to.isExternal ? '<span style="font-size:0.7rem;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:3px;margin-left:4px;">EXT</span>' : '';
+                const decBadge = from.isDecision ? '<span style="font-size:0.7rem;background:#ede9fe;color:#6d28d9;padding:1px 6px;border-radius:3px;margin-left:4px;">&#9670; DECISION</span>' : '';
+                const branchNote = from.isDecision && from.branches ? '<div style="font-size:0.8rem;color:#6d28d9;margin-top:4px;padding:4px 8px;background:#f5f3ff;border-radius:4px;">Routes: ' + from.branches.map(b => '<strong>' + b.label + '</strong>' + (b.target ? ' → ' + b.target : '')).join(' · ') + '</div>' : '';
                 block.innerHTML = `
                     <div class="handoff-header">
-                        Step ${from.number}: ${from.name} (${from.department || '?'})${fromBadge}
+                        Step ${from.number}: ${from.name} (${from.department || '?'})${fromBadge}${decBadge}
                         <span class="handoff-arrow"> &rarr; </span>
                         Step ${to.number}: ${to.name} (${to.department || '?'})${toBadge}
                     </div>
+                    ${branchNote}
                     <div class="form-group">
                         <label>How did ${from.department || 'Step ' + from.number} notify ${to.department || 'Step ' + to.number}?</label>
                         <div class="radio-group">
@@ -4954,7 +5151,9 @@
                     department: s.department || 'Other',
                     isApproval,
                     isBottleneck,
-                    auto   // { key, label, badge, color, bg, reason } or null
+                    isDecision: !!s.isDecision,
+                    branches: s.branches || [],
+                    auto
                 };
             });
 
@@ -5022,7 +5221,8 @@
 
             const totalW = endPos.x + TERM_W + 30;
             const autoCount = allSteps.filter(s => s.auto).length;
-            const totalH = laneY + (autoCount > 0 ? 80 : 50);
+            const hasAnyDecisions = allSteps.some(s => s.isDecision && s.branches.length > 0);
+            const totalH = laneY + (autoCount > 0 ? 80 : 50) + (hasAnyDecisions ? 40 : 0);
 
             // ── Build SVG ──
             let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${totalH}" width="${totalW}" height="${totalH}" style="font-family: 'Work Sans', Arial, sans-serif;">`;
@@ -5144,20 +5344,42 @@
                     svg += `<title>${escSvg(s.auto.label + ': ' + s.auto.reason)}</title>`;
                     svg += `</g>`;
                 }
+
+                // Decision point diamond + branch labels
+                if (s.isDecision && s.branches.length > 0) {
+                    const dx = pos.x + NODE_W / 2;
+                    const dy = pos.y + NODE_H + 8;
+                    const dd = 10;
+                    svg += `<polygon points="${dx},${dy - dd} ${dx + dd},${dy} ${dx},${dy + dd} ${dx - dd},${dy}" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>`;
+                    svg += `<text x="${dx}" y="${dy + 3}" text-anchor="middle" font-size="7" font-weight="700" fill="#7c3aed">?</text>`;
+                    s.branches.forEach((br, bi) => {
+                        const bLabelX = dx + (bi === 0 ? -dd - 4 : dd + 4);
+                        const bLabelY = dy + dd + 10 + bi * 11;
+                        const anchor = bi === 0 ? 'end' : 'start';
+                        svg += `<text x="${bLabelX}" y="${bLabelY}" text-anchor="${anchor}" font-size="8" fill="#7c3aed" font-style="italic">${escSvg(br.label)}${br.target ? ' → ' + escSvg(br.target) : ''}</text>`;
+                    });
+                }
             });
 
             // ── Legend (two rows) ──
             const legendY = laneY + 10;
             // Row 1: node types + handoff
+            const hasDecisions = allSteps.some(s => s.isDecision && s.branches.length > 0);
             const nodeItems = [
                 { color: '#d1fae5', stroke: '#059669', label: 'Start / End' },
                 { color: '#ffffff', stroke: '#cbd5e1', label: 'Process Step' },
                 { color: '#fee2e2', stroke: '#ef4444', label: 'Bottleneck' },
                 { color: '#fef3c7', stroke: '#d97706', label: 'Approval' }
             ];
+            if (hasDecisions) nodeItems.push({ color: '#ede9fe', stroke: '#7c3aed', label: 'Decision Point', isDiamond: true });
             let lx = LANE_LABEL_W + 10;
             nodeItems.forEach(item => {
-                svg += `<rect x="${lx}" y="${legendY}" width="14" height="14" rx="3" fill="${item.color}" stroke="${item.stroke}" stroke-width="1.5"/>`;
+                if (item.isDiamond) {
+                    const cx = lx + 7, cy = legendY + 7, d = 7;
+                    svg += `<polygon points="${cx},${cy - d} ${cx + d},${cy} ${cx},${cy + d} ${cx - d},${cy}" fill="${item.color}" stroke="${item.stroke}" stroke-width="1.5"/>`;
+                } else {
+                    svg += `<rect x="${lx}" y="${legendY}" width="14" height="14" rx="3" fill="${item.color}" stroke="${item.stroke}" stroke-width="1.5"/>`;
+                }
                 svg += `<text x="${lx + 20}" y="${legendY + 11}" font-size="10" fill="#64748b">${item.label}</text>`;
                 lx += 110;
             });
@@ -5542,7 +5764,12 @@
                 elapsedDays: p.lastExample?.elapsedDays || 0,
                 steps: (p.steps || []).length,
                 handoffs: (p.handoffs || []).length,
-                performance: p.performance || ''
+                performance: p.performance || '',
+                decisionPoints: (p.steps || []).filter(s => s.isDecision).map(s => ({
+                    step: s.number,
+                    name: s.name,
+                    branches: s.branches || []
+                }))
             }));
             return { recommendations: recs, processes: procs, totalCost: lastResult.totalCost, potentialSavings: lastResult.potentialSavings };
         }
@@ -5609,9 +5836,9 @@
             if (!completedProcesses || completedProcesses.length === 0) return;
             const p = completedProcesses[0];
             const steps = p.steps || [];
-            const handoffs = p.handoffs || [];
             const depts = [...new Set(steps.map(s => s.department).filter(Boolean))];
             const processId = 'Process_' + (p.processName || 'Main').replace(/[^a-zA-Z0-9]/g, '_');
+            let flowId = 0;
 
             let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
@@ -5625,7 +5852,6 @@
   <collaboration id="Collaboration_1">
     <participant id="Participant_1" name="${escXml(p.processName || 'Process')}" processRef="${processId}" />\n`;
 
-            // Add lanes for each department
             depts.forEach((dept, i) => {
                 xml += `    <participant id="Lane_${i}" name="${escXml(dept)}" />\n`;
             });
@@ -5633,46 +5859,69 @@
             xml += `  </collaboration>
   <process id="${processId}" name="${escXml(p.processName || 'Process')}" isExecutable="false">\n`;
 
-            // Start event
             xml += `    <startEvent id="Start_1" name="Process Start" />\n`;
 
-            // Tasks
             steps.forEach((s, i) => {
                 const taskType = (s.isExternal) ? 'serviceTask' : 'userTask';
                 xml += `    <${taskType} id="Task_${i + 1}" name="${escXml(s.name || 'Step ' + (i + 1))}" />\n`;
+                if (s.isDecision && s.branches && s.branches.length > 0) {
+                    xml += `    <exclusiveGateway id="Gateway_${i + 1}" name="${escXml(s.name + '?')}" />\n`;
+                }
             });
 
-            // End event
             xml += `    <endEvent id="End_1" name="Process Complete" />\n`;
 
-            // Sequence flows
-            xml += `    <sequenceFlow id="Flow_start" sourceRef="Start_1" targetRef="Task_1" />\n`;
+            xml += `    <sequenceFlow id="Flow_${++flowId}" sourceRef="Start_1" targetRef="Task_1" />\n`;
             steps.forEach((s, i) => {
-                const nextRef = i < steps.length - 1 ? `Task_${i + 2}` : 'End_1';
-                xml += `    <sequenceFlow id="Flow_${i + 1}" sourceRef="Task_${i + 1}" targetRef="${nextRef}" />\n`;
+                const taskId = `Task_${i + 1}`;
+                const defaultNext = i < steps.length - 1 ? `Task_${i + 2}` : 'End_1';
+
+                if (s.isDecision && s.branches && s.branches.length > 0) {
+                    xml += `    <sequenceFlow id="Flow_${++flowId}" sourceRef="${taskId}" targetRef="Gateway_${i + 1}" />\n`;
+                    s.branches.forEach((br) => {
+                        let targetRef = defaultNext;
+                        if (br.target) {
+                            const match = br.target.match(/step\s*(\d+)/i);
+                            if (match && parseInt(match[1]) <= steps.length) {
+                                targetRef = `Task_${parseInt(match[1])}`;
+                            }
+                        }
+                        xml += `    <sequenceFlow id="Flow_${++flowId}" name="${escXml(br.label)}" sourceRef="Gateway_${i + 1}" targetRef="${targetRef}" />\n`;
+                    });
+                } else {
+                    xml += `    <sequenceFlow id="Flow_${++flowId}" sourceRef="${taskId}" targetRef="${defaultNext}" />\n`;
+                }
             });
 
             xml += `  </process>\n`;
 
-            // Basic diagram layout
-            xml += `  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
-    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_1">
-      <bpmndi:BPMNShape id="Start_1_di" bpmnElement="Start_1">
-        <dc:Bounds x="160" y="100" width="36" height="36" />
-      </bpmndi:BPMNShape>\n`;
+            let xPos = 160;
+            const shapes = [];
+            const yMain = 100;
+
+            shapes.push({ id: 'Start_1', x: xPos, y: yMain, w: 36, h: 36 });
+            xPos += 100;
 
             steps.forEach((s, i) => {
-                const x = 260 + i * 160;
-                xml += `      <bpmndi:BPMNShape id="Task_${i + 1}_di" bpmnElement="Task_${i + 1}">
-        <dc:Bounds x="${x}" y="80" width="120" height="80" />
+                shapes.push({ id: `Task_${i + 1}`, x: xPos, y: yMain - 20, w: 120, h: 80 });
+                xPos += 160;
+                if (s.isDecision && s.branches && s.branches.length > 0) {
+                    shapes.push({ id: `Gateway_${i + 1}`, x: xPos - 80, y: yMain + 80, w: 50, h: 50, isGateway: true });
+                }
+            });
+
+            shapes.push({ id: 'End_1', x: xPos, y: yMain, w: 36, h: 36 });
+
+            xml += `  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_1">\n`;
+
+            shapes.forEach(sh => {
+                xml += `      <bpmndi:BPMNShape id="${sh.id}_di" bpmnElement="${sh.id}"${sh.isGateway ? ' isMarkerVisible="true"' : ''}>
+        <dc:Bounds x="${sh.x}" y="${sh.y}" width="${sh.w}" height="${sh.h}" />
       </bpmndi:BPMNShape>\n`;
             });
 
-            const endX = 260 + steps.length * 160;
-            xml += `      <bpmndi:BPMNShape id="End_1_di" bpmnElement="End_1">
-        <dc:Bounds x="${endX}" y="100" width="36" height="36" />
-      </bpmndi:BPMNShape>
-    </bpmndi:BPMNPlane>
+            xml += `    </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </definitions>`;
 
@@ -6883,11 +7132,42 @@
         // TEAM DIAGNOSTIC MODE
         // ============================================================
         let teamMode = null; // { code, processName }
+        let teamSelectedProcess = '';
+
+        function selectTeamProcess(chip, name) {
+            document.querySelectorAll('.team-process-chip').forEach(c => c.classList.remove('selected'));
+            chip.classList.add('selected');
+            teamSelectedProcess = name;
+            document.getElementById('teamProcessName').value = '';
+            document.getElementById('teamProcessName').style.borderColor = '';
+            document.getElementById('teamCreateBtn').disabled = false;
+        }
+
+        function handleTeamCustomProcess() {
+            const val = document.getElementById('teamProcessName').value.trim();
+            if (val) {
+                document.querySelectorAll('.team-process-chip').forEach(c => c.classList.remove('selected'));
+                teamSelectedProcess = '';
+                document.getElementById('teamCreateBtn').disabled = false;
+            } else if (!teamSelectedProcess) {
+                document.getElementById('teamCreateBtn').disabled = true;
+            }
+            document.getElementById('teamProcessName').style.borderColor = '';
+        }
+
+        function getTeamProcessName() {
+            const custom = document.getElementById('teamProcessName').value.trim();
+            return custom || teamSelectedProcess;
+        }
 
         function openTeamModal() {
             document.getElementById('teamModalCreate').style.display = 'block';
             document.getElementById('teamModalSuccess').style.display = 'none';
             document.getElementById('teamLinkBox').style.display = 'none';
+            teamSelectedProcess = '';
+            document.querySelectorAll('.team-process-chip').forEach(c => c.classList.remove('selected'));
+            document.getElementById('teamProcessName').value = '';
+            document.getElementById('teamCreateBtn').disabled = true;
             document.getElementById('teamModalOverlay').classList.add('show');
         }
 
@@ -6896,7 +7176,7 @@
         }
 
         async function createTeamDiagnostic() {
-            const processName = document.getElementById('teamProcessName').value.trim();
+            const processName = getTeamProcessName();
             if (!processName) {
                 document.getElementById('teamProcessName').style.borderColor = '#dc3545';
                 document.getElementById('teamProcessName').focus();
@@ -7058,13 +7338,28 @@
                 <h3>Team Diagnostic</h3>
                 <p>Create a team session and share the code with colleagues. Each person fills out the diagnostic independently, then you compare perspectives.</p>
 
-                <input type="text" class="save-modal-input" id="teamProcessName" placeholder="Process name, e.g. Client Onboarding">
+                <label style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Select a process:</label>
+                <div class="team-process-grid" id="teamProcessGrid">
+                    <div class="team-process-chip" onclick="selectTeamProcess(this, 'Customer Onboarding')">&#128230; Customer Onboarding</div>
+                    <div class="team-process-chip" onclick="selectTeamProcess(this, 'Sales to Delivery')">&#128176; Sales to Delivery</div>
+                    <div class="team-process-chip" onclick="selectTeamProcess(this, 'Employee Onboarding')">&#128100; Employee Onboarding</div>
+                    <div class="team-process-chip" onclick="selectTeamProcess(this, 'Order Fulfillment')">&#9989; Order Fulfillment</div>
+                    <div class="team-process-chip" onclick="selectTeamProcess(this, 'Invoice to Payment')">&#128179; Invoice to Payment</div>
+                    <div class="team-process-chip" onclick="selectTeamProcess(this, 'Issue Resolution')">&#128295; Issue Resolution</div>
+                    <div class="team-process-chip" onclick="selectTeamProcess(this, 'Approval Workflow')">&#128203; Approval Workflow</div>
+                    <div class="team-process-chip" onclick="selectTeamProcess(this, 'Product Launch')">&#128640; Product Launch</div>
+                    <div class="team-process-chip" onclick="selectTeamProcess(this, 'Reporting Cycle')">&#128202; Reporting Cycle</div>
+                </div>
+                <div style="margin-top: 0.75rem;">
+                    <input type="text" class="save-modal-input" id="teamProcessName" placeholder="Or type a custom process name..." oninput="handleTeamCustomProcess()">
+                </div>
+
                 <input type="text" class="save-modal-input" id="teamCompany" placeholder="Company name (optional)">
                 <input type="text" class="save-modal-input" id="teamCreatorName" placeholder="Your name">
                 <input type="email" class="save-modal-input" id="teamCreatorEmail" placeholder="Your email (optional)">
 
                 <div class="save-modal-actions">
-                    <button class="button button-primary" id="teamCreateBtn" onclick="createTeamDiagnostic()">Create Team Session</button>
+                    <button class="button button-primary" id="teamCreateBtn" onclick="createTeamDiagnostic()" disabled>Create Team Session</button>
                 </div>
 
                 <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); text-align: center;">
