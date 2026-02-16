@@ -5253,9 +5253,11 @@
             });
 
             // ── Grid layout: serpentine rows ──
+            const DIAMOND_W = 130;
+            const DIAMOND_H = 90;
             const colW = NODE_W + NODE_GAP_X;
             const hasDecisions = allSteps.some(s => s.isDecision && s.branches.length > 0);
-            const rowH = NODE_H + NODE_GAP_Y + (hasDecisions ? 60 : 20);
+            const rowH = NODE_H + NODE_GAP_Y + (hasDecisions ? 55 : 20);
             const nodePos = [];
             const numRows = Math.ceil(allSteps.length / COLS);
 
@@ -5329,6 +5331,8 @@
             }
 
             for (let i = 0; i < allSteps.length - 1; i++) {
+                // Skip sequential arrow FROM decision steps — branches define the paths
+                if (allSteps[i].isDecision && allSteps[i].branches && allSteps[i].branches.length > 0) continue;
                 drawSeqArrow(i, i + 1);
             }
 
@@ -5347,96 +5351,124 @@
                 });
             });
 
-            // ── Draw nodes (static, no animation) ──
+            // ── Helper: word-wrap text to N chars per line ──
+            function wrapText(text, maxChars) {
+                const words = text.split(/\s+/);
+                const lines = []; let cur = '';
+                words.forEach(w => { const t = cur ? cur + ' ' + w : w; if (t.length > maxChars && cur) { lines.push(cur); cur = w; } else { cur = t; } });
+                if (cur) lines.push(cur);
+                return lines;
+            }
+
+            // ── Draw nodes ──
             allSteps.forEach((s, i) => {
                 const pos = nodePos[i];
                 if (!pos) return;
                 const dc = getDeptColor(s.department);
                 const isDecNode = s.isDecision && s.branches.length > 0;
-                let fill = dc.bg, stroke = dc.stroke, sw = 1.5, textCol = '#1e293b';
-                if (s.isBottleneck) { fill = '#fee2e2'; stroke = '#ef4444'; sw = 2.5; textCol = '#991b1b'; }
-                else if (s.isApproval) { fill = '#fef3c7'; stroke = '#d97706'; sw = 2; textCol = '#92400e'; }
-                else if (isDecNode) { fill = '#f5f3ff'; stroke = '#7c3aed'; sw = 2; }
-                const rx = s.isApproval ? 16 : 8;
 
                 svg += `<g>`;
-                svg += `<rect x="${pos.x}" y="${pos.y}" width="${NODE_W}" height="${NODE_H}" rx="${rx}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" filter="url(#shadow)"/>`;
 
-                // Purple left accent for decision nodes (like n8n's colored node types)
                 if (isDecNode) {
-                    svg += `<rect x="${pos.x}" y="${pos.y}" width="5" height="${NODE_H}" rx="4" fill="#7c3aed"/>`;
-                }
+                    // ── DIAMOND (standard flowchart decision symbol) ──
+                    const cx = pos.cx, cy = pos.cy;
+                    const hw = DIAMOND_W / 2, hh = DIAMOND_H / 2;
+                    svg += `<polygon points="${cx},${cy - hh} ${cx + hw},${cy} ${cx},${cy + hh} ${cx - hw},${cy}" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2" filter="url(#shadow)"/>`;
 
-                // Step badge
-                const badgeBg = s.isBottleneck ? '#ef4444' : s.isApproval ? '#d97706' : isDecNode ? '#7c3aed' : stroke;
-                svg += `<circle cx="${pos.x + 15}" cy="${pos.y + 15}" r="10" fill="${badgeBg}" opacity="0.15"/>`;
-                svg += `<text x="${pos.x + 15}" y="${pos.y + 19}" text-anchor="middle" font-size="9" font-weight="700" fill="${badgeBg}">${i + 1}</text>`;
+                    // Step number badge (top)
+                    svg += `<circle cx="${cx}" cy="${cy - hh + 8}" r="8" fill="#7c3aed" opacity="0.15"/>`;
+                    svg += `<text x="${cx}" y="${cy - hh + 11}" text-anchor="middle" font-size="8" font-weight="700" fill="#7c3aed">${i + 1}</text>`;
 
-                // Department label
-                svg += `<text x="${pos.x + NODE_W - 6}" y="${pos.y + 12}" text-anchor="end" font-size="7" fill="${stroke}" opacity="0.7">${escSvg(s.department.length > 14 ? s.department.substring(0, 12) + '..' : s.department)}</text>`;
+                    // Name inside diamond (compact, 2 lines)
+                    let dLines = wrapText(s.name, 16);
+                    if (dLines.length > 2) { dLines.length = 2; dLines[1] = dLines[1].substring(0, 13) + '..'; }
+                    dLines.forEach((line, li) => {
+                        svg += `<text x="${cx}" y="${cy - 2 + li * 12}" text-anchor="middle" font-size="9" fill="#4c1d95" font-weight="500">${escSvg(line)}</text>`;
+                    });
 
-                // Incoming route badges (left edge, n8n-style input ports)
-                const incoming = incomingRoutes[i] || [];
-                incoming.forEach((inc, ii) => {
-                    const by = pos.y + 14 + ii * 14;
-                    svg += `<circle cx="${pos.x - 1}" cy="${by}" r="5" fill="${inc.color}" stroke="#fff" stroke-width="1.5"/>`;
-                    svg += `<text x="${pos.x - 1}" y="${by + 2}" text-anchor="middle" font-size="5" fill="#fff" font-weight="700">${inc.fromStep}</text>`;
-                    svg += `<title>From Step ${inc.fromStep}: ${escSvg(inc.label)}</title>`;
-                });
+                    // Dept label below name
+                    svg += `<text x="${cx}" y="${cy + 18}" text-anchor="middle" font-size="7" fill="#7c3aed" opacity="0.6">${escSvg(s.department.length > 14 ? s.department.substring(0, 12) + '..' : s.department)}</text>`;
 
-                // Name (2 lines max)
-                const words = s.name.split(/\s+/);
-                const lines = []; let cur = '';
-                words.forEach(w => { const test = cur ? cur + ' ' + w : w; if (test.length > 22 && cur) { lines.push(cur); cur = w; } else { cur = test; } });
-                if (cur) lines.push(cur);
-                if (lines.length > 2) { lines.length = 2; lines[1] = lines[1].substring(0, 18) + '..'; }
-                const lineH = 13;
-                const textStartY = pos.y + 30 + (lines.length === 1 ? 4 : 0);
-                lines.forEach((line, li) => {
-                    svg += `<text x="${pos.x + NODE_W / 2}" y="${textStartY + li * lineH}" text-anchor="middle" font-size="10" fill="${textCol}" font-weight="500">${escSvg(line)}</text>`;
-                });
+                    // Auto badge
+                    if (s.auto) {
+                        svg += `<circle cx="${cx + hw - 4}" cy="${cy - hh + 4}" r="8" fill="${s.auto.color}" stroke="#fff" stroke-width="1.5"/>`;
+                        svg += `<text x="${cx + hw - 4}" y="${cy - hh + 7}" text-anchor="middle" font-size="7" fill="#fff" font-weight="700">${s.auto.badge}</text>`;
+                    }
 
-                // Auto badge
-                if (s.auto) {
-                    const bx = pos.x + NODE_W - 6, by = pos.y - 4;
-                    svg += `<circle cx="${bx}" cy="${by}" r="${AGENT_BADGE_R}" fill="${s.auto.color}" stroke="#fff" stroke-width="2"/>`;
-                    svg += `<text x="${bx}" y="${by + 4}" text-anchor="middle" font-size="9" fill="#fff" font-weight="700">${s.auto.badge}</text>`;
-                }
-
-                // n8n-style output ports + forking branch connections (below node)
-                if (isDecNode) {
+                    // Branch labels below diamond, spaced to avoid overlap
                     const brCount = s.branches.length;
-                    const portY = pos.y + NODE_H;
-                    const portSpacing = Math.min(28, NODE_W / (brCount + 1));
-                    const portStartX = pos.x + (NODE_W - (brCount - 1) * portSpacing) / 2;
+                    const labelY = cy + hh + 6;
+                    const labelSpacing = Math.max(colW / brCount, 90);
+                    const labelStartX = cx - ((brCount - 1) * labelSpacing) / 2;
 
                     s.branches.forEach((br, bi) => {
                         const color = branchColors[bi % branchColors.length];
-                        const portX = portStartX + bi * portSpacing;
+                        const lx = labelStartX + bi * labelSpacing;
                         const targetMatch = (br.target || '').match(/(\d+)/);
                         const targetIdx = targetMatch ? parseInt(targetMatch[1]) - 1 : -1;
-                        const targetNum = targetIdx >= 0 ? targetIdx + 1 : '?';
+                        const targetNum = targetIdx >= 0 ? targetIdx + 1 : '–';
+                        const brText = escSvg(br.label.length > 16 ? br.label.substring(0, 14) + '..' : br.label);
 
-                        // Output port circle on bottom edge
-                        svg += `<circle cx="${portX}" cy="${portY}" r="5" fill="${color}" stroke="#fff" stroke-width="1.5"/>`;
+                        // Short line from diamond bottom to label
+                        svg += `<line x1="${cx}" y1="${cy + hh}" x2="${lx}" y2="${labelY + 4}" stroke="${color}" stroke-width="1.5" stroke-dasharray="3,2" class="flow-arrow" opacity="0.6"/>`;
+                        svg += `<circle cx="${lx}" cy="${labelY + 4}" r="2.5" fill="${color}"/>`;
 
-                        // Short forking bezier downward
-                        const forkLen = 32;
-                        const fanSpread = (bi - (brCount - 1) / 2) * 20;
-                        const endX = portX + fanSpread;
-                        const endY = portY + forkLen;
-                        const pathD = `M ${portX} ${portY + 5} C ${portX} ${portY + forkLen * 0.5}, ${endX} ${portY + forkLen * 0.5}, ${endX} ${endY}`;
-
-                        svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,3" class="flow-arrow" opacity="0.7"/>`;
-
-                        // Pill label at end of fork
-                        const brText = escSvg(br.label.length > 13 ? br.label.substring(0, 11) + '..' : br.label);
-                        const pillText = `${brText} → ${targetNum}`;
-                        const pillW = Math.min(pillText.length * 5 + 14, 110);
-                        svg += `<rect x="${endX - pillW / 2}" y="${endY}" width="${pillW}" height="14" rx="7" fill="${color}" opacity="0.1"/>`;
-                        svg += `<rect x="${endX - pillW / 2}" y="${endY}" width="${pillW}" height="14" rx="7" fill="none" stroke="${color}" stroke-width="0.8" opacity="0.4"/>`;
-                        svg += `<text x="${endX}" y="${endY + 10}" text-anchor="middle" font-size="7" fill="${color}" font-weight="600">${pillText}</text>`;
+                        // Label text
+                        svg += `<text x="${lx}" y="${labelY + 16}" text-anchor="middle" font-size="7.5" fill="${color}" font-weight="600">${brText}</text>`;
+                        svg += `<text x="${lx}" y="${labelY + 26}" text-anchor="middle" font-size="7" fill="${color}" opacity="0.8">→ Step ${targetNum}</text>`;
                     });
+
+                    // Incoming route indicators
+                    const incoming = incomingRoutes[i] || [];
+                    incoming.forEach((inc, ii) => {
+                        const ix = cx - hw + 4;
+                        const iy = cy - 10 + ii * 12;
+                        svg += `<circle cx="${ix}" cy="${iy}" r="5" fill="${inc.color}" stroke="#fff" stroke-width="1"/>`;
+                        svg += `<text x="${ix}" y="${iy + 2}" text-anchor="middle" font-size="5" fill="#fff" font-weight="700">${inc.fromStep}</text>`;
+                        svg += `<title>From Step ${inc.fromStep}: ${escSvg(inc.label)}</title>`;
+                    });
+
+                } else {
+                    // ── RECTANGLE (regular process step) ──
+                    let fill = dc.bg, stroke = dc.stroke, sw = 1.5, textCol = '#1e293b';
+                    if (s.isBottleneck) { fill = '#fee2e2'; stroke = '#ef4444'; sw = 2.5; textCol = '#991b1b'; }
+                    else if (s.isApproval) { fill = '#fef3c7'; stroke = '#d97706'; sw = 2; textCol = '#92400e'; }
+                    const rx = s.isApproval ? 16 : 8;
+
+                    svg += `<rect x="${pos.x}" y="${pos.y}" width="${NODE_W}" height="${NODE_H}" rx="${rx}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" filter="url(#shadow)"/>`;
+
+                    // Step badge
+                    const badgeBg = s.isBottleneck ? '#ef4444' : s.isApproval ? '#d97706' : stroke;
+                    svg += `<circle cx="${pos.x + 15}" cy="${pos.y + 15}" r="10" fill="${badgeBg}" opacity="0.15"/>`;
+                    svg += `<text x="${pos.x + 15}" y="${pos.y + 19}" text-anchor="middle" font-size="9" font-weight="700" fill="${badgeBg}">${i + 1}</text>`;
+
+                    // Department label
+                    svg += `<text x="${pos.x + NODE_W - 6}" y="${pos.y + 12}" text-anchor="end" font-size="7" fill="${stroke}" opacity="0.7">${escSvg(s.department.length > 14 ? s.department.substring(0, 12) + '..' : s.department)}</text>`;
+
+                    // Incoming route indicators
+                    const incoming = incomingRoutes[i] || [];
+                    incoming.forEach((inc, ii) => {
+                        const by = pos.y + 14 + ii * 12;
+                        svg += `<circle cx="${pos.x - 1}" cy="${by}" r="5" fill="${inc.color}" stroke="#fff" stroke-width="1.5"/>`;
+                        svg += `<text x="${pos.x - 1}" y="${by + 2}" text-anchor="middle" font-size="5" fill="#fff" font-weight="700">${inc.fromStep}</text>`;
+                        svg += `<title>From Step ${inc.fromStep}: ${escSvg(inc.label)}</title>`;
+                    });
+
+                    // Name (2 lines max)
+                    let lines = wrapText(s.name, 22);
+                    if (lines.length > 2) { lines.length = 2; lines[1] = lines[1].substring(0, 18) + '..'; }
+                    const lineH = 13;
+                    const textStartY = pos.y + 30 + (lines.length === 1 ? 4 : 0);
+                    lines.forEach((line, li) => {
+                        svg += `<text x="${pos.x + NODE_W / 2}" y="${textStartY + li * lineH}" text-anchor="middle" font-size="10" fill="${textCol}" font-weight="500">${escSvg(line)}</text>`;
+                    });
+
+                    // Auto badge
+                    if (s.auto) {
+                        const bx = pos.x + NODE_W - 6, by = pos.y - 4;
+                        svg += `<circle cx="${bx}" cy="${by}" r="${AGENT_BADGE_R}" fill="${s.auto.color}" stroke="#fff" stroke-width="2"/>`;
+                        svg += `<text x="${bx}" y="${by + 4}" text-anchor="middle" font-size="9" fill="#fff" font-weight="700">${s.auto.badge}</text>`;
+                    }
                 }
 
                 svg += `</g>`;
@@ -5445,26 +5477,23 @@
             // ── Legend ──
             const autoCount = allSteps.filter(s => s.auto).length;
             const legendY = totalH - 50;
-            const nodeItems = [
-                { color: '#ffffff', stroke: '#94a3b8', label: 'Step' },
-                { color: '#fee2e2', stroke: '#ef4444', label: 'Bottleneck' },
-                { color: '#fef3c7', stroke: '#d97706', label: 'Approval' }
-            ];
-            if (hasDecisions) nodeItems.push({ color: '#f5f3ff', stroke: '#7c3aed', label: 'Decision' });
             let lx = PAD_L;
-            nodeItems.forEach(item => {
-                svg += `<rect x="${lx}" y="${legendY}" width="14" height="14" rx="3" fill="${item.color}" stroke="${item.stroke}" stroke-width="1.5"/>`;
-                svg += `<text x="${lx + 20}" y="${legendY + 11}" font-size="9" fill="#64748b">${item.label}</text>`;
-                lx += 90;
-            });
+            // Step types
+            svg += `<rect x="${lx}" y="${legendY}" width="14" height="14" rx="3" fill="#fff" stroke="#94a3b8" stroke-width="1.5"/>`;
+            svg += `<text x="${lx + 20}" y="${legendY + 11}" font-size="9" fill="#64748b">Process Step</text>`;
+            lx += 100;
             if (hasDecisions) {
-                svg += `<circle cx="${lx + 5}" cy="${legendY + 7}" r="5" fill="#7c3aed"/>`;
-                svg += `<text x="${lx + 16}" y="${legendY + 11}" font-size="9" fill="#64748b">Output port</text>`;
-                lx += 90;
-                svg += `<circle cx="${lx + 5}" cy="${legendY + 7}" r="5" fill="#2563eb"/>`;
-                svg += `<text x="${lx + 16}" y="${legendY + 11}" font-size="9" fill="#64748b">Input port</text>`;
+                const dx = lx + 7, dy = legendY + 7, dd = 7;
+                svg += `<polygon points="${dx},${dy - dd} ${dx + dd},${dy} ${dx},${dy + dd} ${dx - dd},${dy}" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5"/>`;
+                svg += `<text x="${lx + 20}" y="${legendY + 11}" font-size="9" fill="#64748b">Decision</text>`;
                 lx += 80;
             }
+            svg += `<rect x="${lx}" y="${legendY}" width="14" height="14" rx="3" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>`;
+            svg += `<text x="${lx + 20}" y="${legendY + 11}" font-size="9" fill="#64748b">Bottleneck</text>`;
+            lx += 90;
+            svg += `<rect x="${lx}" y="${legendY}" width="14" height="14" rx="3" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>`;
+            svg += `<text x="${lx + 20}" y="${legendY + 11}" font-size="9" fill="#64748b">Approval</text>`;
+            lx += 85;
             svg += `<line x1="${lx}" y1="${legendY + 7}" x2="${lx + 20}" y2="${legendY + 7}" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="5,3"/>`;
             svg += `<text x="${lx + 26}" y="${legendY + 11}" font-size="9" fill="#64748b">Bad handoff</text>`;
 
@@ -5580,6 +5609,8 @@
             const connections = [];
             connections.push({ fromType: 'start', toIdx: 0 });
             for (let i = 0; i < allSteps.length - 1; i++) {
+                // Skip sequential arrow FROM decision steps — branches define the paths
+                if (allSteps[i].isDecision && allSteps[i].branches && allSteps[i].branches.length > 0) continue;
                 const hk = i + '->' + (i + 1);
                 const hd = handoffMap[hk] || { method: '', isBad: false };
                 connections.push({ fromIdx: i, toIdx: i + 1, method: hd.method, isBad: hd.isBad });
@@ -5596,8 +5627,8 @@
                 const dc = getDC(dept);
                 const deptSteps = deptMap[dept] || [];
                 const hasDecInLane = deptSteps.some(s => s.isDecision && (s.branches || []).length > 0);
-                const extraForPorts = hasDecInLane ? 55 : 0;
-                const laneH = NODE_H + LANE_PAD_Y * 2 + extraForPorts;
+                const extraForDiamond = hasDecInLane ? 65 : 0;
+                const laneH = NODE_H + LANE_PAD_Y * 2 + extraForDiamond;
                 lanes.push({ dept, y: laneY, h: laneH, bg: dc.bg, stroke: dc.stroke });
                 deptMap[dept].forEach(s => {
                     const nx = START_X + s.idx * colW;
@@ -5716,93 +5747,109 @@
                 });
             });
 
-            // Step nodes (static, no animation)
+            // Step nodes (static, no animation) — with diamond decisions
+            function slWrapText(text, maxC) {
+                const words = text.split(/\s+/);
+                const lines = []; let cur = '';
+                words.forEach(w => { const t = cur ? cur + ' ' + w : w; if (t.length > maxC && cur) { lines.push(cur); cur = w; } else { cur = t; } });
+                if (cur) lines.push(cur);
+                return lines;
+            }
+
             allSteps.forEach((s, i) => {
                 const pos = nodePos[i];
                 if (!pos) return;
                 const isDecNode = s.isDecision && s.branches.length > 0;
 
-                let fill = '#ffffff', stroke = '#cbd5e1', sw = 1.5, textCol = '#1e293b';
-                if (s.isBottleneck) { fill = '#fee2e2'; stroke = '#ef4444'; sw = 2.5; textCol = '#991b1b'; }
-                else if (s.isApproval) { fill = '#fef3c7'; stroke = '#d97706'; sw = 2; textCol = '#92400e'; }
-                else if (isDecNode) { fill = '#f5f3ff'; stroke = '#7c3aed'; sw = 2; }
-                const rx = s.isApproval ? 16 : 8;
-
                 svg += `<g>`;
-                svg += `<rect x="${pos.x}" y="${pos.y}" width="${NODE_W}" height="${NODE_H}" rx="${rx}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" filter="url(#sshadow)"/>`;
 
-                // Purple left accent for decision nodes
                 if (isDecNode) {
-                    svg += `<rect x="${pos.x}" y="${pos.y}" width="5" height="${NODE_H}" rx="4" fill="#7c3aed"/>`;
-                }
+                    // ── DIAMOND decision symbol ──
+                    const cx = pos.cx, cy = pos.cy;
+                    const hw = 60, hh = 38;
+                    svg += `<polygon points="${cx},${cy - hh} ${cx + hw},${cy} ${cx},${cy + hh} ${cx - hw},${cy}" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2" filter="url(#sshadow)"/>`;
 
-                // Step badge
-                const badgeBg = s.isBottleneck ? '#ef4444' : s.isApproval ? '#d97706' : isDecNode ? '#7c3aed' : '#64748b';
-                svg += `<circle cx="${pos.x + 14}" cy="${pos.y + 14}" r="10" fill="${badgeBg}" opacity="0.15"/>`;
-                svg += `<text x="${pos.x + 14}" y="${pos.y + 18}" text-anchor="middle" font-size="9" font-weight="700" fill="${badgeBg}">${i + 1}</text>`;
+                    // Step number
+                    svg += `<text x="${cx}" y="${cy - hh + 12}" text-anchor="middle" font-size="8" font-weight="700" fill="#7c3aed">${i + 1}</text>`;
 
-                // Incoming route badges (left edge, n8n-style input ports)
-                const incoming = slIncoming[i] || [];
-                incoming.forEach((inc, ii) => {
-                    const by = pos.y + 14 + ii * 13;
-                    svg += `<circle cx="${pos.x - 1}" cy="${by}" r="5" fill="${inc.color}" stroke="#fff" stroke-width="1.5"/>`;
-                    svg += `<text x="${pos.x - 1}" y="${by + 2}" text-anchor="middle" font-size="5" fill="#fff" font-weight="700">${inc.fromStep}</text>`;
-                    svg += `<title>From Step ${inc.fromStep}: ${escSvg(inc.label)}</title>`;
-                });
+                    // Name inside diamond
+                    let dLines = slWrapText(s.name, 14);
+                    if (dLines.length > 2) { dLines.length = 2; dLines[1] = dLines[1].substring(0, 11) + '..'; }
+                    dLines.forEach((line, li) => {
+                        svg += `<text x="${cx}" y="${cy - 2 + li * 11}" text-anchor="middle" font-size="8" fill="#4c1d95" font-weight="500">${escSvg(line)}</text>`;
+                    });
 
-                // Name (2 lines)
-                const words = s.name.split(/\s+/);
-                const lines = []; let cur = '';
-                words.forEach(w => { const test = cur ? cur + ' ' + w : w; if (test.length > 20 && cur) { lines.push(cur); cur = w; } else { cur = test; } });
-                if (cur) lines.push(cur);
-                if (lines.length > 2) { lines.length = 2; lines[1] = lines[1].substring(0, 17) + '..'; }
-                const lineH = 13;
-                const textStartY = pos.cy + 4 - ((lines.length - 1) * lineH) / 2;
-                lines.forEach((line, li) => {
-                    svg += `<text x="${pos.x + NODE_W / 2}" y="${textStartY + li * lineH}" text-anchor="middle" font-size="10" fill="${textCol}" font-weight="500">${escSvg(line)}</text>`;
-                });
+                    // Auto badge
+                    if (s.auto) {
+                        svg += `<circle cx="${cx + hw - 4}" cy="${cy - hh + 4}" r="7" fill="${s.auto.color}" stroke="#fff" stroke-width="1.5"/>`;
+                        svg += `<text x="${cx + hw - 4}" y="${cy - hh + 7}" text-anchor="middle" font-size="6" fill="#fff" font-weight="700">${s.auto.badge}</text>`;
+                    }
 
-                // Auto badge
-                if (s.auto) {
-                    const bx = pos.x + NODE_W - 6, by = pos.y - 4;
-                    svg += `<circle cx="${bx}" cy="${by}" r="9" fill="${s.auto.color}" stroke="#fff" stroke-width="2"/>`;
-                    svg += `<text x="${bx}" y="${by + 3}" text-anchor="middle" font-size="8" fill="#fff" font-weight="700">${s.auto.badge}</text>`;
-                }
-
-                // n8n-style output ports + forking branch connections (below node in swimlane)
-                if (isDecNode) {
+                    // Branch labels below diamond
                     const brCount = s.branches.length;
-                    const portY = pos.y + NODE_H;
-                    const portSpacing = Math.min(30, NODE_W / (brCount + 1));
-                    const portStartX = pos.x + (NODE_W - (brCount - 1) * portSpacing) / 2;
+                    const labelY = cy + hh + 5;
+                    const labelSpacing = Math.max(NODE_W * 0.9 / brCount, 70);
+                    const labelStartX = cx - ((brCount - 1) * labelSpacing) / 2;
 
                     s.branches.forEach((br, bi) => {
                         const color = slBranchColors[bi % slBranchColors.length];
-                        const portX = portStartX + bi * portSpacing;
+                        const blx = labelStartX + bi * labelSpacing;
                         const targetMatch = (br.target || '').match(/(\d+)/);
                         const targetIdx = targetMatch ? parseInt(targetMatch[1]) - 1 : -1;
-                        const targetNum = targetIdx >= 0 ? targetIdx + 1 : '?';
+                        const targetNum = targetIdx >= 0 ? targetIdx + 1 : '–';
+                        const brText = escSvg(br.label.length > 14 ? br.label.substring(0, 12) + '..' : br.label);
 
-                        // Output port circle on bottom edge
-                        svg += `<circle cx="${portX}" cy="${portY}" r="5" fill="${color}" stroke="#fff" stroke-width="1.5"/>`;
-
-                        // Short forking bezier downward
-                        const forkLen = 35;
-                        const fanSpread = (bi - (brCount - 1) / 2) * 22;
-                        const endX = portX + fanSpread;
-                        const endY = portY + forkLen;
-                        const pathD = `M ${portX} ${portY + 5} C ${portX} ${portY + forkLen * 0.5}, ${endX} ${portY + forkLen * 0.5}, ${endX} ${endY}`;
-
-                        svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,3" class="sl-arrow" opacity="0.7"/>`;
-
-                        // Pill label at end of fork
-                        const brText = escSvg(br.label.length > 12 ? br.label.substring(0, 10) + '..' : br.label);
-                        const pillText = `${brText} → ${targetNum}`;
-                        const pillW = Math.min(pillText.length * 5 + 14, 110);
-                        svg += `<rect x="${endX - pillW / 2}" y="${endY}" width="${pillW}" height="14" rx="7" fill="${color}" opacity="0.1"/>`;
-                        svg += `<rect x="${endX - pillW / 2}" y="${endY}" width="${pillW}" height="14" rx="7" fill="none" stroke="${color}" stroke-width="0.8" opacity="0.4"/>`;
-                        svg += `<text x="${endX}" y="${endY + 10}" text-anchor="middle" font-size="6.5" fill="${color}" font-weight="600">${pillText}</text>`;
+                        svg += `<line x1="${cx}" y1="${cy + hh}" x2="${blx}" y2="${labelY + 3}" stroke="${color}" stroke-width="1.5" stroke-dasharray="3,2" class="sl-arrow" opacity="0.6"/>`;
+                        svg += `<circle cx="${blx}" cy="${labelY + 3}" r="2" fill="${color}"/>`;
+                        svg += `<text x="${blx}" y="${labelY + 14}" text-anchor="middle" font-size="7" fill="${color}" font-weight="600">${brText}</text>`;
+                        svg += `<text x="${blx}" y="${labelY + 23}" text-anchor="middle" font-size="6.5" fill="${color}" opacity="0.8">→ Step ${targetNum}</text>`;
                     });
+
+                    // Incoming route indicators
+                    const incoming = slIncoming[i] || [];
+                    incoming.forEach((inc, ii) => {
+                        const ix = cx - hw + 4;
+                        const iy = cy - 8 + ii * 11;
+                        svg += `<circle cx="${ix}" cy="${iy}" r="4.5" fill="${inc.color}" stroke="#fff" stroke-width="1"/>`;
+                        svg += `<text x="${ix}" y="${iy + 2}" text-anchor="middle" font-size="4.5" fill="#fff" font-weight="700">${inc.fromStep}</text>`;
+                        svg += `<title>From Step ${inc.fromStep}: ${escSvg(inc.label)}</title>`;
+                    });
+
+                } else {
+                    // ── RECTANGLE (regular step) ──
+                    let fill = '#ffffff', stroke = '#cbd5e1', sw = 1.5, textCol = '#1e293b';
+                    if (s.isBottleneck) { fill = '#fee2e2'; stroke = '#ef4444'; sw = 2.5; textCol = '#991b1b'; }
+                    else if (s.isApproval) { fill = '#fef3c7'; stroke = '#d97706'; sw = 2; textCol = '#92400e'; }
+                    const rx = s.isApproval ? 16 : 8;
+
+                    svg += `<rect x="${pos.x}" y="${pos.y}" width="${NODE_W}" height="${NODE_H}" rx="${rx}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" filter="url(#sshadow)"/>`;
+
+                    const badgeBg = s.isBottleneck ? '#ef4444' : s.isApproval ? '#d97706' : '#64748b';
+                    svg += `<circle cx="${pos.x + 14}" cy="${pos.y + 14}" r="10" fill="${badgeBg}" opacity="0.15"/>`;
+                    svg += `<text x="${pos.x + 14}" y="${pos.y + 18}" text-anchor="middle" font-size="9" font-weight="700" fill="${badgeBg}">${i + 1}</text>`;
+
+                    // Incoming route indicators
+                    const incoming = slIncoming[i] || [];
+                    incoming.forEach((inc, ii) => {
+                        const by = pos.y + 14 + ii * 12;
+                        svg += `<circle cx="${pos.x - 1}" cy="${by}" r="4.5" fill="${inc.color}" stroke="#fff" stroke-width="1"/>`;
+                        svg += `<text x="${pos.x - 1}" y="${by + 2}" text-anchor="middle" font-size="4.5" fill="#fff" font-weight="700">${inc.fromStep}</text>`;
+                        svg += `<title>From Step ${inc.fromStep}: ${escSvg(inc.label)}</title>`;
+                    });
+
+                    let lines = slWrapText(s.name, 20);
+                    if (lines.length > 2) { lines.length = 2; lines[1] = lines[1].substring(0, 17) + '..'; }
+                    const lineH = 13;
+                    const textStartY = pos.cy + 4 - ((lines.length - 1) * lineH) / 2;
+                    lines.forEach((line, li) => {
+                        svg += `<text x="${pos.x + NODE_W / 2}" y="${textStartY + li * lineH}" text-anchor="middle" font-size="10" fill="${textCol}" font-weight="500">${escSvg(line)}</text>`;
+                    });
+
+                    if (s.auto) {
+                        const bx = pos.x + NODE_W - 6, by = pos.y - 4;
+                        svg += `<circle cx="${bx}" cy="${by}" r="9" fill="${s.auto.color}" stroke="#fff" stroke-width="2"/>`;
+                        svg += `<text x="${bx}" y="${by + 3}" text-anchor="middle" font-size="8" fill="#fff" font-weight="700">${s.auto.badge}</text>`;
+                    }
                 }
                 svg += `</g>`;
             });
@@ -5810,27 +5857,25 @@
             // Legend
             const legendY = laneY + 8;
             const hasDecisions = allSteps.some(s => s.isDecision && s.branches.length > 0);
-            const nodeItems = [
-                { color: '#d1fae5', stroke: '#059669', label: 'Start / End' },
-                { color: '#ffffff', stroke: '#cbd5e1', label: 'Step' },
-                { color: '#fee2e2', stroke: '#ef4444', label: 'Bottleneck' },
-                { color: '#fef3c7', stroke: '#d97706', label: 'Approval' }
-            ];
-            if (hasDecisions) nodeItems.push({ color: '#f5f3ff', stroke: '#7c3aed', label: 'Decision' });
             let slx = LANE_LABEL_W + 10;
-            nodeItems.forEach(item => {
-                svg += `<rect x="${slx}" y="${legendY}" width="14" height="14" rx="3" fill="${item.color}" stroke="${item.stroke}" stroke-width="1.5"/>`;
-                svg += `<text x="${slx + 20}" y="${legendY + 11}" font-size="9" fill="#64748b">${item.label}</text>`;
-                slx += 90;
-            });
+            svg += `<rect x="${slx}" y="${legendY}" width="14" height="14" rx="3" fill="#d1fae5" stroke="#059669" stroke-width="1.5"/>`;
+            svg += `<text x="${slx + 20}" y="${legendY + 11}" font-size="9" fill="#64748b">Start / End</text>`;
+            slx += 90;
+            svg += `<rect x="${slx}" y="${legendY}" width="14" height="14" rx="3" fill="#fff" stroke="#cbd5e1" stroke-width="1.5"/>`;
+            svg += `<text x="${slx + 20}" y="${legendY + 11}" font-size="9" fill="#64748b">Step</text>`;
+            slx += 60;
             if (hasDecisions) {
-                svg += `<circle cx="${slx + 5}" cy="${legendY + 7}" r="5" fill="#7c3aed"/>`;
-                svg += `<text x="${slx + 16}" y="${legendY + 11}" font-size="9" fill="#64748b">Output port</text>`;
-                slx += 90;
-                svg += `<circle cx="${slx + 5}" cy="${legendY + 7}" r="5" fill="#2563eb"/>`;
-                svg += `<text x="${slx + 16}" y="${legendY + 11}" font-size="9" fill="#64748b">Input port</text>`;
+                const dx = slx + 7, dy = legendY + 7, dd = 7;
+                svg += `<polygon points="${dx},${dy - dd} ${dx + dd},${dy} ${dx},${dy + dd} ${dx - dd},${dy}" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5"/>`;
+                svg += `<text x="${slx + 20}" y="${legendY + 11}" font-size="9" fill="#64748b">Decision</text>`;
                 slx += 80;
             }
+            svg += `<rect x="${slx}" y="${legendY}" width="14" height="14" rx="3" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>`;
+            svg += `<text x="${slx + 20}" y="${legendY + 11}" font-size="9" fill="#64748b">Bottleneck</text>`;
+            slx += 90;
+            svg += `<rect x="${slx}" y="${legendY}" width="14" height="14" rx="3" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>`;
+            svg += `<text x="${slx + 20}" y="${legendY + 11}" font-size="9" fill="#64748b">Approval</text>`;
+            slx += 85;
             svg += `<line x1="${slx}" y1="${legendY + 7}" x2="${slx + 20}" y2="${legendY + 7}" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="5,3"/>`;
             svg += `<text x="${slx + 26}" y="${legendY + 11}" font-size="9" fill="#64748b">Bad handoff</text>`;
 
