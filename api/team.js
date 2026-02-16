@@ -221,7 +221,13 @@ async function getResults(req, res) {
 
     const individuals = responses.map(r => {
       const d = r.response_data || {};
+      const m = d.metrics || {};
       const p = d.processData || d;
+
+      // Support both formats:
+      // Format A (full diagnostic): p.lastExample.elapsedDays, p.handoffs[], p.userTime.total, etc.
+      // Format B (team/sample submit): d.metrics.elapsedDays, d.metrics.handoffCount, d.metrics.totalUserHours, etc.
+      const hasDirectMetrics = m.elapsedDays !== undefined || m.stepsCount !== undefined;
 
       return {
         id: r.id,
@@ -229,20 +235,21 @@ async function getResults(req, res) {
         email: r.respondent_email,
         department: r.respondent_department,
         createdAt: r.created_at,
+        responseData: d,
         metrics: {
-          elapsedDays: p.lastExample?.elapsedDays || 0,
-          stepsCount: (p.steps || []).length,
-          handoffCount: (p.handoffs || []).length,
-          poorHandoffs: (p.handoffs || []).filter(h => h.clarity === 'yes-multiple' || h.clarity === 'yes-major').length,
+          elapsedDays: hasDirectMetrics ? (m.elapsedDays || 0) : (p.lastExample?.elapsedDays || 0),
+          stepsCount: hasDirectMetrics ? (m.stepsCount || (p.steps || []).length) : (p.steps || []).length,
+          handoffCount: hasDirectMetrics ? (m.handoffCount || 0) : (p.handoffs || []).length,
+          poorHandoffs: hasDirectMetrics ? (m.poorHandoffs || 0) : (p.handoffs || []).filter(h => h.clarity === 'yes-multiple' || h.clarity === 'yes-major').length,
           approvalCount: (p.approvals || []).length,
           systemCount: (p.systems || []).length,
           complexity: p.definition?.complexity || '',
           departments: p.definition?.departments || [],
-          performance: p.performance || '',
-          issues: p.issues || [],
-          biggestDelay: p.biggestDelay || '',
-          bottleneck: p.bottleneck?.name || '',
-          totalUserHours: p.userTime?.total || 0
+          performance: hasDirectMetrics ? (m.performance || '') : (p.performance || ''),
+          issues: hasDirectMetrics ? (d.issues || m.issues || []) : (p.issues || []),
+          biggestDelay: hasDirectMetrics ? (m.biggestDelay || '') : (p.biggestDelay || ''),
+          bottleneck: hasDirectMetrics ? (m.bottleneck || '') : (p.bottleneck?.name || ''),
+          totalUserHours: hasDirectMetrics ? (m.totalUserHours || 0) : (p.userTime?.total || 0)
         }
       };
     });
@@ -297,6 +304,28 @@ async function getResults(req, res) {
       });
     }
 
+    if (spread(handoffArr) > 3) {
+      const byName = individuals.filter(i => i.metrics.handoffCount > 0)
+        .map(i => `${i.name} (${i.department || '?'}): ${i.metrics.handoffCount} handoffs`);
+      gaps.push({
+        metric: 'Handoff Count',
+        severity: spread(handoffArr) > 8 ? 'high' : 'medium',
+        detail: `Handoff counts range from ${Math.min(...handoffArr)} to ${Math.max(...handoffArr)}`,
+        byPerson: byName
+      });
+    }
+
+    if (spread(hoursArr) > 8) {
+      const byName = individuals.filter(i => i.metrics.totalUserHours > 0)
+        .map(i => `${i.name} (${i.department || '?'}): ${i.metrics.totalUserHours}h`);
+      gaps.push({
+        metric: 'Time Invested',
+        severity: spread(hoursArr) > 20 ? 'high' : 'medium',
+        detail: `Time invested ranges from ${Math.min(...hoursArr)}h to ${Math.max(...hoursArr)}h`,
+        byPerson: byName
+      });
+    }
+
     const delays = individuals.filter(i => i.metrics.biggestDelay).map(i => ({
       name: i.name, department: i.department, delay: i.metrics.biggestDelay
     }));
@@ -319,11 +348,14 @@ async function getResults(req, res) {
       });
     });
 
+    const safeMin = (arr) => arr.length > 0 ? Math.min(...arr) : 0;
+    const safeMax = (arr) => arr.length > 0 ? Math.max(...arr) : 0;
+
     const aggregation = {
-      elapsedDays: { avg: avg(elapsedDaysArr), min: Math.min(...elapsedDaysArr) || 0, max: Math.max(...elapsedDaysArr) || 0, spread: spread(elapsedDaysArr) },
-      steps: { avg: avg(stepsArr), min: Math.min(...stepsArr) || 0, max: Math.max(...stepsArr) || 0, spread: spread(stepsArr) },
-      handoffs: { avg: avg(handoffArr), min: Math.min(...handoffArr) || 0, max: Math.max(...handoffArr) || 0 },
-      totalHours: { avg: avg(hoursArr), min: Math.min(...hoursArr) || 0, max: Math.max(...hoursArr) || 0 },
+      elapsedDays: { avg: avg(elapsedDaysArr), min: safeMin(elapsedDaysArr), max: safeMax(elapsedDaysArr), spread: spread(elapsedDaysArr) },
+      steps: { avg: avg(stepsArr), min: safeMin(stepsArr), max: safeMax(stepsArr), spread: spread(stepsArr) },
+      handoffs: { avg: avg(handoffArr), min: safeMin(handoffArr), max: safeMax(handoffArr) },
+      totalHours: { avg: avg(hoursArr), min: safeMin(hoursArr), max: safeMax(hoursArr) },
       perceptionGaps: gaps,
       issueFrequency: Object.entries(issueFreq).sort((a, b) => b[1] - a[1]).map(([issue, count]) => ({ issue, count, pct: Math.round(count / individuals.length * 100) })),
       consensusScore: Math.max(0, 100 - (gaps.filter(g => g.severity === 'high').length * 25) - (gaps.filter(g => g.severity === 'medium').length * 10))
