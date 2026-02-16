@@ -1222,6 +1222,17 @@
             margin-bottom: 1rem;
         }
 
+        /* Collapsible sections */
+        .collapsible { margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+        .collapsible:last-child { border-bottom: none; }
+        .collapsible-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; margin-bottom: 1rem; }
+        .collapsible-header:hover .collapse-btn { background: var(--primary); color: white; }
+        .collapsible-header h3 { font-size: 1.4rem; margin: 0; }
+        .collapse-btn { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--border); background: white; color: var(--text-mid); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: 700; line-height: 1; flex-shrink: 0; transition: all 0.2s ease; }
+        .collapsible-body { overflow: hidden; transition: max-height 0.35s ease, opacity 0.25s ease; max-height: 8000px; opacity: 1; }
+        .collapsible.collapsed .collapsible-body { max-height: 0; opacity: 0; margin: 0; padding: 0; }
+        .collapsible.collapsed .collapsible-header { margin-bottom: 0; }
+
         .result-item {
             padding: 0.75rem 0;
         }
@@ -2646,6 +2657,13 @@
         let completedProcesses = [];
         let stepCount = 0;
         let systemCount = 0;
+
+        function toggleSection(header) {
+            const section = header.parentElement;
+            const btn = header.querySelector('.collapse-btn');
+            section.classList.toggle('collapsed');
+            btn.textContent = section.classList.contains('collapsed') ? '+' : '−';
+        }
 
         // Current process being analyzed
         let processData = createEmptyProcess();
@@ -4171,6 +4189,18 @@
             </div>`;
         }
 
+        function dsec(title, bodyHtml, startOpen = true) {
+            const cls = startOpen ? 'collapsible' : 'collapsible collapsed';
+            const icon = startOpen ? '−' : '+';
+            return `<div class="${cls}">
+                <div class="collapsible-header" onclick="toggleSection(this)">
+                    <h3>${title}</h3>
+                    <span class="collapse-btn">${icon}</span>
+                </div>
+                <div class="collapsible-body">${bodyHtml}</div>
+            </div>`;
+        }
+
         function displayResults(result, contact) {
             lastResult = result;
             lastContact = contact;
@@ -4178,74 +4208,63 @@
             document.getElementById('loadingState').style.display = 'none';
             document.getElementById('resultsContainer').style.display = 'block';
 
-            // Process cards
+            // Process cards — each process as a collapsible section
             const processResultsDiv = document.getElementById('processResults');
             let html = '';
 
             (result.processes || []).forEach((p, i) => {
-                html += `
-                    <div class="result-section">
-                        <h3>${i + 1}. ${p.name}</h3>
-                        <div class="metric-grid">
-                            <div class="metric-card">
-                                <div class="metric-value">${formatCurrency(p.annualCost)}</div>
-                                <div class="metric-label">Annual cost</div>
-                            </div>
-                            <div class="metric-card">
-                                <div class="metric-value">${p.elapsedDays} days</div>
-                                <div class="metric-label">Average cycle</div>
-                            </div>
-                            <div class="metric-card">
-                                <div class="metric-value">${p.stepsCount}</div>
-                                <div class="metric-label">Steps</div>
-                            </div>
-                            <div class="metric-card">
-                                <div class="metric-value"><span class="confidence-badge confidence-${(p.quality?.grade || 'medium').toLowerCase()}">${p.quality?.grade || 'MEDIUM'}</span></div>
-                                <div class="metric-label">Confidence (${p.quality?.score || '\u2014'}/100)</div>
-                            </div>
-                        </div>
+                const cardBody = `<div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="metric-value">${formatCurrency(p.annualCost)}</div>
+                        <div class="metric-label">Annual cost</div>
                     </div>
-                `;
+                    <div class="metric-card">
+                        <div class="metric-value">${p.elapsedDays} days</div>
+                        <div class="metric-label">Average cycle</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">${p.stepsCount}</div>
+                        <div class="metric-label">Steps</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value"><span class="confidence-badge confidence-${(p.quality?.grade || 'medium').toLowerCase()}">${p.quality?.grade || 'MEDIUM'}</span></div>
+                        <div class="metric-label">Confidence (${p.quality?.score || '\u2014'}/100)</div>
+                    </div>
+                </div>`;
+                html += dsec(`${i + 1}. ${p.name}`, cardBody, true);
             });
 
-            // Totals
-            html += `
-                <div class="result-section">
-                    <div class="calculated" style="background: linear-gradient(135deg, rgba(61, 142, 166, 0.15), rgba(61, 142, 166, 0.05)); border-left: 4px solid var(--primary);">
-                        <div class="calculated-label" style="font-weight: 600;">Total Annual Cost:</div>
-                        <div class="calculated-value" style="font-size: 2.2rem; color: var(--primary);">${formatCurrency(result.totalCost)}</div>
-                    </div>
-                    <div class="calculated success">
-                        <div class="calculated-label" style="font-weight: 600;">Potential Annual Savings (50% improvement):</div>
-                        <div class="calculated-value" style="font-size: 2rem;">${formatCurrency(result.potentialSavings)}</div>
-                    </div>
+            // Totals (always open)
+            html += dsec('Cost Summary', `
+                <div class="calculated" style="background: linear-gradient(135deg, rgba(61, 142, 166, 0.15), rgba(61, 142, 166, 0.05)); border-left: 4px solid var(--primary);">
+                    <div class="calculated-label" style="font-weight: 600;">Total Annual Cost:</div>
+                    <div class="calculated-value" style="font-size: 2.2rem; color: var(--primary);">${formatCurrency(result.totalCost)}</div>
                 </div>
-            `;
+                <div class="calculated success">
+                    <div class="calculated-label" style="font-weight: 600;">Potential Annual Savings (50% improvement):</div>
+                    <div class="calculated-value" style="font-size: 2rem;">${formatCurrency(result.potentialSavings)}</div>
+                </div>`, true);
 
             processResultsDiv.innerHTML = html;
 
-            // Recommendations
+            // Recommendations (collapsible, starts open)
             const analysisDiv = document.getElementById('analysisResults');
-            let recHtml = '<div class="result-section"><h3>Recommendations</h3>';
+            let recBody = '';
             (result.recommendations || []).forEach(rec => {
-                recHtml += `<div class="result-item" style="padding: 1rem; margin-bottom: 0.5rem; background: var(--bg-alt); border-radius: var(--radius-sm);">
+                recBody += `<div class="result-item" style="padding: 1rem; margin-bottom: 0.5rem; background: var(--bg-alt); border-radius: var(--radius-sm);">
                     <strong>${rec.process}:</strong> ${rec.text}
                 </div>`;
             });
-            recHtml += '</div>';
 
-            recHtml += `<div class="result-section">
-                <h3>Next Steps</h3>
-                <div class="checklist">
-                    <div class="checklist-item"><span class="checklist-icon">&#9744;</span><span>Review this analysis</span></div>
-                    <div class="checklist-item"><span class="checklist-icon">&#9744;</span><span>Book a discovery call to discuss findings</span></div>
-                    <div class="checklist-item"><span class="checklist-icon">&#9744;</span><span>Connect tools for deeper automated analysis</span></div>
-                    <div class="checklist-item"><span class="checklist-icon">&#9744;</span><span>Complete manual survey for offline workflows</span></div>
-                </div>
-                <p style="color: var(--text-mid); margin-top: 1rem;">Analysis sent to: <strong>${contact?.email || ''}</strong></p>
-            </div>`;
+            let nextBody = `<div class="checklist">
+                <div class="checklist-item"><span class="checklist-icon">&#9744;</span><span>Review this analysis</span></div>
+                <div class="checklist-item"><span class="checklist-icon">&#9744;</span><span>Book a discovery call to discuss findings</span></div>
+                <div class="checklist-item"><span class="checklist-icon">&#9744;</span><span>Connect tools for deeper automated analysis</span></div>
+                <div class="checklist-item"><span class="checklist-icon">&#9744;</span><span>Complete manual survey for offline workflows</span></div>
+            </div>
+            <p style="color: var(--text-mid); margin-top: 1rem;">Analysis sent to: <strong>${contact?.email || ''}</strong></p>`;
 
-            analysisDiv.innerHTML = recHtml;
+            analysisDiv.innerHTML = dsec('Recommendations', recBody, true) + dsec('Next Steps', nextBody, false);
 
             // Automation Readiness Score
             const scoreData = buildAutomationScore(completedProcesses);
@@ -4274,6 +4293,43 @@
             if (result.flowDiagramUrl) {
                 showFlowDiagram(result.flowDiagramUrl);
             }
+
+            // Wrap existing sections that are rendered by other functions in collapsible containers
+            wrapExistingSections();
+        }
+
+        function wrapExistingSections() {
+            const wrappable = [
+                { id: 'automationScoreSection', title: 'Automation Readiness Score', open: true },
+                { id: 'roadmapSection', title: '90-Day Transformation Roadmap', open: false },
+                { id: 'roiCalculator', title: 'ROI Projection Calculator', open: false },
+                { id: 'flowDiagramSection', title: 'Process Flow Diagrams', open: true }
+            ];
+
+            wrappable.forEach(({ id, title, open }) => {
+                const el = document.getElementById(id);
+                if (!el || el.dataset.wrapped) return;
+                el.dataset.wrapped = 'true';
+
+                const wrapper = document.createElement('div');
+                wrapper.className = open ? 'collapsible' : 'collapsible collapsed';
+                const icon = open ? '−' : '+';
+                const header = document.createElement('div');
+                header.className = 'collapsible-header';
+                header.onclick = function() { toggleSection(this); };
+                header.innerHTML = `<h3>${title}</h3><span class="collapse-btn">${icon}</span>`;
+
+                const body = document.createElement('div');
+                body.className = 'collapsible-body';
+
+                el.parentNode.insertBefore(wrapper, el);
+                wrapper.appendChild(header);
+                wrapper.appendChild(body);
+                body.appendChild(el);
+
+                // Make the inner element always visible (the collapsible wrapper controls visibility)
+                el.style.display = 'block';
+            });
         }
 
         // ============================================================

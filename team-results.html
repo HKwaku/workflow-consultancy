@@ -142,6 +142,16 @@
         .ai-loading .dot-pulse span:nth-child(3) { animation-delay: 0.4s; }
         @keyframes dot-pulse { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1.2); } }
 
+        /* Collapsible sections */
+        .collapsible { margin-bottom: 24px; }
+        .collapsible-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; padding-bottom: 8px; border-bottom: 2px solid var(--border); margin-bottom: 16px; }
+        .collapsible-header:hover .collapse-btn { background: var(--accent); color: white; }
+        .collapsible-header h3 { font-size: 1.1rem; font-weight: 600; color: var(--primary); margin: 0; padding: 0; border: none; }
+        .collapse-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border); background: var(--white); color: var(--text-mid); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 700; line-height: 1; flex-shrink: 0; transition: all 0.2s ease; }
+        .collapsible-body { overflow: hidden; transition: max-height 0.35s ease, opacity 0.25s ease; max-height: 5000px; opacity: 1; }
+        .collapsible.collapsed .collapsible-body { max-height: 0; opacity: 0; margin: 0; padding: 0; }
+        .collapsible.collapsed .collapsible-header { margin-bottom: 0; border-bottom-color: transparent; }
+
         .cta-section { background: linear-gradient(135deg, #eff6ff, #f0fdf4); border-radius: var(--radius-md); padding: 32px; text-align: center; margin-top: 8px; }
         .cta-section h3 { font-size: 1.1rem; margin-bottom: 8px; }
         .cta-section p { font-size: 0.9rem; color: var(--text-mid); margin-bottom: 20px; }
@@ -245,6 +255,13 @@
         }
 
         function formatDate(d) { return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
+
+        function toggleSection(header) {
+            const section = header.parentElement;
+            const btn = header.querySelector('.collapse-btn');
+            section.classList.toggle('collapsed');
+            btn.textContent = section.classList.contains('collapsed') ? '+' : '−';
+        }
 
 
         // ═══════════════════════════════════════════════════════════
@@ -609,6 +626,18 @@
         // ═══════════════════════════════════════════════════════════
         // RENDER RESULTS
         // ═══════════════════════════════════════════════════════════
+        function sec(title, body, startOpen = true, extra = '') {
+            const cls = startOpen ? 'collapsible' : 'collapsible collapsed';
+            const icon = startOpen ? '−' : '+';
+            return `<div class="${cls}">
+                <div class="collapsible-header" onclick="toggleSection(this)">
+                    <h3>${title}${extra}</h3>
+                    <span class="collapse-btn">${icon}</span>
+                </div>
+                <div class="collapsible-body">${body}</div>
+            </div>`;
+        }
+
         function renderResults(data) {
             lastResultsData = data;
             const { team, responses, aggregation } = data;
@@ -616,34 +645,35 @@
 
             let html = '';
 
-            // Header
+            // Header (always visible, not collapsible)
             html += `<div style="margin-bottom: 24px;">
                 <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 700; color: var(--primary);">${team.processName}</h2>
                 <p style="color: var(--text-light); font-size: 0.9rem;">${team.company ? team.company + ' &middot; ' : ''}${data.responseCount} team members responded &middot; Created ${formatDate(team.createdAt)}</p>
             </div>`;
 
-            // Consensus score
+            // 1. Consensus score (always open)
             const csColor = a.consensusScore >= 70 ? 'var(--green)' : a.consensusScore >= 40 ? 'var(--amber)' : 'var(--red)';
             const csLabel = a.consensusScore >= 70 ? 'Strong Alignment' : a.consensusScore >= 40 ? 'Partial Alignment' : 'Significant Disagreement';
-            html += `<h3 class="section-title">Team Consensus: ${a.consensusScore}% — ${csLabel}</h3>
-            <div class="consensus-bar">
-                <div class="consensus-track"><div class="consensus-fill" style="width: ${a.consensusScore}%; background: ${csColor};"></div></div>
-                <div class="consensus-label"><span>Disagreement</span><span>Full alignment</span></div>
-            </div>`;
+            html += sec(`Team Consensus: ${a.consensusScore}% — ${csLabel}`, `
+                <div class="consensus-bar">
+                    <div class="consensus-track"><div class="consensus-fill" style="width: ${a.consensusScore}%; background: ${csColor};"></div></div>
+                    <div class="consensus-label"><span>Disagreement</span><span>Full alignment</span></div>
+                </div>`, true);
 
-            // Respondents
-            html += `<h3 class="section-title">Respondents</h3><div class="respondent-grid">`;
+            // 2. Respondents
+            let respHtml = '<div class="respondent-grid">';
             responses.forEach(r => {
                 const initials = r.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-                html += `<div class="respondent-chip">
+                respHtml += `<div class="respondent-chip">
                     <div class="respondent-avatar">${initials}</div>
                     <div class="respondent-info"><strong>${r.name}</strong><span>${r.department || 'No department'}</span></div>
                 </div>`;
             });
-            html += `</div>`;
+            respHtml += '</div>';
+            html += sec('Respondents', respHtml, true);
 
-            // Aggregated metrics
-            html += `<h3 class="section-title">Aggregated Metrics</h3><div class="metrics-grid">`;
+            // 3. Aggregated metrics
+            let metHtml = '<div class="metrics-grid">';
             const metrics = [
                 { value: a.elapsedDays.avg + ' days', label: 'Avg Cycle Time', color: 'blue', range: `${a.elapsedDays.min}–${a.elapsedDays.max} day range` },
                 { value: a.steps.avg, label: 'Avg Steps Seen', color: 'purple', range: `${a.steps.min}–${a.steps.max} step range` },
@@ -651,20 +681,20 @@
                 { value: a.totalHours.avg + 'h', label: 'Avg Time Invested', color: 'green', range: `${a.totalHours.min}–${a.totalHours.max}h range` }
             ];
             metrics.forEach(m => {
-                html += `<div class="metric-card">
+                metHtml += `<div class="metric-card">
                     <div class="metric-value ${m.color}">${m.value}</div>
                     <div class="metric-label">${m.label}</div>
                     <div class="metric-range">${m.range}</div>
                 </div>`;
             });
-            html += `</div>`;
+            metHtml += '</div>';
+            html += sec('Aggregated Metrics', metHtml, true);
 
-            // Perception gaps
+            // 4. Perception gaps
             if (a.perceptionGaps.length > 0) {
-                html += `<h3 class="section-title">Perception Gaps &#9888;</h3>
-                <p style="font-size: 0.88rem; color: var(--text-mid); margin-bottom: 16px;">These are areas where team members see the process differently. High gaps often reveal hidden inefficiencies.</p>`;
+                let gapHtml = '<p style="font-size: 0.88rem; color: var(--text-mid); margin-bottom: 16px;">These are areas where team members see the process differently. High gaps often reveal hidden inefficiencies.</p>';
                 a.perceptionGaps.forEach(g => {
-                    html += `<div class="gap-card ${g.severity}">
+                    gapHtml += `<div class="gap-card ${g.severity}">
                         <div class="gap-header">
                             <span class="gap-metric">${g.metric}</span>
                             <span class="gap-severity ${g.severity}">${g.severity} gap</span>
@@ -673,40 +703,35 @@
                         <ul class="gap-people">${g.byPerson.map(p => `<li>${p}</li>`).join('')}</ul>
                     </div>`;
                 });
+                html += sec('Perception Gaps &#9888;', gapHtml, true);
             }
 
-            // AI Analysis placeholder
-            html += `<h3 class="section-title">Deep Analysis <span class="ai-badge ai" style="vertical-align:middle;">AI-Powered</span></h3>
-            <div id="aiAnalysisSection" class="ai-analysis">
+            // 5. AI Analysis
+            html += sec('Deep Analysis', `<div id="aiAnalysisSection" class="ai-analysis">
                 <div class="ai-loading">
                     <div class="dot-pulse"><span></span><span></span><span></span></div>
                     <p style="margin-top: 12px; color: var(--text-mid); font-size: 0.88rem;">Analysing perception gaps...</p>
                 </div>
-            </div>`;
+            </div>`, true, ' <span class="ai-badge ai" style="vertical-align:middle;">AI-Powered</span>');
 
-            // Issues heatmap
+            // 6. Issues heatmap
             if (a.issueFrequency.length > 0) {
-                html += `<h3 class="section-title">Issue Frequency</h3>
-                <p style="font-size: 0.88rem; color: var(--text-mid); margin-bottom: 16px;">How many team members reported each issue type.</p>
-                <div class="issue-bar-chart">`;
+                let issueHtml = '<p style="font-size: 0.88rem; color: var(--text-mid); margin-bottom: 16px;">How many team members reported each issue type.</p><div class="issue-bar-chart">';
                 a.issueFrequency.forEach(issue => {
                     const label = issueLabels[issue.issue] || issue.issue;
-                    html += `<div class="issue-row">
+                    issueHtml += `<div class="issue-row">
                         <div class="issue-label">${label}</div>
                         <div class="issue-track"><div class="issue-fill" style="width: ${issue.pct}%;"><span>${issue.count}/${data.responseCount}</span></div></div>
                     </div>`;
                 });
-                html += `</div>`;
+                issueHtml += '</div>';
+                html += sec('Issue Frequency', issueHtml, false);
             }
 
-            // Side-by-side comparison table
-            html += `<h3 class="section-title">Individual Responses</h3>
-            <div style="overflow-x: auto;">
-            <table class="comp-table">
-                <thead><tr><th>Metric</th>`;
-            responses.forEach(r => { html += `<th>${r.name}<br><span style="font-weight:400;text-transform:none;letter-spacing:0;">${r.department || ''}</span></th>`; });
-            html += `</tr></thead><tbody>`;
-
+            // 7. Side-by-side comparison table
+            let tableHtml = '<div style="overflow-x: auto;"><table class="comp-table"><thead><tr><th>Metric</th>';
+            responses.forEach(r => { tableHtml += `<th>${r.name}<br><span style="font-weight:400;text-transform:none;letter-spacing:0;">${r.department || ''}</span></th>`; });
+            tableHtml += '</tr></thead><tbody>';
             const rows = [
                 { label: 'Cycle Time', key: 'elapsedDays', suffix: ' days' },
                 { label: 'Steps', key: 'stepsCount', suffix: '' },
@@ -717,17 +742,18 @@
                 { label: 'Biggest Delay', key: 'biggestDelay', suffix: '' }
             ];
             rows.forEach(row => {
-                html += `<tr><td style="font-weight:500;">${row.label}</td>`;
+                tableHtml += `<tr><td style="font-weight:500;">${row.label}</td>`;
                 responses.forEach(r => {
                     const val = r.metrics[row.key];
                     const display = val ? val + row.suffix : '—';
-                    html += `<td>${display}</td>`;
+                    tableHtml += `<td>${display}</td>`;
                 });
-                html += `</tr>`;
+                tableHtml += '</tr>';
             });
-            html += `</tbody></table></div>`;
+            tableHtml += '</tbody></table></div>';
+            html += sec('Individual Responses', tableHtml, false);
 
-            // CTA
+            // CTA (not collapsible)
             html += `<div class="cta-section">
                 <h3>Turn These Insights Into Action</h3>
                 <p>Perception gaps are the #1 signal of process improvement opportunity. Let's discuss what your team's results reveal.</p>
