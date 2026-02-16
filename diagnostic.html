@@ -5257,7 +5257,7 @@
             const DIAMOND_H = 90;
             const colW = NODE_W + NODE_GAP_X;
             const hasDecisions = allSteps.some(s => s.isDecision && s.branches.length > 0);
-            const rowH = NODE_H + NODE_GAP_Y + (hasDecisions ? 55 : 20);
+            const rowH = NODE_H + NODE_GAP_Y + (hasDecisions ? 30 : 20);
             const nodePos = [];
             const numRows = Math.ceil(allSteps.length / COLS);
 
@@ -5395,30 +5395,7 @@
                         svg += `<text x="${cx + hw - 4}" y="${cy - hh + 7}" text-anchor="middle" font-size="7" fill="#fff" font-weight="700">${s.auto.badge}</text>`;
                     }
 
-                    // Branch labels below diamond, spaced to avoid overlap
-                    const brCount = s.branches.length;
-                    const labelY = cy + hh + 6;
-                    const labelSpacing = Math.max(colW / brCount, 90);
-                    const labelStartX = cx - ((brCount - 1) * labelSpacing) / 2;
-
-                    s.branches.forEach((br, bi) => {
-                        const color = branchColors[bi % branchColors.length];
-                        const lx = labelStartX + bi * labelSpacing;
-                        const targetMatch = (br.target || '').match(/(\d+)/);
-                        const targetIdx = targetMatch ? parseInt(targetMatch[1]) - 1 : -1;
-                        const targetNum = targetIdx >= 0 ? targetIdx + 1 : '–';
-                        const brText = escSvg(br.label.length > 16 ? br.label.substring(0, 14) + '..' : br.label);
-
-                        // Short line from diamond bottom to label
-                        svg += `<line x1="${cx}" y1="${cy + hh}" x2="${lx}" y2="${labelY + 4}" stroke="${color}" stroke-width="1.5" stroke-dasharray="3,2" class="flow-arrow" opacity="0.6"/>`;
-                        svg += `<circle cx="${lx}" cy="${labelY + 4}" r="2.5" fill="${color}"/>`;
-
-                        // Label text
-                        svg += `<text x="${lx}" y="${labelY + 16}" text-anchor="middle" font-size="7.5" fill="${color}" font-weight="600">${brText}</text>`;
-                        svg += `<text x="${lx}" y="${labelY + 26}" text-anchor="middle" font-size="7" fill="${color}" opacity="0.8">→ Step ${targetNum}</text>`;
-                    });
-
-                    // Incoming route indicators
+                    // Incoming route indicators on diamond
                     const incoming = incomingRoutes[i] || [];
                     incoming.forEach((inc, ii) => {
                         const ix = cx - hw + 4;
@@ -5474,11 +5451,111 @@
                 svg += `</g>`;
             });
 
+            // ── Decision branch connecting lines ──
+            allSteps.forEach((s, i) => {
+                if (!s.isDecision || !s.branches || s.branches.length === 0) return;
+                const pos = nodePos[i];
+                if (!pos) return;
+                const cx = pos.cx, cy = pos.cy;
+                const hw = DIAMOND_W / 2, hh = DIAMOND_H / 2;
+                const brCount = s.branches.length;
+
+                s.branches.forEach((br, bi) => {
+                    const color = branchColors[bi % branchColors.length];
+                    const targetMatch = (br.target || '').match(/(\d+)/);
+                    const targetIdx = targetMatch ? parseInt(targetMatch[1]) - 1 : -1;
+                    if (targetIdx < 0 || targetIdx >= allSteps.length) return;
+
+                    const tp = nodePos[targetIdx];
+                    if (!tp) return;
+                    const isTargetDec = allSteps[targetIdx].isDecision && (allSteps[targetIdx].branches || []).length > 0;
+                    const tHH = isTargetDec ? DIAMOND_H / 2 : 0;
+
+                    // Determine exit point on diamond and entry point on target
+                    let exitX, exitY, entryX, entryY;
+                    const goesBack = targetIdx < i;
+                    const goesForward = targetIdx > i;
+                    const sameRow = pos.row === tp.row;
+
+                    if (goesBack) {
+                        // Loop-back: exit from left of diamond, enter target from top or left
+                        exitX = cx - hw;
+                        exitY = cy;
+                        if (isTargetDec) {
+                            entryX = tp.cx;
+                            entryY = tp.cy - tHH;
+                        } else {
+                            entryX = tp.cx;
+                            entryY = tp.y;
+                        }
+                    } else if (sameRow) {
+                        // Same row: exit right, enter left
+                        exitX = cx + hw;
+                        exitY = cy;
+                        entryX = isTargetDec ? tp.cx - DIAMOND_W / 2 : tp.x;
+                        entryY = isTargetDec ? tp.cy : tp.cy;
+                    } else {
+                        // Forward to a later row: exit bottom, enter top
+                        exitX = cx + (bi - (brCount - 1) / 2) * 12;
+                        exitY = cy + hh;
+                        if (isTargetDec) {
+                            entryX = tp.cx;
+                            entryY = tp.cy - tHH;
+                        } else {
+                            entryX = tp.cx;
+                            entryY = tp.y;
+                        }
+                    }
+
+                    // Build bezier path
+                    let pathD;
+                    if (goesBack) {
+                        // Route via left margin for loop-backs
+                        const marginX = PAD_L - 15 - bi * 8;
+                        const midY = (exitY + entryY) / 2;
+                        pathD = `M ${exitX} ${exitY} C ${exitX - 40} ${exitY}, ${marginX} ${exitY}, ${marginX} ${midY} S ${marginX} ${entryY}, ${entryX} ${entryY}`;
+                    } else if (sameRow) {
+                        const midX = (exitX + entryX) / 2;
+                        const offsetY = -25 - bi * 10;
+                        pathD = `M ${exitX} ${exitY} C ${exitX + 30} ${exitY + offsetY}, ${entryX - 30} ${entryY + offsetY}, ${entryX} ${entryY}`;
+                    } else {
+                        // Forward: smooth S-curve down
+                        const c1y = exitY + (entryY - exitY) * 0.35;
+                        const c2y = entryY - (entryY - exitY) * 0.35;
+                        pathD = `M ${exitX} ${exitY} C ${exitX} ${c1y}, ${entryX} ${c2y}, ${entryX} ${entryY}`;
+                    }
+
+                    // Draw the connecting line
+                    svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.8" stroke-dasharray="6,4" marker-end="url(#arwc${bi % 5})" opacity="0.55" class="flow-arrow"/>`;
+
+                    // Condition label near exit point
+                    const brText = escSvg(br.label.length > 20 ? br.label.substring(0, 18) + '..' : br.label);
+                    let lblX, lblY, anchor;
+                    if (goesBack) {
+                        lblX = exitX - 6;
+                        lblY = exitY + 12 + bi * 11;
+                        anchor = 'end';
+                    } else if (sameRow) {
+                        lblX = exitX + 10;
+                        lblY = exitY - 6 - bi * 11;
+                        anchor = 'start';
+                    } else {
+                        lblX = exitX + (bi - (brCount - 1) / 2) * 30;
+                        lblY = exitY + 14 + bi * 11;
+                        anchor = 'middle';
+                    }
+                    // Background rect for legibility
+                    const textW = brText.length * 4.5 + 10;
+                    const rectX = anchor === 'end' ? lblX - textW : anchor === 'start' ? lblX - 2 : lblX - textW / 2;
+                    svg += `<rect x="${rectX}" y="${lblY - 8}" width="${textW}" height="11" rx="3" fill="#fff" opacity="0.85"/>`;
+                    svg += `<text x="${lblX}" y="${lblY}" text-anchor="${anchor}" font-size="7" fill="${color}" font-weight="600">${brText}</text>`;
+                });
+            });
+
             // ── Legend ──
             const autoCount = allSteps.filter(s => s.auto).length;
             const legendY = totalH - 50;
             let lx = PAD_L;
-            // Step types
             svg += `<rect x="${lx}" y="${legendY}" width="14" height="14" rx="3" fill="#fff" stroke="#94a3b8" stroke-width="1.5"/>`;
             svg += `<text x="${lx + 20}" y="${legendY + 11}" font-size="9" fill="#64748b">Process Step</text>`;
             lx += 100;
@@ -5529,7 +5606,7 @@
             const LANE_PAD_Y = 18;
             const LANE_GAP = 3;
             const START_X = LANE_LABEL_W + 30;
-            const TOP_PAD = 65;
+            const TOP_PAD = 80;
             const TERM_W = 100;
             const TERM_H = 32;
             const TERM_RX = 16;
@@ -5627,7 +5704,7 @@
                 const dc = getDC(dept);
                 const deptSteps = deptMap[dept] || [];
                 const hasDecInLane = deptSteps.some(s => s.isDecision && (s.branches || []).length > 0);
-                const extraForDiamond = hasDecInLane ? 65 : 0;
+                const extraForDiamond = hasDecInLane ? 30 : 0;
                 const laneH = NODE_H + LANE_PAD_Y * 2 + extraForDiamond;
                 lanes.push({ dept, y: laneY, h: laneH, bg: dc.bg, stroke: dc.stroke });
                 deptMap[dept].forEach(s => {
@@ -5785,27 +5862,7 @@
                         svg += `<text x="${cx + hw - 4}" y="${cy - hh + 7}" text-anchor="middle" font-size="6" fill="#fff" font-weight="700">${s.auto.badge}</text>`;
                     }
 
-                    // Branch labels below diamond
-                    const brCount = s.branches.length;
-                    const labelY = cy + hh + 5;
-                    const labelSpacing = Math.max(NODE_W * 0.9 / brCount, 70);
-                    const labelStartX = cx - ((brCount - 1) * labelSpacing) / 2;
-
-                    s.branches.forEach((br, bi) => {
-                        const color = slBranchColors[bi % slBranchColors.length];
-                        const blx = labelStartX + bi * labelSpacing;
-                        const targetMatch = (br.target || '').match(/(\d+)/);
-                        const targetIdx = targetMatch ? parseInt(targetMatch[1]) - 1 : -1;
-                        const targetNum = targetIdx >= 0 ? targetIdx + 1 : '–';
-                        const brText = escSvg(br.label.length > 14 ? br.label.substring(0, 12) + '..' : br.label);
-
-                        svg += `<line x1="${cx}" y1="${cy + hh}" x2="${blx}" y2="${labelY + 3}" stroke="${color}" stroke-width="1.5" stroke-dasharray="3,2" class="sl-arrow" opacity="0.6"/>`;
-                        svg += `<circle cx="${blx}" cy="${labelY + 3}" r="2" fill="${color}"/>`;
-                        svg += `<text x="${blx}" y="${labelY + 14}" text-anchor="middle" font-size="7" fill="${color}" font-weight="600">${brText}</text>`;
-                        svg += `<text x="${blx}" y="${labelY + 23}" text-anchor="middle" font-size="6.5" fill="${color}" opacity="0.8">→ Step ${targetNum}</text>`;
-                    });
-
-                    // Incoming route indicators
+                    // Incoming route indicators on diamond
                     const incoming = slIncoming[i] || [];
                     incoming.forEach((inc, ii) => {
                         const ix = cx - hw + 4;
@@ -5852,6 +5909,76 @@
                     }
                 }
                 svg += `</g>`;
+            });
+
+            // ── Decision branch connecting lines (swimlane) ──
+            const SL_DIA_HW = 60, SL_DIA_HH = 38;
+            allSteps.forEach((s, i) => {
+                if (!s.isDecision || !s.branches || s.branches.length === 0) return;
+                const pos = nodePos[i];
+                if (!pos) return;
+                const cx = pos.cx, cy = pos.cy;
+                const brCount = s.branches.length;
+
+                s.branches.forEach((br, bi) => {
+                    const color = slBranchColors[bi % slBranchColors.length];
+                    const targetMatch = (br.target || '').match(/(\d+)/);
+                    const targetIdx = targetMatch ? parseInt(targetMatch[1]) - 1 : -1;
+                    if (targetIdx < 0 || targetIdx >= allSteps.length) return;
+
+                    const tp = nodePos[targetIdx];
+                    if (!tp) return;
+                    const isTargetDec = allSteps[targetIdx].isDecision && (allSteps[targetIdx].branches || []).length > 0;
+
+                    // In swimlane: flow goes left-to-right, each step is a column
+                    const goesBack = targetIdx < i;
+                    let exitX, exitY, entryX, entryY;
+
+                    if (goesBack) {
+                        // Loop-back: exit top of diamond, route above lanes, enter target from top
+                        exitX = cx;
+                        exitY = cy - SL_DIA_HH;
+                        entryX = tp.cx;
+                        entryY = isTargetDec ? tp.cy - SL_DIA_HH : tp.y;
+                    } else {
+                        // Forward: exit right of diamond, enter target from left
+                        exitX = cx + SL_DIA_HW;
+                        exitY = cy + (bi - (brCount - 1) / 2) * 8;
+                        entryX = isTargetDec ? tp.cx - SL_DIA_HW : tp.x;
+                        entryY = isTargetDec ? tp.cy : tp.cy;
+                    }
+
+                    let pathD;
+                    if (goesBack) {
+                        // Route above all lanes
+                        const topY = TOP_PAD - 15 - bi * 12;
+                        pathD = `M ${exitX} ${exitY} C ${exitX} ${topY}, ${entryX} ${topY}, ${entryX} ${entryY}`;
+                    } else {
+                        // Forward smooth curve
+                        const midX = (exitX + entryX) / 2;
+                        const offsetY = (bi - (brCount - 1) / 2) * 18;
+                        pathD = `M ${exitX} ${exitY} C ${midX} ${exitY + offsetY}, ${midX} ${entryY + offsetY}, ${entryX} ${entryY}`;
+                    }
+
+                    svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.8" stroke-dasharray="6,4" marker-end="url(#sarwc${bi % 5})" opacity="0.5" class="sl-arrow"/>`;
+
+                    // Condition label near exit
+                    const brText = escSvg(br.label.length > 18 ? br.label.substring(0, 16) + '..' : br.label);
+                    let lblX, lblY, anchor;
+                    if (goesBack) {
+                        lblX = exitX + 6;
+                        lblY = exitY - 6 - bi * 10;
+                        anchor = 'start';
+                    } else {
+                        lblX = exitX + 8;
+                        lblY = exitY - 4 + bi * 11;
+                        anchor = 'start';
+                    }
+                    const textW = brText.length * 4.2 + 8;
+                    const rectX = lblX - 2;
+                    svg += `<rect x="${rectX}" y="${lblY - 8}" width="${textW}" height="11" rx="3" fill="#fff" opacity="0.85"/>`;
+                    svg += `<text x="${lblX}" y="${lblY}" text-anchor="${anchor}" font-size="6.5" fill="${color}" font-weight="600">${brText}</text>`;
+                });
             });
 
             // Legend
