@@ -5165,7 +5165,18 @@
         // ============================================================
         // SVG SWIMLANE RENDERER (single process)
         // ============================================================
-        function buildSwimlanesSVG(process) {
+        // ── Current view mode: 'grid' (compact) or 'swimlane' (classic horizontal)
+        let _flowViewMode = 'grid';
+        let _flowProcesses = [];
+
+        function buildFlowSVG(process) {
+            return _flowViewMode === 'swimlane' ? buildSwimlaneSVG(process) : buildGridSVG(process);
+        }
+
+        // ============================================================
+        // GRID VIEW (compact serpentine layout)
+        // ============================================================
+        function buildGridSVG(process) {
             const NODE_W = 160;
             const NODE_H = 54;
             const NODE_GAP_X = 40;
@@ -5470,6 +5481,355 @@
             return svg;
         }
 
+        // ============================================================
+        // SWIMLANE VIEW (classic horizontal department lanes)
+        // ============================================================
+        function buildSwimlaneSVG(process) {
+            const LANE_LABEL_W = 130;
+            const NODE_W = 150;
+            const NODE_H = 50;
+            const NODE_GAP_X = 40;
+            const LANE_PAD_Y = 18;
+            const LANE_GAP = 3;
+            const START_X = LANE_LABEL_W + 30;
+            const TOP_PAD = 65;
+            const TERM_W = 100;
+            const TERM_H = 32;
+            const TERM_RX = 16;
+
+            const deptColors = {
+                'Sales': { bg: '#dbeafe', stroke: '#3b82f6' },
+                'Operations': { bg: '#fef3c7', stroke: '#f59e0b' },
+                'Finance': { bg: '#dcfce7', stroke: '#22c55e' },
+                'IT': { bg: '#e0e7ff', stroke: '#6366f1' },
+                'Customer Success': { bg: '#fce7f3', stroke: '#ec4899' },
+                'Product': { bg: '#f3e8ff', stroke: '#a855f7' },
+                'Leadership': { bg: '#fef9c3', stroke: '#ca8a04' },
+                'HR': { bg: '#ffedd5', stroke: '#ea580c' },
+                'Procurement': { bg: '#e0f2fe', stroke: '#0284c7' },
+                'Legal': { bg: '#fce4ec', stroke: '#e91e63' },
+                'Compliance': { bg: '#f3e5f5', stroke: '#9c27b0' },
+                'Engineering': { bg: '#e8eaf6', stroke: '#3f51b5' },
+                'Risk': { bg: '#fff3e0', stroke: '#e65100' },
+                'Data Protection': { bg: '#e8f5e9', stroke: '#2e7d32' },
+                'Quality Assurance': { bg: '#e1f5fe', stroke: '#0277bd' },
+                'Quality': { bg: '#e1f5fe', stroke: '#0277bd' },
+                'Facilities': { bg: '#efebe9', stroke: '#795548' },
+                'Executive Board': { bg: '#fef9c3', stroke: '#ca8a04' }
+            };
+            function getDC(dept) {
+                if (deptColors[dept]) return deptColors[dept];
+                if (dept && dept.includes('External')) return { bg: '#fffbeb', stroke: '#d97706' };
+                return { bg: '#f1f5f9', stroke: '#94a3b8' };
+            }
+
+            const p = process;
+            const steps = p.steps || [];
+            const handoffs = p.handoffs || [];
+            const approvals = p.approvals || [];
+            const startLabel = p.definition?.startsWhen || 'Start';
+            const endLabel = p.definition?.completesWhen || 'Complete';
+            if (steps.length === 0) return '';
+
+            const allSteps = steps.map((s, i) => {
+                const isApproval = approvals.some(() =>
+                    s.name && (s.name.toLowerCase().includes('approv') || s.name.toLowerCase().includes('review'))
+                );
+                let isBottleneck = false;
+                if (p.bottleneck?.longestStep) {
+                    const bnIdx = parseInt(String(p.bottleneck.longestStep).replace('step-', ''));
+                    if (bnIdx === i) isBottleneck = true;
+                }
+                const auto = classifyAutomation(s, i, p);
+                return {
+                    idx: i, name: s.name || 'Step ' + (i + 1),
+                    department: s.department || 'Other',
+                    isApproval, isBottleneck,
+                    isDecision: !!s.isDecision, branches: s.branches || [],
+                    isExternal: !!s.isExternal, auto
+                };
+            });
+
+            const handoffMap = {};
+            handoffs.forEach((h, i) => {
+                if (i + 1 < allSteps.length) {
+                    handoffMap[i + '->' + (i + 1)] = {
+                        method: h.method ? h.method.replace(/-/g, ' ') : '',
+                        isBad: h.clarity === 'yes-multiple' || h.clarity === 'yes-major'
+                    };
+                }
+            });
+
+            // Department grouping
+            const deptOrder = [];
+            const deptMap = {};
+            allSteps.forEach(s => {
+                if (!deptMap[s.department]) { deptMap[s.department] = []; deptOrder.push(s.department); }
+                deptMap[s.department].push(s);
+            });
+
+            // Sequential connections
+            const connections = [];
+            connections.push({ fromType: 'start', toIdx: 0 });
+            for (let i = 0; i < allSteps.length - 1; i++) {
+                const hk = i + '->' + (i + 1);
+                const hd = handoffMap[hk] || { method: '', isBad: false };
+                connections.push({ fromIdx: i, toIdx: i + 1, method: hd.method, isBad: hd.isBad });
+            }
+            connections.push({ fromIdx: allSteps.length - 1, toType: 'end' });
+
+            // Layout: each step = column, each dept = row (lane)
+            const colW = NODE_W + NODE_GAP_X;
+            const nodePos = [];
+            let laneY = TOP_PAD;
+            const lanes = [];
+
+            deptOrder.forEach(dept => {
+                const dc = getDC(dept);
+                const laneH = NODE_H + LANE_PAD_Y * 2;
+                lanes.push({ dept, y: laneY, h: laneH, bg: dc.bg, stroke: dc.stroke });
+                deptMap[dept].forEach(s => {
+                    const nx = START_X + s.idx * colW;
+                    const ny = laneY + LANE_PAD_Y;
+                    nodePos[s.idx] = { x: nx, y: ny, cx: nx + NODE_W / 2, cy: ny + NODE_H / 2, dept };
+                });
+                laneY += laneH + LANE_GAP;
+            });
+
+            const firstLane = lanes.find(l => l.dept === allSteps[0].department);
+            const lastLane = lanes.find(l => l.dept === allSteps[allSteps.length - 1].department);
+
+            const startPos = {
+                x: START_X - TERM_W - NODE_GAP_X,
+                y: firstLane.y + (firstLane.h - TERM_H) / 2,
+                cx: START_X - TERM_W - NODE_GAP_X + TERM_W / 2,
+                cy: firstLane.y + firstLane.h / 2
+            };
+            const endPos = {
+                x: START_X + allSteps.length * colW + 10,
+                y: lastLane.y + (lastLane.h - TERM_H) / 2,
+                cx: START_X + allSteps.length * colW + 10 + TERM_W / 2,
+                cy: lastLane.y + lastLane.h / 2
+            };
+
+            const totalW = endPos.x + TERM_W + 30;
+            const hasAnyDecisions = allSteps.some(s => s.isDecision && s.branches.length > 0);
+            const maxBr = Math.max(0, ...allSteps.filter(s => s.isDecision).map(s => (s.branches || []).length));
+            const routeSpace = hasAnyDecisions ? maxBr * 24 + 40 : 0;
+            const autoCount = allSteps.filter(s => s.auto).length;
+            const totalH = laneY + (autoCount > 0 ? 70 : 50) + routeSpace;
+
+            let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${totalH}" width="${totalW}" height="${totalH}" style="font-family:'Work Sans',Arial,sans-serif;">`;
+            svg += `<rect x="0" y="0" width="${totalW}" height="${totalH}" fill="#ffffff" rx="8"/>`;
+
+            // Title
+            svg += `<text x="${totalW / 2}" y="28" text-anchor="middle" font-size="16" font-weight="600" fill="#1a2f4a">${escSvg(p.processName || 'Process Flow')}</text>`;
+            svg += `<text x="${totalW / 2}" y="45" text-anchor="middle" font-size="10" fill="#94a3b8">Swimlane view · ${allSteps.length} steps · ${deptOrder.length} departments</text>`;
+
+            // Lane bands
+            lanes.forEach(l => {
+                svg += `<rect x="0" y="${l.y}" width="${totalW}" height="${l.h}" fill="${l.bg}" stroke="${l.stroke}" stroke-width="0.5" rx="0"/>`;
+                svg += `<rect x="0" y="${l.y}" width="${LANE_LABEL_W}" height="${l.h}" fill="${l.stroke}" opacity="0.1" rx="0"/>`;
+                svg += `<rect x="0" y="${l.y}" width="4" height="${l.h}" fill="${l.stroke}" rx="0"/>`;
+                svg += `<text x="${LANE_LABEL_W / 2 + 2}" y="${l.y + l.h / 2 + 5}" text-anchor="middle" font-size="11" font-weight="600" fill="${l.stroke}">${escSvg(l.dept)}</text>`;
+            });
+
+            // Defs
+            svg += `<defs>`;
+            svg += `<marker id="sarw" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 1 L 10 5 L 0 9 z" fill="#475569"/></marker>`;
+            svg += `<marker id="sarw-bad" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 1 L 10 5 L 0 9 z" fill="#ef4444"/></marker>`;
+            ['#7c3aed','#2563eb','#059669','#d97706','#dc2626'].forEach((c, ci) => {
+                svg += `<marker id="sarwc${ci}" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 1 L 10 5 L 0 9 z" fill="${c}"/></marker>`;
+            });
+            svg += `<filter id="sshadow" x="-4%" y="-4%" width="108%" height="108%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>`;
+            svg += `</defs>`;
+
+            // CSS: only line animations
+            svg += `<style>
+                @keyframes flowDash { to { stroke-dashoffset: -40; } }
+                @keyframes particleMove { 0% { offset-distance: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { offset-distance: 100%; opacity: 0; } }
+                .sl-arrow { stroke-dasharray: 8 6; animation: flowDash 1.5s linear infinite; }
+                .sl-particle { r: 3; fill: #3d8ea6; animation: particleMove 3s linear infinite; }
+            </style>`;
+
+            // Draw sequential arrows
+            function drawSLArrow(x1, y1, x2, y2, isCross, isBad) {
+                const color = isBad ? '#ef4444' : '#3d8ea6';
+                const marker = isBad ? 'url(#sarw-bad)' : 'url(#sarw)';
+                let pathD;
+                if (isCross && Math.abs(y1 - y2) > 10) {
+                    const mx = (x1 + x2) / 2;
+                    pathD = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
+                } else {
+                    pathD = `M ${x1} ${y1} L ${x2} ${y2}`;
+                }
+                svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.8" class="sl-arrow" marker-end="${marker}" opacity="0.55"/>`;
+                svg += `<circle class="sl-particle" style="offset-path:path('${pathD}');animation-duration:2.5s;fill:${isBad ? '#ef4444' : '#3d8ea6'};"/>`;
+            }
+
+            connections.forEach(c => {
+                let x1, y1, x2, y2, isCross;
+                if (c.fromType === 'start') {
+                    x1 = startPos.x + TERM_W; y1 = startPos.cy;
+                    x2 = nodePos[c.toIdx].x; y2 = nodePos[c.toIdx].cy;
+                    isCross = Math.abs(y1 - y2) > 10;
+                } else if (c.toType === 'end') {
+                    x1 = nodePos[c.fromIdx].x + NODE_W; y1 = nodePos[c.fromIdx].cy;
+                    x2 = endPos.x; y2 = endPos.cy;
+                    isCross = Math.abs(y1 - y2) > 10;
+                } else {
+                    x1 = nodePos[c.fromIdx].x + NODE_W; y1 = nodePos[c.fromIdx].cy;
+                    x2 = nodePos[c.toIdx].x; y2 = nodePos[c.toIdx].cy;
+                    isCross = nodePos[c.fromIdx].dept !== nodePos[c.toIdx].dept;
+                }
+                drawSLArrow(x1, y1, x2, y2, isCross, c.isBad || false);
+            });
+
+            // Start terminal (static)
+            svg += `<rect x="${startPos.x}" y="${startPos.y}" width="${TERM_W}" height="${TERM_H}" rx="${TERM_RX}" fill="#d1fae5" stroke="#059669" stroke-width="2" filter="url(#sshadow)"/>`;
+            svg += `<text x="${startPos.cx}" y="${startPos.cy + 4}" text-anchor="middle" font-size="9" font-weight="600" fill="#064e3b">${escSvg(startLabel.length > 16 ? startLabel.substring(0, 14) + '..' : startLabel)}</text>`;
+
+            // End terminal (static)
+            svg += `<rect x="${endPos.x}" y="${endPos.y}" width="${TERM_W}" height="${TERM_H}" rx="${TERM_RX}" fill="#d1fae5" stroke="#059669" stroke-width="2" filter="url(#sshadow)"/>`;
+            svg += `<text x="${endPos.cx}" y="${endPos.cy + 4}" text-anchor="middle" font-size="9" font-weight="600" fill="#064e3b">${escSvg(endLabel.length > 16 ? endLabel.substring(0, 14) + '..' : endLabel)}</text>`;
+
+            // Step nodes (static, no animation)
+            allSteps.forEach((s, i) => {
+                const pos = nodePos[i];
+                if (!pos) return;
+
+                let fill = '#ffffff', stroke = '#cbd5e1', sw = 1.5, textCol = '#1e293b';
+                if (s.isBottleneck) { fill = '#fee2e2'; stroke = '#ef4444'; sw = 2.5; textCol = '#991b1b'; }
+                else if (s.isApproval) { fill = '#fef3c7'; stroke = '#d97706'; sw = 2; textCol = '#92400e'; }
+                const rx = s.isApproval ? 16 : 8;
+
+                svg += `<g>`;
+                svg += `<rect x="${pos.x}" y="${pos.y}" width="${NODE_W}" height="${NODE_H}" rx="${rx}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" filter="url(#sshadow)"/>`;
+
+                // Step badge
+                const badgeBg = s.isBottleneck ? '#ef4444' : s.isApproval ? '#d97706' : '#64748b';
+                svg += `<circle cx="${pos.x + 14}" cy="${pos.y + 14}" r="10" fill="${badgeBg}" opacity="0.15"/>`;
+                svg += `<text x="${pos.x + 14}" y="${pos.y + 18}" text-anchor="middle" font-size="9" font-weight="700" fill="${badgeBg}">${i + 1}</text>`;
+
+                // Name (2 lines)
+                const words = s.name.split(/\s+/);
+                const lines = []; let cur = '';
+                words.forEach(w => { const test = cur ? cur + ' ' + w : w; if (test.length > 20 && cur) { lines.push(cur); cur = w; } else { cur = test; } });
+                if (cur) lines.push(cur);
+                if (lines.length > 2) { lines.length = 2; lines[1] = lines[1].substring(0, 17) + '..'; }
+                const lineH = 13;
+                const textStartY = pos.cy + 4 - ((lines.length - 1) * lineH) / 2;
+                lines.forEach((line, li) => {
+                    svg += `<text x="${pos.x + NODE_W / 2}" y="${textStartY + li * lineH}" text-anchor="middle" font-size="10" fill="${textCol}" font-weight="500">${escSvg(line)}</text>`;
+                });
+
+                // Auto badge
+                if (s.auto) {
+                    const bx = pos.x + NODE_W - 6, by = pos.y - 4;
+                    svg += `<circle cx="${bx}" cy="${by}" r="9" fill="${s.auto.color}" stroke="#fff" stroke-width="2"/>`;
+                    svg += `<text x="${bx}" y="${by + 3}" text-anchor="middle" font-size="8" fill="#fff" font-weight="700">${s.auto.badge}</text>`;
+                }
+
+                // Decision diamond
+                if (s.isDecision && s.branches.length > 0) {
+                    const dx = pos.x + NODE_W / 2;
+                    const dy = pos.y + NODE_H + 12;
+                    const dd = 12;
+                    svg += `<polygon points="${dx},${dy - dd} ${dx + dd},${dy} ${dx},${dy + dd} ${dx - dd},${dy}" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>`;
+                    svg += `<text x="${dx}" y="${dy + 4}" text-anchor="middle" font-size="8" font-weight="700" fill="#7c3aed">?</text>`;
+                }
+                svg += `</g>`;
+            });
+
+            // Decision branch routes
+            const branchColors = ['#7c3aed', '#2563eb', '#059669', '#d97706', '#dc2626'];
+            allSteps.forEach((s, i) => {
+                if (!s.isDecision || s.branches.length === 0) return;
+                const pos = nodePos[i];
+                const dx = pos.x + NODE_W / 2;
+                const dy = pos.y + NODE_H + 24;
+
+                s.branches.forEach((br, bi) => {
+                    const color = branchColors[bi % branchColors.length];
+                    const targetMatch = (br.target || '').match(/(\d+)/);
+                    const targetIdx = targetMatch ? parseInt(targetMatch[1]) - 1 : -1;
+
+                    if (targetIdx >= 0 && targetIdx < allSteps.length && nodePos[targetIdx]) {
+                        const tp = nodePos[targetIdx];
+                        const isLoopBack = targetIdx <= i;
+                        const offset = (bi + 1) * 22;
+                        let pathD;
+
+                        if (isLoopBack) {
+                            const belowY = laneY + offset + 10;
+                            pathD = `M ${dx} ${dy} C ${dx} ${belowY}, ${tp.cx} ${belowY}, ${tp.cx} ${tp.y + NODE_H}`;
+                        } else {
+                            const curveY = dy + offset + 6;
+                            pathD = `M ${dx} ${dy} C ${dx} ${curveY}, ${tp.x - 30} ${curveY}, ${tp.x} ${tp.cy}`;
+                        }
+                        svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="6,3" class="sl-arrow" marker-end="url(#sarwc${bi % 5})" opacity="0.65"/>`;
+                        svg += `<circle class="sl-particle" style="offset-path:path('${pathD}');animation-duration:3s;fill:${color};"/>`;
+
+                        // Label pill
+                        const labelText = escSvg(br.label.length > 18 ? br.label.substring(0, 16) + '..' : br.label);
+                        const pillW = Math.min(labelText.length * 5.5 + 30, 130);
+                        const labelX = (dx + tp.cx) / 2 - pillW / 2;
+                        const labelY = isLoopBack ? laneY + offset + 10 - 2 : dy + offset + 6 - 2;
+                        svg += `<rect x="${labelX}" y="${labelY - 6}" width="${pillW}" height="14" rx="7" fill="white" stroke="${color}" stroke-width="1" opacity="0.9"/>`;
+                        svg += `<text x="${labelX + pillW / 2}" y="${labelY + 5}" text-anchor="middle" font-size="7" fill="${color}" font-weight="600">${labelText} → ${targetIdx + 1}</text>`;
+                        svg += `<circle cx="${dx}" cy="${dy}" r="3" fill="${color}" opacity="0.7"/>`;
+                    } else {
+                        const bLabelY = dy + 8 + bi * 14;
+                        svg += `<text x="${dx}" y="${bLabelY}" text-anchor="middle" font-size="7" fill="#7c3aed" font-weight="500">${escSvg(br.label)} → ${br.target || 'End'}</text>`;
+                    }
+                });
+            });
+
+            // Legend
+            const legendY = laneY + 8;
+            const hasDecisions = allSteps.some(s => s.isDecision && s.branches.length > 0);
+            const nodeItems = [
+                { color: '#d1fae5', stroke: '#059669', label: 'Start / End' },
+                { color: '#ffffff', stroke: '#cbd5e1', label: 'Step' },
+                { color: '#fee2e2', stroke: '#ef4444', label: 'Bottleneck' },
+                { color: '#fef3c7', stroke: '#d97706', label: 'Approval' }
+            ];
+            if (hasDecisions) nodeItems.push({ color: '#ede9fe', stroke: '#7c3aed', label: 'Decision', isDiamond: true });
+            let slx = LANE_LABEL_W + 10;
+            nodeItems.forEach(item => {
+                if (item.isDiamond) {
+                    const cx = slx + 7, cy = legendY + 7, d = 7;
+                    svg += `<polygon points="${cx},${cy - d} ${cx + d},${cy} ${cx},${cy + d} ${cx - d},${cy}" fill="${item.color}" stroke="${item.stroke}" stroke-width="1.5"/>`;
+                } else {
+                    svg += `<rect x="${slx}" y="${legendY}" width="14" height="14" rx="3" fill="${item.color}" stroke="${item.stroke}" stroke-width="1.5"/>`;
+                }
+                svg += `<text x="${slx + 20}" y="${legendY + 11}" font-size="9" fill="#64748b">${item.label}</text>`;
+                slx += 90;
+            });
+            svg += `<line x1="${slx}" y1="${legendY + 7}" x2="${slx + 20}" y2="${legendY + 7}" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="5,3"/>`;
+            svg += `<text x="${slx + 26}" y="${legendY + 11}" font-size="9" fill="#64748b">Bad handoff</text>`;
+
+            if (autoCount > 0) {
+                const row2Y = legendY + 18;
+                slx = LANE_LABEL_W + 10;
+                svg += `<text x="${slx}" y="${row2Y + 10}" font-size="9" font-weight="600" fill="#475569">Auto:</text>`;
+                slx += 40;
+                const cats = [AUTOMATION_CATEGORIES.simple, AUTOMATION_CATEGORIES.agent, AUTOMATION_CATEGORIES.humanLoop, AUTOMATION_CATEGORIES.multiAgent];
+                cats.forEach(cat => {
+                    const count = allSteps.filter(s => s.auto && s.auto.key === cat.key).length;
+                    if (count > 0) {
+                        svg += `<circle cx="${slx + 7}" cy="${row2Y + 6}" r="7" fill="${cat.color}" stroke="#fff" stroke-width="1.5"/>`;
+                        svg += `<text x="${slx + 7}" y="${row2Y + 9}" text-anchor="middle" font-size="7" fill="#fff" font-weight="700">${cat.badge}</text>`;
+                        svg += `<text x="${slx + 18}" y="${row2Y + 10}" font-size="9" fill="${cat.color}" font-weight="500">${cat.label} (${count})</text>`;
+                        slx += 18 + cat.label.length * 6 + 26;
+                    }
+                });
+            }
+
+            svg += '</svg>';
+            return svg;
+        }
+
         function escSvg(str) {
             return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
@@ -5477,7 +5837,13 @@
         // ============================================================
         // RENDER FLOW DIAGRAMS (one per process)
         // ============================================================
+        function switchFlowView(mode) {
+            _flowViewMode = mode;
+            if (_flowProcesses.length > 0) renderFlowDiagram(_flowProcesses);
+        }
+
         function renderFlowDiagram(processes) {
+            _flowProcesses = processes;
             const loading = document.getElementById('flowDiagramLoading');
             const container = document.getElementById('flowDiagramsContainer');
             const errorDiv = document.getElementById('flowDiagramError');
@@ -5486,11 +5852,17 @@
                 let allHtml = '';
                 const allSvgs = [];
 
+                // View toggle
+                const isGrid = _flowViewMode === 'grid';
+                allHtml += `<div style="display:flex;align-items:center;gap:0.25rem;margin-bottom:1rem;background:var(--bg-light,#f1f5f9);padding:4px;border-radius:8px;width:fit-content;">`;
+                allHtml += `<button onclick="switchFlowView('grid')" style="padding:0.4rem 1rem;font-size:0.8rem;font-weight:600;border:none;border-radius:6px;cursor:pointer;transition:all 0.2s;${isGrid ? 'background:var(--primary,#1a5a6e);color:white;box-shadow:0 1px 3px rgba(0,0,0,0.15);' : 'background:transparent;color:var(--text-mid,#64748b);'}">&#9638; Grid View</button>`;
+                allHtml += `<button onclick="switchFlowView('swimlane')" style="padding:0.4rem 1rem;font-size:0.8rem;font-weight:600;border:none;border-radius:6px;cursor:pointer;transition:all 0.2s;${!isGrid ? 'background:var(--primary,#1a5a6e);color:white;box-shadow:0 1px 3px rgba(0,0,0,0.15);' : 'background:transparent;color:var(--text-mid,#64748b);'}">&#9776; Swimlane View</button>`;
+                allHtml += `</div>`;
+
                 processes.forEach((p, pi) => {
-                    const svg = buildSwimlanesSVG(p);
+                    const svg = buildFlowSVG(p);
                     allSvgs.push(svg);
 
-                    // Classify automation opportunities for this process
                     const steps = p.steps || [];
                     const classified = steps.map((s, i) => {
                         const auto = classifyAutomation(s, i, p);
@@ -5501,7 +5873,7 @@
                     allHtml += `<h3 style="margin-bottom: 0.5rem;">${pi + 1}. ${escSvg(p.processName || 'Process')} — Flow Diagram</h3>`;
                     allHtml += `<p class="helper-text" style="margin-bottom: 0.75rem;">Zoom: scroll wheel · Pan: click &amp; drag · Coloured badges show automation type (hover for details)</p>`;
 
-                    // Zoom controls for this diagram
+                    // Zoom controls
                     allHtml += `<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">`;
                     allHtml += `<button onclick="diagramZoomFor(${pi},-0.2)" class="diagram-ctrl-btn">&#8722;</button>`;
                     allHtml += `<span id="zoomLabel_${pi}" style="font-size:0.8rem;color:var(--text-mid);min-width:3rem;text-align:center;">100%</span>`;
@@ -5517,7 +5889,7 @@
                     allHtml += svg;
                     allHtml += `</div></div></div>`;
 
-                    // Automation opportunities grouped by category
+                    // Automation opportunities
                     if (classified.length > 0) {
                         allHtml += `<div style="margin-top:1.25rem;">`;
                         allHtml += `<h4 style="margin-bottom:0.75rem;font-size:1rem;color:var(--text-dark);">Automation Opportunities (${classified.length} steps)</h4>`;
@@ -5556,12 +5928,9 @@
                     allHtml += `</div>`;
                 });
 
-                // Store all SVGs for PDF
                 lastRenderedSvg = allSvgs.join('|||');
-
                 container.innerHTML = allHtml;
 
-                // Make SVGs responsive
                 container.querySelectorAll('svg').forEach(el => {
                     el.style.maxWidth = '100%';
                     el.style.height = 'auto';
@@ -5572,13 +5941,12 @@
                 container.style.display = 'block';
                 flowDiagramUrl = 'local-svg';
 
-                // Init per-diagram zoom state
                 diagramStates = {};
                 processes.forEach((_, pi) => {
                     diagramStates[pi] = { scale: 1, pan: { x: 0, y: 0 } };
                 });
             } catch (e) {
-                console.error('Swimlane render error:', e);
+                console.error('Flow diagram render error:', e);
                 loading.style.display = 'none';
                 errorDiv.style.display = 'flex';
             }
@@ -5728,7 +6096,7 @@
 
                     // Fallback: re-generate
                     if (!svgText) {
-                        svgText = buildSwimlanesSVG(completedProcesses[pi]);
+                        svgText = buildFlowSVG(completedProcesses[pi]);
                     }
                     if (!svgText) continue;
 
