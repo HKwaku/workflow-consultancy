@@ -405,8 +405,9 @@
 
                     const respBody = {
                         teamCode,
-                        name: r.name,
-                        department: r.department,
+                        respondentName: r.name,
+                        respondentEmail: sample.base.email,
+                        respondentDepartment: r.department,
                         responseData: {
                             processName: sample.base.processName,
                             metrics: r.metrics,
