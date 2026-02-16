@@ -178,11 +178,15 @@
                         <input type="text" id="codeInput" placeholder="ABC123" maxlength="6" required autofocus>
                         <button type="submit">View Results</button>
                     </form>
-                    <div style="margin-top: 24px; padding-top: 20px; border-top: 2px dashed var(--border);">
+                    <div id="devToolbar" style="display: none; margin-top: 24px; padding-top: 20px; border-top: 2px dashed var(--border);">
+                        <p style="font-size: 0.8rem; color: var(--text-mid); margin-bottom: 10px;">Developer Tools</p>
                         <button onclick="loadSampleTeamData()" id="sampleBtn" style="padding: 10px 24px; background: var(--purple); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; font-family: inherit; font-weight: 500; font-size: 0.9rem;">
                             Load Sample Team Data (Complexity 10)
                         </button>
                         <p style="font-size: 0.78rem; color: var(--text-light); margin-top: 8px;">Creates a team session with 4 respondents and runs AI analysis</p>
+                        <button onclick="copyTeamSampleJSON()" style="padding: 8px 20px; background: #475569; color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; font-family: inherit; font-weight: 500; font-size: 0.85rem; margin-top: 8px;">
+                            Copy Team Sample JSON
+                        </button>
                     </div>
                 </div>
 
@@ -759,6 +763,14 @@
         // ═══════════════════════════════════════════════════════════
         document.addEventListener('DOMContentLoaded', function() {
             const params = new URLSearchParams(location.search);
+
+            // Show dev toolbar on localhost or with ?sample param
+            const isLocal = ['localhost', '127.0.0.1', '0.0.0.0'].includes(location.hostname) || location.port;
+            const devToolbar = document.getElementById('devToolbar');
+            if (devToolbar && (isLocal || params.has('sample'))) {
+                devToolbar.style.display = 'block';
+            }
+
             const code = params.get('code');
             if (code) {
                 document.getElementById('codeInput').value = code;
