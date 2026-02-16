@@ -1705,6 +1705,9 @@
                     <button class="button" onclick="loadSampleData()" style="background: #475569; color: white; font-size: 0.85rem; padding: 0.6rem 1.5rem;">
                         Load Sample Data &amp; Skip to Results &rarr;
                     </button>
+                    <button class="button" onclick="loadComplexitySample()" style="background: #dc2626; color: white; font-size: 0.85rem; padding: 0.6rem 1.5rem; margin-top: 0.5rem;">
+                        Load Complexity-10 Workflow (Decision Points) &rarr;
+                    </button>
                     <button class="button" onclick="loadTeamSampleToConsole()" style="background: #7c3aed; color: white; font-size: 0.85rem; padding: 0.6rem 1.5rem; margin-top: 0.5rem;">
                         Copy Team Sample JSON to Console
                     </button>
@@ -6950,6 +6953,230 @@
             // Build results client-side (no API needed)
             const result = buildLocalResults(completedProcesses, contact);
             displayResults(result, contact);
+        }
+
+        function loadComplexitySample() {
+            const allSamples = getSampleProcesses();
+            const complex = allSamples.find(p => p.processName.includes('CapEx'));
+            if (!complex) { alert('Complexity-10 sample not found'); return; }
+
+            completedProcesses = [complex];
+
+            const contact = {
+                name: 'Test User',
+                email: 'hopektettey@gmail.com',
+                company: 'Meridian Manufacturing Ltd',
+                title: 'Head of Procurement',
+                teamSize: '501-1000',
+                industry: 'Manufacturing'
+            };
+
+            goToScreen(19);
+            document.getElementById('loadingState').style.display = 'block';
+            document.getElementById('resultsContainer').style.display = 'none';
+
+            const result = buildLocalResults(completedProcesses, contact);
+            displayResults(result, contact);
+
+            // Also trigger AI analysis
+            triggerAIDiagnostic(complex, contact);
+        }
+
+        async function triggerAIDiagnostic(process, contact) {
+            const aiContainer = document.getElementById('aiDiagnosticSection');
+            if (!aiContainer) {
+                // Create the AI section after results
+                const resultsContainer = document.getElementById('resultsContainer');
+                const section = document.createElement('div');
+                section.id = 'aiDiagnosticSection';
+                section.className = 'result-section';
+                section.style.marginTop = '2rem';
+                resultsContainer.appendChild(section);
+            }
+
+            const target = document.getElementById('aiDiagnosticSection');
+            target.innerHTML = `<h3 style="margin-bottom: 1rem;">AI Deep Analysis <span style="display:inline-block;font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;padding:3px 10px;border-radius:100px;background:linear-gradient(135deg,#7c3aed,#1e40af);color:white;vertical-align:middle;margin-left:8px;">AI-Powered</span></h3>
+                <div style="text-align:center;padding:24px;">
+                    <div style="display:inline-flex;gap:4px;">
+                        <span style="width:8px;height:8px;background:#7c3aed;border-radius:50%;animation:aiPulse 1.2s ease-in-out infinite;"></span>
+                        <span style="width:8px;height:8px;background:#7c3aed;border-radius:50%;animation:aiPulse 1.2s ease-in-out 0.2s infinite;"></span>
+                        <span style="width:8px;height:8px;background:#7c3aed;border-radius:50%;animation:aiPulse 1.2s ease-in-out 0.4s infinite;"></span>
+                    </div>
+                    <p style="margin-top:12px;color:var(--text-mid);font-size:0.88rem;">Analysing workflow with ${process.steps.length} steps and ${process.steps.filter(s => s.isDecision).length} decision points...</p>
+                </div>
+                <style>@keyframes aiPulse{0%,80%,100%{opacity:.3;transform:scale(.8)}40%{opacity:1;transform:scale(1.2)}}</style>`;
+
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            const decisionPoints = process.steps.filter(s => s.isDecision);
+            const deptList = [...new Set(process.steps.map(s => s.department))];
+            const poorHandoffs = (process.handoffs || []).filter(h => h.clarity === 'yes-multiple' || h.clarity === 'yes-major');
+
+            const evidence = {
+                actualTime: process.lastExample.elapsedDays,
+                idealTime: Math.round(process.lastExample.elapsedDays * 0.4),
+                waitTime: process.userTime.waiting,
+                waitFrequency: 'every-time',
+                meetingHours: process.userTime.meetings,
+                emailHours: process.userTime.emails,
+                statusUpdates: 'daily',
+                missingInfo: 'frequently',
+                handoffCount: (process.handoffs || []).length,
+                poorHandoffs: poorHandoffs.length,
+                systemCount: (process.systems || []).length,
+                manualTransfer: (process.systems || []).filter(s => s.actions.includes('copy-in') || s.actions.includes('copy-out')).length,
+                approvalCount: (process.approvals || []).length,
+                approvalAvgDays: process.approvals.reduce((sum, a) => sum + parseInt(a.avgDays || 0), 0),
+                processSteps: process.steps.length,
+                departments: deptList.length,
+                decisionPoints: decisionPoints.length,
+                branchingComplexity: decisionPoints.reduce((sum, d) => sum + (d.branches || []).length, 0),
+                loopBacks: decisionPoints.filter(d => (d.branches || []).some(b => {
+                    const targetNum = parseInt((b.target || '').replace(/\D/g, ''));
+                    return targetNum < d.number;
+                })).length,
+                documentation: process.knowledge.documentation,
+                spof: process.knowledge.singlePointOfFailure === 'yes',
+                workarounds: process.knowledge.workarounds === 'yes'
+            };
+
+            try {
+                const resp = await fetch('/api/analyze-symptoms', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        evidence,
+                        workflows: process.steps.map(s => ({
+                            name: s.name,
+                            department: s.department,
+                            isDecision: s.isDecision || false,
+                            branches: s.branches || [],
+                            isExternal: s.isExternal || false
+                        })),
+                        channels: (process.systems || []).map(s => s.name),
+                        toolConsent: true,
+                        contact: {
+                            name: contact.name,
+                            email: contact.email,
+                            company: contact.company,
+                            teamSize: contact.teamSize,
+                            industry: contact.industry
+                        }
+                    })
+                });
+
+                if (!resp.ok) {
+                    const errData = await resp.json().catch(() => ({}));
+                    throw new Error(errData.error || `API returned ${resp.status}`);
+                }
+
+                const data = await resp.json();
+                renderAIDiagnostic(target, data, process);
+            } catch (err) {
+                console.error('AI diagnostic error:', err);
+                target.innerHTML += `<div style="padding:16px;background:#fef2f2;border-radius:8px;border-left:4px solid #dc2626;margin-top:12px;">
+                    <strong style="color:#dc2626;">AI analysis unavailable</strong>
+                    <p style="color:#64748b;font-size:0.85rem;margin-top:4px;">${err.message}</p>
+                    <p style="color:#64748b;font-size:0.82rem;margin-top:8px;">The rule-based analysis above is still valid. AI analysis requires the ANTHROPIC_API_KEY to be configured.</p>
+                </div>`;
+            }
+        }
+
+        function renderAIDiagnostic(container, data, process) {
+            const decisionPoints = process.steps.filter(s => s.isDecision);
+            let html = `<h3 style="margin-bottom: 1rem;">AI Deep Analysis <span style="display:inline-block;font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;padding:3px 10px;border-radius:100px;background:linear-gradient(135deg,#7c3aed,#1e40af);color:white;vertical-align:middle;margin-left:8px;">AI-Powered</span></h3>`;
+
+            // Decision Points Summary
+            if (decisionPoints.length > 0) {
+                html += `<div style="background:linear-gradient(135deg,#faf5ff,#f0f9ff);padding:20px 24px;border-radius:12px;border-left:4px solid #7c3aed;margin-bottom:20px;">
+                    <h4 style="font-size:0.95rem;font-weight:600;color:#7c3aed;margin-bottom:12px;">Decision Points & Routing (${decisionPoints.length} found)</h4>`;
+                decisionPoints.forEach(dp => {
+                    const branches = dp.branches || [];
+                    const hasLoopBack = branches.some(b => {
+                        const t = parseInt((b.target || '').replace(/\D/g, ''));
+                        return t && t < dp.number;
+                    });
+                    html += `<div style="background:white;border-radius:8px;padding:14px 16px;margin-bottom:8px;border:1px solid #e2e8f0;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                            <strong style="font-size:0.9rem;">Step ${dp.number}: ${dp.name}</strong>
+                            <div>
+                                <span style="font-size:0.7rem;padding:2px 8px;border-radius:100px;background:#f3e8ff;color:#7c3aed;font-weight:600;">${branches.length} routes</span>
+                                ${hasLoopBack ? '<span style="font-size:0.7rem;padding:2px 8px;border-radius:100px;background:#fef3c7;color:#d97706;font-weight:600;margin-left:4px;">Loop-back</span>' : ''}
+                            </div>
+                        </div>
+                        <div style="font-size:0.82rem;color:#475569;">
+                            ${branches.map(b => `<span style="display:inline-block;margin:2px 4px 2px 0;padding:2px 8px;background:#f1f5f9;border-radius:4px;">${b.label} → ${b.target || 'End'}</span>`).join('')}
+                        </div>
+                    </div>`;
+                });
+                const totalRoutes = decisionPoints.reduce((s, d) => s + (d.branches || []).length, 0);
+                const loopBacks = decisionPoints.filter(d => (d.branches || []).some(b => { const t = parseInt((b.target||'').replace(/\D/g,'')); return t && t < d.number; })).length;
+                html += `<div style="display:flex;gap:16px;margin-top:12px;font-size:0.82rem;color:#64748b;">
+                    <span><strong>${decisionPoints.length}</strong> decision gates</span>
+                    <span><strong>${totalRoutes}</strong> total routes</span>
+                    <span><strong>${loopBacks}</strong> loop-backs</span>
+                    <span><strong>${process.steps.filter(s=>s.isExternal).length}</strong> external steps</span>
+                </div></div>`;
+            }
+
+            // If API returned structured analysis
+            if (data.diagnosis || data.recommendations || data.operatingModel) {
+                // Executive summary from API
+                if (data.diagnosis?.executiveSummary) {
+                    html += `<div style="font-size:0.95rem;line-height:1.7;color:var(--text);background:linear-gradient(135deg,#f0fdf4,#eff6ff);padding:20px 24px;border-radius:12px;border-left:4px solid #16a34a;margin-bottom:20px;">
+                        ${data.diagnosis.executiveSummary}
+                    </div>`;
+                }
+
+                // Root causes
+                if (data.diagnosis?.rootCauses && data.diagnosis.rootCauses.length > 0) {
+                    html += `<h4 style="font-size:0.95rem;font-weight:600;color:var(--primary);margin:20px 0 12px;">Root Causes</h4>`;
+                    data.diagnosis.rootCauses.forEach(rc => {
+                        const sevColor = rc.severity === 'critical' ? '#dc2626' : rc.severity === 'high' ? '#d97706' : '#1e40af';
+                        html += `<div style="background:white;border:1.5px solid #e2e8f0;border-left:4px solid ${sevColor};border-radius:12px;padding:18px 20px;margin-bottom:12px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                                <strong style="font-size:0.95rem;">${rc.title || rc.cause || ''}</strong>
+                                <span style="font-size:0.7rem;font-weight:600;text-transform:uppercase;padding:2px 8px;border-radius:100px;background:${sevColor};color:white;">${rc.severity}</span>
+                            </div>
+                            <p style="font-size:0.88rem;color:#475569;line-height:1.6;">${rc.explanation || rc.detail || ''}</p>
+                            ${rc.evidence ? `<p style="font-size:0.8rem;color:#94a3b8;font-style:italic;margin-top:4px;">Evidence: ${rc.evidence}</p>` : ''}
+                        </div>`;
+                    });
+                }
+
+                // Recommendations from API
+                if (data.recommendations && data.recommendations.length > 0) {
+                    html += `<h4 style="font-size:0.95rem;font-weight:600;color:var(--primary);margin:20px 0 12px;">AI Recommendations</h4>`;
+                    data.recommendations.forEach((rec, i) => {
+                        const tfColor = rec.timeframe === 'immediate' || rec.timeframe === 'quick-win' ? '#d1fae5' : rec.timeframe === '30-day' ? '#dbeafe' : '#fae8ff';
+                        const tfText = rec.timeframe === 'immediate' || rec.timeframe === 'quick-win' ? '#065f46' : rec.timeframe === '30-day' ? '#1e40af' : '#7c3aed';
+                        html += `<div style="display:flex;gap:14px;padding:14px 0;border-bottom:1px solid #e2e8f0;">
+                            <div style="width:28px;height:28px;border-radius:50%;background:#3d8ea6;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.82rem;flex-shrink:0;">${i + 1}</div>
+                            <div style="flex:1;">
+                                <strong style="display:block;font-size:0.9rem;">${rec.action || rec.title || ''}</strong>
+                                <p style="font-size:0.82rem;color:#475569;margin:3px 0 6px;">${rec.impact || rec.description || ''}</p>
+                                <div style="display:flex;gap:6px;">
+                                    ${rec.timeframe ? `<span style="font-size:0.7rem;padding:2px 8px;border-radius:100px;background:${tfColor};color:${tfText};">${rec.timeframe}</span>` : ''}
+                                    ${rec.owner ? `<span style="font-size:0.7rem;padding:2px 8px;border-radius:100px;background:#f1f5f9;color:#64748b;">${rec.owner}</span>` : ''}
+                                </div>
+                            </div>
+                        </div>`;
+                    });
+                }
+
+                // Operating model
+                if (data.operatingModel) {
+                    html += `<div style="background:#f8fafc;border-radius:12px;padding:18px 20px;margin-top:20px;border:1px solid #e2e8f0;">
+                        <h4 style="font-size:0.95rem;font-weight:600;color:var(--primary);margin-bottom:8px;">Operating Model: ${data.operatingModel.type || 'Complex'}</h4>
+                        <p style="font-size:0.85rem;color:#475569;line-height:1.6;">${data.operatingModel.description || ''}</p>
+                    </div>`;
+                }
+            } else if (typeof data === 'string') {
+                html += `<div style="font-size:0.92rem;line-height:1.7;color:var(--text);white-space:pre-wrap;">${data}</div>`;
+            }
+
+            container.innerHTML = html;
+            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         function loadTeamSampleToConsole() {
