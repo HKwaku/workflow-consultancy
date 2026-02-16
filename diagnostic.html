@@ -5182,7 +5182,7 @@
             const NODE_GAP_X = 40;
             const NODE_GAP_Y = 30;
             const COLS = Math.min(6, Math.max(4, Math.ceil(Math.sqrt((process.steps || []).length * 1.5))));
-            const PAD_L = 30;
+            const PAD_L = 50;
             const PAD_T = 70;
             const TERM_W = 100;
             const TERM_H = 34;
@@ -5271,7 +5271,7 @@
             });
 
             // SVG dimensions
-            const contentW = PAD_L + COLS * colW + PAD_L;
+            const contentW = PAD_L + COLS * colW + 50;
             const contentH = PAD_T + numRows * rowH + 60;
             const totalW = Math.max(contentW, 700);
             const totalH = contentH;
@@ -5303,7 +5303,7 @@
                 .flow-particle { r: 3; fill: #3d8ea6; animation: particleMove 3s linear infinite; }
             </style>`;
 
-            // ── Draw sequential arrows ──
+            // ── Draw sequential arrows (orthogonal 90°) ──
             function drawSeqArrow(fromIdx, toIdx) {
                 const fp = nodePos[fromIdx], tp = nodePos[toIdx];
                 const hk = fromIdx + '->' + toIdx;
@@ -5313,25 +5313,24 @@
                 let pathD;
 
                 if (fp.row === tp.row) {
-                    // Same row
+                    // Same row: horizontal line
                     const x1 = fp.col < tp.col ? fp.x + NODE_W : fp.x;
                     const x2 = fp.col < tp.col ? tp.x : tp.x + NODE_W;
                     pathD = `M ${x1} ${fp.cy} L ${x2} ${tp.cy}`;
                 } else {
-                    // Row wrap: go down from source, then up to target
+                    // Row wrap: orthogonal right-angle route
                     const x1 = fp.cx;
                     const y1 = fp.y + NODE_H;
-                    const midY = fp.y + NODE_H + (rowH - NODE_H) / 2;
+                    const channelY = fp.y + NODE_H + (rowH - NODE_H) / 2;
                     const x2 = tp.cx;
                     const y2 = tp.y;
-                    pathD = `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
+                    pathD = `M ${x1} ${y1} L ${x1} ${channelY} L ${x2} ${channelY} L ${x2} ${y2}`;
                 }
                 svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.8" class="flow-arrow" marker-end="${marker}" opacity="0.5"/>`;
                 svg += `<circle class="flow-particle" style="offset-path:path('${pathD}');animation-duration:2.5s;fill:${hd.isBad ? '#ef4444' : '#3d8ea6'};"/>`;
             }
 
             for (let i = 0; i < allSteps.length - 1; i++) {
-                // Skip sequential arrow FROM decision steps — branches define the paths
                 if (allSteps[i].isDecision && allSteps[i].branches && allSteps[i].branches.length > 0) continue;
                 drawSeqArrow(i, i + 1);
             }
@@ -5451,7 +5450,11 @@
                 svg += `</g>`;
             });
 
-            // ── Decision branch connecting lines ──
+            // ── Decision branch connecting lines (orthogonal 90° routing) ──
+            // Route through gaps between rows and margin channels — never cross nodes
+            const LEFT_CHANNEL = PAD_L - 5;   // left margin routing area
+            const RIGHT_CHANNEL = totalW - 5;  // right margin routing area
+
             allSteps.forEach((s, i) => {
                 if (!s.isDecision || !s.branches || s.branches.length === 0) return;
                 const pos = nodePos[i];
@@ -5470,84 +5473,78 @@
                     if (!tp) return;
                     const isTargetDec = allSteps[targetIdx].isDecision && (allSteps[targetIdx].branches || []).length > 0;
                     const tHH = isTargetDec ? DIAMOND_H / 2 : 0;
-
-                    // Determine exit point on diamond and entry point on target
-                    let exitX, exitY, entryX, entryY;
                     const goesBack = targetIdx < i;
-                    const goesForward = targetIdx > i;
                     const sameRow = pos.row === tp.row;
 
-                    if (goesBack) {
-                        // Loop-back: exit from left of diamond, enter target from top or left
-                        exitX = cx - hw;
-                        exitY = cy;
-                        if (isTargetDec) {
-                            entryX = tp.cx;
-                            entryY = tp.cy - tHH;
-                        } else {
-                            entryX = tp.cx;
-                            entryY = tp.y;
-                        }
-                    } else if (sameRow) {
-                        // Same row: exit right, enter left
-                        exitX = cx + hw;
-                        exitY = cy;
-                        entryX = isTargetDec ? tp.cx - DIAMOND_W / 2 : tp.x;
-                        entryY = isTargetDec ? tp.cy : tp.cy;
-                    } else {
-                        // Forward to a later row: exit bottom, enter top
-                        exitX = cx + (bi - (brCount - 1) / 2) * 12;
-                        exitY = cy + hh;
-                        if (isTargetDec) {
-                            entryX = tp.cx;
-                            entryY = tp.cy - tHH;
-                        } else {
-                            entryX = tp.cx;
-                            entryY = tp.y;
-                        }
-                    }
-
-                    // Build bezier path
+                    // Channel offset so multiple branches don't overlap
+                    const chOff = (bi + 1) * 6;
                     let pathD;
-                    if (goesBack) {
-                        // Route via left margin for loop-backs
-                        const marginX = PAD_L - 15 - bi * 8;
-                        const midY = (exitY + entryY) / 2;
-                        pathD = `M ${exitX} ${exitY} C ${exitX - 40} ${exitY}, ${marginX} ${exitY}, ${marginX} ${midY} S ${marginX} ${entryY}, ${entryX} ${entryY}`;
-                    } else if (sameRow) {
-                        const midX = (exitX + entryX) / 2;
-                        const offsetY = -25 - bi * 10;
-                        pathD = `M ${exitX} ${exitY} C ${exitX + 30} ${exitY + offsetY}, ${entryX - 30} ${entryY + offsetY}, ${entryX} ${entryY}`;
-                    } else {
-                        // Forward: smooth S-curve down
-                        const c1y = exitY + (entryY - exitY) * 0.35;
-                        const c2y = entryY - (entryY - exitY) * 0.35;
-                        pathD = `M ${exitX} ${exitY} C ${exitX} ${c1y}, ${entryX} ${c2y}, ${entryX} ${entryY}`;
-                    }
-
-                    // Draw the connecting line
-                    svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.8" stroke-dasharray="6,4" marker-end="url(#arwc${bi % 5})" opacity="0.55" class="flow-arrow"/>`;
-
-                    // Condition label near exit point
-                    const brText = escSvg(br.label.length > 20 ? br.label.substring(0, 18) + '..' : br.label);
                     let lblX, lblY, anchor;
+
                     if (goesBack) {
-                        lblX = exitX - 6;
-                        lblY = exitY + 12 + bi * 11;
-                        anchor = 'end';
-                    } else if (sameRow) {
-                        lblX = exitX + 10;
-                        lblY = exitY - 6 - bi * 11;
+                        // LOOP-BACK: exit left → go left to margin channel → go up → go right to target col → go down into target
+                        const exitX = cx - hw;
+                        const exitY = cy;
+                        const channelX = LEFT_CHANNEL - chOff;
+                        const entryY = isTargetDec ? tp.cy - tHH : tp.y;
+                        const entryX = tp.cx;
+                        pathD = `M ${exitX} ${exitY} L ${channelX} ${exitY} L ${channelX} ${entryY - 8} L ${entryX} ${entryY - 8} L ${entryX} ${entryY}`;
+                        lblX = channelX + 3;
+                        lblY = exitY - 4;
                         anchor = 'start';
+
+                    } else if (sameRow) {
+                        // SAME ROW forward: exit right → horizontal above row → down to target
+                        const exitX = cx + hw;
+                        const exitY = cy;
+                        const entryX = isTargetDec ? tp.cx - DIAMOND_W / 2 : tp.x;
+                        const entryY = isTargetDec ? tp.cy : tp.cy;
+                        const jogY = pos.y - 10 - chOff;
+                        pathD = `M ${exitX} ${exitY} L ${exitX + 8} ${exitY} L ${exitX + 8} ${jogY} L ${entryX - 8} ${jogY} L ${entryX - 8} ${entryY} L ${entryX} ${entryY}`;
+                        lblX = exitX + 12;
+                        lblY = jogY - 2;
+                        anchor = 'start';
+
+                    } else if (tp.row > pos.row) {
+                        // FORWARD to later row: exit bottom → down to row gap → horizontal to target col → down to target
+                        const exitX = cx + (bi - (brCount - 1) / 2) * 10;
+                        const exitY = cy + hh;
+                        const gapY = pos.y + NODE_H + (rowH - NODE_H) * (0.3 + bi * 0.2);
+                        const entryX = tp.cx;
+                        const entryY = isTargetDec ? tp.cy - tHH : tp.y;
+
+                        if (tp.row === pos.row + 1 && Math.abs(entryX - exitX) < 20) {
+                            // Nearly vertical — just go straight down
+                            pathD = `M ${exitX} ${exitY} L ${exitX} ${entryY}`;
+                        } else {
+                            // Right-angle: down, across, down
+                            pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${entryX} ${gapY} L ${entryX} ${entryY}`;
+                        }
+                        lblX = exitX + 4;
+                        lblY = exitY + 12;
+                        anchor = 'start';
+
                     } else {
-                        lblX = exitX + (bi - (brCount - 1) / 2) * 30;
-                        lblY = exitY + 14 + bi * 11;
-                        anchor = 'middle';
+                        // FORWARD but to an earlier row (rare — skip via right margin)
+                        const exitX = cx + hw;
+                        const exitY = cy;
+                        const channelX = RIGHT_CHANNEL + chOff;
+                        const entryY = isTargetDec ? tp.cy - tHH : tp.y;
+                        const entryX = tp.cx;
+                        pathD = `M ${exitX} ${exitY} L ${channelX} ${exitY} L ${channelX} ${entryY - 8} L ${entryX} ${entryY - 8} L ${entryX} ${entryY}`;
+                        lblX = channelX - 3;
+                        lblY = exitY - 4;
+                        anchor = 'end';
                     }
-                    // Background rect for legibility
+
+                    // Draw the orthogonal line
+                    svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.6" stroke-dasharray="6,4" marker-end="url(#arwc${bi % 5})" opacity="0.6"/>`;
+
+                    // Condition label with white background
+                    const brText = escSvg(br.label.length > 22 ? br.label.substring(0, 20) + '..' : br.label);
                     const textW = brText.length * 4.5 + 10;
                     const rectX = anchor === 'end' ? lblX - textW : anchor === 'start' ? lblX - 2 : lblX - textW / 2;
-                    svg += `<rect x="${rectX}" y="${lblY - 8}" width="${textW}" height="11" rx="3" fill="#fff" opacity="0.85"/>`;
+                    svg += `<rect x="${rectX}" y="${lblY - 8}" width="${textW}" height="11" rx="3" fill="#fff" opacity="0.9"/>`;
                     svg += `<text x="${lblX}" y="${lblY}" text-anchor="${anchor}" font-size="7" fill="${color}" font-weight="600">${brText}</text>`;
                 });
             });
@@ -5774,8 +5771,9 @@
                 const marker = isBad ? 'url(#sarw-bad)' : 'url(#sarw)';
                 let pathD;
                 if (isCross && Math.abs(y1 - y2) > 10) {
+                    // Orthogonal: horizontal to midpoint, vertical to target row, horizontal to target
                     const mx = (x1 + x2) / 2;
-                    pathD = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
+                    pathD = `M ${x1} ${y1} L ${mx} ${y1} L ${mx} ${y2} L ${x2} ${y2}`;
                 } else {
                     pathD = `M ${x1} ${y1} L ${x2} ${y2}`;
                 }
@@ -5911,8 +5909,11 @@
                 svg += `</g>`;
             });
 
-            // ── Decision branch connecting lines (swimlane) ──
+            // ── Decision branch connecting lines (swimlane — orthogonal 90° routing) ──
             const SL_DIA_HW = 60, SL_DIA_HH = 38;
+            const SL_TOP_CHANNEL = TOP_PAD - 10;  // routing channel above lanes
+            const SL_BOT_CHANNEL = laneY - 5;     // routing channel below lanes
+
             allSteps.forEach((s, i) => {
                 if (!s.isDecision || !s.branches || s.branches.length === 0) return;
                 const pos = nodePos[i];
@@ -5929,53 +5930,50 @@
                     const tp = nodePos[targetIdx];
                     if (!tp) return;
                     const isTargetDec = allSteps[targetIdx].isDecision && (allSteps[targetIdx].branches || []).length > 0;
-
-                    // In swimlane: flow goes left-to-right, each step is a column
                     const goesBack = targetIdx < i;
-                    let exitX, exitY, entryX, entryY;
-
-                    if (goesBack) {
-                        // Loop-back: exit top of diamond, route above lanes, enter target from top
-                        exitX = cx;
-                        exitY = cy - SL_DIA_HH;
-                        entryX = tp.cx;
-                        entryY = isTargetDec ? tp.cy - SL_DIA_HH : tp.y;
-                    } else {
-                        // Forward: exit right of diamond, enter target from left
-                        exitX = cx + SL_DIA_HW;
-                        exitY = cy + (bi - (brCount - 1) / 2) * 8;
-                        entryX = isTargetDec ? tp.cx - SL_DIA_HW : tp.x;
-                        entryY = isTargetDec ? tp.cy : tp.cy;
-                    }
+                    const chOff = (bi + 1) * 8;
 
                     let pathD;
-                    if (goesBack) {
-                        // Route above all lanes
-                        const topY = TOP_PAD - 15 - bi * 12;
-                        pathD = `M ${exitX} ${exitY} C ${exitX} ${topY}, ${entryX} ${topY}, ${entryX} ${entryY}`;
-                    } else {
-                        // Forward smooth curve
-                        const midX = (exitX + entryX) / 2;
-                        const offsetY = (bi - (brCount - 1) / 2) * 18;
-                        pathD = `M ${exitX} ${exitY} C ${midX} ${exitY + offsetY}, ${midX} ${entryY + offsetY}, ${entryX} ${entryY}`;
-                    }
-
-                    svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.8" stroke-dasharray="6,4" marker-end="url(#sarwc${bi % 5})" opacity="0.5" class="sl-arrow"/>`;
-
-                    // Condition label near exit
-                    const brText = escSvg(br.label.length > 18 ? br.label.substring(0, 16) + '..' : br.label);
                     let lblX, lblY, anchor;
+
                     if (goesBack) {
-                        lblX = exitX + 6;
-                        lblY = exitY - 6 - bi * 10;
-                        anchor = 'start';
+                        // LOOP-BACK: exit top → up to channel → left to target col → down into target
+                        const exitX = cx;
+                        const exitY = cy - SL_DIA_HH;
+                        const channelY = SL_TOP_CHANNEL - chOff;
+                        const entryX = tp.cx;
+                        const entryY = isTargetDec ? tp.cy - SL_DIA_HH : tp.y;
+                        pathD = `M ${exitX} ${exitY} L ${exitX} ${channelY} L ${entryX} ${channelY} L ${entryX} ${entryY}`;
+                        lblX = Math.min(exitX, entryX) + Math.abs(entryX - exitX) / 2;
+                        lblY = channelY - 3;
+                        anchor = 'middle';
+
                     } else {
-                        lblX = exitX + 8;
-                        lblY = exitY - 4 + bi * 11;
+                        // FORWARD: exit right → right to midpoint → vertical to target row → right to target
+                        const exitX = cx + SL_DIA_HW;
+                        const exitY = cy + (bi - (brCount - 1) / 2) * 6;
+                        const entryX = isTargetDec ? tp.cx - SL_DIA_HW : tp.x;
+                        const entryY = isTargetDec ? tp.cy : tp.cy;
+
+                        if (Math.abs(exitY - entryY) < 5) {
+                            // Same lane — straight horizontal
+                            pathD = `M ${exitX} ${exitY} L ${entryX} ${entryY}`;
+                        } else {
+                            // Cross-lane: right-angle jog
+                            const midX = exitX + (entryX - exitX) * 0.35 + chOff;
+                            pathD = `M ${exitX} ${exitY} L ${midX} ${exitY} L ${midX} ${entryY} L ${entryX} ${entryY}`;
+                        }
+                        lblX = exitX + 6;
+                        lblY = exitY - 4;
                         anchor = 'start';
                     }
+
+                    svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.6" stroke-dasharray="6,4" marker-end="url(#sarwc${bi % 5})" opacity="0.55"/>`;
+
+                    // Condition label with white background
+                    const brText = escSvg(br.label.length > 20 ? br.label.substring(0, 18) + '..' : br.label);
                     const textW = brText.length * 4.2 + 8;
-                    const rectX = lblX - 2;
+                    const rectX = anchor === 'middle' ? lblX - textW / 2 : anchor === 'end' ? lblX - textW : lblX - 2;
                     svg += `<rect x="${rectX}" y="${lblY - 8}" width="${textW}" height="11" rx="3" fill="#fff" opacity="0.85"/>`;
                     svg += `<text x="${lblX}" y="${lblY}" text-anchor="${anchor}" font-size="6.5" fill="${color}" font-weight="600">${brText}</text>`;
                 });
