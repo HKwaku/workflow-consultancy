@@ -5188,7 +5188,6 @@
             const TERM_H = 34;
             const TERM_RX = 17;
             const AGENT_BADGE_R = 10;
-            const ROUTE_MARGIN = 30;
 
             const deptColors = {
                 'Sales': { bg: '#dbeafe', stroke: '#3b82f6' },
@@ -5255,7 +5254,9 @@
 
             // ── Grid layout: serpentine rows ──
             const colW = NODE_W + NODE_GAP_X;
-            const rowH = NODE_H + NODE_GAP_Y + 50;
+            const maxBranches = Math.max(0, ...allSteps.filter(s => s.isDecision).map(s => (s.branches || []).length));
+            const branchSpace = maxBranches > 0 ? maxBranches * 12 + 30 : 0;
+            const rowH = NODE_H + NODE_GAP_Y + 30 + branchSpace;
             const nodePos = [];
             const numRows = Math.ceil(allSteps.length / COLS);
 
@@ -5270,7 +5271,7 @@
 
             // SVG dimensions
             const contentW = PAD_L + COLS * colW + PAD_L;
-            const contentH = PAD_T + numRows * rowH + ROUTE_MARGIN * 2 + 60;
+            const contentH = PAD_T + numRows * rowH + 60;
             const totalW = Math.max(contentW, 700);
             const totalH = contentH;
 
@@ -5332,6 +5333,21 @@
                 drawSeqArrow(i, i + 1);
             }
 
+            // ── Build incoming-route map for target badges ──
+            const branchColors = ['#7c3aed', '#2563eb', '#059669', '#d97706', '#dc2626'];
+            const incomingRoutes = {};
+            allSteps.forEach((s, i) => {
+                if (!s.isDecision || s.branches.length === 0) return;
+                s.branches.forEach((br, bi) => {
+                    const targetMatch = (br.target || '').match(/(\d+)/);
+                    const targetIdx = targetMatch ? parseInt(targetMatch[1]) - 1 : -1;
+                    if (targetIdx >= 0 && targetIdx < allSteps.length) {
+                        if (!incomingRoutes[targetIdx]) incomingRoutes[targetIdx] = [];
+                        incomingRoutes[targetIdx].push({ fromStep: i + 1, color: branchColors[bi % branchColors.length], label: br.label });
+                    }
+                });
+            });
+
             // ── Draw nodes (static, no animation) ──
             allSteps.forEach((s, i) => {
                 const pos = nodePos[i];
@@ -5353,6 +5369,16 @@
                 // Department label
                 svg += `<text x="${pos.x + NODE_W - 6}" y="${pos.y + 12}" text-anchor="end" font-size="7" fill="${stroke}" opacity="0.7">${escSvg(s.department.length > 14 ? s.department.substring(0, 12) + '..' : s.department)}</text>`;
 
+                // Incoming route badges (top-left, stacked)
+                const incoming = incomingRoutes[i] || [];
+                incoming.forEach((inc, ii) => {
+                    const bx = pos.x - 3 + ii * 16;
+                    const by = pos.y - 6;
+                    svg += `<circle cx="${bx}" cy="${by}" r="7" fill="${inc.color}" stroke="#fff" stroke-width="1.5"/>`;
+                    svg += `<text x="${bx}" y="${by + 3}" text-anchor="middle" font-size="6" fill="#fff" font-weight="700">${inc.fromStep}</text>`;
+                    svg += `<title>From Step ${inc.fromStep}: ${escSvg(inc.label)}</title>`;
+                });
+
                 // Name (2 lines max)
                 const words = s.name.split(/\s+/);
                 const lines = []; let cur = '';
@@ -5372,68 +5398,29 @@
                     svg += `<text x="${bx}" y="${by + 4}" text-anchor="middle" font-size="9" fill="#fff" font-weight="700">${s.auto.badge}</text>`;
                 }
 
-                // Decision diamond below node
+                // Decision: diamond + compact branch labels below
                 if (s.isDecision && s.branches.length > 0) {
                     const dx = pos.x + NODE_W / 2;
                     const dy = pos.y + NODE_H + 14;
-                    const dd = 12;
+                    const dd = 10;
                     svg += `<polygon points="${dx},${dy - dd} ${dx + dd},${dy} ${dx},${dy + dd} ${dx - dd},${dy}" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>`;
-                    svg += `<text x="${dx}" y="${dy + 4}" text-anchor="middle" font-size="8" font-weight="700" fill="#7c3aed">?</text>`;
+                    svg += `<text x="${dx}" y="${dy + 3}" text-anchor="middle" font-size="7" font-weight="700" fill="#7c3aed">?</text>`;
+
+                    // Compact branch labels stacked below diamond
+                    s.branches.forEach((br, bi) => {
+                        const color = branchColors[bi % branchColors.length];
+                        const targetMatch = (br.target || '').match(/(\d+)/);
+                        const targetIdx = targetMatch ? parseInt(targetMatch[1]) - 1 : -1;
+                        const targetLabel = targetIdx >= 0 ? `→ Step ${targetIdx + 1}` : `→ ${br.target || 'End'}`;
+                        const brText = escSvg(br.label.length > 14 ? br.label.substring(0, 12) + '..' : br.label);
+                        const ly = dy + dd + 8 + bi * 12;
+
+                        svg += `<circle cx="${dx - NODE_W / 2 + 6}" cy="${ly - 2}" r="4" fill="${color}"/>`;
+                        svg += `<text x="${dx - NODE_W / 2 + 14}" y="${ly + 1}" font-size="7" fill="${color}" font-weight="600">${brText} ${targetLabel}</text>`;
+                    });
                 }
 
                 svg += `</g>`;
-            });
-
-            // ── Draw decision branch routes ──
-            const branchColors = ['#7c3aed', '#2563eb', '#059669', '#d97706', '#dc2626'];
-            allSteps.forEach((s, i) => {
-                if (!s.isDecision || s.branches.length === 0) return;
-                const pos = nodePos[i];
-                const dx = pos.x + NODE_W / 2;
-                const dy = pos.y + NODE_H + 26;
-
-                s.branches.forEach((br, bi) => {
-                    const color = branchColors[bi % branchColors.length];
-                    const targetMatch = (br.target || '').match(/(\d+)/);
-                    const targetIdx = targetMatch ? parseInt(targetMatch[1]) - 1 : -1;
-
-                    if (targetIdx >= 0 && targetIdx < allSteps.length && nodePos[targetIdx]) {
-                        const tp = nodePos[targetIdx];
-                        const isLoopBack = targetIdx <= i;
-                        const offset = (bi + 1) * 18;
-
-                        let pathD;
-                        if (isLoopBack) {
-                            const loopY = Math.max(pos.y + NODE_H + 40 + offset, tp.y + NODE_H + 40 + offset);
-                            const clipY = Math.min(loopY, totalH - 20);
-                            pathD = `M ${dx} ${dy} C ${dx} ${clipY}, ${tp.cx} ${clipY}, ${tp.cx} ${tp.y + NODE_H}`;
-                        } else if (pos.row === tp.row) {
-                            const curveY = pos.y + NODE_H + 30 + offset;
-                            const enterSide = tp.col > pos.col ? tp.x : tp.x + NODE_W;
-                            pathD = `M ${dx} ${dy} C ${dx} ${curveY}, ${enterSide} ${curveY}, ${enterSide} ${tp.cy}`;
-                        } else {
-                            const midY = (pos.y + NODE_H + tp.y) / 2 + offset;
-                            pathD = `M ${dx} ${dy} C ${dx} ${midY}, ${tp.cx} ${midY}, ${tp.cx} ${tp.y}`;
-                        }
-
-                        svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="6,3" class="flow-arrow" marker-end="url(#arwc${bi % 5})" opacity="0.65"/>`;
-                        svg += `<circle class="flow-particle" style="offset-path:path('${pathD}');animation-duration:3s;fill:${color};"/>`;
-
-                        // Label pill at midpoint
-                        const labelText = escSvg(br.label.length > 18 ? br.label.substring(0, 16) + '..' : br.label);
-                        const pillW = Math.min(labelText.length * 5.5 + 32, 130);
-                        const labelX = (dx + tp.cx) / 2 - pillW / 2;
-                        const labelY = isLoopBack
-                            ? Math.min(Math.max(pos.y, tp.y) + NODE_H + 40 + offset, totalH - 20) - 2
-                            : (pos.y + NODE_H + tp.y) / 2 + offset - 2;
-                        svg += `<rect x="${labelX}" y="${labelY - 6}" width="${pillW}" height="14" rx="7" fill="white" stroke="${color}" stroke-width="1" opacity="0.9"/>`;
-                        svg += `<text x="${labelX + pillW / 2}" y="${labelY + 5}" text-anchor="middle" font-size="7" fill="${color}" font-weight="600">${labelText} → ${targetIdx + 1}</text>`;
-                        svg += `<circle cx="${dx}" cy="${dy}" r="3" fill="${color}" opacity="0.7"/>`;
-                    } else {
-                        const bLabelY = dy + 8 + bi * 14;
-                        svg += `<text x="${dx}" y="${bLabelY}" text-anchor="middle" font-size="7" fill="#7c3aed" font-weight="500">${escSvg(br.label)} → ${br.target || 'End'}</text>`;
-                    }
-                });
             });
 
             // ── Legend ──
@@ -5586,7 +5573,10 @@
 
             deptOrder.forEach(dept => {
                 const dc = getDC(dept);
-                const laneH = NODE_H + LANE_PAD_Y * 2;
+                const deptSteps = deptMap[dept] || [];
+                const maxBrInLane = Math.max(0, ...deptSteps.map(s => s.isDecision ? (s.branches || []).length : 0));
+                const extraForBranches = maxBrInLane > 0 ? maxBrInLane * 11 + 30 : 0;
+                const laneH = NODE_H + LANE_PAD_Y * 2 + extraForBranches;
                 lanes.push({ dept, y: laneY, h: laneH, bg: dc.bg, stroke: dc.stroke });
                 deptMap[dept].forEach(s => {
                     const nx = START_X + s.idx * colW;
@@ -5613,11 +5603,8 @@
             };
 
             const totalW = endPos.x + TERM_W + 30;
-            const hasAnyDecisions = allSteps.some(s => s.isDecision && s.branches.length > 0);
-            const maxBr = Math.max(0, ...allSteps.filter(s => s.isDecision).map(s => (s.branches || []).length));
-            const routeSpace = hasAnyDecisions ? maxBr * 24 + 40 : 0;
             const autoCount = allSteps.filter(s => s.auto).length;
-            const totalH = laneY + (autoCount > 0 ? 70 : 50) + routeSpace;
+            const totalH = laneY + (autoCount > 0 ? 70 : 50);
 
             let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${totalH}" width="${totalW}" height="${totalH}" style="font-family:'Work Sans',Arial,sans-serif;">`;
             svg += `<rect x="0" y="0" width="${totalW}" height="${totalH}" fill="#ffffff" rx="8"/>`;
@@ -5693,6 +5680,21 @@
             svg += `<rect x="${endPos.x}" y="${endPos.y}" width="${TERM_W}" height="${TERM_H}" rx="${TERM_RX}" fill="#d1fae5" stroke="#059669" stroke-width="2" filter="url(#sshadow)"/>`;
             svg += `<text x="${endPos.cx}" y="${endPos.cy + 4}" text-anchor="middle" font-size="9" font-weight="600" fill="#064e3b">${escSvg(endLabel.length > 16 ? endLabel.substring(0, 14) + '..' : endLabel)}</text>`;
 
+            // Build incoming route map for target badges
+            const slBranchColors = ['#7c3aed', '#2563eb', '#059669', '#d97706', '#dc2626'];
+            const slIncoming = {};
+            allSteps.forEach((s, i) => {
+                if (!s.isDecision || s.branches.length === 0) return;
+                s.branches.forEach((br, bi) => {
+                    const targetMatch = (br.target || '').match(/(\d+)/);
+                    const targetIdx = targetMatch ? parseInt(targetMatch[1]) - 1 : -1;
+                    if (targetIdx >= 0 && targetIdx < allSteps.length) {
+                        if (!slIncoming[targetIdx]) slIncoming[targetIdx] = [];
+                        slIncoming[targetIdx].push({ fromStep: i + 1, color: slBranchColors[bi % slBranchColors.length], label: br.label });
+                    }
+                });
+            });
+
             // Step nodes (static, no animation)
             allSteps.forEach((s, i) => {
                 const pos = nodePos[i];
@@ -5710,6 +5712,16 @@
                 const badgeBg = s.isBottleneck ? '#ef4444' : s.isApproval ? '#d97706' : '#64748b';
                 svg += `<circle cx="${pos.x + 14}" cy="${pos.y + 14}" r="10" fill="${badgeBg}" opacity="0.15"/>`;
                 svg += `<text x="${pos.x + 14}" y="${pos.y + 18}" text-anchor="middle" font-size="9" font-weight="700" fill="${badgeBg}">${i + 1}</text>`;
+
+                // Incoming route badges (top-left, stacked)
+                const incoming = slIncoming[i] || [];
+                incoming.forEach((inc, ii) => {
+                    const bx = pos.x - 3 + ii * 15;
+                    const by = pos.y - 5;
+                    svg += `<circle cx="${bx}" cy="${by}" r="6" fill="${inc.color}" stroke="#fff" stroke-width="1.5"/>`;
+                    svg += `<text x="${bx}" y="${by + 3}" text-anchor="middle" font-size="5.5" fill="#fff" font-weight="700">${inc.fromStep}</text>`;
+                    svg += `<title>From Step ${inc.fromStep}: ${escSvg(inc.label)}</title>`;
+                });
 
                 // Name (2 lines)
                 const words = s.name.split(/\s+/);
@@ -5730,59 +5742,28 @@
                     svg += `<text x="${bx}" y="${by + 3}" text-anchor="middle" font-size="8" fill="#fff" font-weight="700">${s.auto.badge}</text>`;
                 }
 
-                // Decision diamond
+                // Decision: diamond + compact branch labels below
                 if (s.isDecision && s.branches.length > 0) {
                     const dx = pos.x + NODE_W / 2;
                     const dy = pos.y + NODE_H + 12;
-                    const dd = 12;
+                    const dd = 10;
                     svg += `<polygon points="${dx},${dy - dd} ${dx + dd},${dy} ${dx},${dy + dd} ${dx - dd},${dy}" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>`;
-                    svg += `<text x="${dx}" y="${dy + 4}" text-anchor="middle" font-size="8" font-weight="700" fill="#7c3aed">?</text>`;
+                    svg += `<text x="${dx}" y="${dy + 3}" text-anchor="middle" font-size="7" font-weight="700" fill="#7c3aed">?</text>`;
+
+                    // Compact branch labels stacked below diamond
+                    s.branches.forEach((br, bi) => {
+                        const color = slBranchColors[bi % slBranchColors.length];
+                        const targetMatch = (br.target || '').match(/(\d+)/);
+                        const targetIdx = targetMatch ? parseInt(targetMatch[1]) - 1 : -1;
+                        const targetLabel = targetIdx >= 0 ? `→ Step ${targetIdx + 1}` : `→ ${br.target || 'End'}`;
+                        const brText = escSvg(br.label.length > 12 ? br.label.substring(0, 10) + '..' : br.label);
+                        const ly = dy + dd + 7 + bi * 11;
+
+                        svg += `<circle cx="${pos.x + 4}" cy="${ly - 2}" r="3.5" fill="${color}"/>`;
+                        svg += `<text x="${pos.x + 10}" y="${ly + 1}" font-size="6.5" fill="${color}" font-weight="600">${brText} ${targetLabel}</text>`;
+                    });
                 }
                 svg += `</g>`;
-            });
-
-            // Decision branch routes
-            const branchColors = ['#7c3aed', '#2563eb', '#059669', '#d97706', '#dc2626'];
-            allSteps.forEach((s, i) => {
-                if (!s.isDecision || s.branches.length === 0) return;
-                const pos = nodePos[i];
-                const dx = pos.x + NODE_W / 2;
-                const dy = pos.y + NODE_H + 24;
-
-                s.branches.forEach((br, bi) => {
-                    const color = branchColors[bi % branchColors.length];
-                    const targetMatch = (br.target || '').match(/(\d+)/);
-                    const targetIdx = targetMatch ? parseInt(targetMatch[1]) - 1 : -1;
-
-                    if (targetIdx >= 0 && targetIdx < allSteps.length && nodePos[targetIdx]) {
-                        const tp = nodePos[targetIdx];
-                        const isLoopBack = targetIdx <= i;
-                        const offset = (bi + 1) * 22;
-                        let pathD;
-
-                        if (isLoopBack) {
-                            const belowY = laneY + offset + 10;
-                            pathD = `M ${dx} ${dy} C ${dx} ${belowY}, ${tp.cx} ${belowY}, ${tp.cx} ${tp.y + NODE_H}`;
-                        } else {
-                            const curveY = dy + offset + 6;
-                            pathD = `M ${dx} ${dy} C ${dx} ${curveY}, ${tp.x - 30} ${curveY}, ${tp.x} ${tp.cy}`;
-                        }
-                        svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="6,3" class="sl-arrow" marker-end="url(#sarwc${bi % 5})" opacity="0.65"/>`;
-                        svg += `<circle class="sl-particle" style="offset-path:path('${pathD}');animation-duration:3s;fill:${color};"/>`;
-
-                        // Label pill
-                        const labelText = escSvg(br.label.length > 18 ? br.label.substring(0, 16) + '..' : br.label);
-                        const pillW = Math.min(labelText.length * 5.5 + 30, 130);
-                        const labelX = (dx + tp.cx) / 2 - pillW / 2;
-                        const labelY = isLoopBack ? laneY + offset + 10 - 2 : dy + offset + 6 - 2;
-                        svg += `<rect x="${labelX}" y="${labelY - 6}" width="${pillW}" height="14" rx="7" fill="white" stroke="${color}" stroke-width="1" opacity="0.9"/>`;
-                        svg += `<text x="${labelX + pillW / 2}" y="${labelY + 5}" text-anchor="middle" font-size="7" fill="${color}" font-weight="600">${labelText} → ${targetIdx + 1}</text>`;
-                        svg += `<circle cx="${dx}" cy="${dy}" r="3" fill="${color}" opacity="0.7"/>`;
-                    } else {
-                        const bLabelY = dy + 8 + bi * 14;
-                        svg += `<text x="${dx}" y="${bLabelY}" text-anchor="middle" font-size="7" fill="#7c3aed" font-weight="500">${escSvg(br.label)} → ${br.target || 'End'}</text>`;
-                    }
-                });
             });
 
             // Legend
