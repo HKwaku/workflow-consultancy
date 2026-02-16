@@ -1,6 +1,6 @@
 // api/team.js
 // Consolidated endpoint for team diagnostics
-// Routes by query param ?action=create|submit|results
+// Routes by query param ?action=create|submit|results|analyze
 // Combines former create-team-diagnostic.js, submit-team-response.js, get-team-results.js
 
 const crypto = require('crypto');
@@ -19,8 +19,9 @@ module.exports = async function handler(req, res) {
     case 'create':  return createTeam(req, res);
     case 'submit':  return submitResponse(req, res);
     case 'results': return getResults(req, res);
+    case 'analyze': return analyzeGaps(req, res);
     default:
-      return res.status(400).json({ error: 'Missing or invalid action. Use ?action=create, ?action=submit, or ?action=results' });
+      return res.status(400).json({ error: 'Missing or invalid action. Use ?action=create, ?action=submit, ?action=results, or ?action=analyze' });
   }
 };
 
@@ -348,4 +349,191 @@ async function getResults(req, res) {
     console.error('Get team results error:', error);
     return res.status(500).json({ error: 'Failed to retrieve team results.' });
   }
+}
+
+
+// ── POST ?action=analyze ────────────────────────────────────────
+// AI-powered perception gap analysis using Claude
+async function analyzeGaps(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  try {
+    const { team, responses, aggregation } = req.body;
+
+    if (!responses || responses.length < 2 || !aggregation) {
+      return res.status(400).json({ error: 'Need at least 2 responses and aggregation data.' });
+    }
+
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      return res.status(200).json({
+        success: true,
+        analysisType: 'rule-based',
+        analysis: buildRuleBasedAnalysis(team, responses, aggregation)
+      });
+    }
+
+    // Build the prompt
+    const respondentSummaries = responses.map(r => {
+      const m = r.metrics;
+      const decisionSteps = (r.responseData?.processData?.steps || []).filter(s => s.isDecision);
+      return `- ${r.name} (${r.department}): sees ${m.stepsCount} steps, ${m.elapsedDays} days cycle time, ${m.handoffCount} handoffs, ${m.totalUserHours}h invested, performance="${m.performance}", biggest delay="${m.biggestDelay}", bottleneck="${m.bottleneck}"${decisionSteps.length > 0 ? `, ${decisionSteps.length} decision/routing points` : ''}`;
+    }).join('\n');
+
+    const gapSummaries = (aggregation.perceptionGaps || []).map(g =>
+      `- ${g.metric} (${g.severity}): ${g.detail}\n  Per person: ${g.byPerson.join('; ')}`
+    ).join('\n');
+
+    const issueSummary = (aggregation.issueFrequency || []).map(i =>
+      `- "${i.issue}" reported by ${i.count}/${responses.length} (${i.pct}%)`
+    ).join('\n');
+
+    const prompt = `You are an expert organisational process consultant analysing a TEAM diagnostic where multiple people from different departments described the SAME process. Their differing perspectives reveal hidden inefficiencies, misalignment, and improvement opportunities.
+
+PROCESS: ${team.processName || 'Unknown'}
+COMPANY: ${team.company || 'Unknown'}
+RESPONDENTS: ${responses.length}
+
+INDIVIDUAL PERSPECTIVES:
+${respondentSummaries}
+
+AGGREGATED METRICS:
+- Average cycle time: ${aggregation.elapsedDays.avg} days (range: ${aggregation.elapsedDays.min}–${aggregation.elapsedDays.max})
+- Average steps: ${aggregation.steps.avg} (range: ${aggregation.steps.min}–${aggregation.steps.max})
+- Average handoffs: ${aggregation.handoffs.avg} (range: ${aggregation.handoffs.min}–${aggregation.handoffs.max})
+- Average time invested: ${aggregation.totalHours.avg}h (range: ${aggregation.totalHours.min}–${aggregation.totalHours.max}h)
+- Consensus score: ${aggregation.consensusScore}%
+
+PERCEPTION GAPS DETECTED:
+${gapSummaries || 'None detected'}
+
+ISSUES REPORTED:
+${issueSummary || 'None'}
+
+Analyse these team results and provide your response as JSON with this exact structure:
+{
+  "executiveSummary": "2-3 sentence overview of the team's alignment and the most critical finding",
+  "rootCauses": [
+    {
+      "title": "Short root cause name",
+      "severity": "critical|high|medium",
+      "explanation": "2-3 sentences explaining why this matters",
+      "affectedDepartments": ["dept1", "dept2"],
+      "evidence": "Specific data points from the responses that prove this"
+    }
+  ],
+  "hiddenInefficiencies": [
+    {
+      "title": "What's hidden",
+      "insight": "1-2 sentences. Focus on what the gap REVEALS that no individual would see alone."
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": 1,
+      "action": "Specific, actionable recommendation",
+      "impact": "Expected outcome",
+      "owner": "Which department should lead this",
+      "timeframe": "quick-win|30-day|90-day"
+    }
+  ],
+  "alignmentActions": [
+    "Specific action to get the team aligned on this process"
+  ]
+}
+
+Return ONLY valid JSON, no markdown fences or extra text.`;
+
+    const claudeResp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        temperature: 0.5,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!claudeResp.ok) {
+      console.warn('Claude API error:', claudeResp.status);
+      return res.status(200).json({
+        success: true,
+        analysisType: 'rule-based',
+        analysis: buildRuleBasedAnalysis(team, responses, aggregation)
+      });
+    }
+
+    const claudeData = await claudeResp.json();
+    const text = claudeData.content?.[0]?.text || '';
+
+    let analysis;
+    try {
+      const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+      analysis = JSON.parse(cleaned);
+    } catch (parseErr) {
+      console.warn('Claude JSON parse failed, falling back to rule-based');
+      return res.status(200).json({
+        success: true,
+        analysisType: 'rule-based',
+        analysis: buildRuleBasedAnalysis(team, responses, aggregation)
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      analysisType: 'ai-enhanced',
+      analysis
+    });
+
+  } catch (error) {
+    console.error('Analyze gaps error:', error);
+    return res.status(500).json({ error: 'Analysis failed.' });
+  }
+}
+
+
+function buildRuleBasedAnalysis(team, responses, aggregation) {
+  const gaps = aggregation.perceptionGaps || [];
+  const highGaps = gaps.filter(g => g.severity === 'high');
+  const medGaps = gaps.filter(g => g.severity === 'medium');
+
+  const rootCauses = [];
+  if (highGaps.some(g => g.metric === 'Cycle Time')) {
+    rootCauses.push({ title: 'Cycle time perception mismatch', severity: 'critical', explanation: 'Team members experience vastly different timelines for the same process. This typically indicates hidden rework loops, inconsistent routing, or departmental bottlenecks that are invisible to upstream teams.', affectedDepartments: [...new Set(responses.map(r => r.department).filter(Boolean))], evidence: `Spread of ${aggregation.elapsedDays.spread} days across respondents` });
+  }
+  if (highGaps.some(g => g.metric === 'Process Steps')) {
+    rootCauses.push({ title: 'Process visibility gap', severity: 'high', explanation: 'Different departments see a different number of steps. This means parts of the process are invisible to certain stakeholders, creating blind spots and misaligned expectations.', affectedDepartments: [...new Set(responses.map(r => r.department).filter(Boolean))], evidence: `Step counts range from ${aggregation.steps.min} to ${aggregation.steps.max}` });
+  }
+  if (highGaps.some(g => g.metric === 'Biggest Bottleneck')) {
+    rootCauses.push({ title: 'Distributed bottleneck problem', severity: 'high', explanation: 'Each department identifies a different bottleneck. This means the process has multiple constraint points and no single fix will resolve the issue — a coordinated approach is needed.', affectedDepartments: [...new Set(responses.map(r => r.department).filter(Boolean))], evidence: 'All respondents named different bottlenecks' });
+  }
+  if (medGaps.some(g => g.metric === 'Performance Assessment')) {
+    rootCauses.push({ title: 'Inconsistent performance standards', severity: 'medium', explanation: 'Team disagrees on whether the process performs well. This suggests no shared KPIs or service level agreements exist.', affectedDepartments: [...new Set(responses.map(r => r.department).filter(Boolean))], evidence: 'Mixed performance ratings across respondents' });
+  }
+
+  const recommendations = [
+    { priority: 1, action: 'Run a cross-departmental process mapping workshop to establish a single source of truth', impact: 'Eliminate visibility gaps and align on actual steps, routing, and ownership', owner: 'Process Owner / Operations', timeframe: 'quick-win' },
+    { priority: 2, action: 'Define shared KPIs and SLAs for each handoff point in the process', impact: 'Create accountability and enable measurement of improvement', owner: 'Operations + Department Heads', timeframe: '30-day' },
+    { priority: 3, action: 'Implement a process tracking tool that provides real-time visibility across all departments', impact: 'Reduce information gaps and enable data-driven optimisation', owner: 'IT / Operations', timeframe: '90-day' }
+  ];
+
+  return {
+    executiveSummary: `The team shows ${aggregation.consensusScore >= 50 ? 'partial' : 'significant'} misalignment on "${team.processName}". ${highGaps.length} high-severity perception gaps were identified across ${responses.length} respondents, indicating that each department experiences a fundamentally different process.`,
+    rootCauses,
+    hiddenInefficiencies: [
+      { title: 'Shadow processes', insight: 'When team members see different step counts, it often means unofficial workarounds and shortcuts have become normalised but undocumented.' },
+      { title: 'Information asymmetry', insight: 'Different bottleneck perceptions suggest teams are working around problems locally rather than escalating them — masking systemic issues.' }
+    ],
+    recommendations,
+    alignmentActions: [
+      'Schedule a 90-minute cross-departmental session to review these results together',
+      'Have each respondent walk through their version of the process on a shared whiteboard',
+      'Agree on a single process definition with numbered steps and clear ownership'
+    ]
+  };
 }

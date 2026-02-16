@@ -98,6 +98,50 @@
         .comp-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
         .comp-table tr:last-child td { border-bottom: none; }
 
+        /* AI Analysis section */
+        .ai-analysis { margin-bottom: 32px; }
+        .ai-badge { display: inline-block; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding: 3px 10px; border-radius: 100px; margin-left: 8px; vertical-align: middle; }
+        .ai-badge.ai { background: linear-gradient(135deg, var(--purple), var(--blue)); color: white; }
+        .ai-badge.rule { background: var(--bg-alt); color: var(--text-light); }
+        .ai-summary { font-size: 0.95rem; line-height: 1.7; color: var(--text); background: linear-gradient(135deg, #faf5ff, #f0f9ff); padding: 20px 24px; border-radius: var(--radius-md); border-left: 4px solid var(--purple); margin-bottom: 24px; }
+        .root-cause { background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius-md); padding: 18px 20px; margin-bottom: 12px; }
+        .root-cause.critical { border-left: 4px solid var(--red); }
+        .root-cause.high { border-left: 4px solid var(--amber); }
+        .root-cause.medium { border-left: 4px solid var(--blue); }
+        .root-cause-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .root-cause-title { font-weight: 600; font-size: 0.95rem; }
+        .root-cause-sev { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; padding: 2px 8px; border-radius: 100px; }
+        .root-cause-sev.critical { background: var(--red); color: white; }
+        .root-cause-sev.high { background: var(--amber); color: white; }
+        .root-cause-sev.medium { background: var(--blue); color: white; }
+        .root-cause p { font-size: 0.88rem; color: var(--text-mid); margin-bottom: 4px; line-height: 1.6; }
+        .root-cause .evidence { font-size: 0.8rem; color: var(--text-light); font-style: italic; }
+        .insight-card { background: linear-gradient(135deg, #fffbeb, #fef3c7); border-radius: var(--radius-sm); padding: 14px 18px; margin-bottom: 10px; }
+        .insight-card strong { display: block; font-size: 0.88rem; color: var(--amber); margin-bottom: 4px; }
+        .insight-card p { font-size: 0.85rem; color: var(--text-mid); margin: 0; line-height: 1.5; }
+        .rec-list { list-style: none; counter-reset: rec; }
+        .rec-item { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+        .rec-item:last-child { border-bottom: none; }
+        .rec-num { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.82rem; flex-shrink: 0; }
+        .rec-body { flex: 1; }
+        .rec-body strong { display: block; font-size: 0.9rem; margin-bottom: 3px; }
+        .rec-body p { font-size: 0.82rem; color: var(--text-mid); margin: 0; }
+        .rec-tags { display: flex; gap: 6px; margin-top: 6px; }
+        .rec-tag { font-size: 0.7rem; padding: 2px 8px; border-radius: 100px; background: var(--bg-alt); color: var(--text-light); }
+        .rec-tag.quick-win { background: #d1fae5; color: #065f46; }
+        .rec-tag.thirty { background: #dbeafe; color: #1e40af; }
+        .rec-tag.ninety { background: #fae8ff; color: #7c3aed; }
+        .alignment-list { list-style: none; }
+        .alignment-list li { padding: 8px 0 8px 24px; position: relative; font-size: 0.88rem; color: var(--text-mid); border-bottom: 1px solid var(--border); }
+        .alignment-list li:last-child { border-bottom: none; }
+        .alignment-list li::before { content: '→'; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+        .ai-loading { text-align: center; padding: 24px; }
+        .ai-loading .dot-pulse { display: inline-flex; gap: 4px; }
+        .ai-loading .dot-pulse span { width: 8px; height: 8px; background: var(--purple); border-radius: 50%; animation: dot-pulse 1.2s ease-in-out infinite; }
+        .ai-loading .dot-pulse span:nth-child(2) { animation-delay: 0.2s; }
+        .ai-loading .dot-pulse span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes dot-pulse { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1.2); } }
+
         .cta-section { background: linear-gradient(135deg, #eff6ff, #f0fdf4); border-radius: var(--radius-md); padding: 32px; text-align: center; margin-top: 8px; }
         .cta-section h3 { font-size: 1.1rem; margin-bottom: 8px; }
         .cta-section p { font-size: 0.9rem; color: var(--text-mid); margin-bottom: 20px; }
@@ -134,6 +178,12 @@
                         <input type="text" id="codeInput" placeholder="ABC123" maxlength="6" required autofocus>
                         <button type="submit">View Results</button>
                     </form>
+                    <div style="margin-top: 24px; padding-top: 20px; border-top: 2px dashed var(--border);">
+                        <button onclick="loadSampleTeamData()" id="sampleBtn" style="padding: 10px 24px; background: var(--purple); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; font-family: inherit; font-weight: 500; font-size: 0.9rem;">
+                            Load Sample Team Data (Complexity 10)
+                        </button>
+                        <p style="font-size: 0.78rem; color: var(--text-light); margin-top: 8px;">Creates a team session with 4 respondents and runs AI analysis</p>
+                    </div>
                 </div>
 
                 <!-- Loading -->
@@ -180,19 +230,233 @@
             'other': 'Other'
         };
 
+        let lastResultsData = null;
+
         function showState(name) {
             ['lookupState', 'loadingState', 'errorState', 'waitingState', 'resultsContent'].forEach(id => {
                 document.getElementById(id).style.display = 'none';
             });
-            document.getElementById(name + 'State' === 'resultsContentState' ? 'resultsContent' : name + 'State').style.display = '';
+            const target = name === 'results' ? 'resultsContent' : name + 'State';
+            document.getElementById(target).style.display = '';
         }
 
         function formatDate(d) { return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
 
+
+        // ═══════════════════════════════════════════════════════════
+        // SAMPLE TEAM DATA — 4 respondents, complexity 10
+        // ═══════════════════════════════════════════════════════════
+        function getTeamSampleResponses() {
+            const base = {
+                processName: 'Enterprise CapEx Procurement',
+                company: 'Meridian Manufacturing Ltd',
+                email: 'demo@workflow.partners'
+            };
+
+            const respondents = [
+                {
+                    name: 'James Okafor',
+                    department: 'Procurement',
+                    metrics: {
+                        elapsedDays: 45, stepsCount: 22, handoffCount: 18, poorHandoffs: 7,
+                        totalUserHours: 32, performance: 'Below expectations',
+                        biggestDelay: 'Vendor qualification & due diligence', bottleneck: 'Legal review queue'
+                    },
+                    issues: ['approval-delay','missing-info','slow-response','external','rework','escalation'],
+                    steps: [
+                        { name: 'Business unit submits CapEx request', dept: 'Engineering', mins: 45 },
+                        { name: 'Procurement reviews requirement spec', dept: 'Procurement', mins: 120 },
+                        { name: 'Budget validation', dept: 'Finance', mins: 60, isDecision: true, branches: [{ label: 'Under £50k', target: 'Step 5' }, { label: '£50k-250k', target: 'Step 4' }, { label: 'Over £250k', target: 'Step 6' }] },
+                        { name: 'Department head approval', dept: 'Engineering', mins: 30 },
+                        { name: 'RFQ preparation & distribution', dept: 'Procurement', mins: 180 },
+                        { name: 'Board-level approval (high value)', dept: 'Executive Board', mins: 15 },
+                        { name: 'Vendor response collection', dept: 'Procurement', mins: 0 },
+                        { name: 'Technical evaluation', dept: 'Engineering', mins: 240 },
+                        { name: 'Commercial evaluation', dept: 'Procurement', mins: 180 },
+                        { name: 'Vendor shortlist decision', dept: 'Procurement', mins: 60, isDecision: true, branches: [{ label: 'Single vendor', target: 'Step 12' }, { label: 'Multiple finalists', target: 'Step 11' }] },
+                        { name: 'Vendor presentations & demos', dept: 'Engineering', mins: 480 },
+                        { name: 'Due diligence & references', dept: 'Procurement', mins: 120 },
+                        { name: 'Contract negotiation', dept: 'Legal', mins: 360 },
+                        { name: 'Legal review', dept: 'Legal', mins: 240, isDecision: true, branches: [{ label: 'Approved', target: 'Step 15' }, { label: 'Revisions needed', target: 'Step 13' }] },
+                        { name: 'Final budget sign-off', dept: 'Finance', mins: 60, isDecision: true, branches: [{ label: 'Within budget', target: 'Step 16' }, { label: 'Over budget', target: 'Step 6' }] },
+                        { name: 'PO generation', dept: 'Procurement', mins: 30 },
+                        { name: 'Vendor onboarding', dept: 'Procurement', mins: 120 },
+                        { name: 'Goods receipt & inspection', dept: 'Engineering', mins: 180 },
+                        { name: 'Quality check', dept: 'Quality', mins: 120, isDecision: true, branches: [{ label: 'Pass', target: 'Step 20' }, { label: 'Fail - return', target: 'Step 18' }, { label: 'Fail - renegotiate', target: 'Step 13' }] },
+                        { name: 'Three-way match', dept: 'Finance', mins: 90 },
+                        { name: 'Payment processing', dept: 'Finance', mins: 30 },
+                        { name: 'Asset registration & close', dept: 'Finance', mins: 60 }
+                    ]
+                },
+                {
+                    name: 'Sarah Chen',
+                    department: 'Finance',
+                    metrics: {
+                        elapsedDays: 62, stepsCount: 16, handoffCount: 12, poorHandoffs: 5,
+                        totalUserHours: 18, performance: 'Needs improvement',
+                        biggestDelay: 'Budget reallocation across cost centres', bottleneck: 'Board approval scheduling'
+                    },
+                    issues: ['approval-delay','missing-info','system-issues','rework','unclear-process'],
+                    steps: [
+                        { name: 'CapEx request submitted in ERP', dept: 'Engineering', mins: 30 },
+                        { name: 'Cost centre validation', dept: 'Finance', mins: 90 },
+                        { name: 'Budget availability check', dept: 'Finance', mins: 60, isDecision: true, branches: [{ label: 'Budget available', target: 'Step 4' }, { label: 'No budget', target: 'Step 14' }] },
+                        { name: 'Approval routing', dept: 'Finance', mins: 30, isDecision: true, branches: [{ label: 'Under £50k - auto', target: 'Step 6' }, { label: '£50k+ - manual', target: 'Step 5' }] },
+                        { name: 'CFO / Board approval', dept: 'Finance', mins: 15 },
+                        { name: 'Procurement sourcing', dept: 'Procurement', mins: 0 },
+                        { name: 'Vendor quotes received', dept: 'Procurement', mins: 0 },
+                        { name: 'Finance evaluates quotes', dept: 'Finance', mins: 120 },
+                        { name: 'Negotiation support', dept: 'Finance', mins: 60 },
+                        { name: 'Contract review (finance terms)', dept: 'Finance', mins: 90 },
+                        { name: 'PO approved in ERP', dept: 'Finance', mins: 15 },
+                        { name: 'Invoice receipt & matching', dept: 'Finance', mins: 120, isDecision: true, branches: [{ label: 'Match OK', target: 'Step 13' }, { label: 'Mismatch', target: 'Step 9' }] },
+                        { name: 'Payment batch processing', dept: 'Finance', mins: 30 },
+                        { name: 'Budget reallocation request', dept: 'Finance', mins: 180 },
+                        { name: 'Asset capitalisation', dept: 'Finance', mins: 60 },
+                        { name: 'Month-end reconciliation', dept: 'Finance', mins: 45 }
+                    ]
+                },
+                {
+                    name: 'David Mensah',
+                    department: 'Engineering',
+                    metrics: {
+                        elapsedDays: 78, stepsCount: 14, handoffCount: 10, poorHandoffs: 8,
+                        totalUserHours: 48, performance: 'Significantly below expectations',
+                        biggestDelay: 'Waiting for procurement to process RFQ', bottleneck: 'Procurement bottleneck'
+                    },
+                    issues: ['approval-delay','slow-response','missing-info','wrong-person','unavailable','rework','unclear-process','escalation'],
+                    steps: [
+                        { name: 'Write technical requirement', dept: 'Engineering', mins: 240 },
+                        { name: 'Submit CapEx form', dept: 'Engineering', mins: 60 },
+                        { name: 'Wait for finance approval', dept: 'Finance', mins: 0 },
+                        { name: 'Get asked for more info', dept: 'Engineering', mins: 120 },
+                        { name: 'Resubmit with corrections', dept: 'Engineering', mins: 90 },
+                        { name: 'Wait for procurement', dept: 'Procurement', mins: 0 },
+                        { name: 'Review vendor quotes', dept: 'Engineering', mins: 360 },
+                        { name: 'Attend vendor demos', dept: 'Engineering', mins: 480 },
+                        { name: 'Write technical evaluation report', dept: 'Engineering', mins: 300 },
+                        { name: 'Wait for legal/contract', dept: 'Legal', mins: 0 },
+                        { name: 'Answer legal queries', dept: 'Engineering', mins: 60 },
+                        { name: 'Receive equipment', dept: 'Engineering', mins: 120 },
+                        { name: 'Test & commission', dept: 'Engineering', mins: 480, isDecision: true, branches: [{ label: 'Works', target: 'Step 14' }, { label: 'Defective', target: 'Step 12' }] },
+                        { name: 'Sign off & handover', dept: 'Engineering', mins: 60 }
+                    ]
+                },
+                {
+                    name: 'Amara Williams',
+                    department: 'Legal',
+                    metrics: {
+                        elapsedDays: 55, stepsCount: 10, handoffCount: 8, poorHandoffs: 4,
+                        totalUserHours: 24, performance: 'Meets expectations',
+                        biggestDelay: 'Vendor T&C negotiation back-and-forth', bottleneck: 'Missing technical specs from Engineering'
+                    },
+                    issues: ['missing-info','slow-response','external','rework'],
+                    steps: [
+                        { name: 'Receive contract review request', dept: 'Procurement', mins: 15 },
+                        { name: 'Risk assessment', dept: 'Legal', mins: 120, isDecision: true, branches: [{ label: 'Low risk', target: 'Step 4' }, { label: 'High risk', target: 'Step 3' }] },
+                        { name: 'Full legal review', dept: 'Legal', mins: 360 },
+                        { name: 'Draft amendments', dept: 'Legal', mins: 180 },
+                        { name: 'Send to vendor', dept: 'Procurement', mins: 15 },
+                        { name: 'Vendor counter-proposals', dept: 'Legal', mins: 0 },
+                        { name: 'Review counter-proposals', dept: 'Legal', mins: 120, isDecision: true, branches: [{ label: 'Accept', target: 'Step 9' }, { label: 'Counter again', target: 'Step 4' }, { label: 'Reject vendor', target: 'Step 10' }] },
+                        { name: 'Final legal sign-off', dept: 'Legal', mins: 30 },
+                        { name: 'Archive executed contract', dept: 'Legal', mins: 15 },
+                        { name: 'Notify procurement — vendor rejected', dept: 'Procurement', mins: 15 }
+                    ]
+                }
+            ];
+
+            return { base, respondents };
+        }
+
+        async function loadSampleTeamData() {
+            const btn = document.getElementById('sampleBtn');
+            btn.disabled = true;
+            btn.textContent = 'Creating team session...';
+            showState('loading');
+            document.querySelector('#loadingState h2').textContent = 'Loading sample team data...';
+
+            try {
+                const sample = getTeamSampleResponses();
+
+                // Step 1: Create team session
+                document.querySelector('#loadingState h2').textContent = 'Creating team session...';
+                const createResp = await fetch('/api/team?action=create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        processName: sample.base.processName,
+                        createdBy: sample.base.email,
+                        company: sample.base.company
+                    })
+                });
+                const createData = await createResp.json();
+                if (!createResp.ok) throw new Error(createData.error || 'Failed to create team');
+                const teamCode = createData.teamCode;
+
+                // Step 2: Submit each respondent
+                for (let i = 0; i < sample.respondents.length; i++) {
+                    const r = sample.respondents[i];
+                    document.querySelector('#loadingState h2').textContent = `Submitting ${r.name}'s response (${i + 1}/${sample.respondents.length})...`;
+
+                    const respBody = {
+                        teamCode,
+                        name: r.name,
+                        department: r.department,
+                        responseData: {
+                            processName: sample.base.processName,
+                            metrics: r.metrics,
+                            issues: r.issues,
+                            processData: {
+                                steps: r.steps
+                            }
+                        }
+                    };
+                    const submitResp = await fetch('/api/team?action=submit', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(respBody)
+                    });
+                    if (!submitResp.ok) {
+                        const err = await submitResp.json();
+                        throw new Error(err.error || `Failed to submit ${r.name}'s response`);
+                    }
+                }
+
+                // Step 3: Load results
+                document.querySelector('#loadingState h2').textContent = 'Aggregating results...';
+                document.getElementById('codeInput').value = teamCode;
+                history.replaceState(null, '', '/team-results?code=' + teamCode);
+
+                const resultsResp = await fetch('/api/team?action=results&code=' + encodeURIComponent(teamCode));
+                const resultsData = await resultsResp.json();
+                if (!resultsResp.ok) throw new Error(resultsData.error || 'Failed to load results');
+
+                renderResults(resultsData);
+
+                // Step 4: Trigger AI analysis
+                triggerAIAnalysis(resultsData);
+
+            } catch (err) {
+                console.error('Sample load error:', err);
+                document.getElementById('errorTitle').textContent = 'Sample Load Failed';
+                document.getElementById('errorMsg').textContent = err.message;
+                showState('error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Load Sample Team Data (Complexity 10)';
+            }
+        }
+
+
+        // ═══════════════════════════════════════════════════════════
+        // LOAD RESULTS
+        // ═══════════════════════════════════════════════════════════
         async function loadResults() {
             const code = document.getElementById('codeInput').value.trim().toUpperCase();
             if (!code) return;
             showState('loading');
+            document.querySelector('#loadingState h2').textContent = 'Aggregating team perspectives...';
             history.replaceState(null, '', '/team-results?code=' + code);
 
             try {
@@ -219,6 +483,7 @@
                 }
 
                 renderResults(data);
+                triggerAIAnalysis(data);
             } catch (err) {
                 console.error(err);
                 document.getElementById('errorTitle').textContent = 'Connection Error';
@@ -227,7 +492,120 @@
             }
         }
 
+
+        // ═══════════════════════════════════════════════════════════
+        // AI ANALYSIS
+        // ═══════════════════════════════════════════════════════════
+        async function triggerAIAnalysis(data) {
+            lastResultsData = data;
+            const container = document.getElementById('aiAnalysisSection');
+            if (!container) return;
+
+            container.innerHTML = `<div class="ai-loading">
+                <div class="dot-pulse"><span></span><span></span><span></span></div>
+                <p style="margin-top: 12px; color: var(--text-mid); font-size: 0.88rem;">Analysing perception gaps with AI...</p>
+            </div>`;
+
+            try {
+                const resp = await fetch('/api/team?action=analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        team: data.team,
+                        responses: data.responses,
+                        aggregation: data.aggregation
+                    })
+                });
+                const result = await resp.json();
+
+                if (!result.success || !result.analysis) {
+                    container.innerHTML = '<p style="color: var(--text-light); font-size: 0.85rem; text-align: center;">Analysis unavailable.</p>';
+                    return;
+                }
+
+                renderAIAnalysis(container, result.analysis, result.analysisType);
+            } catch (err) {
+                console.error('AI analysis error:', err);
+                container.innerHTML = '<p style="color: var(--text-light); font-size: 0.85rem; text-align: center;">Could not load AI analysis.</p>';
+            }
+        }
+
+        function renderAIAnalysis(container, analysis, type) {
+            const badge = type === 'ai-enhanced'
+                ? '<span class="ai-badge ai">AI-Enhanced</span>'
+                : '<span class="ai-badge rule">Rule-Based</span>';
+
+            let html = '';
+
+            // Executive Summary
+            if (analysis.executiveSummary) {
+                html += `<div class="ai-summary">${analysis.executiveSummary}</div>`;
+            }
+
+            // Root Causes
+            if (analysis.rootCauses && analysis.rootCauses.length > 0) {
+                html += `<h4 style="font-size: 0.95rem; font-weight: 600; color: var(--primary); margin-bottom: 12px;">Root Causes Identified</h4>`;
+                analysis.rootCauses.forEach(rc => {
+                    html += `<div class="root-cause ${rc.severity}">
+                        <div class="root-cause-header">
+                            <span class="root-cause-title">${rc.title}</span>
+                            <span class="root-cause-sev ${rc.severity}">${rc.severity}</span>
+                        </div>
+                        <p>${rc.explanation}</p>
+                        ${rc.evidence ? `<p class="evidence">Evidence: ${rc.evidence}</p>` : ''}
+                        ${rc.affectedDepartments ? `<p style="font-size:0.78rem;color:var(--text-light);margin-top:4px;">Departments: ${rc.affectedDepartments.join(', ')}</p>` : ''}
+                    </div>`;
+                });
+            }
+
+            // Hidden Inefficiencies
+            if (analysis.hiddenInefficiencies && analysis.hiddenInefficiencies.length > 0) {
+                html += `<h4 style="font-size: 0.95rem; font-weight: 600; color: var(--amber); margin: 20px 0 12px;">Hidden Inefficiencies</h4>`;
+                analysis.hiddenInefficiencies.forEach(hi => {
+                    html += `<div class="insight-card"><strong>${hi.title}</strong><p>${hi.insight}</p></div>`;
+                });
+            }
+
+            // Recommendations
+            if (analysis.recommendations && analysis.recommendations.length > 0) {
+                html += `<h4 style="font-size: 0.95rem; font-weight: 600; color: var(--primary); margin: 20px 0 12px;">Prioritised Recommendations</h4>
+                <ul class="rec-list">`;
+                analysis.recommendations.forEach(rec => {
+                    const tfClass = rec.timeframe === 'quick-win' ? 'quick-win' : rec.timeframe === '30-day' ? 'thirty' : 'ninety';
+                    html += `<li class="rec-item">
+                        <div class="rec-num">${rec.priority}</div>
+                        <div class="rec-body">
+                            <strong>${rec.action}</strong>
+                            <p>${rec.impact || ''}</p>
+                            <div class="rec-tags">
+                                <span class="rec-tag ${tfClass}">${rec.timeframe}</span>
+                                ${rec.owner ? `<span class="rec-tag">${rec.owner}</span>` : ''}
+                            </div>
+                        </div>
+                    </li>`;
+                });
+                html += `</ul>`;
+            }
+
+            // Alignment Actions
+            if (analysis.alignmentActions && analysis.alignmentActions.length > 0) {
+                html += `<h4 style="font-size: 0.95rem; font-weight: 600; color: var(--accent); margin: 20px 0 12px;">Alignment Actions</h4>
+                <ul class="alignment-list">`;
+                analysis.alignmentActions.forEach(a => {
+                    html += `<li>${a}</li>`;
+                });
+                html += `</ul>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+
+        // ═══════════════════════════════════════════════════════════
+        // RENDER RESULTS
+        // ═══════════════════════════════════════════════════════════
         function renderResults(data) {
+            lastResultsData = data;
             const { team, responses, aggregation } = data;
             const a = aggregation;
 
@@ -292,6 +670,15 @@
                 });
             }
 
+            // AI Analysis placeholder
+            html += `<h3 class="section-title">Deep Analysis <span class="ai-badge ai" style="vertical-align:middle;">AI-Powered</span></h3>
+            <div id="aiAnalysisSection" class="ai-analysis">
+                <div class="ai-loading">
+                    <div class="dot-pulse"><span></span><span></span><span></span></div>
+                    <p style="margin-top: 12px; color: var(--text-mid); font-size: 0.88rem;">Analysing perception gaps...</p>
+                </div>
+            </div>`;
+
             // Issues heatmap
             if (a.issueFrequency.length > 0) {
                 html += `<h3 class="section-title">Issue Frequency</h3>
@@ -351,12 +738,34 @@
             });
         }
 
-        // Init: check URL param
+
+        // ═══════════════════════════════════════════════════════════
+        // COPY TEAM DATA TO CLIPBOARD
+        // ═══════════════════════════════════════════════════════════
+        function copyTeamSampleJSON() {
+            const sample = getTeamSampleResponses();
+            const json = JSON.stringify(sample, null, 2);
+            navigator.clipboard.writeText(json).then(() => {
+                alert('Team sample JSON copied to clipboard! (' + json.length + ' chars)');
+            }).catch(() => {
+                console.log('Team Sample JSON:', json);
+                alert('Logged to console (clipboard blocked).');
+            });
+        }
+
+
+        // ═══════════════════════════════════════════════════════════
+        // INIT
+        // ═══════════════════════════════════════════════════════════
         document.addEventListener('DOMContentLoaded', function() {
-            const code = new URLSearchParams(location.search).get('code');
+            const params = new URLSearchParams(location.search);
+            const code = params.get('code');
             if (code) {
                 document.getElementById('codeInput').value = code;
                 loadResults();
+            }
+            if (params.has('sample')) {
+                loadSampleTeamData();
             }
         });
     </script>
