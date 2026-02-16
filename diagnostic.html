@@ -5287,7 +5287,9 @@
             const totalW = endPos.x + TERM_W + 30;
             const autoCount = allSteps.filter(s => s.auto).length;
             const hasAnyDecisions = allSteps.some(s => s.isDecision && s.branches.length > 0);
-            const totalH = laneY + (autoCount > 0 ? 80 : 50) + (hasAnyDecisions ? 40 : 0);
+            const maxBranches = Math.max(0, ...allSteps.filter(s => s.isDecision).map(s => (s.branches || []).length));
+            const routeSpace = hasAnyDecisions ? maxBranches * 26 + 40 : 0;
+            const totalH = laneY + (autoCount > 0 ? 80 : 50) + routeSpace;
 
             // ── Build SVG ──
             let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${totalH}" width="${totalW}" height="${totalH}" style="font-family: 'Work Sans', Arial, sans-serif;">`;
@@ -5318,6 +5320,11 @@
             svg += `<defs>`;
             svg += `<marker id="arw" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 1 L 10 5 L 0 9 z" fill="#475569"/></marker>`;
             svg += `<marker id="arw-bad" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 1 L 10 5 L 0 9 z" fill="#ef4444"/></marker>`;
+            svg += `<marker id="arw-purple" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 1 L 10 5 L 0 9 z" fill="#7c3aed"/></marker>`;
+            svg += `<marker id="arw-blue" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 1 L 10 5 L 0 9 z" fill="#2563eb"/></marker>`;
+            svg += `<marker id="arw-green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 1 L 10 5 L 0 9 z" fill="#059669"/></marker>`;
+            svg += `<marker id="arw-amber" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 1 L 10 5 L 0 9 z" fill="#d97706"/></marker>`;
+            svg += `<marker id="arw-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 1 L 10 5 L 0 9 z" fill="#dc2626"/></marker>`;
             svg += `<filter id="shadow" x="-4%" y="-4%" width="108%" height="108%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>`;
             svg += `<filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
             svg += `</defs>`;
@@ -5453,18 +5460,69 @@
                     svg += `</g>`;
                 }
 
-                // Decision point diamond + branch labels
+                // Decision point: diamond gateway + branch route arrows
                 if (s.isDecision && s.branches.length > 0) {
                     const dx = pos.x + NODE_W / 2;
-                    const dy = pos.y + NODE_H + 8;
-                    const dd = 10;
-                    svg += `<polygon class="flow-decision" points="${dx},${dy - dd} ${dx + dd},${dy} ${dx},${dy + dd} ${dx - dd},${dy}" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5" style="animation-delay:${animDelay + 0.3}s"/>`;
-                    svg += `<text x="${dx}" y="${dy + 3}" text-anchor="middle" font-size="7" font-weight="700" fill="#7c3aed">?</text>`;
+                    const dy = pos.y + NODE_H + 12;
+                    const dd = 14;
+                    // Diamond gateway
+                    svg += `<polygon class="flow-decision" points="${dx},${dy - dd} ${dx + dd},${dy} ${dx},${dy + dd} ${dx - dd},${dy}" fill="#ede9fe" stroke="#7c3aed" stroke-width="2" style="animation-delay:${animDelay + 0.3}s"/>`;
+                    svg += `<text x="${dx}" y="${dy + 4}" text-anchor="middle" font-size="9" font-weight="700" fill="#7c3aed">?</text>`;
+
+                    // Draw actual route arrows to target steps
+                    const branchColors = ['#7c3aed', '#2563eb', '#059669', '#d97706', '#dc2626'];
+                    const markerIds = ['arw-purple', 'arw-blue', 'arw-green', 'arw-amber', 'arw-red'];
                     s.branches.forEach((br, bi) => {
-                        const bLabelX = dx + (bi === 0 ? -dd - 4 : dd + 4);
-                        const bLabelY = dy + dd + 10 + bi * 11;
-                        const anchor = bi === 0 ? 'end' : 'start';
-                        svg += `<text x="${bLabelX}" y="${bLabelY}" text-anchor="${anchor}" font-size="8" fill="#7c3aed" font-style="italic">${escSvg(br.label)}${br.target ? ' → ' + escSvg(br.target) : ''}</text>`;
+                        const color = branchColors[bi % branchColors.length];
+                        const markerId = markerIds[bi % markerIds.length];
+                        const targetMatch = (br.target || '').match(/(\d+)/);
+                        const targetIdx = targetMatch ? parseInt(targetMatch[1]) - 1 : -1;
+
+                        if (targetIdx >= 0 && targetIdx < allSteps.length && nodePos[targetIdx]) {
+                            const tp = nodePos[targetIdx];
+                            const isLoopBack = targetIdx <= i;
+                            const routeOffset = (bi + 1) * 24;
+
+                            let pathD;
+                            if (isLoopBack) {
+                                // Loop-back: go down from diamond, curve below all lanes, come back up to target bottom
+                                const belowY = laneY + routeOffset + 10;
+                                pathD = `M ${dx} ${dy + dd} C ${dx} ${belowY}, ${tp.cx} ${belowY}, ${tp.cx} ${tp.y + NODE_H}`;
+                                svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="6,3" class="flow-arrow" marker-end="url(#${markerId})" opacity="0.75" style="animation-delay:${animDelay + bi * 0.2}s"/>`;
+                                svg += `<circle class="flow-particle" style="offset-path:path('${pathD}');animation-delay:${animDelay + bi * 0.5 + 1}s;animation-duration:3s;fill:${color};"/>`;
+                            } else {
+                                // Forward: curve down from diamond and into target left side
+                                const curveY = dy + dd + routeOffset + 6;
+                                const enterX = tp.x;
+                                const enterY = tp.cy;
+                                pathD = `M ${dx} ${dy + dd} C ${dx} ${curveY}, ${enterX - 40} ${curveY}, ${enterX} ${enterY}`;
+                                svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="6,3" class="flow-arrow" marker-end="url(#${markerId})" opacity="0.75" style="animation-delay:${animDelay + bi * 0.2}s"/>`;
+                                svg += `<circle class="flow-particle" style="offset-path:path('${pathD}');animation-delay:${animDelay + bi * 0.5 + 1}s;animation-duration:2.5s;fill:${color};"/>`;
+                            }
+
+                            // Route label pill
+                            const labelText = escSvg(br.label.length > 20 ? br.label.substring(0, 18) + '..' : br.label);
+                            const pillW = Math.min(labelText.length * 5.8 + 36, 150);
+                            let labelX, labelY;
+                            if (isLoopBack) {
+                                labelX = Math.min(dx, tp.cx) + Math.abs(dx - tp.cx) / 2 - pillW / 2;
+                                labelY = laneY + routeOffset + 10 - 7;
+                            } else {
+                                labelX = dx + (tp.x - dx) * 0.3 - pillW / 2;
+                                labelY = dy + dd + routeOffset + 6 - 7;
+                            }
+                            svg += `<rect x="${labelX}" y="${labelY - 5}" width="${pillW}" height="16" rx="8" fill="${color}" opacity="0.12"/>`;
+                            svg += `<rect x="${labelX}" y="${labelY - 5}" width="${pillW}" height="16" rx="8" fill="none" stroke="${color}" stroke-width="1" opacity="0.4"/>`;
+                            svg += `<text x="${labelX + pillW / 2}" y="${labelY + 6}" text-anchor="middle" font-size="8" fill="${color}" font-weight="600">${labelText} → Step ${targetIdx + 1}</text>`;
+
+                            // Small circle at the departure point of the diamond
+                            svg += `<circle cx="${dx}" cy="${dy + dd}" r="3" fill="${color}" opacity="0.8"/>`;
+                        } else {
+                            // No valid target — show exit label below diamond
+                            const bLabelY = dy + dd + 10 + bi * 16;
+                            svg += `<rect x="${dx - 50}" y="${bLabelY - 10}" width="100" height="14" rx="7" fill="#7c3aed" opacity="0.08"/>`;
+                            svg += `<text x="${dx}" y="${bLabelY}" text-anchor="middle" font-size="8" fill="#7c3aed" font-weight="500">${escSvg(br.label)} → ${br.target || 'End'}</text>`;
+                        }
                     });
                 }
                 svg += `</g>`;
