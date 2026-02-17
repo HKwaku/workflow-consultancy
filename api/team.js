@@ -484,7 +484,7 @@ Return ONLY valid JSON, no markdown fences or extra text.`;
         'content-type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5-20250929',
         max_tokens: 4000,
         temperature: 0.5,
         messages: [{ role: 'user', content: prompt }]

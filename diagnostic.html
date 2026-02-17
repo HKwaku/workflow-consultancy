@@ -5486,68 +5486,61 @@
                     let pathD;
                     let lblX, lblY, anchor;
 
+                    // All routes: exit top or bottom of diamond into gap, THEN go horizontal (never at node level).
+                    const entryX = tp.cx;
+                    const entryY = isTargetDec ? tp.cy - tHH : tp.y;
+
                     if (goesBack) {
-                        // LOOP-BACK: exit left of diamond → left margin channel → up → across to target col → down into target top
-                        const exitX = cx - hw;
-                        const exitY = cy;
-                        const channelX = LEFT_MARGIN + chOff;
-                        const entryX = tp.cx;
-                        const entryY = isTargetDec ? tp.cy - tHH : tp.y;
-                        pathD = `M ${exitX} ${exitY} L ${channelX} ${exitY} L ${channelX} ${entryY - 10} L ${entryX} ${entryY - 10} L ${entryX} ${entryY}`;
+                        // LOOP-BACK: exit TOP of diamond → up into gap above row → left to margin → up → right to target col → down into target top
+                        const exitX = cx + (bi - (brCount - 1) / 2) * 10;
+                        const exitY = cy - hh;
+                        const gapY = pos.y - 12 - chOff;          // gap above current row
+                        const channelX = LEFT_MARGIN + chOff;      // left margin
+                        const targetGapY = entryY - 12 - chOff;    // gap above target row
+                        pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${channelX} ${gapY} L ${channelX} ${targetGapY} L ${entryX} ${targetGapY} L ${entryX} ${entryY}`;
                         lblX = channelX + 3;
-                        lblY = (exitY + entryY) / 2;
+                        lblY = (gapY + targetGapY) / 2;
                         anchor = 'start';
 
                     } else if (sameRow && pos.col !== tp.col) {
-                        // SAME ROW forward: exit right → jog up above the row (through gap) → across → down into target top
-                        const exitX = cx + hw;
-                        const exitY = cy;
-                        const entryX = isTargetDec ? tp.cx : tp.cx;
-                        const entryY = isTargetDec ? tp.cy - tHH : tp.y;
-                        const jogY = pos.y - 12 - chOff;
-                        pathD = `M ${exitX} ${exitY} L ${exitX + 10} ${exitY} L ${exitX + 10} ${jogY} L ${entryX} ${jogY} L ${entryX} ${entryY}`;
-                        lblX = (exitX + 10 + entryX) / 2;
-                        lblY = jogY - 3;
+                        // SAME ROW forward: exit TOP → up into gap → across to target col → down into target top
+                        const exitX = cx + (bi - (brCount - 1) / 2) * 10;
+                        const exitY = cy - hh;
+                        const gapY = pos.y - 12 - chOff;
+                        pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${entryX} ${gapY} L ${entryX} ${entryY}`;
+                        lblX = (exitX + entryX) / 2;
+                        lblY = gapY - 3;
                         anchor = 'middle';
 
                     } else if (tp.row > pos.row) {
-                        // FORWARD to later row: exit bottom of diamond → down through row gap → across to target col → down into target top
+                        // FORWARD to later row: exit BOTTOM → down into gap below row → right margin if needed → down to target gap → left to target → down into target
                         const exitX = cx + (bi - (brCount - 1) / 2) * 12;
                         const exitY = cy + hh;
-                        const entryX = tp.cx;
-                        const entryY = isTargetDec ? tp.cy - tHH : tp.y;
+                        const gapY = pos.y + rowH - (NODE_GAP_Y * 0.35) + chOff;
 
-                        if (tp.row === pos.row + 1) {
-                            // Adjacent row: route through the gap between the two rows
-                            const gapY = pos.y + rowH - (NODE_GAP_Y * 0.3) + chOff;
-                            if (Math.abs(entryX - exitX) < colW * 0.3) {
-                                // Close columns — go straight down, jog horizontal, then down
-                                pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${entryX} ${gapY} L ${entryX} ${entryY}`;
-                            } else {
-                                // Distant columns — use right margin to avoid crossing row nodes
-                                const mX = RIGHT_MARGIN - chOff;
-                                pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${mX} ${gapY} L ${mX} ${entryY - 10} L ${entryX} ${entryY - 10} L ${entryX} ${entryY}`;
-                            }
+                        if (tp.row === pos.row + 1 && Math.abs(entryX - exitX) < colW * 0.5) {
+                            // Adjacent row, nearby column — route through gap: down, across, down
+                            pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${entryX} ${gapY} L ${entryX} ${entryY}`;
                         } else {
-                            // Multiple rows apart: route via right margin to stay clear of all intermediate nodes
+                            // Distant target: down to gap, right to margin, down margin, left to target gap, down into target
                             const mX = RIGHT_MARGIN - chOff;
-                            const exitGapY = pos.y + rowH - (NODE_GAP_Y * 0.3) + chOff;
-                            pathD = `M ${exitX} ${exitY} L ${exitX} ${exitGapY} L ${mX} ${exitGapY} L ${mX} ${entryY - 10} L ${entryX} ${entryY - 10} L ${entryX} ${entryY}`;
+                            const targetGapY = entryY - 12 - chOff;
+                            pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${mX} ${gapY} L ${mX} ${targetGapY} L ${entryX} ${targetGapY} L ${entryX} ${entryY}`;
                         }
                         lblX = exitX + 4;
                         lblY = exitY + 12;
                         anchor = 'start';
 
                     } else {
-                        // Forward but target in earlier row (rare — wrapping): use right margin
-                        const exitX = cx + hw;
-                        const exitY = cy;
-                        const channelX = RIGHT_MARGIN - chOff;
-                        const entryX = tp.cx;
-                        const entryY = isTargetDec ? tp.cy - tHH : tp.y;
-                        pathD = `M ${exitX} ${exitY} L ${channelX} ${exitY} L ${channelX} ${entryY - 10} L ${entryX} ${entryY - 10} L ${entryX} ${entryY}`;
-                        lblX = channelX - 3;
-                        lblY = exitY - 4;
+                        // Forward to earlier row (rare wrapping): exit TOP → up to gap → right margin → down to target gap → left → down
+                        const exitX = cx + (bi - (brCount - 1) / 2) * 10;
+                        const exitY = cy - hh;
+                        const gapY = pos.y - 12 - chOff;
+                        const mX = RIGHT_MARGIN - chOff;
+                        const targetGapY = entryY - 12 - chOff;
+                        pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${mX} ${gapY} L ${mX} ${targetGapY} L ${entryX} ${targetGapY} L ${entryX} ${entryY}`;
+                        lblX = mX - 3;
+                        lblY = (gapY + targetGapY) / 2;
                         anchor = 'end';
                     }
 
