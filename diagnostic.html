@@ -5180,13 +5180,13 @@
             const NODE_W = 180;
             const NODE_H = 68;
             const NODE_GAP_X = 50;
-            const NODE_GAP_Y = 40;
+            const NODE_GAP_Y = 50;
             const COLS = Math.min(6, Math.max(4, Math.ceil(Math.sqrt((process.steps || []).length * 1.5))));
             const PAD_L = 55;
-            const PAD_T = 70;
-            const TERM_W = 100;
-            const TERM_H = 34;
-            const TERM_RX = 17;
+            const PAD_T = 90;
+            const TERM_W = 180;
+            const TERM_H = 50;
+            const TERM_RX = 25;
             const AGENT_BADGE_R = 10;
 
             const deptColors = {
@@ -5254,10 +5254,10 @@
 
             // ── Grid layout: serpentine rows ──
             const DIAMOND_W = 160;
-            const DIAMOND_H = 110;
+            const DIAMOND_H = 100;
             const colW = NODE_W + NODE_GAP_X;
             const hasDecisions = allSteps.some(s => s.isDecision && s.branches.length > 0);
-            const rowH = NODE_H + NODE_GAP_Y + (hasDecisions ? 30 : 20);
+            const rowH = NODE_H + NODE_GAP_Y + (hasDecisions ? 50 : 20);
             const nodePos = [];
             const numRows = Math.ceil(allSteps.length / COLS);
 
@@ -5506,11 +5506,11 @@
                         // SAME ROW forward: exit TOP → up into gap → across to target col → down into target top
                         const exitX = cx + (bi - (brCount - 1) / 2) * 10;
                         const exitY = cy - hh;
-                        const gapY = pos.y - 12 - chOff;
+                        const gapY = pos.y - 14 - bi * 12;
                         pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${entryX} ${gapY} L ${entryX} ${entryY}`;
-                        lblX = (exitX + entryX) / 2;
+                        lblX = exitX + 6;
                         lblY = gapY - 3;
-                        anchor = 'middle';
+                        anchor = 'start';
 
                     } else if (tp.row > pos.row) {
                         // FORWARD to later row: exit BOTTOM → down into gap below row → right margin if needed → down to target gap → left to target → down into target
@@ -5606,14 +5606,14 @@
             const LANE_LABEL_W = 130;
             const NODE_W = 170;
             const NODE_H = 64;
-            const NODE_GAP_X = 45;
-            const LANE_PAD_Y = 22;
+            const NODE_GAP_X = 50;
+            const LANE_PAD_Y = 24;
             const LANE_GAP = 3;
             const START_X = LANE_LABEL_W + 30;
-            const TOP_PAD = 80;
-            const TERM_W = 100;
-            const TERM_H = 32;
-            const TERM_RX = 16;
+            const TOP_PAD = 90;
+            const TERM_W = 160;
+            const TERM_H = 46;
+            const TERM_RX = 23;
 
             const deptColors = {
                 'Sales': { bg: '#dbeafe', stroke: '#3b82f6' },
@@ -5708,7 +5708,7 @@
                 const dc = getDC(dept);
                 const deptSteps = deptMap[dept] || [];
                 const hasDecInLane = deptSteps.some(s => s.isDecision && (s.branches || []).length > 0);
-                const extraForDiamond = hasDecInLane ? 36 : 0;
+                const extraForDiamond = hasDecInLane ? 50 : 0;
                 const laneH = NODE_H + LANE_PAD_Y * 2 + extraForDiamond;
                 lanes.push({ dept, y: laneY, h: laneH, bg: dc.bg, stroke: dc.stroke });
                 deptMap[dept].forEach(s => {
@@ -5806,13 +5806,29 @@
                 drawSLArrow(x1, y1, x2, y2, isCross, c.isBad || false);
             });
 
-            // Start terminal (static)
+            // Start terminal (static, wrapped text)
             svg += `<rect x="${startPos.x}" y="${startPos.y}" width="${TERM_W}" height="${TERM_H}" rx="${TERM_RX}" fill="#d1fae5" stroke="#059669" stroke-width="2" filter="url(#sshadow)"/>`;
-            svg += `<text x="${startPos.cx}" y="${startPos.cy + 4}" text-anchor="middle" font-size="8" font-weight="600" fill="#064e3b">${escSvg(startLabel)}</text>`;
+            {
+                const tLines = slWrapText(startLabel, 22);
+                const tFS = tLines.length > 2 ? 6.5 : 7.5;
+                const tLH = tFS + 2;
+                const tSY = startPos.cy - ((tLines.length - 1) * tLH) / 2 + tFS / 2;
+                tLines.forEach((line, li) => {
+                    svg += `<text x="${startPos.cx}" y="${tSY + li * tLH}" text-anchor="middle" font-size="${tFS}" font-weight="600" fill="#064e3b">${escSvg(line)}</text>`;
+                });
+            }
 
-            // End terminal (static)
+            // End terminal (static, wrapped text)
             svg += `<rect x="${endPos.x}" y="${endPos.y}" width="${TERM_W}" height="${TERM_H}" rx="${TERM_RX}" fill="#d1fae5" stroke="#059669" stroke-width="2" filter="url(#sshadow)"/>`;
-            svg += `<text x="${endPos.cx}" y="${endPos.cy + 4}" text-anchor="middle" font-size="8" font-weight="600" fill="#064e3b">${escSvg(endLabel)}</text>`;
+            {
+                const tLines = slWrapText(endLabel, 22);
+                const tFS = tLines.length > 2 ? 6.5 : 7.5;
+                const tLH = tFS + 2;
+                const tSY = endPos.cy - ((tLines.length - 1) * tLH) / 2 + tFS / 2;
+                tLines.forEach((line, li) => {
+                    svg += `<text x="${endPos.cx}" y="${tSY + li * tLH}" text-anchor="middle" font-size="${tFS}" font-weight="600" fill="#064e3b">${escSvg(line)}</text>`;
+                });
+            }
 
             // Build incoming route map for target badges
             const slBranchColors = ['#7c3aed', '#2563eb', '#059669', '#d97706', '#dc2626'];
@@ -5848,7 +5864,7 @@
                 if (isDecNode) {
                     // ── DIAMOND decision symbol ──
                     const cx = pos.cx, cy = pos.cy;
-                    const hw = 70, hh = 45;
+                    const hw = 65, hh = 40;
                     svg += `<polygon points="${cx},${cy - hh} ${cx + hw},${cy} ${cx},${cy + hh} ${cx - hw},${cy}" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2" filter="url(#sshadow)"/>`;
 
                     // Step number
@@ -5924,7 +5940,7 @@
             // ── Decision branch connecting lines (swimlane) ──
             // Orthogonal routing: loop-backs go above lanes, forward lines jog at midpoint between columns.
             // Lines enter target top when crossing lanes vertically, avoiding node overlap.
-            const SL_DIA_HW = 70, SL_DIA_HH = 45;
+            const SL_DIA_HW = 65, SL_DIA_HH = 40;
 
             allSteps.forEach((s, i) => {
                 if (!s.isDecision || !s.branches || s.branches.length === 0) return;
@@ -5961,22 +5977,28 @@
                         anchor = 'middle';
 
                     } else {
-                        // FORWARD: exit right of diamond → jog at midpoint between columns → enter target left or top
-                        const exitX = cx + SL_DIA_HW;
-                        const exitY = cy + (bi - (brCount - 1) / 2) * 6;
+                        // FORWARD: exit bottom of diamond → down to lane gap → right to column gap → vertical to target lane → left to target
+                        const exitX = cx + (bi - (brCount - 1) / 2) * 8;
+                        const exitY = cy + SL_DIA_HH;
                         const entryX = isTargetDec ? tp.cx - SL_DIA_HW : tp.x;
                         const entryY = isTargetDec ? tp.cy : tp.cy;
 
-                        if (Math.abs(exitY - entryY) < 5) {
-                            // Same lane — straight horizontal (no crossing)
-                            pathD = `M ${exitX} ${exitY} L ${entryX} ${entryY}`;
+                        // Find the lane bottom for the source node
+                        const srcLane = lanes.find(l => l.dept === pos.dept);
+                        const laneBottom = srcLane ? srcLane.y + srcLane.h : exitY + 20;
+                        const jogY = laneBottom - 6 + chOff;
+                        const gapMidX = pos.x + NODE_W + NODE_GAP_X / 2 + chOff;
+
+                        if (Math.abs(exitY - entryY) < 5 && Math.abs(exitX - entryX) < colW * 2) {
+                            // Near same lane — go down, across bottom gap, up to target
+                            pathD = `M ${exitX} ${exitY} L ${exitX} ${jogY} L ${entryX} ${jogY} L ${entryX} ${entryY}`;
                         } else {
-                            // Cross-lane: use column gap midpoint for vertical segment (between columns, not through nodes)
-                            const gapMidX = exitX + NODE_GAP_X / 2 + chOff;
-                            pathD = `M ${exitX} ${exitY} L ${gapMidX} ${exitY} L ${gapMidX} ${entryY} L ${entryX} ${entryY}`;
+                            // Cross-lane: down to lane bottom gap, right to column gap, vertical to target lane, left to target
+                            pathD = `M ${exitX} ${exitY} L ${exitX} ${jogY} L ${gapMidX} ${jogY} L ${gapMidX} ${entryY} L ${entryX} ${entryY}`;
                         }
-                        lblX = exitX + 6;
-                        lblY = exitY - 5 - bi * 10;
+                        // Label along the horizontal segment at lane bottom (in the gap, clear of nodes)
+                        lblX = exitX + 4;
+                        lblY = jogY - 2;
                         anchor = 'start';
                     }
 
