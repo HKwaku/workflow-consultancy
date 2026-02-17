@@ -1,6 +1,9 @@
 // api/analyze-symptoms.js - UPDATED VERSION
 // Vercel Serverless Function for AI-Powered Diagnostic Analysis with Workflow Context
 
+const nodeFetch = require('node-fetch');
+const fetchFn = typeof globalThis.fetch === 'function' ? globalThis.fetch : nodeFetch;
+
 module.exports = async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -26,8 +29,13 @@ module.exports = async function handler(req, res) {
     // Detect operating model
     const operatingModel = detectOperatingModel(evidence);
 
+    // Validate API key is present
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured on server' });
+    }
+
     // Call Claude API for deep analysis
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetchFn('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'x-api-key': process.env.ANTHROPIC_API_KEY,
@@ -303,16 +311,27 @@ Be SPECIFIC. Use THEIR numbers everywhere. Reference THEIR workflows by name. Sh
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      console.error('Claude API Error:', error);
+      const errorText = await response.text();
+      let errorJson;
+      try { errorJson = JSON.parse(errorText); } catch(e) { errorJson = { raw: errorText }; }
+      console.error('Claude API Error:', response.status, errorJson);
       return res.status(500).json({ 
-        error: 'AI analysis failed', 
-        details: error 
+        error: `Claude API returned ${response.status}`, 
+        details: errorJson 
       });
     }
 
     const data = await response.json();
-    const analysis = JSON.parse(data.content[0].text);
+    let analysis;
+    try {
+      analysis = JSON.parse(data.content[0].text);
+    } catch (parseErr) {
+      console.error('JSON parse error:', parseErr.message, 'Raw:', data.content[0].text.substring(0, 200));
+      return res.status(500).json({
+        error: 'Failed to parse AI response as JSON',
+        rawPreview: data.content[0].text.substring(0, 500)
+      });
+    }
 
     // Return the comprehensive AI analysis
     return res.status(200).json({
@@ -327,7 +346,8 @@ Be SPECIFIC. Use THEIR numbers everywhere. Reference THEIR workflows by name. Sh
     console.error('Analysis error:', error);
     return res.status(500).json({ 
       error: 'Failed to analyze symptoms',
-      message: error.message 
+      message: error.message,
+      stack: error.stack ? error.stack.split('\n').slice(0, 3).join('\n') : undefined
     });
   }
 }

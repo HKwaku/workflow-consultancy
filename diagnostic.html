@@ -7723,7 +7723,8 @@
 
                 if (!resp.ok) {
                     const errData = await resp.json().catch(() => ({}));
-                    throw new Error(errData.error || `API returned ${resp.status}`);
+                    const detail = errData.details ? ` — ${JSON.stringify(errData.details).substring(0, 200)}` : '';
+                    throw new Error((errData.error || `API returned ${resp.status}`) + detail);
                 }
 
                 const data = await resp.json();
