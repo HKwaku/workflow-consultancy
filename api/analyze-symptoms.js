@@ -282,7 +282,7 @@ Launch operational transformation to reduce cycle time from ${evidence.actualTim
 - Communication plan
 
 ## Attendees
-${workflows && workflows.length > 0 && workflows[0].departments ? workflows[0].departments.map(d => \`- ${d} Lead\`).join('\\n') : '- Leadership\\n- Operations\\n- Key stakeholders'}
+${workflows && workflows.length > 0 && workflows[0].departments ? workflows[0].departments.map(d => '- ' + d + ' Lead').join('\\n') : '- Leadership\\n- Operations\\n- Key stakeholders'}
 
 ## Next Steps
 - Tuesday: Process mapping workshop
