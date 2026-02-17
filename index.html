@@ -153,7 +153,8 @@
             margin-top: 72px;
             min-height: 88vh;
             display: flex;
-            align-items: center;
+            flex-direction: column;
+            justify-content: center;
             position: relative;
             overflow: hidden;
             background: var(--bg);
@@ -312,11 +313,13 @@
 
         /* Full-width flow diagram below the two-column hero */
         .hero-flow-section {
+            width: 100%;
             max-width: 1200px;
             margin: 0 auto;
             padding: 2.5rem 2.5rem 0;
             position: relative;
             z-index: 1;
+            clear: both;
             animation: fadeInUp 0.8s cubic-bezier(0.16,1,0.3,1) 0.35s both;
         }
 
