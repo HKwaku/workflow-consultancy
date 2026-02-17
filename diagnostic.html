@@ -8093,21 +8093,29 @@
         document.addEventListener('DOMContentLoaded', async function() {
             setDateLimits();
 
-            // Show dev toolbar on localhost / local dev
+            // Show dev toolbar on localhost / local dev OR when ?dev param is present
+            const params = new URLSearchParams(location.search);
             const isLocal = ['localhost', '127.0.0.1', '0.0.0.0'].includes(location.hostname) || location.port;
+            const showDev = isLocal || params.has('dev');
             const devToolbar = document.getElementById('devToolbar');
-            if (devToolbar && isLocal) {
+            if (devToolbar && showDev) {
                 devToolbar.style.display = 'block';
             }
 
             // Also support ?sample query param to skip straight to results
-            if (new URLSearchParams(location.search).has('sample')) {
+            if (params.has('sample')) {
                 loadSampleData();
                 return;
             }
 
+            // ?complex loads the Complexity-10 CapEx workflow directly
+            if (params.has('complex')) {
+                loadComplexitySample();
+                return;
+            }
+
             // ?team-sample outputs team sample data to console for easy copy
-            if (new URLSearchParams(location.search).has('team-sample')) {
+            if (params.has('team-sample')) {
                 loadTeamSampleToConsole();
             }
 
