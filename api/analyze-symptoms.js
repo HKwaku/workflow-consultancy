@@ -1,8 +1,6 @@
 // api/analyze-symptoms.js - UPDATED VERSION
 // Vercel Serverless Function for AI-Powered Diagnostic Analysis with Workflow Context
 
-const nodeFetch = require('node-fetch');
-const fetchFn = typeof globalThis.fetch === 'function' ? globalThis.fetch : nodeFetch;
 
 module.exports = async function handler(req, res) {
   // Enable CORS
@@ -35,7 +33,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Call Claude API for deep analysis
-    const response = await fetchFn('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'x-api-key': process.env.ANTHROPIC_API_KEY,

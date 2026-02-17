@@ -11,7 +11,6 @@
     "vercel": "^39.0.0"
   },
   "dependencies": {
-    "jspdf": "^4.1.0",
-    "node-fetch": "^2.7.0"
+    "jspdf": "^4.1.0"
   }
 }
