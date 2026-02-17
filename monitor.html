@@ -55,7 +55,18 @@
         .section-title { font-size: 1rem; font-weight: 600; color: var(--primary); margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid var(--border); }
         .footer { text-align: center; padding: 24px; font-size: 0.82rem; color: var(--text-light); }
         .footer a { color: var(--accent); text-decoration: none; }
-        @media (max-width: 600px) { .card { padding: 24px; } .log-form { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 600px) {
+            .card { padding: 20px; }
+            .log-form { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .log-form input, .log-form select, .log-form button { min-height: 48px; font-size: 1rem; }
+            .event-time { min-width: auto; font-size: 0.78rem; }
+            h1 { font-size: 1.6rem; }
+        }
+
+        @media (max-width: 400px) {
+            .stats-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>

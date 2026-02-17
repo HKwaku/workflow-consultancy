@@ -246,10 +246,18 @@
 
         /* ── Responsive ──────────────────────────────── */
         @media (max-width: 600px) {
-            .card-body { padding: 24px; }
+            .card-body { padding: 20px; }
             .header h1 { font-size: 1.5rem; }
             .metric-value { font-size: 1.3rem; }
-            .download-section { padding: 24px; }
+            .download-section { padding: 20px; }
+            .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+            .btn-group { flex-direction: column; }
+            .btn-group a, .btn-group button { width: 100%; min-height: 48px; text-align: center; }
+        }
+
+        @media (max-width: 400px) {
+            .metrics-grid { grid-template-columns: 1fr; }
+            .card-body { padding: 16px; }
         }
     </style>
 </head>

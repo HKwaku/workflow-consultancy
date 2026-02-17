@@ -417,12 +417,18 @@
         /* ── Responsive ────────────────────────── */
         @media (max-width: 600px) {
             .header h1 { font-size: 1.5rem; }
-            .card-body { padding: 24px; }
+            .card-body { padding: 20px; }
             .lookup-form { flex-direction: column; }
-            .lookup-form button { width: 100%; }
+            .lookup-form button { width: 100%; min-height: 48px; }
+            .lookup-form input { min-height: 48px; font-size: 1rem; }
             .metrics-grid { grid-template-columns: repeat(2, 1fr); }
-            .comparison-table { font-size: 0.8rem; }
-            .comparison-table th, .comparison-table td { padding: 8px; }
+            .comparison-table { font-size: 0.85rem; }
+            .comparison-table th, .comparison-table td { padding: 8px 6px; }
+        }
+
+        @media (max-width: 400px) {
+            .metrics-grid { grid-template-columns: 1fr; }
+            .card-body { padding: 16px; }
         }
     </style>
 </head>

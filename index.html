@@ -255,59 +255,53 @@
             animation: fadeInUp 0.8s cubic-bezier(0.16,1,0.3,1) 0.2s both;
         }
 
-        .visual-card {
-            background: var(--white);
-            border-radius: var(--radius-md);
-            padding: 2.5rem;
-            box-shadow: var(--shadow-lg);
-            border: 1px solid var(--border);
-            position: relative;
+        .hero-flow-svg {
+            width: 100%;
+            height: auto;
+            filter: drop-shadow(0 8px 32px rgba(26,47,74,0.10));
         }
 
-        .visual-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: linear-gradient(to bottom, var(--accent), var(--primary));
-            border-radius: var(--radius-md) 0 0 var(--radius-md);
+        .hero-flow-svg .flow-node {
+            animation: flowNodeIn 0.6s cubic-bezier(0.16,1,0.3,1) both;
+        }
+        .hero-flow-svg .flow-node:nth-child(2) { animation-delay: 0.1s; }
+        .hero-flow-svg .flow-node:nth-child(3) { animation-delay: 0.2s; }
+        .hero-flow-svg .flow-node:nth-child(4) { animation-delay: 0.3s; }
+        .hero-flow-svg .flow-node:nth-child(5) { animation-delay: 0.4s; }
+        .hero-flow-svg .flow-node:nth-child(6) { animation-delay: 0.5s; }
+        .hero-flow-svg .flow-node:nth-child(7) { animation-delay: 0.6s; }
+        .hero-flow-svg .flow-node:nth-child(8) { animation-delay: 0.7s; }
+
+        @keyframes flowNodeIn {
+            from { opacity: 0; transform: translateY(12px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        .card-title {
-            font-family: 'Cormorant Garamond', serif;
-            font-size: 1.4rem;
-            color: var(--dark);
-            margin-bottom: 1.25rem;
+        @keyframes flowDash {
+            to { stroke-dashoffset: -20; }
         }
 
-        .card-list { list-style: none; }
-
-        .card-list li {
-            padding: 0.7rem 0;
-            border-bottom: 1px solid var(--border-light);
-            font-size: 0.9rem;
-            color: var(--text-mid);
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
+        @keyframes flowPulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
         }
 
-        .card-list li:last-child { border-bottom: none; }
+        .flow-line {
+            stroke-dasharray: 6 4;
+            animation: flowDash 1.2s linear infinite;
+        }
 
-        .checkmark {
-            width: 22px;
-            height: 22px;
-            border-radius: 7px;
-            background: linear-gradient(135deg, var(--accent), var(--accent-light));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 0.65rem;
-            flex-shrink: 0;
-            font-weight: 700;
+        .flow-line-solid {
+            stroke-dasharray: none;
+            opacity: 0.5;
+        }
+
+        .flow-badge {
+            font-family: 'Work Sans', sans-serif;
+            font-size: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         /* ===== Section Base ===== */
@@ -824,11 +818,15 @@
         @media (max-width: 1024px) {
             .hero .container {
                 grid-template-columns: 1fr;
-                gap: 2rem;
+                gap: 2.5rem;
             }
 
             .hero h1 { font-size: 3.2rem; }
-            .hero-visual { display: none; }
+
+            .hero-visual {
+                max-width: 520px;
+                margin: 0 auto;
+            }
 
             .services-grid,
             .problem-grid { grid-template-columns: 1fr 1fr; }
@@ -883,8 +881,8 @@
             .hero {
                 margin-top: 60px;
                 min-height: auto;
-                padding-top: 3rem;
-                padding-bottom: 3rem;
+                padding-top: 2.5rem;
+                padding-bottom: 2.5rem;
             }
 
             .hero .container { padding: 0 1.25rem; }
@@ -902,6 +900,10 @@
             .hero-label {
                 font-size: 0.72rem;
                 padding: 5px 12px;
+            }
+
+            .hero-visual {
+                max-width: 100%;
             }
 
             .hero-stats {
@@ -926,10 +928,7 @@
 
             .problem-card { padding: 1.75rem; }
 
-            .service-card {
-                padding: 2rem 1.5rem;
-            }
-
+            .service-card { padding: 2rem 1.5rem; }
             .service-card h3 { font-size: 1.5rem; }
 
             .process-step { padding: 1.5rem; }
@@ -1008,15 +1007,122 @@
             </div>
             
             <div class="hero-visual">
-                <div class="visual-card">
-                    <h3 class="card-title">The Legacy Technology Trap</h3>
-                    <ul class="card-list">
-                        <li><span class="checkmark">!</span>Platforms become obsolete faster than contracts</li>
-                        <li><span class="checkmark">!</span>Solution-first thinking automates broken processes</li>
-                        <li><span class="checkmark">!</span>Yesterday's innovation becomes tomorrow's burden</li>
-                        <li><span class="checkmark">!</span>68% of digital transformations fail</li>
-                    </ul>
-                </div>
+                <svg class="hero-flow-svg" viewBox="0 0 460 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="gAcc" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#3d8ea6"/><stop offset="100%" stop-color="#5bb8d4"/></linearGradient>
+                        <linearGradient id="gPri" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1a2f4a"/><stop offset="100%" stop-color="#2a4a6b"/></linearGradient>
+                        <linearGradient id="gGrn" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#16a34a"/><stop offset="100%" stop-color="#22c55e"/></linearGradient>
+                        <linearGradient id="gAmb" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#d97706"/><stop offset="100%" stop-color="#f59e0b"/></linearGradient>
+                        <filter id="fShadow"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.08"/></filter>
+                        <marker id="arrowAcc" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#3d8ea6"/></marker>
+                        <marker id="arrowGrn" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#16a34a"/></marker>
+                        <marker id="arrowAmb" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#d97706"/></marker>
+                    </defs>
+
+                    <!-- Background card -->
+                    <rect x="8" y="8" width="444" height="404" rx="16" fill="white" filter="url(#fShadow)" stroke="#e2e8f0" stroke-width="1"/>
+                    <!-- Title bar -->
+                    <rect x="8" y="8" width="444" height="40" rx="16" fill="#f8fafc"/>
+                    <rect x="8" y="32" width="444" height="16" fill="#f8fafc"/>
+                    <circle cx="28" cy="28" r="5" fill="#ef4444" opacity="0.6"/><circle cx="44" cy="28" r="5" fill="#f59e0b" opacity="0.6"/><circle cx="60" cy="28" r="5" fill="#16a34a" opacity="0.6"/>
+                    <text x="230" y="32" text-anchor="middle" fill="#475569" font-family="Work Sans,sans-serif" font-size="11" font-weight="600">Process Diagnostic Flow</text>
+
+                    <!-- Swim lane labels -->
+                    <rect x="16" y="56" width="56" height="352" rx="6" fill="#f1f5f9"/>
+                    <text x="44" y="100" text-anchor="middle" fill="#3d8ea6" class="flow-badge" transform="rotate(-90 44 100)">OPERATIONS</text>
+                    <text x="44" y="220" text-anchor="middle" fill="#7c3aed" class="flow-badge" transform="rotate(-90 44 220)">FINANCE</text>
+                    <text x="44" y="340" text-anchor="middle" fill="#d97706" class="flow-badge" transform="rotate(-90 44 340)">MANAGEMENT</text>
+
+                    <!-- === CONNECTING LINES (drawn first, behind nodes) === -->
+                    <!-- Start -> Process Request -->
+                    <path d="M160,90 L210,90" class="flow-line" stroke="#3d8ea6" stroke-width="1.5" marker-end="url(#arrowAcc)"/>
+                    <!-- Process Request -> Review -->
+                    <path d="M350,90 L350,140" class="flow-line" stroke="#3d8ea6" stroke-width="1.5" marker-end="url(#arrowAcc)"/>
+                    <!-- Review -> Decision diamond -->
+                    <path d="M310,170 L258,170" class="flow-line" stroke="#3d8ea6" stroke-width="1.5" marker-end="url(#arrowAcc)"/>
+                    <!-- Decision Yes -> Approve -->
+                    <path d="M230,195 L230,238" class="flow-line" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrowGrn)"/>
+                    <!-- Decision No -> Revise -->
+                    <path d="M205,170 L150,170 L150,238" class="flow-line" stroke="#d97706" stroke-width="1.5" marker-end="url(#arrowAmb)"/>
+                    <!-- Revise -> loops back up (path goes left, up, right to Process Request) -->
+                    <path d="M120,260 L96,260 L96,90 L120,90" class="flow-line" stroke="#d97706" stroke-width="1.5" marker-end="url(#arrowAmb)" opacity="0.6"/>
+                    <!-- Approve -> Implement -->
+                    <path d="M280,260 L330,260" class="flow-line" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrowGrn)"/>
+                    <!-- Implement -> Complete -->
+                    <path d="M390,280 L390,330" class="flow-line" stroke="#3d8ea6" stroke-width="1.5" marker-end="url(#arrowAcc)"/>
+
+                    <!-- === NODES === -->
+                    <!-- Start (pill) -->
+                    <g class="flow-node">
+                        <rect x="100" y="74" width="60" height="32" rx="16" fill="url(#gAcc)"/>
+                        <text x="130" y="94" text-anchor="middle" fill="white" font-family="Work Sans,sans-serif" font-size="10" font-weight="600">Start</text>
+                    </g>
+
+                    <!-- Process Request (rectangle) -->
+                    <g class="flow-node">
+                        <rect x="210" y="70" width="140" height="40" rx="8" fill="white" stroke="#3d8ea6" stroke-width="1.5" filter="url(#fShadow)"/>
+                        <text x="280" y="94" text-anchor="middle" fill="#1a2f4a" font-family="Work Sans,sans-serif" font-size="11" font-weight="500">Process Request</text>
+                    </g>
+
+                    <!-- Review (rectangle) -->
+                    <g class="flow-node">
+                        <rect x="290" y="140" width="120" height="40" rx="8" fill="white" stroke="#7c3aed" stroke-width="1.5" filter="url(#fShadow)"/>
+                        <text x="350" y="164" text-anchor="middle" fill="#1a2f4a" font-family="Work Sans,sans-serif" font-size="11" font-weight="500">Review Data</text>
+                    </g>
+
+                    <!-- Decision Diamond -->
+                    <g class="flow-node">
+                        <polygon points="230,145 258,170 230,195 202,170" fill="white" stroke="#d97706" stroke-width="1.5" filter="url(#fShadow)"/>
+                        <text x="230" y="174" text-anchor="middle" fill="#1a2f4a" font-family="Work Sans,sans-serif" font-size="9" font-weight="600">Valid?</text>
+                        <!-- Yes/No labels -->
+                        <text x="240" y="212" fill="#16a34a" font-family="Work Sans,sans-serif" font-size="8" font-weight="600">YES</text>
+                        <text x="182" y="162" fill="#d97706" font-family="Work Sans,sans-serif" font-size="8" font-weight="600">NO</text>
+                    </g>
+
+                    <!-- Revise (rectangle) -->
+                    <g class="flow-node">
+                        <rect x="110" y="238" width="100" height="40" rx="8" fill="white" stroke="#d97706" stroke-width="1.5" filter="url(#fShadow)"/>
+                        <text x="160" y="262" text-anchor="middle" fill="#1a2f4a" font-family="Work Sans,sans-serif" font-size="11" font-weight="500">Revise</text>
+                        <text x="160" y="208" text-anchor="middle" fill="#64748b" font-family="Work Sans,sans-serif" font-size="7" font-style="italic">bottleneck detected</text>
+                    </g>
+
+                    <!-- Approve (rectangle) -->
+                    <g class="flow-node">
+                        <rect x="210" y="238" width="100" height="40" rx="8" fill="white" stroke="#16a34a" stroke-width="1.5" filter="url(#fShadow)"/>
+                        <text x="260" y="262" text-anchor="middle" fill="#1a2f4a" font-family="Work Sans,sans-serif" font-size="11" font-weight="500">Approve</text>
+                    </g>
+
+                    <!-- Implement (rectangle) -->
+                    <g class="flow-node">
+                        <rect x="330" y="238" width="120" height="40" rx="8" fill="white" stroke="#3d8ea6" stroke-width="1.5" filter="url(#fShadow)"/>
+                        <text x="390" y="262" text-anchor="middle" fill="#1a2f4a" font-family="Work Sans,sans-serif" font-size="11" font-weight="500">Implement</text>
+                    </g>
+
+                    <!-- Complete (pill) -->
+                    <g class="flow-node">
+                        <rect x="360" y="330" width="60" height="32" rx="16" fill="url(#gGrn)"/>
+                        <text x="390" y="350" text-anchor="middle" fill="white" font-family="Work Sans,sans-serif" font-size="10" font-weight="600">Done</text>
+                    </g>
+
+                    <!-- Diagnostic overlay annotations -->
+                    <g opacity="0.85">
+                        <!-- Cycle time annotation -->
+                        <rect x="80" y="310" width="120" height="44" rx="8" fill="#1a2f4a"/>
+                        <text x="140" y="328" text-anchor="middle" fill="#5bb8d4" font-family="Work Sans,sans-serif" font-size="8" font-weight="600" text-transform="uppercase" letter-spacing="1">CYCLE TIME</text>
+                        <text x="140" y="346" text-anchor="middle" fill="white" font-family="Cormorant Garamond,serif" font-size="16" font-weight="700">47 → 14 days</text>
+                    </g>
+                    <g opacity="0.85">
+                        <!-- Cost savings annotation -->
+                        <rect x="215" y="310" width="120" height="44" rx="8" fill="#1a2f4a"/>
+                        <text x="275" y="328" text-anchor="middle" fill="#5bb8d4" font-family="Work Sans,sans-serif" font-size="8" font-weight="600" letter-spacing="1">ANNUAL SAVINGS</text>
+                        <text x="275" y="346" text-anchor="middle" fill="white" font-family="Cormorant Garamond,serif" font-size="16" font-weight="700">£127,400</text>
+                    </g>
+
+                    <!-- Animated pulse dot on the flow line -->
+                    <circle r="3" fill="#3d8ea6">
+                        <animateMotion dur="4s" repeatCount="indefinite" path="M130,90 L280,90 L350,90 L350,170 L230,170 L230,260 L390,260 L390,350"/>
+                    </circle>
+                </svg>
             </div>
         </div>
     </section>

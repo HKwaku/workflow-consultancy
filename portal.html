@@ -55,7 +55,13 @@
 
         .footer { text-align: center; padding: 24px; font-size: 0.82rem; color: var(--text-light); }
         .footer a { color: var(--accent); text-decoration: none; }
-        @media (max-width: 600px) { .card { padding: 24px; } .portal-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 600px) {
+            .card { padding: 20px; }
+            .portal-grid { grid-template-columns: 1fr; }
+            .auth-card { max-width: 100%; }
+            .auth-card input, .auth-card button { min-height: 48px; font-size: 1rem; }
+            h1 { font-size: 1.6rem; }
+        }
     </style>
 </head>
 <body>

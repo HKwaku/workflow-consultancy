@@ -1292,6 +1292,12 @@
                 flex-direction: column-reverse;
             }
 
+            .button-group .button {
+                width: 100%;
+                text-align: center;
+                min-height: 48px;
+            }
+
             .metric-grid {
                 grid-template-columns: 1fr 1fr;
             }
@@ -1300,9 +1306,29 @@
                 font-size: 1.4rem;
             }
 
-            .score-ring-container { flex-direction: column; }
+            .score-ring-container { flex-direction: column; align-items: center; }
+            .score-breakdown { min-width: 0; width: 100%; }
+            .score-bar-label { width: auto; max-width: 110px; }
             .roadmap-phases { grid-template-columns: 1fr; }
-            .health-score-bar { font-size: 0.7rem !important; }
+            .health-score-bar { font-size: 0.75rem !important; }
+            .hs-label, .hs-grade { white-space: normal; }
+
+            .roi-projections { grid-template-columns: 1fr !important; }
+
+            .collapse-btn { width: 44px; height: 44px; min-width: 44px; }
+            .custom-dept-tag button { width: 28px; height: 28px; min-width: 28px; font-size: 1rem; }
+            .custom-dept-add-btn { width: 48px; height: 48px; min-width: 48px; }
+
+            .progress-bar { padding: 0.75rem 1rem; }
+            .progress-bar .step-text { font-size: 0.8rem; }
+        }
+
+        @media (max-width: 480px) {
+            .screen-card { padding: 1.25rem; }
+            .screen-title { font-size: 1.35rem; }
+            .metric-grid { grid-template-columns: 1fr; }
+            .button { padding: 0.85rem 1.5rem; font-size: 0.95rem; }
+            .score-ring { width: 130px; height: 130px; }
         }
 
         /* Live Process Health Score */
