@@ -119,14 +119,17 @@ Use THEIR actual numbers. Show the MATH. Be specific and concise.`
     }
 
     const data = await response.json();
+    let rawText = data.content[0].text;
+    // Strip markdown code fences if present
+    rawText = rawText.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
     let analysis;
     try {
-      analysis = JSON.parse(data.content[0].text);
+      analysis = JSON.parse(rawText);
     } catch (parseErr) {
-      console.error('JSON parse error:', parseErr.message, 'Raw:', data.content[0].text.substring(0, 200));
+      console.error('JSON parse error:', parseErr.message, 'Raw:', rawText.substring(0, 200));
       return res.status(500).json({
         error: 'Failed to parse AI response as JSON',
-        rawPreview: data.content[0].text.substring(0, 500)
+        rawPreview: rawText.substring(0, 500)
       });
     }
 
