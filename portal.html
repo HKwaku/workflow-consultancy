@@ -141,8 +141,7 @@
     <div class="footer"><a href="/">Workflow Partners</a> &middot; Technology-agnostic workflow optimisation</div>
 
     <script>
-        // Supabase client — initialised from /api/public-config (reads from .env)
-        let supabase;
+        let sbClient = null;
         let isSignUp = false;
         let currentUser = null;
 
@@ -151,15 +150,20 @@
                 const resp = await fetch('/api/public-config');
                 if (!resp.ok) throw new Error('Config not available');
                 const config = await resp.json();
-                supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
 
-                // Check for existing session
-                const { data: { session } } = await supabase.auth.getSession();
+                if (!window.supabase || !window.supabase.createClient) {
+                    console.warn('Supabase JS library not loaded from CDN');
+                    return;
+                }
+
+                sbClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+
+                const { data: { session } } = await sbClient.auth.getSession();
                 if (session?.user) {
                     onAuthenticated(session.user);
                 }
             } catch (e) {
-                console.warn('Supabase init failed — portal will use API fallback for reports.', e.message);
+                console.warn('Supabase init failed — portal will use email fallback.', e.message);
             }
         }
 
@@ -185,13 +189,12 @@
             document.getElementById('authBtn').textContent = 'Signing in...';
 
             try {
-                if (supabase) {
-                    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                if (sbClient) {
+                    const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
                     if (error) throw error;
                     currentUser = data.user;
                     onAuthenticated(currentUser);
                 } else {
-                    // Fallback: use email directly to load reports via API
                     currentUser = { email };
                     onAuthenticated(currentUser);
                 }
@@ -213,8 +216,8 @@
             document.getElementById('signupBtn').textContent = 'Creating account...';
 
             try {
-                if (supabase) {
-                    const { data, error } = await supabase.auth.signUp({ email, password });
+                if (sbClient) {
+                    const { data, error } = await sbClient.auth.signUp({ email, password });
                     if (error) throw error;
                     if (data.user) {
                         currentUser = data.user;
@@ -236,7 +239,7 @@
         }
 
         async function signOut() {
-            if (supabase) await supabase.auth.signOut();
+            if (sbClient) await sbClient.auth.signOut();
             currentUser = null;
             document.getElementById('authCard').style.display = '';
             document.getElementById('portalContent').style.display = 'none';
