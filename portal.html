@@ -10,130 +10,258 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        :root { --primary: #1a2f4a; --accent: #3d8ea6; --text: #1e293b; --text-mid: #475569; --text-light: #64748b; --bg: #fafbfc; --bg-alt: #f1f5f9; --white: #fff; --border: #e2e8f0; --green: #16a34a; --red: #dc2626; --amber: #d97706; --blue: #1e40af; --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --shadow-lg: 0 12px 40px rgba(0,0,0,0.08); }
-        body { font-family: 'Work Sans', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
-        .header { background: linear-gradient(135deg, var(--primary), #2a4a6b); color: white; padding: 40px 0; text-align: center; }
-        .header h1 { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 600; margin-bottom: 6px; }
-        .header p { opacity: 0.75; font-size: 0.95rem; }
-        .header-nav { display: flex; justify-content: flex-end; padding: 0 20px; margin-top: 12px; gap: 16px; }
-        .header-nav a, .header-nav button { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.85rem; background: none; border: none; cursor: pointer; font-family: inherit; }
-        .header-nav a:hover, .header-nav button:hover { color: white; }
-        .container { max-width: 900px; margin: -30px auto 60px; padding: 0 20px; flex: 1; }
-        .card { background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 40px; margin-bottom: 24px; }
+        :root {
+            --primary: #1a2f4a; --accent: #3d8ea6; --gold: #b8976a;
+            --text: #1e293b; --text-mid: #475569; --text-light: #64748b;
+            --bg: #f8fafb; --white: #fff; --border: #e2e8f0;
+            --green: #16a34a; --red: #dc2626; --amber: #d97706;
+            --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.04); --shadow-lg: 0 8px 32px rgba(0,0,0,0.06);
+        }
+        body { font-family: 'Work Sans', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; font-weight: 300; -webkit-font-smoothing: antialiased; }
 
-        /* Auth forms */
-        .auth-card { max-width: 420px; margin: 0 auto; }
-        .auth-card h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 700; color: var(--primary); margin-bottom: 8px; text-align: center; }
-        .auth-card p { color: var(--text-mid); font-size: 0.9rem; text-align: center; margin-bottom: 24px; }
-        .auth-input { width: 100%; padding: 12px 16px; font-size: 0.95rem; border: 2px solid var(--border); border-radius: var(--radius-sm); font-family: inherit; margin-bottom: 12px; box-sizing: border-box; }
-        .auth-input:focus { border-color: var(--accent); outline: none; }
-        .auth-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--accent), var(--primary)); color: white; border: none; border-radius: var(--radius-sm); font-family: inherit; font-weight: 600; font-size: 1rem; cursor: pointer; margin-bottom: 12px; }
-        .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .auth-toggle { text-align: center; font-size: 0.88rem; color: var(--text-mid); }
+        /* Header */
+        .header {
+            background: var(--primary); color: white;
+            padding: 20px 24px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .header-logo {
+            font-family: 'Cormorant Garamond', serif; font-size: 1.3rem;
+            font-weight: 700; color: white; text-decoration: none;
+        }
+        .header-logo span { color: var(--gold); }
+        .header-divider { width: 1px; height: 20px; background: rgba(255,255,255,0.15); }
+        .header-title { font-size: 0.88rem; font-weight: 400; opacity: 0.8; }
+        .header-right { display: flex; align-items: center; gap: 16px; }
+        .header-email { font-size: 0.78rem; opacity: 0.6; }
+        .header-btn {
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15);
+            color: white; padding: 6px 14px; border-radius: 6px;
+            font-size: 0.78rem; font-family: inherit; cursor: pointer;
+            transition: background 0.2s;
+        }
+        .header-btn:hover { background: rgba(255,255,255,0.18); }
+
+        /* Layout */
+        .portal-wrap { max-width: 960px; margin: 0 auto; padding: 24px 20px 60px; flex: 1; width: 100%; }
+
+        /* Auth card */
+        .auth-card {
+            max-width: 400px; margin: 40px auto; background: var(--white);
+            border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+            padding: 36px; border: 1px solid var(--border);
+        }
+        .auth-card h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 700; color: var(--primary); margin-bottom: 6px; text-align: center; }
+        .auth-card > p { color: var(--text-light); font-size: 0.85rem; text-align: center; margin-bottom: 24px; }
+        .auth-input { width: 100%; padding: 11px 14px; font-size: 0.9rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: inherit; margin-bottom: 10px; background: var(--bg); transition: border-color 0.2s; }
+        .auth-input:focus { border-color: var(--accent); outline: none; background: var(--white); }
+        .auth-btn { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: var(--radius-sm); font-family: inherit; font-weight: 500; font-size: 0.9rem; cursor: pointer; margin-top: 4px; margin-bottom: 12px; transition: background 0.2s; }
+        .auth-btn:hover { background: #2a4a6b; }
+        .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .auth-toggle { text-align: center; font-size: 0.82rem; color: var(--text-light); }
         .auth-toggle a { color: var(--accent); cursor: pointer; text-decoration: none; font-weight: 500; }
-        .auth-error { background: #fef2f2; color: var(--red); padding: 10px 14px; border-radius: var(--radius-sm); font-size: 0.88rem; margin-bottom: 12px; display: none; }
+        .auth-error { background: #fef2f2; color: var(--red); padding: 10px 12px; border-radius: var(--radius-sm); font-size: 0.82rem; margin-bottom: 12px; display: none; }
         .auth-error.show { display: block; }
 
-        /* Portal content */
-        .section-title { font-size: 1.1rem; font-weight: 600; color: var(--primary); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
-        .portal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-bottom: 24px; }
-        .portal-tile { background: var(--bg-alt); border-radius: var(--radius-md); padding: 24px; text-align: center; text-decoration: none; color: var(--text); transition: transform 0.2s, box-shadow 0.2s; display: block; }
-        .portal-tile:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
-        .portal-tile .tile-icon { font-size: 2rem; margin-bottom: 8px; }
-        .portal-tile h3 { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
-        .portal-tile p { font-size: 0.82rem; color: var(--text-light); }
+        /* Tabs */
+        .portal-tabs {
+            display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 24px;
+        }
+        .portal-tab {
+            padding: 10px 20px; font-size: 0.85rem; font-weight: 500;
+            color: var(--text-light); border-bottom: 2px solid transparent;
+            margin-bottom: -2px; cursor: pointer; transition: all 0.2s;
+            background: none; border-top: none; border-left: none; border-right: none;
+            font-family: inherit;
+        }
+        .portal-tab:hover { color: var(--text); }
+        .portal-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-        .report-list { list-style: none; }
-        .report-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border); }
-        .report-item:last-child { border-bottom: none; }
-        .report-info h4 { font-size: 0.95rem; font-weight: 500; }
-        .report-info span { font-size: 0.8rem; color: var(--text-light); }
-        .report-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
-        .report-link { padding: 6px 16px; background: var(--accent); color: white; text-decoration: none; border-radius: var(--radius-sm); font-size: 0.82rem; font-weight: 500; white-space: nowrap; }
-        .report-edit { padding: 6px 16px; background: transparent; color: var(--accent); text-decoration: none; border-radius: var(--radius-sm); font-size: 0.82rem; font-weight: 500; border: 1.5px solid var(--accent); white-space: nowrap; transition: all 0.2s; }
-        .report-edit:hover { background: var(--accent); color: white; }
+        /* Metric cards */
+        .metrics-row {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px;
+        }
+        .metric-card {
+            background: var(--white); border: 1px solid var(--border);
+            border-radius: var(--radius-md); padding: 20px; text-align: center;
+            transition: box-shadow 0.2s;
+        }
+        .metric-card:hover { box-shadow: var(--shadow-lg); }
+        .metric-val {
+            font-family: 'Cormorant Garamond', serif; font-size: 1.8rem;
+            font-weight: 700; color: var(--primary); display: block; margin-bottom: 2px;
+        }
+        .metric-lbl { font-size: 0.7rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; }
 
-        .empty-state { text-align: center; padding: 40px; color: var(--text-light); }
-        .empty-state a { color: var(--accent); }
+        /* Dashboard card */
+        .dash-card {
+            background: var(--white); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 16px;
+        }
+        .dash-card-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 20px; border-bottom: 1px solid var(--border);
+        }
+        .dash-card-title { font-size: 0.92rem; font-weight: 600; color: var(--primary); }
+        .dash-card-action {
+            font-size: 0.78rem; color: var(--accent); text-decoration: none;
+            font-weight: 500; cursor: pointer; background: none; border: none;
+            font-family: inherit;
+        }
+        .dash-card-action:hover { text-decoration: underline; }
 
-        .footer { text-align: center; padding: 24px; font-size: 0.82rem; color: var(--text-light); }
+        /* Process rows */
+        .process-row {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 20px; border-bottom: 1px solid #f5f5f7;
+            transition: background 0.15s;
+        }
+        .process-row:last-child { border-bottom: none; }
+        .process-row:hover { background: #fafbfc; }
+        .process-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .process-dot.green { background: var(--green); }
+        .process-dot.amber { background: var(--amber); }
+        .process-dot.red { background: var(--red); }
+        .process-dot.blue { background: #3b82f6; }
+        .process-name { flex: 1; font-size: 0.88rem; font-weight: 400; color: var(--text); }
+        .process-tag {
+            display: inline-block; font-size: 0.65rem; font-weight: 600;
+            padding: 3px 8px; border-radius: 4px;
+        }
+        .process-tag.optimised { background: #ecfdf5; color: var(--green); }
+        .process-tag.progress { background: #fffbeb; color: var(--amber); }
+        .process-tag.review { background: #fef2f2; color: var(--red); }
+        .process-tag.new { background: #eff6ff; color: #3b82f6; }
+        .process-val { font-size: 0.78rem; color: var(--text-mid); font-weight: 400; }
+        .process-actions {
+            display: flex; gap: 6px; align-items: center; flex-shrink: 0;
+        }
+        .process-btn {
+            padding: 5px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 500;
+            text-decoration: none; cursor: pointer; font-family: inherit;
+            transition: all 0.2s;
+        }
+        .process-btn-view { background: var(--accent); color: white; border: none; }
+        .process-btn-view:hover { background: #358b9e; }
+        .process-btn-edit { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+        .process-btn-edit:hover { background: var(--accent); color: white; }
+
+        /* Quick access */
+        .quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+        .quick-tile {
+            background: var(--white); border: 1px solid var(--border);
+            border-radius: var(--radius-md); padding: 20px; text-align: center;
+            text-decoration: none; color: var(--text); transition: all 0.2s; display: block;
+        }
+        .quick-tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: transparent; }
+        .quick-tile-icon { font-size: 1.5rem; margin-bottom: 6px; }
+        .quick-tile h3 { font-family: 'Work Sans', sans-serif; font-size: 0.88rem; font-weight: 600; margin-bottom: 2px; }
+        .quick-tile p { font-size: 0.72rem; color: var(--text-light); }
+
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-light); font-size: 0.88rem; }
+        .empty-state a { color: var(--accent); text-decoration: none; font-weight: 500; }
+
+        .footer { text-align: center; padding: 24px; font-size: 0.78rem; color: var(--text-light); }
         .footer a { color: var(--accent); text-decoration: none; }
+
         @media (max-width: 600px) {
-            .card { padding: 20px; }
-            .portal-grid { grid-template-columns: 1fr; }
-            .auth-card { max-width: 100%; }
-            .auth-card input, .auth-card button { min-height: 48px; font-size: 1rem; }
-            h1 { font-size: 1.6rem; }
+            .header { flex-direction: column; gap: 12px; text-align: center; }
+            .header-left { flex-direction: column; gap: 4px; }
+            .header-divider { display: none; }
+            .metrics-row { grid-template-columns: 1fr; }
+            .quick-grid { grid-template-columns: 1fr; }
+            .portal-tabs { overflow-x: auto; }
+            .process-row { flex-wrap: wrap; gap: 8px; }
+            .process-actions { width: 100%; justify-content: flex-end; }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Client Portal</h1>
-        <p>Your diagnostics, reports, and progress — all in one place</p>
-        <div class="header-nav" id="headerNav" style="display: none;">
-            <span id="userEmail" style="opacity: 0.7;"></span>
-            <button onclick="signOut()">Sign Out</button>
+        <div class="header-left">
+            <a href="/" class="header-logo">Workflow<span>.</span></a>
+            <div class="header-divider"></div>
+            <span class="header-title">Client Portal</span>
+        </div>
+        <div class="header-right" id="headerNav" style="display: none;">
+            <span class="header-email" id="userEmail"></span>
+            <button class="header-btn" onclick="signOut()">Sign Out</button>
         </div>
     </div>
 
-    <div class="container">
+    <div class="portal-wrap">
         <!-- Auth Card -->
-        <div class="card auth-card" id="authCard">
-            <div id="loginForm">
-                <h2>Sign In</h2>
-                <p>Access your diagnostic reports and track implementation progress.</p>
-                <div class="auth-error" id="authError"></div>
-                <input type="email" class="auth-input" id="authEmail" placeholder="Email address" autofocus>
-                <input type="password" class="auth-input" id="authPassword" placeholder="Password">
-                <button class="auth-btn" id="authBtn" onclick="signIn()">Sign In</button>
-                <div class="auth-toggle">
-                    Don't have an account? <a onclick="toggleAuthMode()">Sign up</a>
+        <div id="authCard">
+            <div class="auth-card">
+                <div id="loginForm">
+                    <h2>Sign In</h2>
+                    <p>Access your diagnostic reports and track implementation progress.</p>
+                    <div class="auth-error" id="authError"></div>
+                    <input type="email" class="auth-input" id="authEmail" placeholder="Email address" autofocus>
+                    <input type="password" class="auth-input" id="authPassword" placeholder="Password">
+                    <button class="auth-btn" id="authBtn" onclick="signIn()">Sign In</button>
+                    <div class="auth-toggle">
+                        Don't have an account? <a onclick="toggleAuthMode()">Sign up</a>
+                    </div>
                 </div>
-            </div>
-            <div id="signupForm" style="display: none;">
-                <h2>Create Account</h2>
-                <p>Sign up to access your portal. Use the same email from your diagnostic.</p>
-                <div class="auth-error" id="signupError"></div>
-                <input type="email" class="auth-input" id="signupEmail" placeholder="Email address">
-                <input type="password" class="auth-input" id="signupPassword" placeholder="Password (min 6 characters)">
-                <button class="auth-btn" id="signupBtn" onclick="signUp()">Create Account</button>
-                <div class="auth-toggle">
-                    Already have an account? <a onclick="toggleAuthMode()">Sign in</a>
+                <div id="signupForm" style="display: none;">
+                    <h2>Create Account</h2>
+                    <p>Sign up to access your portal. Use the same email from your diagnostic.</p>
+                    <div class="auth-error" id="signupError"></div>
+                    <input type="email" class="auth-input" id="signupEmail" placeholder="Email address">
+                    <input type="password" class="auth-input" id="signupPassword" placeholder="Password (min 6 characters)">
+                    <button class="auth-btn" id="signupBtn" onclick="signUp()">Create Account</button>
+                    <div class="auth-toggle">
+                        Already have an account? <a onclick="toggleAuthMode()">Sign in</a>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Portal Content (shown when logged in) -->
+        <!-- Portal Content -->
         <div id="portalContent" style="display: none;">
-            <!-- Quick access tiles -->
-            <div class="card">
-                <h3 class="section-title">Quick Access</h3>
-                <div class="portal-grid">
-                    <a href="/diagnostic" class="portal-tile">
-                        <div class="tile-icon">&#127919;</div>
-                        <h3>New Diagnostic</h3>
-                        <p>Run a new process diagnostic</p>
-                    </a>
-                    <a id="dashboardTile" href="/dashboard" class="portal-tile">
-                        <div class="tile-icon">&#128200;</div>
-                        <h3>Dashboard</h3>
-                        <p>Compare results over time</p>
-                    </a>
-                    <a id="monitorTile" href="/monitor" class="portal-tile">
-                        <div class="tile-icon">&#128337;</div>
-                        <h3>Process Monitor</h3>
-                        <p>Track live process instances</p>
-                    </a>
-                </div>
+            <div class="portal-tabs">
+                <button class="portal-tab active">Overview</button>
+                <button class="portal-tab" onclick="document.getElementById('reportsCard').scrollIntoView({behavior:'smooth'})">Reports</button>
             </div>
 
-            <!-- Past reports -->
-            <div class="card">
-                <h3 class="section-title">Your Diagnostic Reports</h3>
-                <ul class="report-list" id="reportList">
-                    <li class="empty-state">Loading...</li>
-                </ul>
+            <!-- Metrics -->
+            <div class="metrics-row" id="metricsRow">
+                <div class="metric-card"><span class="metric-val" id="metricProcesses">—</span><span class="metric-lbl">Processes analysed</span></div>
+                <div class="metric-card"><span class="metric-val" id="metricAutomation">—</span><span class="metric-lbl">Automation ready</span></div>
+                <div class="metric-card"><span class="metric-val" id="metricReports">—</span><span class="metric-lbl">Reports</span></div>
+            </div>
+
+            <!-- Quick access -->
+            <div class="quick-grid">
+                <a href="/diagnostic" class="quick-tile">
+                    <div class="quick-tile-icon">&#127919;</div>
+                    <h3>New Diagnostic</h3>
+                    <p>Run a new process diagnostic</p>
+                </a>
+                <a id="dashboardTile" href="/dashboard" class="quick-tile">
+                    <div class="quick-tile-icon">&#128200;</div>
+                    <h3>Dashboard</h3>
+                    <p>Compare results over time</p>
+                </a>
+                <a id="monitorTile" href="/monitor" class="quick-tile">
+                    <div class="quick-tile-icon">&#128337;</div>
+                    <h3>Process Monitor</h3>
+                    <p>Track live process instances</p>
+                </a>
+            </div>
+
+            <!-- Reports list -->
+            <div class="dash-card" id="reportsCard">
+                <div class="dash-card-header">
+                    <span class="dash-card-title">Your Diagnostic Reports</span>
+                    <a href="/diagnostic" class="dash-card-action">+ New Diagnostic</a>
+                </div>
+                <div id="reportList">
+                    <div class="empty-state">Loading...</div>
+                </div>
             </div>
         </div>
     </div>
@@ -255,11 +383,17 @@
             document.getElementById('headerNav').style.display = 'flex';
             document.getElementById('userEmail').textContent = email;
 
-            // Set links with email
             document.getElementById('dashboardTile').href = '/dashboard?email=' + encodeURIComponent(email);
             document.getElementById('monitorTile').href = '/monitor?email=' + encodeURIComponent(email);
 
             loadReports(email);
+        }
+
+        function getStatusInfo(r) {
+            const pct = r.metrics.automationPercentage;
+            if (pct >= 70) return { dot: 'green', tag: 'optimised', tagText: 'Optimised' };
+            if (pct >= 40) return { dot: 'amber', tag: 'progress', tagText: 'In progress' };
+            return { dot: 'red', tag: 'review', tagText: 'Needs review' };
         }
 
         async function loadReports(email) {
@@ -268,34 +402,45 @@
                 const resp = await fetch('/api/get-dashboard?email=' + encodeURIComponent(email));
                 const data = await resp.json();
 
-                if (!resp.ok || !data.success) {
-                    list.innerHTML = `<li class="empty-state">No diagnostics found yet. <a href="/diagnostic">Start your first diagnostic</a></li>`;
+                if (!resp.ok || !data.success || !data.reports.length) {
+                    document.getElementById('metricProcesses').textContent = '0';
+                    document.getElementById('metricAutomation').textContent = '—';
+                    document.getElementById('metricReports').textContent = '0';
+                    list.innerHTML = '<div class="empty-state">No diagnostics found yet. <a href="/diagnostic">Start your first diagnostic</a></div>';
                     return;
                 }
 
-                list.innerHTML = data.reports.map(r => {
+                const reports = data.reports;
+                const totalProcs = reports.reduce((sum, r) => sum + r.metrics.totalProcesses, 0);
+                const avgAuto = Math.round(reports.reduce((sum, r) => sum + r.metrics.automationPercentage, 0) / reports.length);
+
+                document.getElementById('metricProcesses').textContent = totalProcs;
+                document.getElementById('metricAutomation').textContent = avgAuto + '%';
+                document.getElementById('metricReports').textContent = reports.length;
+
+                list.innerHTML = reports.map(r => {
                     const date = new Date(r.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
                     const procs = r.processes.map(p => p.name).join(', ') || 'Process Diagnostic';
                     const editUrl = '/diagnostic?edit=' + r.id + '&email=' + encodeURIComponent(email);
-                    return `<li class="report-item">
-                        <div class="report-info">
-                            <h4>${procs}</h4>
-                            <span>${date} &middot; ${r.metrics.automationPercentage}% automation readiness &middot; ${r.metrics.totalProcesses} process${r.metrics.totalProcesses !== 1 ? 'es' : ''}</span>
-                        </div>
-                        <div class="report-actions">
-                            <a href="${editUrl}" class="report-edit">Edit</a>
-                            <a href="/report?id=${r.id}" class="report-link">View</a>
-                        </div>
-                    </li>`;
+                    const s = getStatusInfo(r);
+                    return '<div class="process-row">' +
+                        '<span class="process-dot ' + s.dot + '"></span>' +
+                        '<span class="process-name">' + procs + '</span>' +
+                        '<span class="process-tag ' + s.tag + '">' + s.tagText + '</span>' +
+                        '<span class="process-val">' + date + '</span>' +
+                        '<div class="process-actions">' +
+                            '<a href="' + editUrl + '" class="process-btn process-btn-edit">Edit</a>' +
+                            '<a href="/report?id=' + r.id + '" class="process-btn process-btn-view">View</a>' +
+                        '</div>' +
+                    '</div>';
                 }).join('');
 
             } catch (err) {
                 console.error(err);
-                list.innerHTML = '<li class="empty-state">Failed to load reports.</li>';
+                list.innerHTML = '<div class="empty-state">Failed to load reports.</div>';
             }
         }
 
-        // Initialise Supabase and check for existing session on load
         document.addEventListener('DOMContentLoaded', function() {
             initSupabase();
         });
