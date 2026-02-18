@@ -48,7 +48,10 @@
         .report-item:last-child { border-bottom: none; }
         .report-info h4 { font-size: 0.95rem; font-weight: 500; }
         .report-info span { font-size: 0.8rem; color: var(--text-light); }
-        .report-link { padding: 6px 16px; background: var(--accent); color: white; text-decoration: none; border-radius: var(--radius-sm); font-size: 0.82rem; font-weight: 500; }
+        .report-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+        .report-link { padding: 6px 16px; background: var(--accent); color: white; text-decoration: none; border-radius: var(--radius-sm); font-size: 0.82rem; font-weight: 500; white-space: nowrap; }
+        .report-edit { padding: 6px 16px; background: transparent; color: var(--accent); text-decoration: none; border-radius: var(--radius-sm); font-size: 0.82rem; font-weight: 500; border: 1.5px solid var(--accent); white-space: nowrap; transition: all 0.2s; }
+        .report-edit:hover { background: var(--accent); color: white; }
 
         .empty-state { text-align: center; padding: 40px; color: var(--text-light); }
         .empty-state a { color: var(--accent); }
@@ -270,12 +273,16 @@
                 list.innerHTML = data.reports.map(r => {
                     const date = new Date(r.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
                     const procs = r.processes.map(p => p.name).join(', ') || 'Process Diagnostic';
+                    const editUrl = '/diagnostic?edit=' + r.id + '&email=' + encodeURIComponent(email);
                     return `<li class="report-item">
                         <div class="report-info">
                             <h4>${procs}</h4>
                             <span>${date} &middot; ${r.metrics.automationPercentage}% automation readiness &middot; ${r.metrics.totalProcesses} process${r.metrics.totalProcesses !== 1 ? 'es' : ''}</span>
                         </div>
-                        <a href="/report?id=${r.id}" class="report-link">View Report</a>
+                        <div class="report-actions">
+                            <a href="${editUrl}" class="report-edit">Edit</a>
+                            <a href="/report?id=${r.id}" class="report-link">View</a>
+                        </div>
                     </li>`;
                 }).join('');
 

@@ -25,6 +25,8 @@ module.exports = async function handler(req, res) {
       automationScore,
       roadmap,
       processes,
+      rawProcesses,
+      customDepartments,
       pdfBase64,
       timestamp
     } = req.body;
@@ -67,6 +69,8 @@ module.exports = async function handler(req, res) {
             automationScore,
             roadmap,
             processes,
+            rawProcesses: rawProcesses || null,
+            customDepartments: customDepartments || [],
             leadScore
           },
           pdf_base64: pdfBase64 || null,

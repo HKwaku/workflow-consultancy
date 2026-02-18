@@ -10,6 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <!-- jsPDF for PDF report generation -->
     <script src="/assets/jspdf.umd.min.js"></script>
+    <!-- Supabase client for portal auth check (edit mode) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Flow diagram rendered with custom SVG (no external dependency) -->
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -403,6 +405,96 @@
         .resume-banner strong {
             font-weight: 600;
         }
+
+        /* Edit mode banner */
+        .edit-banner {
+            display: none;
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            color: white;
+            padding: 0.85rem 1.25rem;
+            border-radius: var(--radius-sm);
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            text-align: center;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .edit-banner.show { display: block; }
+        .edit-banner strong { font-weight: 600; }
+
+        .edit-banner .edit-banner-actions {
+            margin-top: 0.5rem;
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .edit-banner .edit-banner-actions button {
+            padding: 0.4rem 1rem;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-family: 'Work Sans', sans-serif;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.15);
+            color: white;
+            transition: background 0.2s;
+        }
+
+        .edit-banner .edit-banner-actions button:hover {
+            background: rgba(255,255,255,0.25);
+        }
+
+        /* Auth gate overlay for edit mode */
+        .auth-gate {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .auth-gate.show { display: flex; }
+
+        .auth-gate-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 2.5rem;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+        }
+
+        .auth-gate-card h3 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.4rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        .auth-gate-card p {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .auth-gate-card .auth-gate-btn {
+            display: inline-block;
+            padding: 0.75rem 2rem;
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            color: white;
+            text-decoration: none;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 0.92rem;
+            transition: opacity 0.2s;
+        }
+
+        .auth-gate-card .auth-gate-btn:hover { opacity: 0.9; }
 
         /* ===== Screens ===== */
         .screen {
@@ -1691,6 +1783,24 @@
         <!-- Resume banner (shown when restoring from link) -->
         <div class="resume-banner" id="resumeBanner">
             <strong>Welcome back!</strong> Your progress has been restored.
+        </div>
+
+        <!-- Edit mode banner (shown when editing a completed diagnostic) -->
+        <div class="edit-banner" id="editBanner">
+            <strong>Edit Mode</strong> — You're editing a previously completed diagnostic.
+            <div class="edit-banner-actions">
+                <button onclick="editGoToProcess(0)">Review Processes</button>
+                <button onclick="goToScreen(18)">Jump to Submit</button>
+            </div>
+        </div>
+
+        <!-- Auth gate (shown when edit param present but user not logged in) -->
+        <div class="auth-gate" id="authGate">
+            <div class="auth-gate-card">
+                <h3>Sign In Required</h3>
+                <p>You need to be signed in to your portal account to edit a completed diagnostic.</p>
+                <a class="auth-gate-btn" id="authGateLink" href="/portal">Sign In to Portal</a>
+            </div>
         </div>
 
         <!-- Live Process Health Score -->
@@ -3635,6 +3745,152 @@
         }
 
         // ============================================================
+        // EDIT A COMPLETED PROCESS (used in edit mode)
+        // ============================================================
+        let editingProcessIndex = -1;
+
+        function editProcess(index) {
+            if (index < 0 || index >= completedProcesses.length) return;
+
+            // Pull the process out and load it into processData
+            editingProcessIndex = index;
+            processData = JSON.parse(JSON.stringify(completedProcesses[index]));
+
+            // Rebuild steps DOM from processData.steps
+            rebuildStepsFromData(processData.steps || []);
+
+            // Rebuild systems DOM from processData.systems
+            rebuildSystemsFromData(processData.systems || []);
+
+            // Navigate to screen 2 (process name) so the user can walk through
+            goToScreen(2);
+
+            // Show a banner
+            const banner = document.getElementById('resumeBanner');
+            if (banner) {
+                banner.innerHTML = '<strong>Editing:</strong> ' +
+                    (processData.processName || 'Process #' + (index + 1)).replace(/</g, '&lt;') +
+                    '. Walk through each section and update as needed. When done, continue to re-submit.';
+                banner.style.background = 'linear-gradient(135deg, rgba(61,142,166,0.08), rgba(61,142,166,0.03))';
+                banner.style.color = 'var(--accent)';
+                banner.style.borderColor = 'rgba(61,142,166,0.2)';
+                banner.classList.add('show');
+            }
+        }
+
+        function rebuildStepsFromData(steps) {
+            const list = document.getElementById('stepsList');
+            list.innerHTML = '';
+            stepCount = 0;
+
+            if (steps.length === 0) {
+                addStep(); addStep(); addStep();
+                return;
+            }
+
+            steps.forEach((s, i) => {
+                addStep();
+                const idx = i;
+                const nameEl = document.getElementById('step_' + idx + '_name');
+                if (nameEl) nameEl.value = s.name || '';
+
+                const deptEl = document.getElementById('step_' + idx + '_dept');
+                if (deptEl && s.department) {
+                    const options = Array.from(deptEl.options).map(o => o.value);
+                    if (options.includes(s.department)) {
+                        deptEl.value = s.department;
+                    } else {
+                        deptEl.value = 'Other';
+                    }
+                }
+
+                if (s.isExternal) {
+                    const extRadio = document.querySelector('input[name="step_' + idx + '_ext"][value="external"]');
+                    if (extRadio) {
+                        extRadio.checked = true;
+                        extRadio.dispatchEvent(new Event('change'));
+                    }
+                }
+
+                if (s.isDecision) {
+                    const cb = document.getElementById('step_' + idx + '_decision');
+                    if (cb) {
+                        cb.checked = true;
+                        toggleDecisionBranches(idx);
+                    }
+                    if (s.branches && s.branches.length > 0) {
+                        s.branches.forEach((br, bi) => {
+                            if (bi >= 2) addBranch(idx);
+                            const labelEl = document.getElementById('step_' + idx + '_branch_' + bi + '_label');
+                            const targetEl = document.getElementById('step_' + idx + '_branch_' + bi + '_target');
+                            if (labelEl) labelEl.value = br.label || '';
+                            if (targetEl) targetEl.value = br.target || '';
+                        });
+                    }
+                }
+            });
+        }
+
+        function rebuildSystemsFromData(systems) {
+            const list = document.getElementById('systemsList');
+            list.innerHTML = '';
+            systemCount = 0;
+
+            if (systems.length === 0) {
+                addSystem(); addSystem();
+                return;
+            }
+
+            systems.forEach((sys, i) => {
+                addSystem();
+                const idx = i;
+                const nameEl = document.getElementById('system_' + idx + '_name');
+                if (nameEl) nameEl.value = sys.name || '';
+
+                const purposeEl = document.getElementById('system_' + idx + '_purpose');
+                if (purposeEl) purposeEl.value = sys.purpose || '';
+
+                if (sys.actions && sys.actions.length > 0) {
+                    sys.actions.forEach(action => {
+                        const cb = document.getElementById('system_' + idx + '_' + action);
+                        if (cb) cb.checked = true;
+                    });
+                }
+            });
+        }
+
+        // Override handleProcessComplete for edit mode: replace the process instead of pushing
+        const _origHandleProcessComplete = handleProcessComplete;
+        handleProcessComplete = function() {
+            if (editingProcessIndex >= 0) {
+                collectAllProcessData();
+
+                const another = getRadioValue('anotherProcess');
+                if (!another) {
+                    showError(17, 'Please select whether you want to analyse another process.');
+                    return;
+                }
+
+                // Replace the process at the editing index
+                completedProcesses[editingProcessIndex] = JSON.parse(JSON.stringify(processData));
+                editingProcessIndex = -1;
+
+                if (another === 'yes' && completedProcesses.length < 3) {
+                    processData = createEmptyProcess();
+                    stepCount = 0;
+                    systemCount = 0;
+                    document.getElementById('stepsList').innerHTML = '';
+                    document.getElementById('systemsList').innerHTML = '';
+                    goToScreen(1);
+                } else {
+                    goToScreen(18);
+                }
+            } else {
+                _origHandleProcessComplete();
+            }
+        };
+
+        // ============================================================
         // SCREEN 18: CONTACT
         // ============================================================
         function populateScreen18() {
@@ -3644,8 +3900,11 @@
 
             completedProcesses.forEach((p, i) => {
                 totalCost += p.costs.totalAnnualCost;
+                const editBtn = editingReportId
+                    ? ` <button onclick="editProcess(${i})" style="float:right;padding:4px 14px;background:transparent;color:var(--accent);border:1.5px solid var(--accent);border-radius:100px;font-size:0.78rem;font-weight:500;cursor:pointer;font-family:inherit;">Edit</button>`
+                    : '';
                 html += `<div class="calculated">
-                    <div class="calculated-label">Process #${i + 1}: ${p.processName}</div>
+                    <div class="calculated-label">Process #${i + 1}: ${p.processName}${editBtn}</div>
                     <div class="calculated-value" style="font-size: 1.3rem;">${formatCurrency(p.costs.totalAnnualCost)}/year</div>
                     <div class="calculated-formula">${p.lastExample.elapsedDays} day cycle &middot; ${p.frequency.annual} instances/year &middot; ${p.costs.teamSize} people</div>
                 </div>`;
@@ -6671,6 +6930,8 @@
                         cumulative: lastRoadmapData.cumulative
                     } : {},
                     processes: result.processes || [],
+                    rawProcesses: completedProcesses || [],
+                    customDepartments: customDepartments || [],
                     pdfBase64,
                     timestamp: new Date().toISOString()
                 };
@@ -8145,6 +8406,10 @@
                 loadTeamSampleToConsole();
             }
 
+            // Check for edit mode (?edit=reportId&email=xxx)
+            const editLoaded = await checkForEditMode();
+            if (editLoaded) return;
+
             // Check for team mode (?team=CODE)
             await checkForTeamMode();
 
@@ -8285,6 +8550,144 @@
             _origGoToScreen(screenNum);
             updateSaveButtonVisibility();
         };
+
+        // ── Edit mode: load a completed diagnostic for editing ─────
+        let editingReportId = null;
+
+        async function checkForEditMode() {
+            const params = new URLSearchParams(location.search);
+            const reportId = params.get('edit');
+            const email = params.get('email');
+            if (!reportId) return false;
+
+            // Email is required -- if missing, prompt user to go through portal
+            if (!email) {
+                const banner = document.getElementById('resumeBanner');
+                if (banner) {
+                    banner.innerHTML = '<strong>Authentication required.</strong> Please <a href="/portal" style="color: inherit; text-decoration: underline;">sign in to the portal</a> to edit a completed diagnostic.';
+                    banner.style.background = '#fef2f2';
+                    banner.style.color = '#dc2626';
+                    banner.style.borderColor = '#fecaca';
+                    banner.classList.add('show');
+                }
+                return false;
+            }
+
+            try {
+                const resp = await fetch('/api/get-editable-diagnostic?id=' + encodeURIComponent(reportId) + '&email=' + encodeURIComponent(email));
+                const result = await resp.json();
+
+                if (!resp.ok || !result.success) {
+                    console.warn('Edit load failed:', result.error);
+                    const banner = document.getElementById('resumeBanner');
+                    if (banner) {
+                        banner.innerHTML = '<strong>Could not load diagnostic for editing.</strong> ' + (result.error || 'Unknown error.');
+                        banner.style.background = '#fef2f2';
+                        banner.style.color = '#dc2626';
+                        banner.style.borderColor = '#fecaca';
+                        banner.classList.add('show');
+                        setTimeout(() => banner.classList.remove('show'), 10000);
+                    }
+                    return false;
+                }
+
+                // Restore raw process data
+                const reportData = result.report || result;
+                completedProcesses = reportData.rawProcesses || [];
+                editingReportId = reportId;
+
+                // Restore contact info if available
+                const contact = reportData.contact || {};
+
+                // Pre-fill contact fields (screen 18)
+                setTimeout(() => {
+                    const nameEl = document.getElementById('contactName');
+                    const emailEl = document.getElementById('contactEmail');
+                    const companyEl = document.getElementById('contactCompany');
+                    const titleEl = document.getElementById('contactTitle');
+                    if (nameEl && contact.name) nameEl.value = contact.name;
+                    if (emailEl && contact.email) emailEl.value = contact.email;
+                    if (companyEl && contact.company) companyEl.value = contact.company;
+                    if (titleEl && contact.title) titleEl.value = contact.title;
+
+                    // Set industry dropdown
+                    const industryEl = document.getElementById('contactIndustry');
+                    if (industryEl && contact.industry) {
+                        const options = Array.from(industryEl.options).map(o => o.value);
+                        if (options.includes(contact.industry)) {
+                            industryEl.value = contact.industry;
+                        } else {
+                            industryEl.value = 'Other';
+                        }
+                    }
+
+                    // Set team size radio
+                    if (contact.teamSize) {
+                        const radio = document.querySelector('input[name="teamSize"][value="' + contact.teamSize + '"]');
+                        if (radio) radio.checked = true;
+                    }
+                }, 100);
+
+                // If there are completed processes, load them for editing
+                if (completedProcesses.length > 0) {
+                    // Set the current processData to the last completed one
+                    processData = completedProcesses[completedProcesses.length - 1];
+
+                    // Restore custom departments from stored data or infer from steps
+                    const storedCustomDepts = reportData.customDepartments || [];
+                    if (storedCustomDepts.length > 0) {
+                        storedCustomDepts.forEach(d => {
+                            if (!customDepartments.includes(d)) customDepartments.push(d);
+                        });
+                    } else {
+                        const allDepts = [];
+                        completedProcesses.forEach(p => {
+                            (p.steps || []).forEach(s => {
+                                if (s.department && !allDepts.includes(s.department)) {
+                                    allDepts.push(s.department);
+                                }
+                            });
+                        });
+                        const defaultDepts = ['Sales', 'Operations', 'Finance', 'IT', 'Customer Success', 'Product', 'Leadership', 'HR', 'Other'];
+                        allDepts.forEach(d => {
+                            if (!defaultDepts.includes(d) && !customDepartments.includes(d)) {
+                                customDepartments.push(d);
+                            }
+                        });
+                    }
+                    if (customDepartments.length > 0) {
+                        renderCustomDeptTags();
+                        syncCustomDeptsToStepDropdowns();
+                    }
+
+                    // Navigate to the contact / summary screen so user can review and re-submit
+                    goToScreen(18);
+                }
+
+                // Show edit banner
+                const banner = document.getElementById('resumeBanner');
+                if (banner) {
+                    const procNames = completedProcesses.map(p => p.processName).filter(Boolean).join(', ');
+                    banner.innerHTML = '<strong>Editing mode</strong> — Loaded ' + completedProcesses.length +
+                        ' process' + (completedProcesses.length !== 1 ? 'es' : '') +
+                        (procNames ? ' (' + procNames.replace(/</g, '&lt;') + ')' : '') +
+                        '. Make your changes and re-submit.';
+                    banner.style.background = 'linear-gradient(135deg, rgba(61,142,166,0.08), rgba(61,142,166,0.03))';
+                    banner.style.color = 'var(--accent)';
+                    banner.style.borderColor = 'rgba(61,142,166,0.2)';
+                    banner.classList.add('show');
+                }
+
+                // Clean URL
+                history.replaceState(null, '', location.pathname);
+
+                return true;
+
+            } catch (err) {
+                console.error('Edit mode error:', err);
+                return false;
+            }
+        }
 
         // ── Resume from cloud link ─────────────────────────────────
         async function checkForCloudResume() {
