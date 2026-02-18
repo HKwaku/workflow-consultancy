@@ -1,6 +1,7 @@
 // api/get-diagnostic.js
 // Vercel Serverless Function - Fetches a diagnostic report from Supabase by ID
 // Used by /report?id=xxx to retrieve stored diagnostic data + PDF
+// Also supports ?id=xxx&editable=true&email=yyy to return raw process data for editing
 
 module.exports = async function handler(req, res) {
   // CORS
@@ -13,7 +14,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { id } = req.query;
+    const { id, editable, email } = req.query;
 
     if (!id) {
       return res.status(400).json({ error: 'Report ID is required. Use ?id=xxx' });
@@ -34,7 +35,63 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // Fetch from Supabase
+    // ── Editable mode: return raw process data for editing ──────
+    if (editable === 'true') {
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required for ownership verification.' });
+      }
+
+      const url = `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${id}&select=id,contact_email,contact_name,company,diagnostic_data,created_at`;
+      const sbResp = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!sbResp.ok) {
+        console.error('Supabase fetch error:', sbResp.status);
+        return res.status(502).json({ error: 'Failed to fetch report.' });
+      }
+
+      const rows = await sbResp.json();
+      if (!rows || rows.length === 0) {
+        return res.status(404).json({ error: 'Report not found.' });
+      }
+
+      const report = rows[0];
+
+      // Verify email ownership (case-insensitive)
+      if (report.contact_email.toLowerCase() !== email.toLowerCase()) {
+        return res.status(403).json({ error: 'You do not have permission to edit this diagnostic.' });
+      }
+
+      const diagData = report.diagnostic_data || {};
+
+      if (!diagData.rawProcesses || diagData.rawProcesses.length === 0) {
+        return res.status(404).json({
+          error: 'Raw process data not available for this diagnostic. Only diagnostics submitted after this feature was added can be edited.'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        report: {
+          id: report.id,
+          contactEmail: report.contact_email,
+          contactName: report.contact_name,
+          company: report.company,
+          createdAt: report.created_at,
+          contact: diagData.contact || {},
+          rawProcesses: diagData.rawProcesses,
+          customDepartments: diagData.customDepartments || []
+        }
+      });
+    }
+
+    // ── Standard mode: return full report + PDF ─────────────────
     const url = `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${id}&select=*`;
     const sbResp = await fetch(url, {
       method: 'GET',
@@ -59,7 +116,6 @@ module.exports = async function handler(req, res) {
 
     const report = rows[0];
 
-    // Return diagnostic data (PDF base64 included so client can trigger download)
     return res.status(200).json({
       success: true,
       report: {

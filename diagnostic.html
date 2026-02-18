@@ -8574,7 +8574,7 @@
             }
 
             try {
-                const resp = await fetch('/api/get-editable-diagnostic?id=' + encodeURIComponent(reportId) + '&email=' + encodeURIComponent(email));
+                const resp = await fetch('/api/get-diagnostic?id=' + encodeURIComponent(reportId) + '&editable=true&email=' + encodeURIComponent(email));
                 const result = await resp.json();
 
                 if (!resp.ok || !result.success) {
