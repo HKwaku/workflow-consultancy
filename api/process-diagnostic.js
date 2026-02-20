@@ -101,11 +101,15 @@ async function triggerN8nFlowDiagram(processes, contact) {
     processType: p.processType,
     startsWhen: p.definition?.startsWhen || '',
     completesWhen: p.definition?.completesWhen || '',
-    steps: (p.steps || []).map(s => ({
-      number: s.number,
-      name: s.name,
-      department: s.department
-    })),
+    steps: (p.steps || []).map(s => {
+      const step = { number: s.number, name: s.name, department: s.department };
+      if (s.isDecision && s.branches && s.branches.length > 0) {
+        step.isDecision = true;
+        step.branches = s.branches;
+      }
+      if (s.isExternal) step.isExternal = true;
+      return step;
+    }),
     handoffs: (p.handoffs || []).map(h => ({
       from: { name: h.from?.name, department: h.from?.department },
       to: { name: h.to?.name, department: h.to?.department },
