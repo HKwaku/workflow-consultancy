@@ -303,35 +303,7 @@
             background: var(--accent-dark, #2d7a90);
         }
 
-        /* Team process selection grid inside modal */
-        .team-process-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-        }
-
-        .team-process-chip {
-            padding: 0.45rem 0.9rem;
-            border: 1.5px solid var(--border);
-            border-radius: 100px;
-            font-size: 0.82rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            background: white;
-            color: var(--text);
-            user-select: none;
-        }
-
-        .team-process-chip:hover {
-            border-color: var(--accent);
-            background: #f0fafb;
-        }
-
-        .team-process-chip.selected {
-            border-color: var(--accent);
-            background: var(--accent);
-            color: white;
-        }
+        /* (team-process-chip styles removed — team uses .process-card now) */
 
         .save-modal-success {
             display: none;
@@ -2184,7 +2156,7 @@
                 </div>
 
                 <div style="text-align: center; margin-top: 1rem;">
-                    <button class="button button-secondary" onclick="openTeamModal()" style="font-size: 0.88rem; padding: 0.6rem 1.5rem; border-radius: 100px;">
+                    <button class="button button-secondary" onclick="openTeamSetup()" style="font-size: 0.88rem; padding: 0.6rem 1.5rem; border-radius: 100px;">
                         &#128101; Start a Team Diagnostic
                     </button>
                     <p style="font-size: 0.78rem; color: var(--text-light); margin-top: 0.5rem;">
@@ -2207,6 +2179,121 @@
                     <button class="button" onclick="window.location.href='/team-results?sample'" style="background: #7c3aed; color: white; font-size: 0.85rem; padding: 0.6rem 1.5rem; margin-top: 0.5rem;">
                         Load Team Sample &amp; Show AI Analysis &rarr;
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== TEAM DIAGNOSTIC SETUP (full page) ========== -->
+        <div class="screen" id="screenTeam">
+            <div class="screen-card">
+                <h2 class="screen-title">Team Diagnostic</h2>
+                <p class="screen-subtitle">Get multiple perspectives on the same process from different team members.</p>
+
+                <div id="teamSetupCreate">
+                    <div class="form-group">
+                        <label style="font-weight: 600;">Select a process:</label>
+                    </div>
+
+                    <div class="process-grid" id="teamProcessGrid">
+                        <div class="process-card" onclick="selectTeamProcess(this, 'Customer Onboarding')">
+                            <div class="process-icon">&#128230;</div>
+                            <div class="process-name">Customer Onboarding</div>
+                        </div>
+                        <div class="process-card" onclick="selectTeamProcess(this, 'Sales to Delivery')">
+                            <div class="process-icon">&#128176;</div>
+                            <div class="process-name">Sales to Delivery</div>
+                        </div>
+                        <div class="process-card" onclick="selectTeamProcess(this, 'Employee Onboarding')">
+                            <div class="process-icon">&#128100;</div>
+                            <div class="process-name">Employee Onboarding</div>
+                        </div>
+                        <div class="process-card" onclick="selectTeamProcess(this, 'Order Fulfillment')">
+                            <div class="process-icon">&#9989;</div>
+                            <div class="process-name">Order Fulfillment</div>
+                        </div>
+                        <div class="process-card" onclick="selectTeamProcess(this, 'Invoice to Payment')">
+                            <div class="process-icon">&#128179;</div>
+                            <div class="process-name">Invoice to Payment</div>
+                        </div>
+                        <div class="process-card" onclick="selectTeamProcess(this, 'Issue Resolution')">
+                            <div class="process-icon">&#128295;</div>
+                            <div class="process-name">Issue Resolution</div>
+                        </div>
+                        <div class="process-card" onclick="selectTeamProcess(this, 'Approval Workflow')">
+                            <div class="process-icon">&#128203;</div>
+                            <div class="process-name">Approval Workflow</div>
+                        </div>
+                        <div class="process-card" onclick="selectTeamProcess(this, 'Product Launch')">
+                            <div class="process-icon">&#128640;</div>
+                            <div class="process-name">Product Launch</div>
+                        </div>
+                        <div class="process-card" onclick="selectTeamProcess(this, 'Reporting Cycle')">
+                            <div class="process-icon">&#128202;</div>
+                            <div class="process-name">Reporting Cycle</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 1.5rem;">
+                        <label>Or describe your own:</label>
+                        <input type="text" id="teamProcessName" placeholder="e.g., Quote to Contract" oninput="handleTeamCustomProcess()">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="teamCompany">Company name (optional)</label>
+                        <input type="text" id="teamCompany" placeholder="e.g., Acme Corp">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="teamCreatorName">Your name</label>
+                        <input type="text" id="teamCreatorName" placeholder="e.g., Jane Smith">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="teamCreatorEmail">Your email (optional)</label>
+                        <input type="email" id="teamCreatorEmail" placeholder="e.g., jane@acme.com">
+                    </div>
+
+                    <div class="button-group">
+                        <button class="button button-secondary" onclick="closeTeamSetup()">&larr; Back</button>
+                        <button class="button button-primary" id="teamCreateBtn" onclick="createTeamDiagnostic()" disabled>Create Team Session &rarr;</button>
+                    </div>
+
+                    <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+                        <p style="font-size: 0.95rem; color: var(--text-mid); margin-bottom: 0.75rem; text-align: center;">Already have a team code?</p>
+                        <div style="display: flex; gap: 8px; max-width: 320px; margin: 0 auto;">
+                            <input type="text" id="teamJoinCode" placeholder="ABC123" maxlength="6" style="text-transform: uppercase; text-align: center; letter-spacing: 0.1em;">
+                            <button class="button button-secondary" onclick="joinTeamDiagnostic()" style="white-space: nowrap;">Join Session</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="teamSetupSuccess" style="display: none;">
+                    <div style="text-align: center; padding: 2rem 0;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">&#128101;</div>
+                        <h3 style="color: var(--primary); margin-bottom: 0.5rem;">Team Session Created!</h3>
+                        <p id="teamSuccessMsg" style="color: var(--text-mid);"></p>
+                    </div>
+
+                    <div class="form-group" style="background: var(--bg-soft); border-radius: var(--radius-md); padding: 1.5rem; text-align: center;">
+                        <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Share this code with your team</label>
+                        <div style="font-size: 2.5rem; letter-spacing: 0.2em; font-weight: 700; color: var(--accent); margin: 0.5rem 0;" id="teamCodeDisplay"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Or share this link</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="teamJoinLink" readonly onclick="this.select()" style="flex: 1;">
+                            <button class="button button-secondary" onclick="copyTeamLink()" style="white-space: nowrap;">Copy Link</button>
+                        </div>
+                    </div>
+
+                    <div style="text-align: center; margin-top: 1rem;">
+                        <a id="teamResultsLink" href="#" style="color: var(--accent); font-weight: 500;">View team results page &rarr;</a>
+                    </div>
+
+                    <div class="button-group" style="margin-top: 2rem;">
+                        <button class="button button-secondary" onclick="closeTeamSetup()">&larr; Back to Start</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -10361,20 +10448,26 @@
             return custom || teamSelectedProcess;
         }
 
-        function openTeamModal() {
-            document.getElementById('teamModalCreate').style.display = 'block';
-            document.getElementById('teamModalSuccess').style.display = 'none';
-            document.getElementById('teamLinkBox').style.display = 'none';
+        function openTeamSetup() {
+            document.getElementById('teamSetupCreate').style.display = 'block';
+            document.getElementById('teamSetupSuccess').style.display = 'none';
             teamSelectedProcess = '';
-            document.querySelectorAll('.team-process-chip').forEach(c => c.classList.remove('selected'));
+            document.querySelectorAll('#teamProcessGrid .process-card').forEach(c => c.classList.remove('selected'));
             document.getElementById('teamProcessName').value = '';
             document.getElementById('teamCreateBtn').disabled = true;
-            document.getElementById('teamModalOverlay').classList.add('show');
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('screenTeam').classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function closeTeamModal() {
-            document.getElementById('teamModalOverlay').classList.remove('show');
+        function closeTeamSetup() {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('screen0').classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+
+        function openTeamModal() { openTeamSetup(); }
+        function closeTeamModal() { closeTeamSetup(); }
 
         async function createTeamDiagnostic() {
             const processName = getTeamProcessName();
@@ -10403,10 +10496,9 @@
                 const result = await resp.json();
                 if (!resp.ok || !result.success) throw new Error(result.error || 'Failed');
 
-                // Show success
-                document.getElementById('teamModalCreate').style.display = 'none';
-                document.getElementById('teamModalSuccess').style.display = 'block';
-                document.getElementById('teamLinkBox').style.display = 'block';
+                // Show success in full-page screen
+                document.getElementById('teamSetupCreate').style.display = 'none';
+                document.getElementById('teamSetupSuccess').style.display = 'block';
                 document.getElementById('teamSuccessMsg').textContent =
                     `Share the code below with your team. Each person visits the link and completes the diagnostic for "${processName}".`;
                 document.getElementById('teamCodeDisplay').textContent = result.teamCode;
@@ -10798,96 +10890,5 @@
         </div>
     </div>
 
-    <!-- Team Diagnostic Modal -->
-    <div class="save-modal-overlay" id="teamModalOverlay" onclick="if(event.target===this)closeTeamModal()">
-        <div class="save-modal">
-            <button class="save-modal-close" onclick="closeTeamModal()">&times;</button>
-
-            <div id="teamModalCreate">
-                <h3>Team Diagnostic</h3>
-                <p>Create a team session and share the code with colleagues. Each person fills out the diagnostic independently, then you compare perspectives.</p>
-
-                <label style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Select a process:</label>
-                <div class="process-grid" id="teamProcessGrid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem; margin: 1rem 0 0.5rem;">
-                    <div class="process-card" onclick="selectTeamProcess(this, 'Customer Onboarding')" style="padding: 1rem 0.75rem;">
-                        <div class="process-icon" style="font-size: 1.8rem; margin-bottom: 0.4rem;">&#128230;</div>
-                        <div class="process-name" style="font-size: 0.82rem;">Customer Onboarding</div>
-                    </div>
-                    <div class="process-card" onclick="selectTeamProcess(this, 'Sales to Delivery')" style="padding: 1rem 0.75rem;">
-                        <div class="process-icon" style="font-size: 1.8rem; margin-bottom: 0.4rem;">&#128176;</div>
-                        <div class="process-name" style="font-size: 0.82rem;">Sales to Delivery</div>
-                    </div>
-                    <div class="process-card" onclick="selectTeamProcess(this, 'Employee Onboarding')" style="padding: 1rem 0.75rem;">
-                        <div class="process-icon" style="font-size: 1.8rem; margin-bottom: 0.4rem;">&#128100;</div>
-                        <div class="process-name" style="font-size: 0.82rem;">Employee Onboarding</div>
-                    </div>
-                    <div class="process-card" onclick="selectTeamProcess(this, 'Order Fulfillment')" style="padding: 1rem 0.75rem;">
-                        <div class="process-icon" style="font-size: 1.8rem; margin-bottom: 0.4rem;">&#9989;</div>
-                        <div class="process-name" style="font-size: 0.82rem;">Order Fulfillment</div>
-                    </div>
-                    <div class="process-card" onclick="selectTeamProcess(this, 'Invoice to Payment')" style="padding: 1rem 0.75rem;">
-                        <div class="process-icon" style="font-size: 1.8rem; margin-bottom: 0.4rem;">&#128179;</div>
-                        <div class="process-name" style="font-size: 0.82rem;">Invoice to Payment</div>
-                    </div>
-                    <div class="process-card" onclick="selectTeamProcess(this, 'Issue Resolution')" style="padding: 1rem 0.75rem;">
-                        <div class="process-icon" style="font-size: 1.8rem; margin-bottom: 0.4rem;">&#128295;</div>
-                        <div class="process-name" style="font-size: 0.82rem;">Issue Resolution</div>
-                    </div>
-                    <div class="process-card" onclick="selectTeamProcess(this, 'Approval Workflow')" style="padding: 1rem 0.75rem;">
-                        <div class="process-icon" style="font-size: 1.8rem; margin-bottom: 0.4rem;">&#128203;</div>
-                        <div class="process-name" style="font-size: 0.82rem;">Approval Workflow</div>
-                    </div>
-                    <div class="process-card" onclick="selectTeamProcess(this, 'Product Launch')" style="padding: 1rem 0.75rem;">
-                        <div class="process-icon" style="font-size: 1.8rem; margin-bottom: 0.4rem;">&#128640;</div>
-                        <div class="process-name" style="font-size: 0.82rem;">Product Launch</div>
-                    </div>
-                    <div class="process-card" onclick="selectTeamProcess(this, 'Reporting Cycle')" style="padding: 1rem 0.75rem;">
-                        <div class="process-icon" style="font-size: 1.8rem; margin-bottom: 0.4rem;">&#128202;</div>
-                        <div class="process-name" style="font-size: 0.82rem;">Reporting Cycle</div>
-                    </div>
-                </div>
-                <div style="margin-top: 0.75rem;">
-                    <input type="text" class="save-modal-input" id="teamProcessName" placeholder="Or type a custom process name..." oninput="handleTeamCustomProcess()">
-                </div>
-
-                <input type="text" class="save-modal-input" id="teamCompany" placeholder="Company name (optional)">
-                <input type="text" class="save-modal-input" id="teamCreatorName" placeholder="Your name">
-                <input type="email" class="save-modal-input" id="teamCreatorEmail" placeholder="Your email (optional)">
-
-                <div class="save-modal-actions">
-                    <button class="button button-primary" id="teamCreateBtn" onclick="createTeamDiagnostic()" disabled>Create Team Session</button>
-                </div>
-
-                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); text-align: center;">
-                    <p style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 0.5rem;">Already have a team code?</p>
-                    <div style="display: flex; gap: 8px; max-width: 280px; margin: 0 auto;">
-                        <input type="text" class="save-modal-input" id="teamJoinCode" placeholder="ABC123" maxlength="6" style="text-transform: uppercase; text-align: center; letter-spacing: 0.1em; margin-bottom: 0;">
-                        <button class="button button-secondary" onclick="joinTeamDiagnostic()" style="white-space: nowrap;">Join</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="save-modal-success" id="teamModalSuccess" style="display: none;">
-                <div class="checkmark">&#128101;</div>
-                <h4>Team Session Created!</h4>
-                <p id="teamSuccessMsg"></p>
-            </div>
-
-            <div class="save-modal-link-box" id="teamLinkBox" style="display: none;">
-                <label>Share this code with your team</label>
-                <div style="text-align: center; font-size: 2rem; letter-spacing: 0.2em; font-weight: 700; color: var(--accent); margin: 8px 0;" id="teamCodeDisplay"></div>
-                <label style="margin-top: 12px;">Or share this link</label>
-                <div class="save-modal-link-row">
-                    <input type="text" id="teamJoinLink" readonly onclick="this.select()">
-                    <button onclick="copyTeamLink()">Copy</button>
-                </div>
-                <div style="margin-top: 12px; text-align: center;">
-                    <a id="teamResultsLink" href="#" style="font-size: 0.85rem; color: var(--accent);">View team results page &rarr;</a>
-                </div>
-            </div>
-        </div>
-    </div>
 </body>
-</html>
-
 </html>
