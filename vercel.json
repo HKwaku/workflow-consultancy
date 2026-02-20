@@ -1,6 +1,9 @@
 {
   "version": 2,
   "cleanUrls": true,
+  "redirects": [
+    { "source": "/dashboard", "destination": "/portal", "statusCode": 301 }
+  ],
   "functions": {
     "api/*.js": {
       "maxDuration": 60

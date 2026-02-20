@@ -4,12 +4,10 @@
 // POST: Log a new instance event (started, completed, stuck, waiting)
 
 const crypto = require('crypto');
+const { setCorsHeaders, getSupabaseHeaders, getSupabaseWriteHeaders, fetchWithTimeout } = require('../lib/api-helpers');
 
 module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  setCorsHeaders(res, 'GET,OPTIONS,POST');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 

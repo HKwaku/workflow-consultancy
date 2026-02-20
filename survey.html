@@ -8,22 +8,13 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles/base.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
+        body { line-height: 1.65; overflow-x: hidden; }
         :root {
-            --primary: #1a2f4a;
             --primary-light: #2a4a6b;
-            --accent: #3d8ea6;
             --accent-light: #5bb8d4;
             --dark: #0c1b2e;
-            --text: #1e293b;
-            --text-mid: #475569;
-            --text-light: #64748b;
-            --bg: #fafbfc;
-            --bg-alt: #f1f5f9;
-            --white: #ffffff;
-            --border: #e2e8f0;
             --border-light: #f1f5f9;
             --success: #16a34a;
             --success-bg: rgba(22,163,74,0.06);
@@ -33,19 +24,8 @@
             --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
             --shadow-md: 0 4px 20px rgba(0,0,0,0.06);
             --shadow-lg: 0 12px 40px rgba(0,0,0,0.08);
-            --radius-sm: 8px;
             --radius-md: 14px;
             --radius-lg: 20px;
-        }
-
-        body {
-            font-family: 'Work Sans', sans-serif;
-            color: var(--text);
-            line-height: 1.65;
-            background: var(--bg);
-            overflow-x: hidden;
-            -webkit-font-smoothing: antialiased;
-            min-height: 100vh;
         }
 
         h1, h2, h3, h4 {
@@ -524,16 +504,7 @@
 
         .loading-overlay.visible { display: flex; }
 
-        .loading-spinner {
-            width: 48px;
-            height: 48px;
-            border: 3px solid var(--border);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-spinner { width: 48px; height: 48px; border-width: 3px; }
 
         .completion-summary {
             text-align: center;
@@ -605,7 +576,7 @@
 
     <div class="top-bar">
         <div class="top-bar-inner">
-            <a href="/">Workflow Partners</a>
+            <a href="/">Workflow<span style="color:#b8976a">.</span></a>
             <span class="top-bar-badge">Workflow Survey</span>
         </div>
     </div>
@@ -992,6 +963,22 @@
 
     <script>
 (function() {
+        function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+        function showBanner(msg, type) {
+            var existing = document.getElementById('inlineBanner');
+            if (existing) existing.remove();
+            var div = document.createElement('div');
+            div.id = 'inlineBanner';
+            var bg = type === 'error' ? '#fef2f2' : '#fffbeb';
+            var border = type === 'error' ? '#fca5a5' : '#fcd34d';
+            var color = type === 'error' ? '#991b1b' : '#92400e';
+            div.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:10001;padding:12px 24px;border-radius:8px;background:' + bg + ';border:1px solid ' + border + ';color:' + color + ';font-size:0.88rem;max-width:500px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.1);';
+            div.textContent = msg;
+            document.body.appendChild(div);
+            setTimeout(function() { if (div.parentNode) div.remove(); }, 5000);
+        }
+
         const DEPARTMENTS = ['Sales', 'Operations', 'Finance', 'IT', 'HR', 'Marketing', 'Leadership', 'Customer Service', 'Other'];
         const DELAY_CAUSES = ['approval', 'missing_info', 'person_unavailable', 'system_issues', 'unclear_requirements', 'dependencies', 'quality_rework', 'capacity', 'other'];
         const DELAY_CAUSE_LABELS = {
@@ -1069,7 +1056,7 @@
         function validateSection1() {
             const w = document.getElementById('workflowSelect').value;
             if (!w) {
-                alert('Please select which workflow you are mapping.');
+                showBanner('Please select which workflow you are mapping.', 'error');
                 return false;
             }
             return true;
@@ -1091,7 +1078,7 @@
             div.className = 'step-row';
             div.dataset.index = idx;
             div.innerHTML =
-                '<input type="text" placeholder="Step ' + (idx + 1) + ' name" data-step-index="' + idx + '" value="' + (value || '').replace(/"/g, '&quot;') + '">' +
+                '<input type="text" placeholder="Step ' + (idx + 1) + ' name" data-step-index="' + idx + '" value="' + esc(value) + '">' +
                 (canRemove ? '<button type="button" class="button-remove" data-remove-step="' + idx + '">Remove</button>' : '');
             document.getElementById('stepList').appendChild(div);
             div.querySelector('input').addEventListener('input', function() {
@@ -1255,7 +1242,7 @@
                 const handoffId = 'handoff_' + i;
                 const div = document.createElement('div');
                 div.className = 'handoff-card';
-                div.innerHTML = '<h4>Handoff: ' + a + ' → ' + b + '</h4>' +
+                div.innerHTML = '<h4>Handoff: ' + esc(a) + ' → ' + esc(b) + '</h4>' +
                     '<div class="question-group"><div class="question-label">Method</div><div class="option-grid">' +
                     '<label class="option-card"><input type="radio" name="' + handoffId + '_method" value="email"><div class="option-inner">Email notification</div></label>' +
                     '<label class="option-card"><input type="radio" name="' + handoffId + '_method" value="system"><div class="option-inner">System status update</div></label>' +
@@ -1298,8 +1285,8 @@
                 const div = document.createElement('div');
                 div.className = 'input-row';
                 div.style.marginBottom = '0.75rem';
-                div.innerHTML = '<div class="input-group"><label class="input-label">' + name + ' – Started</label><input type="datetime-local" id="' + id + '_start"></div>' +
-                    '<div class="input-group"><label class="input-label">' + name + ' – Completed</label><input type="datetime-local" id="' + id + '_end"></div>' +
+                div.innerHTML = '<div class="input-group"><label class="input-label">' + esc(name) + ' – Started</label><input type="datetime-local" id="' + id + '_start"></div>' +
+                    '<div class="input-group"><label class="input-label">' + esc(name) + ' – Completed</label><input type="datetime-local" id="' + id + '_end"></div>' +
                     '<div class="input-group"><label class="input-label">Notes</label><input type="text" id="' + id + '_notes" placeholder="Optional"></div>';
                 container.appendChild(div);
             });
@@ -1308,7 +1295,7 @@
         function buildBottleneckDropdown() {
             const names = getStepNames();
             const sel = document.getElementById('bottleneckStep');
-            sel.innerHTML = '<option value="">None / N/A</option>' + names.map((n, i) => '<option value="' + i + '">' + n + '</option>').join('');
+            sel.innerHTML = '<option value="">None / N/A</option>' + names.map((n, i) => '<option value="' + i + '">' + esc(n) + '</option>').join('');
         }
 
         function updateElapsedDays() {
@@ -1443,7 +1430,12 @@
             return data;
         }
 
+        let _saveDraftTimer = null;
         function saveDraft() {
+            clearTimeout(_saveDraftTimer);
+            _saveDraftTimer = setTimeout(_saveDraftNow, 500);
+        }
+        function _saveDraftNow() {
             try {
                 const draft = {
                     steps: steps.slice(),
@@ -1456,7 +1448,7 @@
                     section3StepIndex: section3StepIndex
                 };
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
-            } catch (e) {}
+            } catch (e) { console.error('Failed to save draft:', e.message); }
         }
 
         function loadDraft() {
@@ -1528,7 +1520,7 @@
                 showSection(sectionIds.length - 1);
             }).catch(function() {
                 document.getElementById('loadingOverlay').classList.remove('visible');
-                alert('Submission failed. Your progress is saved locally. Please try again or contact support.');
+                showBanner('Submission failed. Your progress is saved locally. Please try again or contact support.', 'error');
             });
         });
 

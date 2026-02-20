@@ -6,13 +6,10 @@
 // from /report?id=xxx without n8n needing to handle binary attachments.
 
 const crypto = require('crypto');
+const { setCorsHeaders, getSupabaseWriteHeaders, fetchWithTimeout } = require('../lib/api-helpers');
 
 module.exports = async function handler(req, res) {
-  // CORS
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  setCorsHeaders(res, 'POST,OPTIONS');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -77,14 +74,9 @@ module.exports = async function handler(req, res) {
           created_at: timestamp || new Date().toISOString()
         };
 
-        const sbResp = await fetch(`${supabaseUrl}/rest/v1/diagnostic_reports`, {
+        const sbResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`,
-            'Prefer': 'return=minimal'
-          },
+          headers: getSupabaseWriteHeaders(supabaseKey),
           body: JSON.stringify(insertPayload)
         });
 

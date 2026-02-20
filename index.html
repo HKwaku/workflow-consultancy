@@ -8,33 +8,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles/base.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
         :root {
-            --primary: #1a2f4a;
-            --primary-light: #2a4a6b;
-            --accent: #3d8ea6;
-            --accent-light: #5bb8d4;
-            --gold: #b8976a;
-            --gold-light: #d4b896;
-            --dark: #0c1b2e;
-            --text: #1e293b;
-            --text-mid: #475569;
-            --text-light: #64748b;
-            --bg: #fafbfc;
-            --bg-alt: #f1f5f9;
-            --white: #ffffff;
-            --border: #e2e8f0;
-            --border-light: #f1f5f9;
-            --red: #ef4444;
-            --green: #16a34a;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
-            --shadow-md: 0 4px 20px rgba(0,0,0,0.06);
-            --shadow-lg: 0 12px 40px rgba(0,0,0,0.08);
-            --radius-sm: 8px;
             --radius-md: 14px;
             --radius-lg: 20px;
+            --gold-light: #d4b896;
+            --dark: #0c1b2e;
+            --border-light: #f1f5f9;
+            --red: #ef4444;
         }
 
         body {
@@ -211,22 +193,78 @@
         .section-title strong { font-weight: 700; }
         .section-desc { font-size: 1.02rem; color: var(--text-light); line-height: 1.85; font-weight: 300; }
 
-        /* ===== Process Flow ===== */
+        /* ===== Process Flow (How we can help) ===== */
         .flow-section {
-            padding: 5rem 2.5rem;
-            background: var(--white);
+            padding: 6rem 2.5rem 5rem;
+            background: linear-gradient(180deg, #f0f4f8 0%, #ffffff 50%, #f8fafb 100%);
+            position: relative;
+            overflow: hidden;
         }
-        .flow-section .container { max-width: 1200px; margin: 0 auto; }
-        .flow-label {
-            text-align: center; margin-bottom: 1.25rem;
+        .flow-section::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at 15% 20%, rgba(61,142,166,0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 85% 80%, rgba(184,151,106,0.04) 0%, transparent 50%);
+            pointer-events: none;
         }
-        .flow-label span {
-            font-size: 0.68rem; text-transform: uppercase; letter-spacing: 3px; color: var(--text-light); font-weight: 500;
+        .flow-section::after {
+            content: '';
+            position: absolute;
+            top: -120px; right: -80px;
+            width: 400px; height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(61,142,166,0.04) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .flow-section .container { max-width: 1200px; margin: 0 auto; position: relative; z-index: 1; }
+        .flow-section .section-header { text-align: center; margin-bottom: 3rem; }
+        .flow-section .section-label {
+            display: inline-block;
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        .flow-section .section-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.8rem;
+            font-weight: 300;
+            letter-spacing: -1px;
+            line-height: 1.2;
+            color: var(--dark);
+            margin-bottom: 1rem;
+        }
+        .flow-section .section-title strong { font-weight: 700; }
+        .flow-section .section-desc {
+            font-size: 1.02rem;
+            color: var(--text-light);
+            max-width: 560px;
+            margin: 0 auto;
+            line-height: 1.7;
+            font-weight: 300;
+        }
+        .flow-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: var(--radius-lg);
+            padding: 2rem 1.5rem 1.5rem;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.03);
         }
         .flow-svg {
-            width: 100%; height: auto; border-radius: var(--radius-lg);
+            width: 100%; height: auto; border-radius: var(--radius-md);
         }
-        .flow-svg .flow-node { animation: flowNodeIn 0.6s cubic-bezier(0.16,1,0.3,1) both; }
+        .flow-svg .flow-node {
+            animation: flowNodeIn 0.6s cubic-bezier(0.16,1,0.3,1) both;
+            cursor: pointer;
+            transition: transform 0.25s cubic-bezier(0.16,1,0.3,1), filter 0.25s ease;
+            transform-origin: center;
+            transform-box: fill-box;
+        }
+        .flow-svg .flow-node:hover { transform: scale(1.08) translateY(-2px); filter: drop-shadow(0 4px 12px rgba(61,142,166,0.25)); }
         .flow-svg .flow-node:nth-child(2) { animation-delay: 0.1s; }
         .flow-svg .flow-node:nth-child(3) { animation-delay: 0.2s; }
         .flow-svg .flow-node:nth-child(4) { animation-delay: 0.3s; }
@@ -235,107 +273,178 @@
         .flow-svg .flow-node:nth-child(7) { animation-delay: 0.6s; }
         .flow-svg .flow-node:nth-child(8) { animation-delay: 0.7s; }
         @keyframes flowNodeIn { from { opacity: 0; transform: translateY(12px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .flow-avatar {
+            cursor: pointer;
+            transform-origin: center;
+            transform-box: fill-box;
+            pointer-events: bounding-box;
+        }
         @keyframes flowDash { to { stroke-dashoffset: -20; } }
         .flow-line { stroke-dasharray: 6 4; animation: flowDash 1.2s linear infinite; }
         .flow-badge { font-family: 'Work Sans', sans-serif; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .flow-highlights {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.25rem;
+            margin-top: 2rem;
+        }
+        .flow-highlight {
+            background: white;
+            border: 1px solid #e8ecf0;
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        }
+        .flow-highlight:hover { background: #fafcfd; border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(61,142,166,0.08); }
+        .flow-highlight-icon {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 0.75rem;
+            font-size: 1.2rem;
+        }
+        .flow-highlight-icon.teal { background: rgba(61,142,166,0.1); }
+        .flow-highlight-icon.gold { background: rgba(184,151,106,0.1); }
+        .flow-highlight-icon.green { background: rgba(22,163,74,0.1); }
+        .flow-highlight-value {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 0.25rem;
+        }
+        .flow-highlight-label {
+            font-size: 0.78rem;
+            color: var(--text-light);
+            font-weight: 400;
+            letter-spacing: 0.3px;
+        }
 
         /* ===== Comparison Section ===== */
-        .comparison-section { background: var(--bg); }
+        .comparison-section {
+            background: linear-gradient(170deg, #0a1628 0%, #0f1f38 40%, #132844 100%);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        .comparison-section::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at 30% 20%, rgba(61,142,166,0.07) 0%, transparent 55%),
+                        radial-gradient(ellipse at 70% 80%, rgba(184,151,106,0.05) 0%, transparent 55%);
+            pointer-events: none;
+        }
+        .comparison-section .section-label { color: var(--gold-light); }
+        .comparison-section .section-title { color: white; }
+        .comparison-section .section-desc { color: rgba(255,255,255,0.55); }
 
         .comp-panels {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1.5rem;
             margin-bottom: 3.5rem;
         }
 
         .comp-panel {
             border-radius: var(--radius-lg);
-            padding: 2.5rem;
+            padding: 2.25rem;
             position: relative;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
-        .comp-panel.old { background: #faf5f5; border: 1px solid #f0e0e0; }
-        .comp-panel.new { background: #f2faf5; border: 1px solid #d5eddc; }
+        .comp-panel.old { background: rgba(185,28,28,0.06); border: 1px solid rgba(239,68,68,0.18); }
+        .comp-panel.ai { background: rgba(217,119,6,0.06); border: 1px solid rgba(245,158,11,0.18); }
+        .comp-panel.new { background: rgba(22,163,74,0.06); border: 1px solid rgba(34,197,94,0.18); }
 
         .comp-panel-label {
             font-size: 0.65rem; text-transform: uppercase; letter-spacing: 2.5px;
             font-weight: 600; margin-bottom: 0.75rem;
         }
-        .comp-panel.old .comp-panel-label { color: #b91c1c; }
-        .comp-panel.new .comp-panel-label { color: #15803d; }
+        .comp-panel.old .comp-panel-label { color: #f87171; }
+        .comp-panel.ai .comp-panel-label { color: #fbbf24; }
+        .comp-panel.new .comp-panel-label { color: #4ade80; }
 
         .comp-panel h3 {
-            font-size: 1.65rem; font-weight: 700; margin-bottom: 1.5rem;
+            font-size: 1.4rem; font-weight: 700; margin-bottom: 1.5rem;
         }
-        .comp-panel.old h3 { color: #991b1b; }
-        .comp-panel.new h3 { color: #166534; }
+        .comp-panel.old h3 { color: #fca5a5; }
+        .comp-panel.ai h3 { color: #fcd34d; }
+        .comp-panel.new h3 { color: #86efac; }
 
         /* CSS UI Mockups */
         .mockup {
             border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.08);
-            margin-bottom: 1.75rem;
-            background: white;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
         .mockup-bar {
             display: flex; align-items: center; gap: 5px;
-            padding: 8px 12px; background: #f6f6f7;
-            border-bottom: 1px solid #eee;
+            padding: 8px 12px; background: rgba(255,255,255,0.04);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
         }
         .mockup-dot { width: 6px; height: 6px; border-radius: 50%; }
-        .mockup-dot.r { background: #feb2b2; }
-        .mockup-dot.y { background: #fde68a; }
-        .mockup-dot.g { background: #a7f3d0; }
-        .mockup-bar-title { flex: 1; text-align: center; font-size: 0.6rem; color: #aaa; letter-spacing: 0.3px; }
+        .mockup-dot.r { background: #ef4444; opacity: 0.7; }
+        .mockup-dot.y { background: #f59e0b; opacity: 0.7; }
+        .mockup-dot.g { background: #22c55e; opacity: 0.7; }
+        .mockup-bar-title { flex: 1; text-align: center; font-size: 0.6rem; color: rgba(255,255,255,0.35); letter-spacing: 0.3px; }
 
-        .mockup-body { padding: 16px; min-height: 200px; }
+        .mockup-body { padding: 16px; min-height: 200px; flex: 1; }
 
         /* Old way mockup: chaos */
-        .chaos-stack { position: relative; min-height: 220px; }
+        .chaos-stack { position: relative; min-height: 260px; }
         .chaos-card {
-            position: absolute; background: white; border-radius: 8px;
-            padding: 10px 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-            border: 1px solid #eee; font-size: 0.72rem; color: var(--text-mid);
+            position: absolute; background: rgba(255,255,255,0.06); border-radius: 8px;
+            padding: 10px 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.08); font-size: 0.72rem; color: rgba(255,255,255,0.7);
             transition: transform 0.3s;
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
         }
         .chaos-card:hover { z-index: 10 !important; transform: scale(1.04) !important; }
 
         .chaos-card .cc-icon { font-size: 0.85rem; margin-bottom: 4px; }
-        .chaos-card .cc-title { font-weight: 600; font-size: 0.72rem; color: var(--text); margin-bottom: 2px; }
-        .chaos-card .cc-sub { font-size: 0.64rem; color: #94a3b8; }
+        .chaos-card .cc-title { font-weight: 600; font-size: 0.72rem; color: rgba(255,255,255,0.9); margin-bottom: 2px; }
+        .chaos-card .cc-sub { font-size: 0.64rem; color: rgba(255,255,255,0.4); }
         .chaos-badge {
             display: inline-block; font-size: 0.55rem; font-weight: 600;
             padding: 2px 6px; border-radius: 4px; margin-top: 4px;
         }
-        .chaos-badge.warn { background: #fef3c7; color: #b45309; }
-        .chaos-badge.err { background: #fee2e2; color: #dc2626; }
-        .chaos-badge.stale { background: #f1f5f9; color: #64748b; }
+        .chaos-badge.warn { background: rgba(245,158,11,0.15); color: #fbbf24; }
+        .chaos-badge.err { background: rgba(239,68,68,0.15); color: #f87171; }
+        .chaos-badge.stale { background: rgba(148,163,184,0.1); color: #94a3b8; }
 
         /* New way mockup: clean dashboard */
         .dash-tabs {
-            display: flex; gap: 0; border-bottom: 2px solid #f0f0f0; margin-bottom: 14px;
+            display: flex; gap: 0; border-bottom: 2px solid rgba(255,255,255,0.06); margin-bottom: 14px;
         }
         .dash-tab {
             padding: 6px 14px; font-size: 0.68rem; font-weight: 500;
-            color: #94a3b8; border-bottom: 2px solid transparent; margin-bottom: -2px;
+            color: rgba(255,255,255,0.35); border-bottom: 2px solid transparent; margin-bottom: -2px;
         }
-        .dash-tab.active { color: var(--accent); border-color: var(--accent); }
+        .dash-tab.active { color: #5bb8d4; border-color: #5bb8d4; }
         .dash-metrics {
             display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px;
         }
         .dash-metric {
-            background: #f8fafb; border-radius: 8px; padding: 10px 12px; text-align: center;
+            background: rgba(255,255,255,0.04); border-radius: 8px; padding: 10px 12px; text-align: center;
+            border: 1px solid rgba(255,255,255,0.05);
         }
         .dash-metric-val {
             font-family: 'Cormorant Garamond', serif; font-size: 1.15rem;
-            font-weight: 700; color: var(--primary); display: block;
+            font-weight: 700; color: white; display: block;
         }
-        .dash-metric-lbl { font-size: 0.58rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+        .dash-metric-lbl { font-size: 0.58rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.5px; }
         .dash-row {
             display: flex; align-items: center; gap: 10px;
-            padding: 8px 0; border-bottom: 1px solid #f5f5f5;
+            padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
             font-size: 0.72rem;
         }
         .dash-row:last-child { border-bottom: none; }
@@ -343,52 +452,99 @@
         .dash-dot.green { background: #22c55e; }
         .dash-dot.amber { background: #f59e0b; }
         .dash-dot.red { background: #ef4444; }
-        .dash-row-name { flex: 1; color: var(--text); font-weight: 400; }
-        .dash-row-val { font-weight: 500; color: var(--text-mid); font-size: 0.68rem; }
+        .dash-row-name { flex: 1; color: rgba(255,255,255,0.75); font-weight: 400; }
+        .dash-row-val { font-weight: 500; color: rgba(255,255,255,0.5); font-size: 0.68rem; }
         .dash-tag {
             display: inline-block; font-size: 0.55rem; font-weight: 600;
             padding: 2px 6px; border-radius: 4px;
-            background: #ecfdf5; color: #16a34a;
+            background: rgba(34,197,94,0.12); color: #4ade80;
         }
 
-        /* Comparison points below */
-        .comp-points {
-            display: grid; grid-template-columns: repeat(3, 1fr);
-            gap: 1.25rem; max-width: 1000px; margin: 0 auto;
+        /* AI-First mockup: chat interface */
+        .ai-chat-mock { display: flex; flex-direction: column; gap: 10px; min-height: 200px; flex: 1; justify-content: center; }
+        .ai-chat-bubble {
+            padding: 10px 14px; border-radius: 12px; font-size: 0.72rem; line-height: 1.5;
+            max-width: 88%;
         }
-        .comp-point {
-            background: var(--white);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-md);
-            padding: 1.75rem;
-            transition: all 0.35s cubic-bezier(0.16,1,0.3,1);
-            position: relative;
+        .ai-chat-bubble.user {
+            background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.2);
+            color: #fcd34d; align-self: flex-end; border-bottom-right-radius: 4px;
+        }
+        .ai-chat-bubble.bot {
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+            color: rgba(255,255,255,0.6); align-self: flex-start; border-bottom-left-radius: 4px;
+        }
+        .ai-chat-bubble .bubble-tag {
+            display: inline-block; font-size: 0.55rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 1px; margin-bottom: 4px;
+        }
+        .ai-chat-bubble.user .bubble-tag { color: rgba(245,158,11,0.6); }
+        .ai-chat-bubble.bot .bubble-tag { color: rgba(255,255,255,0.3); }
+        .ai-warn-row {
+            display: flex; align-items: center; gap: 8px; padding: 8px 10px; margin-top: 4px;
+            background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.15);
+            border-radius: 8px; font-size: 0.65rem; color: #f87171;
+        }
+        .ai-warn-row .warn-icon { font-size: 0.8rem; flex-shrink: 0; }
+
+        /* Comparison table */
+        .comp-table {
+            max-width: 960px;
+            margin: 0 auto;
+            border-radius: var(--radius-lg);
             overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.06);
         }
-        .comp-point:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-lg);
-            border-color: transparent;
+        .comp-table-head {
+            display: grid;
+            grid-template-columns: 1fr 60px 1fr;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            background: rgba(255,255,255,0.04);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
         }
-        .comp-point::before {
-            content: ''; position: absolute; top: 0; left: 0;
-            width: 100%; height: 3px;
-            background: linear-gradient(90deg, #ef4444, #22c55e);
-            opacity: 0; transition: opacity 0.3s;
+        .comp-table-head span {
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
         }
-        .comp-point:hover::before { opacity: 1; }
-        .comp-point-old {
-            font-size: 0.8rem; color: #b91c1c; margin-bottom: 0.65rem;
-            display: flex; align-items: flex-start; gap: 6px; line-height: 1.45;
-            text-decoration: line-through; text-decoration-color: rgba(185,28,28,0.3);
+        .comp-table-head span:first-child { color: #f87171; }
+        .comp-table-head span:nth-child(2) { text-align: center; color: rgba(255,255,255,0.15); font-size: 1rem; }
+        .comp-table-head span:last-child { color: #4ade80; text-align: right; }
+        .comp-table-row {
+            display: grid;
+            grid-template-columns: 1fr 60px 1fr;
+            align-items: center;
+            padding: 1.1rem 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            transition: background 0.2s;
         }
-        .comp-point-new {
-            font-size: 0.85rem; color: var(--text); font-weight: 400;
-            display: flex; align-items: flex-start; gap: 6px; line-height: 1.5;
+        .comp-table-row:last-child { border-bottom: none; }
+        .comp-table-row:hover { background: rgba(255,255,255,0.02); }
+        .comp-table-old {
+            font-size: 0.84rem;
+            color: rgba(248,113,113,0.7);
+            text-decoration: line-through;
+            text-decoration-color: rgba(248,113,113,0.25);
+            line-height: 1.5;
+            display: flex; align-items: center; gap: 8px;
         }
-        .cp-x { color: #dc2626; flex-shrink: 0; margin-top: 1px; }
-        .cp-check { color: #16a34a; flex-shrink: 0; margin-top: 2px; }
-        .cp-x svg, .cp-check svg { width: 14px; height: 14px; }
+        .comp-table-arrow {
+            text-align: center;
+            color: rgba(255,255,255,0.15);
+            font-size: 1.1rem;
+        }
+        .comp-table-new {
+            font-size: 0.88rem;
+            color: rgba(255,255,255,0.8);
+            line-height: 1.5;
+            text-align: right;
+            display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+        }
+        .cp-x { color: #f87171; flex-shrink: 0; }
+        .cp-check { color: #4ade80; flex-shrink: 0; }
+        .cp-x svg, .cp-check svg { width: 13px; height: 13px; }
 
         /* ===== Approach ===== */
         .approach-section { background: var(--white); }
@@ -514,7 +670,9 @@
         @media (max-width: 1024px) {
             .hero .container { grid-template-columns: 1fr; gap: 2.5rem; }
             .hero h1 { font-size: 3.2rem; }
-            .comp-points { grid-template-columns: repeat(2, 1fr); }
+            .comp-panels { grid-template-columns: 1fr 1fr; }
+            .comp-panel.ai { grid-column: 1 / -1; }
+            .comp-table-row { grid-template-columns: 1fr 40px 1fr; padding: 1rem 1.25rem; }
             .approach-grid { grid-template-columns: repeat(2, 1fr); }
             .services-grid { grid-template-columns: 1fr 1fr; }
             .process-timeline { grid-template-columns: 1fr 1fr; }
@@ -544,17 +702,35 @@
             .stats-strip { grid-template-columns: repeat(2, 1fr); }
             .strip-stat { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.06); padding: 1.25rem 1rem; }
             .strip-stat-number { font-size: 1.6rem; }
-            .flow-section { padding: 3rem 1.25rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .flow-section { padding: 4rem 1.25rem 3rem; }
+            .flow-section .section-title { font-size: 2rem; }
+            .flow-card { padding: 1.25rem 1rem 1rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
             .flow-svg { min-width: 600px; }
+            .flow-highlights { grid-template-columns: 1fr; gap: 0.75rem; }
+            .flow-highlight { padding: 1.25rem; }
 
             section { padding: 4rem 1.25rem; }
             .section-title { font-size: 2rem; }
             .section-header { margin-bottom: 2.5rem; }
             .comp-panels { grid-template-columns: 1fr; }
-            .comp-points { grid-template-columns: 1fr; }
-            .comp-panel { padding: 1.75rem; }
-            .chaos-card { position: relative !important; transform: none !important; width: 100% !important; top: auto !important; left: auto !important; margin-bottom: 8px; }
-            .chaos-stack { min-height: auto; }
+            .comp-table-head, .comp-table-row { grid-template-columns: 1fr; gap: 0.5rem; padding: 1rem 1.25rem; }
+            .comp-table-arrow { display: none; }
+            .comp-table-head span:last-child { text-align: left; }
+            .comp-table-new { text-align: left; justify-content: flex-start; }
+            .comp-panel { padding: 1.5rem; }
+            .comp-panel h3 { font-size: 1.2rem; margin-bottom: 1.25rem; }
+            .chaos-stack { min-height: 290px; }
+            .chaos-card { font-size: 0.68rem !important; padding: 8px 12px !important; }
+            .ai-chat-bubble { font-size: 0.68rem; padding: 8px 12px; max-width: 92%; }
+            .ai-chat-bubble .bubble-tag { font-size: 0.5rem; }
+            .ai-warn-row { font-size: 0.6rem; padding: 6px 8px; }
+            .dash-metrics { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+            .dash-metric { padding: 8px 6px; }
+            .dash-metric-val { font-size: 0.95rem; }
+            .dash-metric-lbl { font-size: 0.5rem; }
+            .dash-row { font-size: 0.68rem; gap: 6px; padding: 6px 0; }
+            .dash-row-val { font-size: 0.6rem; }
+            .dash-tag { font-size: 0.5rem; padding: 2px 4px; }
             .approach-grid { grid-template-columns: 1fr 1fr; }
             .services-grid, .process-timeline { grid-template-columns: 1fr; }
             .service-card { padding: 2rem 1.75rem; }
@@ -572,7 +748,63 @@
             .hero h1 { font-size: 2rem; }
             .section-title { font-size: 1.7rem; }
             .approach-grid { grid-template-columns: 1fr; }
-            .comparison-header h2 { font-size: 1.7rem; }
+            .comp-table-old, .comp-table-new { font-size: 0.78rem; }
+            .comp-panel { padding: 1.25rem; }
+            .comp-panel h3 { font-size: 1.1rem; }
+            .mockup-body { padding: 12px; }
+            .chaos-card { font-size: 0.62rem !important; padding: 7px 10px !important; }
+            .cc-icon { font-size: 0.75rem !important; }
+            .chaos-badge { font-size: 0.48rem !important; padding: 1px 4px !important; }
+            .ai-chat-bubble { font-size: 0.62rem; padding: 7px 10px; }
+            .ai-warn-row { font-size: 0.56rem; }
+        }
+        /* ===== Operating Leverage Section ===== */
+        .leverage-section { background: var(--white); padding: 6rem 0; position: relative; }
+        .leverage-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 4rem;
+            align-items: center; margin-top: 3rem;
+        }
+        .leverage-narrative h3 {
+            font-size: 1.8rem; font-weight: 300; line-height: 1.4;
+            color: var(--dark); margin-bottom: 1.5rem;
+        }
+        .leverage-narrative h3 strong { font-weight: 700; color: var(--accent); }
+        .leverage-narrative p {
+            font-size: 1rem; color: var(--text-mid); line-height: 1.8;
+            font-weight: 300; margin-bottom: 1rem;
+        }
+        .leverage-equation {
+            background: var(--bg); border-radius: var(--radius-md);
+            padding: 2.5rem; border: 1px solid var(--border);
+        }
+        .leverage-eq-row {
+            display: flex; align-items: center; gap: 1rem;
+            padding: 1rem 0; border-bottom: 1px solid var(--border);
+        }
+        .leverage-eq-row:last-child { border-bottom: none; }
+        .leverage-eq-icon {
+            width: 40px; height: 40px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; flex-shrink: 0;
+        }
+        .leverage-eq-icon.fix { background: rgba(61,142,166,0.1); color: var(--accent); }
+        .leverage-eq-icon.auto { background: rgba(124,58,237,0.1); color: #7c3aed; }
+        .leverage-eq-icon.scale { background: rgba(22,163,74,0.1); color: #16a34a; }
+        .leverage-eq-text h4 {
+            font-size: 0.95rem; font-weight: 600; color: var(--dark); margin-bottom: 0.2rem;
+        }
+        .leverage-eq-text p {
+            font-size: 0.82rem; color: var(--text-light); font-weight: 300; margin: 0;
+        }
+        .leverage-result {
+            margin-top: 1.5rem; padding: 1.25rem 1.5rem; border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, var(--accent), #5bb8d4);
+            color: white; text-align: center;
+        }
+        .leverage-result-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 2px; opacity: 0.8; display: block; margin-bottom: 0.3rem; }
+        .leverage-result-value { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 700; }
+        @media (max-width: 768px) {
+            .leverage-grid { grid-template-columns: 1fr; gap: 2rem; }
         }
     </style>
 </head>
@@ -586,7 +818,6 @@
             <ul id="nav-menu">
                 <li><a href="#diagnostic">Diagnostic</a></li>
                 <li><a href="#services">Services</a></li>
-                <li><a href="#process">Methodology</a></li>
                 <li><a href="#approach">Approach</a></li>
                 <li><a href="/portal">Portal</a></li>
                 <li><a href="#contact" class="cta-nav">Get Started</a></li>
@@ -604,11 +835,11 @@
         <div class="hero-main">
             <div class="container">
                 <div class="hero-content">
-                    <div class="hero-label">Technology-Agnostic Consulting</div>
-                    <h1>Fix the Process.<br><strong>The Technology Follows.</strong></h1>
-                    <p class="hero-subtitle">We optimize workflows before recommending technology — so your next transformation actually delivers.</p>
+                    <div class="hero-label">Unlock Operating Leverage</div>
+                    <h1>Do More.<br><strong>With Less Friction.</strong></h1>
+                    <p class="hero-subtitle">We find the hidden capacity in your operations by fixing broken processes and deploying the right technology so your team delivers more without growing proportionally.</p>
                     <div class="hero-cta-row">
-                        <a href="/diagnostic.html" class="btn-primary">
+                        <a href="/diagnostic" class="btn-primary">
                             Start Free Diagnostic
                             <svg class="arrow-icon" viewBox="0 0 16 16" fill="none"><path d="M3.5 8h9m0 0L9 4.5M12.5 8 9 11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         </a>
@@ -620,28 +851,33 @@
 
         <div class="stats-strip">
             <div class="strip-stat">
-                <span class="strip-stat-number">20-35%</span>
-                <span class="strip-stat-label">Reduced cycle times</span>
+                <span class="strip-stat-number">Do More</span>
+                <span class="strip-stat-label">Same team, greater throughput</span>
             </div>
             <div class="strip-stat">
-                <span class="strip-stat-number">60-80%</span>
-                <span class="strip-stat-label">Lower migration costs</span>
+                <span class="strip-stat-number">Spend Less</span>
+                <span class="strip-stat-label">Eliminate waste before adding tools</span>
             </div>
             <div class="strip-stat">
-                <span class="strip-stat-number">&lt;45 Days</span>
-                <span class="strip-stat-label">To first insights</span>
+                <span class="strip-stat-number">Compound</span>
+                <span class="strip-stat-label">Each fix unlocks the next gain</span>
             </div>
             <div class="strip-stat">
                 <span class="strip-stat-number">Free</span>
-                <span class="strip-stat-label">AI-powered diagnostic</span>
+                <span class="strip-stat-label">Start with a diagnostic</span>
             </div>
         </div>
     </section>
 
     <!-- ===== Process Flow ===== -->
-    <div class="flow-section">
+    <section class="flow-section">
         <div class="container">
-            <div class="flow-label"><span>What your diagnostic reveals</span></div>
+            <div class="section-header">
+                <div class="section-label">How we can help</div>
+                <h2 class="section-title">From Diagnosis to <strong>Measurable Impact</strong></h2>
+                <p class="section-desc">Our AI-powered process follows a clear path - mapping, validating, and optimising your workflows with human oversight at every critical step.</p>
+            </div>
+            <div class="flow-card">
             <svg class="flow-svg" viewBox="0 0 960 320" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <defs>
                     <linearGradient id="gAcc" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#3d8ea6"/><stop offset="100%" stop-color="#5bb8d4"/></linearGradient>
@@ -651,19 +887,23 @@
                     <marker id="arrowAcc" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#3d8ea6"/></marker>
                     <marker id="arrowGrn" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#16a34a"/></marker>
                     <marker id="arrowAmb" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#d97706"/></marker>
+                    <clipPath id="av12"><circle r="12"/></clipPath>
+                    <clipPath id="av10"><circle r="10"/></clipPath>
+                    <clipPath id="legendClipH"><circle cx="-66" cy="0" r="6"/></clipPath>
+                    <clipPath id="legendClipH2"><circle cx="-36" cy="0" r="6"/></clipPath>
                 </defs>
                 <rect x="4" y="4" width="952" height="312" rx="16" fill="white" filter="url(#fShadow)" stroke="#e8ecf0" stroke-width="0.5"/>
                 <rect x="4" y="4" width="952" height="36" rx="16" fill="#f8fafb"/>
                 <rect x="4" y="28" width="952" height="12" fill="#f8fafb"/>
                 <circle cx="24" cy="22" r="3.5" fill="#e5e7eb"/><circle cx="36" cy="22" r="3.5" fill="#e5e7eb"/><circle cx="48" cy="22" r="3.5" fill="#e5e7eb"/>
-                <text x="480" y="25" text-anchor="middle" fill="#94a3b8" font-family="Work Sans,sans-serif" font-size="10" font-weight="400" letter-spacing="0.5">Process Diagnostic Flow</text>
+                <text x="480" y="25" text-anchor="middle" fill="#94a3b8" font-family="Work Sans,sans-serif" font-size="10" font-weight="400" letter-spacing="0.5"></text>
                 <rect x="12" y="44" width="936" height="80" rx="6" fill="#f8fafb" opacity="0.5"/>
                 <rect x="12" y="128" width="936" height="80" rx="6" fill="rgba(124,58,237,0.02)"/>
                 <rect x="12" y="212" width="936" height="96" rx="6" fill="rgba(184,151,106,0.03)"/>
                 <path d="M138,84 L195,84" class="flow-line" stroke="#3d8ea6" stroke-width="1.5" marker-end="url(#arrowAcc)"/>
                 <path d="M335,84 L395,84" class="flow-line" stroke="#3d8ea6" stroke-width="1.5" marker-end="url(#arrowAcc)"/>
                 <path d="M495,84 L495,130" class="flow-line" stroke="#3d8ea6" stroke-width="1.5" marker-end="url(#arrowAcc)"/>
-                <path d="M495,190 L495,220" class="flow-line" stroke="#3d8ea6" stroke-width="1.5" marker-end="url(#arrowAcc)"/>
+                
                 <path d="M525,168 L590,168" class="flow-line" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arrowGrn)"/>
                 <path d="M465,168 L370,168" class="flow-line" stroke="#d97706" stroke-width="1.5" marker-end="url(#arrowAmb)"/>
                 <path d="M310,148 L265,100" class="flow-line" stroke="#d97706" stroke-width="1.5" marker-end="url(#arrowAmb)" opacity="0.4"/>
@@ -676,16 +916,120 @@
                 <g class="flow-node"><rect x="300" y="148" width="100" height="40" rx="8" fill="white" stroke="#d97706" stroke-width="1" filter="url(#fShadow)"/><text x="350" y="172" text-anchor="middle" fill="#1a2f4a" font-family="Work Sans,sans-serif" font-size="11" font-weight="400">Revise</text></g>
                 <g class="flow-node"><rect x="590" y="148" width="100" height="40" rx="8" fill="white" stroke="#16a34a" stroke-width="1" filter="url(#fShadow)"/><text x="640" y="172" text-anchor="middle" fill="#1a2f4a" font-family="Work Sans,sans-serif" font-size="11" font-weight="400">Approve</text></g>
                 <g class="flow-node"><rect x="745" y="148" width="130" height="40" rx="8" fill="white" stroke="#d1d5db" stroke-width="1" filter="url(#fShadow)"/><text x="810" y="172" text-anchor="middle" fill="#1a2f4a" font-family="Work Sans,sans-serif" font-size="11" font-weight="400">Implement</text></g>
-                <g class="flow-node"><rect x="440" y="230" width="120" height="40" rx="8" fill="white" stroke="#b8976a" stroke-width="1" filter="url(#fShadow)"/><text x="500" y="254" text-anchor="middle" fill="#1a2f4a" font-family="Work Sans,sans-serif" font-size="11" font-weight="400">Sign-Off</text></g>
-                <g class="flow-node"><rect x="840" y="248" width="72" height="32" rx="16" fill="url(#gGrn)"/><text x="876" y="268" text-anchor="middle" fill="white" font-family="Work Sans,sans-serif" font-size="10" font-weight="500">Complete</text></g>
-                <g opacity="0.9"><rect x="78" y="228" width="100" height="52" rx="8" fill="#1a2f4a"/><text x="128" y="249" text-anchor="middle" fill="#b8976a" font-family="Work Sans,sans-serif" font-size="7" font-weight="500" letter-spacing="1">CYCLE TIME</text><text x="128" y="268" text-anchor="middle" fill="white" font-family="Cormorant Garamond,serif" font-size="16" font-weight="700">47 → 14 days</text></g>
-                <g opacity="0.9"><rect x="195" y="228" width="110" height="52" rx="8" fill="#1a2f4a"/><text x="250" y="249" text-anchor="middle" fill="#b8976a" font-family="Work Sans,sans-serif" font-size="7" font-weight="500" letter-spacing="1">SAVINGS</text><text x="250" y="268" text-anchor="middle" fill="white" font-family="Cormorant Garamond,serif" font-size="16" font-weight="700">£127,400/yr</text></g>
-                <g opacity="0.9"><rect x="665" y="228" width="120" height="52" rx="8" fill="#1a2f4a"/><text x="725" y="249" text-anchor="middle" fill="#b8976a" font-family="Work Sans,sans-serif" font-size="7" font-weight="500" letter-spacing="1">BOTTLENECKS</text><text x="725" y="268" text-anchor="middle" fill="white" font-family="Cormorant Garamond,serif" font-size="16" font-weight="700">3 identified</text></g>
+                                <g class="flow-node"><rect x="840" y="248" width="72" height="32" rx="16" fill="url(#gGrn)"/><text x="876" y="268" text-anchor="middle" fill="white" font-family="Work Sans,sans-serif" font-size="10" font-weight="500">Complete</text></g>
+                
+                <!-- ── Human & AI step indicators ── -->
+
+                <!-- HUMAN: Gather Data (analyst) -->
+                <g class="flow-avatar" transform="translate(265, 48)">
+                    <image href="/images/avatars/person1.jpg" x="-12" y="-12" width="24" height="24" clip-path="url(#av12)" preserveAspectRatio="xMidYMid slice"/>
+                    <circle r="12" fill="none" stroke="#3d8ea6" stroke-width="1.5"/>
+                </g>
+
+                <!-- Handoff pill: Human → AI -->
+                <g class="flow-avatar" transform="translate(365, 74)">
+                    <rect x="-14" y="-6" width="28" height="12" rx="6" fill="rgba(124,58,237,0.1)"/>
+                    <text y="3" text-anchor="middle" fill="#7c3aed" font-family="Work Sans,sans-serif" font-size="6" font-weight="600">→ AI</text>
+                </g>
+
+                <!-- AI: Map Process -->
+                <g class="flow-avatar" transform="translate(465, 48)">
+                    <circle r="12" fill="#f5f0ff" stroke="#7c3aed" stroke-width="1.3"/>
+                    <rect x="-4.5" y="-4.5" width="9" height="9" rx="2" fill="none" stroke="#7c3aed" stroke-width="1"/>
+                    <circle r="1.8" fill="#7c3aed"/>
+                    <line x1="-2.5" y1="-4.5" x2="-2.5" y2="-8" stroke="#7c3aed" stroke-width="0.8" stroke-linecap="round"/>
+                    <line x1="2.5" y1="-4.5" x2="2.5" y2="-8" stroke="#7c3aed" stroke-width="0.8" stroke-linecap="round"/>
+                    <line x1="-2.5" y1="4.5" x2="-2.5" y2="8" stroke="#7c3aed" stroke-width="0.8" stroke-linecap="round"/>
+                    <line x1="2.5" y1="4.5" x2="2.5" y2="8" stroke="#7c3aed" stroke-width="0.8" stroke-linecap="round"/>
+                    <line x1="-4.5" y1="-2.5" x2="-8" y2="-2.5" stroke="#7c3aed" stroke-width="0.8" stroke-linecap="round"/>
+                    <line x1="-4.5" y1="2.5" x2="-8" y2="2.5" stroke="#7c3aed" stroke-width="0.8" stroke-linecap="round"/>
+                    <line x1="4.5" y1="-2.5" x2="8" y2="-2.5" stroke="#7c3aed" stroke-width="0.8" stroke-linecap="round"/>
+                    <line x1="4.5" y1="2.5" x2="8" y2="2.5" stroke="#7c3aed" stroke-width="0.8" stroke-linecap="round"/>
+                </g>
+
+                <!-- AI: Valid? (automated validation) -->
+                <g class="flow-avatar" transform="translate(495, 122)">
+                    <circle r="10" fill="#f5f0ff" stroke="#7c3aed" stroke-width="1"/>
+                    <rect x="-3.5" y="-3.5" width="7" height="7" rx="1.5" fill="none" stroke="#7c3aed" stroke-width="0.8"/>
+                    <circle r="1.3" fill="#7c3aed"/>
+                    <line x1="-2" y1="-3.5" x2="-2" y2="-6.5" stroke="#7c3aed" stroke-width="0.7" stroke-linecap="round"/>
+                    <line x1="2" y1="-3.5" x2="2" y2="-6.5" stroke="#7c3aed" stroke-width="0.7" stroke-linecap="round"/>
+                    <line x1="-2" y1="3.5" x2="-2" y2="6.5" stroke="#7c3aed" stroke-width="0.7" stroke-linecap="round"/>
+                    <line x1="2" y1="3.5" x2="2" y2="6.5" stroke="#7c3aed" stroke-width="0.7" stroke-linecap="round"/>
+                    <line x1="-3.5" y1="-2" x2="-6.5" y2="-2" stroke="#7c3aed" stroke-width="0.7" stroke-linecap="round"/>
+                    <line x1="-3.5" y1="2" x2="-6.5" y2="2" stroke="#7c3aed" stroke-width="0.7" stroke-linecap="round"/>
+                    <line x1="3.5" y1="-2" x2="6.5" y2="-2" stroke="#7c3aed" stroke-width="0.7" stroke-linecap="round"/>
+                    <line x1="3.5" y1="2" x2="6.5" y2="2" stroke="#7c3aed" stroke-width="0.7" stroke-linecap="round"/>
+                </g>
+
+                <!-- Handoff pill: AI → Human (on YES path) -->
+                <g class="flow-avatar" transform="translate(558, 175)">
+                    <rect x="-22" y="-5.5" width="44" height="11" rx="5.5" fill="rgba(61,142,166,0.1)"/>
+                    <text y="3" text-anchor="middle" fill="#3d8ea6" font-family="Work Sans,sans-serif" font-size="5.5" font-weight="600">→ Human</text>
+                </g>
+
+                <!-- HUMAN: Revise (team member) -->
+                <g class="flow-avatar" transform="translate(350, 133)">
+                    <image href="/images/avatars/person2.jpg" x="-10" y="-10" width="20" height="20" clip-path="url(#av10)" preserveAspectRatio="xMidYMid slice"/>
+                    <circle r="10" fill="none" stroke="#3d8ea6" stroke-width="1.2"/>
+                </g>
+
+                <!-- HUMAN: Approve (manager) -->
+                <g class="flow-avatar" transform="translate(640, 133)">
+                    <image href="/images/avatars/person3.jpg" x="-12" y="-12" width="24" height="24" clip-path="url(#av12)" preserveAspectRatio="xMidYMid slice"/>
+                    <circle r="12" fill="none" stroke="#3d8ea6" stroke-width="1.5"/>
+                </g>
+
+                <!-- HUMAN: Implement (team) -->
+                <g class="flow-avatar" transform="translate(810, 133)">
+                    <image href="/images/avatars/person4.jpg" x="-12" y="-12" width="24" height="24" clip-path="url(#av12)" preserveAspectRatio="xMidYMid slice"/>
+                    <circle r="12" fill="none" stroke="#3d8ea6" stroke-width="1.5"/>
+                </g>
+
+
+                <!-- ── Legend ── -->
+                <g transform="translate(480, 300)">
+                    <rect x="-55" y="-9" width="110" height="18" rx="9" fill="white" stroke="#e2e8f0" stroke-width="0.6"/>
+                    <!-- Human legend -->
+                    <image href="/images/avatars/person1.jpg" x="-42" y="-6" width="12" height="12" clip-path="url(#legendClipH2)" preserveAspectRatio="xMidYMid slice"/>
+                    <circle cx="-36" cy="0" r="6" fill="none" stroke="#3d8ea6" stroke-width="0.7"/>
+                    <text x="-24" y="3" fill="#475569" font-family="Work Sans,sans-serif" font-size="7.5" font-weight="500">Human</text>
+                    <line x1="12" y1="-5" x2="12" y2="5" stroke="#e2e8f0" stroke-width="0.5"/>
+                    <!-- AI legend -->
+                    <circle cx="28" cy="0" r="6" fill="#f5f0ff" stroke="#7c3aed" stroke-width="0.7"/>
+                    <rect x="25.5" y="-2.5" width="5" height="5" rx="1" fill="none" stroke="#7c3aed" stroke-width="0.6"/><circle cx="28" cy="0" r="0.8" fill="#7c3aed"/>
+                    <text x="38" y="3" fill="#475569" font-family="Work Sans,sans-serif" font-size="7.5" font-weight="500">AI</text>
+                </g>
                 <circle r="3" fill="#3d8ea6" opacity="0.8"><animateMotion dur="5s" repeatCount="indefinite" path="M108,84 L265,84 L465,84 L495,130 L530,168 L640,168 L810,168 L870,168 L870,260"/></circle>
                 <circle r="3" fill="#d97706" opacity="0.6"><animateMotion dur="5s" repeatCount="indefinite" begin="2s" path="M108,84 L265,84 L465,84 L495,130 L465,168 L350,168 L310,148 L265,100"/></circle>
             </svg>
+            </div>
+
+            <div class="flow-highlights">
+                <div class="flow-highlight">
+                    <div class="flow-highlight-icon teal">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2v16M2 10h16" stroke="#3d8ea6" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="10" r="7" stroke="#3d8ea6" stroke-width="1.2" fill="none"/></svg>
+                    </div>
+                    <div class="flow-highlight-value">Shorter Cycles</div>
+                    <div class="flow-highlight-label">Streamlined workflows, fewer handoffs</div>
+                </div>
+                <div class="flow-highlight">
+                    <div class="flow-highlight-icon gold">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L12.5 7.5H18L13.5 11.5L15.5 17L10 13.5L4.5 17L6.5 11.5L2 7.5H7.5L10 2Z" stroke="#b8976a" stroke-width="1.2" fill="none" stroke-linejoin="round"/></svg>
+                    </div>
+                    <div class="flow-highlight-value">Real Savings</div>
+                    <div class="flow-highlight-label">Quantified before any tool is chosen</div>
+                </div>
+                <div class="flow-highlight">
+                    <div class="flow-highlight-icon green">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="#16a34a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                    <div class="flow-highlight-value">Clear Roadmap</div>
+                    <div class="flow-highlight-label">Bottlenecks identified &amp; prioritised</div>
+                </div>
+            </div>
         </div>
-    </div>
+    </section>
 
     <!-- ===== Comparison ===== -->
     <section class="comparison-section" id="comparison">
@@ -693,7 +1037,7 @@
             <div class="section-header">
                 <div class="section-label">The Difference</div>
                 <h2 class="section-title">Don't Automate the Chaos.<br><strong>Eliminate It.</strong></h2>
-                <p class="section-desc">68% of digital transformations fail because they digitise broken processes.</p>
+                <p class="section-desc">Most digital transformations fail because they digitise broken processes. We fix the process first.</p>
             </div>
 
             <div class="comp-panels">
@@ -708,31 +1052,31 @@
                         </div>
                         <div class="mockup-body">
                             <div class="chaos-stack">
-                                <div class="chaos-card" style="top:0;left:0;transform:rotate(-2deg);z-index:3;width:160px;">
+                                <div class="chaos-card" style="top:0;left:0;transform:rotate(-2deg);z-index:3;width:85%;">
                                     <div class="cc-icon">&#128231;</div>
                                     <div class="cc-title">47 unread threads</div>
                                     <div class="cc-sub">RE: RE: RE: Process update</div>
                                     <div class="chaos-badge warn">3 days old</div>
                                 </div>
-                                <div class="chaos-card" style="top:12px;left:140px;transform:rotate(1.5deg);z-index:4;width:170px;">
+                                <div class="chaos-card" style="top:55px;left:8%;transform:rotate(1.5deg);z-index:4;width:88%;">
                                     <div class="cc-icon">&#128202;</div>
                                     <div class="cc-title">Q3 tracker.xlsx</div>
                                     <div class="cc-sub">Last edited: 6 weeks ago</div>
                                     <div class="chaos-badge stale">Version 14</div>
                                 </div>
-                                <div class="chaos-card" style="top:80px;left:20px;transform:rotate(1deg);z-index:5;width:155px;">
+                                <div class="chaos-card" style="top:110px;left:2%;transform:rotate(1deg);z-index:5;width:82%;">
                                     <div class="cc-icon">&#9888;&#65039;</div>
                                     <div class="cc-title">CRM sync failed</div>
                                     <div class="cc-sub">Salesforce → SAP pipeline</div>
                                     <div class="chaos-badge err">Error</div>
                                 </div>
-                                <div class="chaos-card" style="top:100px;left:155px;transform:rotate(-1.5deg);z-index:2;width:150px;">
+                                <div class="chaos-card" style="top:165px;left:5%;transform:rotate(-1.5deg);z-index:2;width:90%;">
                                     <div class="cc-icon">&#128176;</div>
-                                    <div class="cc-title">£340K Platform fee</div>
-                                    <div class="cc-sub">Annual renewal due</div>
+                                    <div class="cc-title">Costly platform lock-in</div>
+                                    <div class="cc-sub">Multi-year contract, rising fees</div>
                                     <div class="chaos-badge warn">Lock-in: 2 yrs</div>
                                 </div>
-                                <div class="chaos-card" style="top:155px;left:60px;transform:rotate(0.5deg);z-index:6;width:165px;">
+                                <div class="chaos-card" style="top:220px;left:4%;transform:rotate(0.5deg);z-index:6;width:86%;">
                                     <div class="cc-icon">&#128260;</div>
                                     <div class="cc-title">Migration blocked</div>
                                     <div class="cc-sub">Vendor dependency on 4 APIs</div>
@@ -743,7 +1087,43 @@
                     </div>
                 </div>
 
-                <!-- NEW WAY -->
+                <!-- AI-FIRST (wrong question) -->
+                <div class="comp-panel ai">
+                    <div class="comp-panel-label">The Hype Trap</div>
+                    <h3>"How Can We Deploy AI?"</h3>
+                    <div class="mockup">
+                        <div class="mockup-bar">
+                            <div class="mockup-dot r"></div><div class="mockup-dot y"></div><div class="mockup-dot g"></div>
+                            <div class="mockup-bar-title">ai-strategy-meeting.slack</div>
+                        </div>
+                        <div class="mockup-body">
+                            <div class="ai-chat-mock">
+                                <div class="ai-chat-bubble user">
+                                    <div class="bubble-tag">Executive</div>
+                                    "We need to deploy AI across the business. Our competitors are doing it."
+                                </div>
+                                <div class="ai-chat-bubble bot">
+                                    <div class="bubble-tag">AI Vendor</div>
+                                    "Great! Our platform can automate everything. Just connect your data and..."
+                                </div>
+                                <div class="ai-chat-bubble user">
+                                    <div class="bubble-tag">Executive</div>
+                                    "What processes should we start with?"
+                                </div>
+                                <div class="ai-chat-bubble bot">
+                                    <div class="bubble-tag">AI Vendor</div>
+                                    "All of them! Our AI handles it all. ROI in 3 months guaranteed."
+                                </div>
+                                <div class="ai-warn-row">
+                                    <span class="warn-icon">&#9888;&#65039;</span>
+                                    No process mapping. No baseline metrics. No understanding of what's actually broken.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- THE RIGHT WAY -->
                 <div class="comp-panel new">
                     <div class="comp-panel-label">The Workflow Way</div>
                     <h3>Process-First Strategy</h3>
@@ -799,33 +1179,6 @@
                 </div>
             </div>
 
-            <!-- Comparison points -->
-            <div class="comp-points">
-                <div class="comp-point">
-                    <div class="comp-point-old"><span class="cp-x"><svg viewBox="0 0 14 14" fill="none"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>Buy software, then figure out processes</div>
-                    <div class="comp-point-new"><span class="cp-check"><svg viewBox="0 0 14 14" fill="none"><path d="M3 7.5l3 3 5-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Map and optimise workflows first, then choose tools</div>
-                </div>
-                <div class="comp-point">
-                    <div class="comp-point-old"><span class="cp-x"><svg viewBox="0 0 14 14" fill="none"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>Vendor lock-in from day one</div>
-                    <div class="comp-point-new"><span class="cp-check"><svg viewBox="0 0 14 14" fill="none"><path d="M3 7.5l3 3 5-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Technology-agnostic, zero proprietary dependencies</div>
-                </div>
-                <div class="comp-point">
-                    <div class="comp-point-old"><span class="cp-x"><svg viewBox="0 0 14 14" fill="none"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>Automates broken processes at scale</div>
-                    <div class="comp-point-new"><span class="cp-check"><svg viewBox="0 0 14 14" fill="none"><path d="M3 7.5l3 3 5-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Fix the process first, then automate what works</div>
-                </div>
-                <div class="comp-point">
-                    <div class="comp-point-old"><span class="cp-x"><svg viewBox="0 0 14 14" fill="none"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>4-12 months before measurable ROI</div>
-                    <div class="comp-point-new"><span class="cp-check"><svg viewBox="0 0 14 14" fill="none"><path d="M3 7.5l3 3 5-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Quick wins in weeks, full ROI in 6-9 months</div>
-                </div>
-                <div class="comp-point">
-                    <div class="comp-point-old"><span class="cp-x"><svg viewBox="0 0 14 14" fill="none"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>Consultants pushing products they implement</div>
-                    <div class="comp-point-new"><span class="cp-check"><svg viewBox="0 0 14 14" fill="none"><path d="M3 7.5l3 3 5-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Independent advisors with no implementation bias</div>
-                </div>
-                <div class="comp-point">
-                    <div class="comp-point-old"><span class="cp-x"><svg viewBox="0 0 14 14" fill="none"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>Platforms obsolete before contracts expire</div>
-                    <div class="comp-point-new"><span class="cp-check"><svg viewBox="0 0 14 14" fill="none"><path d="M3 7.5l3 3 5-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Adaptive architecture that evolves with technology</div>
-                </div>
-            </div>
         </div>
     </section>
 
@@ -833,38 +1186,38 @@
     <section class="approach-section" id="approach">
         <div class="container">
             <div class="section-header">
-                <div class="section-label">The Modern Approach</div>
+                <div class="section-label">Our Approach</div>
                 <h2 class="section-title">How We <strong>Transform Operations</strong></h2>
-                <p class="section-desc">End-to-end support from diagnosis to delivery. No vendor bias, no hidden agendas.</p>
+                <p class="section-desc">Every engagement is structured to free up capacity - so your team does more, not more of the same.</p>
             </div>
             <div class="approach-grid">
                 <div class="approach-card">
                     <div class="approach-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
                     </div>
-                    <h3>Evidence-Based Diagnosis</h3>
-                    <p>Real process data, real costs. No guesswork — we anchor every finding to workflows you've actually run.</p>
+                    <h3>Find the Hidden Capacity</h3>
+                    <p>Real process data reveals where your team spends time on friction - rework, workarounds, unnecessary handoffs instead of output.</p>
                 </div>
                 <div class="approach-card">
                     <div class="approach-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1"/></svg>
                     </div>
-                    <h3>Technology Independence</h3>
-                    <p>We don't sell software. Our recommendations are unbiased, focused solely on what serves your operations.</p>
+                    <h3>Fix Before You Automate</h3>
+                    <p>Automating a broken process just makes it break faster. We eliminate waste first, then apply the right technology to what's now clean.</p>
                 </div>
                 <div class="approach-card">
                     <div class="approach-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" opacity="0.3"/></svg>
                     </div>
-                    <h3>Strategic Alignment</h3>
-                    <p>Every recommendation maps to your business goals. We ensure technology investments deliver real outcomes.</p>
+                    <h3>Redirect Freed Capacity</h3>
+                    <p>When processes run leaner, your team gets time back. We help you channel that capacity into the work that actually moves the business forward.</p>
                 </div>
                 <div class="approach-card">
                     <div class="approach-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
                     </div>
-                    <h3>Measurable Outcomes</h3>
-                    <p>Cycle time reductions, cost savings, and efficiency gains — tracked and reported at every milestone.</p>
+                    <h3>Compound Every Gain</h3>
+                    <p>Each process fix frees capacity for the next improvement. Operating leverage isn't a one-time event - it's a flywheel.</p>
                 </div>
             </div>
         </div>
@@ -875,100 +1228,60 @@
         <div class="container">
             <div class="diagnostic-badge">Evidence-Based Analysis</div>
             <h2>Discover What's <strong>Actually Broken</strong></h2>
-            <p>Walk through your real processes with real examples. Our diagnostic anchors every question to a workflow you've actually completed — revealing hidden inefficiencies worth £100K-500K+.</p>
+            <p>Walk through your real processes with real examples. Our diagnostic reveals the rework, bottlenecks, and manual workarounds that are quietly consuming your team's capacity.</p>
             <div class="diagnostic-stats">
                 <div class="diagnostic-stat"><span class="diagnostic-stat-number">12-15 min</span><span class="diagnostic-stat-label">Per process</span></div>
                 <div class="diagnostic-stat"><span class="diagnostic-stat-number">Evidence-led</span><span class="diagnostic-stat-label">Real data, real costs</span></div>
                 <div class="diagnostic-stat"><span class="diagnostic-stat-number">Free</span><span class="diagnostic-stat-label">Full report included</span></div>
             </div>
-            <a href="/diagnostic.html" class="btn-white">
+            <a href="/diagnostic" class="btn-white">
                 Start Process Diagnostic
                 <svg class="arrow-icon" viewBox="0 0 16 16" fill="none"><path d="M3.5 8h9m0 0L9 4.5M12.5 8 9 11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </a>
         </div>
     </section>
 
-    <!-- ===== Services ===== -->
+    <!-- ===== Services & Methodology ===== -->
     <section class="services-section" id="services">
         <div class="container">
             <div class="section-header">
-                <div class="section-label">Service Offerings</div>
+                <div class="section-label">Diagnose · Design · Deploy</div>
                 <h2 class="section-title">Your Journey <strong>With Us</strong></h2>
-                <p class="section-desc">From initial assessment to ongoing partnership, we meet you where you are.</p>
+                <p class="section-desc">A proven framework that starts with operational reality. From first audit to ongoing optimisation, we meet you where you are.</p>
             </div>
             <div class="services-grid">
                 <div class="service-card">
                     <div class="service-number">01</div>
-                    <h3>Diagnostic</h3>
-                    <span class="price-label">2-4 week engagement</span>
+                    <h3>Diagnose</h3>
+                    <span class="price-label">2-6 weeks</span>
                     <ul class="service-features">
-                        <li>Comprehensive workflow audit</li>
-                        <li>Data architecture review</li>
-                        <li>Technology stack assessment</li>
-                        <li>Quick-win identification</li>
+                        <li>Map current-state workflows and measure cycle times</li>
+                        <li>Data architecture and technology stack review</li>
+                        <li>Identify bottlenecks, friction points, and quick wins</li>
                     </ul>
-                    <div class="service-deliverable">30-40 page diagnostic report with prioritized recommendations</div>
+                    <div class="service-deliverable">Diagnostic report with prioritized recommendations and baseline metrics</div>
                 </div>
                 <div class="service-card">
                     <div class="service-number">02</div>
-                    <h3>Strategy</h3>
-                    <span class="price-label">4-8 week engagement</span>
+                    <h3>Design</h3>
+                    <span class="price-label">4-8 weeks</span>
                     <ul class="service-features">
-                        <li>12-18 month transformation roadmap</li>
-                        <li>Change management framework</li>
-                        <li>Technology selection criteria</li>
-                        <li>Business case development</li>
+                        <li>Transformation roadmap with milestones</li>
+                        <li>Technology selection with focus on best fit, no vendor bias</li>
+                        <li>Change management and business case development</li>
                     </ul>
-                    <div class="service-deliverable">Complete implementation roadmap with metrics and milestones</div>
+                    <div class="service-deliverable">Implementation-ready roadmap with process architectures and success metrics</div>
                 </div>
                 <div class="service-card">
                     <div class="service-number">03</div>
-                    <h3>Implementation</h3>
-                    <span class="price-label">Ongoing engagement</span>
+                    <h3>Deploy &amp; Scale</h3>
+                    <span class="price-label">Ongoing</span>
                     <ul class="service-features">
-                        <li>Embedded strategic advisor role</li>
-                        <li>Vendor negotiation support</li>
-                        <li>Implementation oversight</li>
-                        <li>Quarterly optimization reviews</li>
+                        <li>Implementation oversight with embedded advisory</li>
+                        <li>Vendor negotiation and integration support</li>
+                        <li>Quarterly reviews and continuous improvement</li>
                     </ul>
-                    <div class="service-deliverable">3-12 month engagements with ongoing partnership</div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ===== Methodology ===== -->
-    <section class="process-section" id="process">
-        <div class="container">
-            <div class="section-header">
-                <div class="section-label">Methodology</div>
-                <h2 class="section-title">The 3D <strong>Optimization Method</strong></h2>
-                <p class="section-desc">A proven framework that starts with operational reality, not technology recommendations.</p>
-            </div>
-            <div class="process-timeline">
-                <div class="process-step">
-                    <div class="step-number">01</div>
-                    <h3 class="step-title">Diagnose</h3>
-                    <div class="step-duration">4-6 weeks</div>
-                    <p class="step-description">Map current-state workflows, identify bottlenecks, measure cycle times, and document friction points.</p>
-                </div>
-                <div class="process-step">
-                    <div class="step-number">02</div>
-                    <h3 class="step-title">Design</h3>
-                    <div class="step-duration">6-8 weeks</div>
-                    <p class="step-description">Create adaptable process architectures prioritizing interoperability, portability, and modularity.</p>
-                </div>
-                <div class="process-step">
-                    <div class="step-number">03</div>
-                    <h3 class="step-title">Deploy</h3>
-                    <div class="step-duration">8-12 weeks</div>
-                    <p class="step-description">Implement with technology independence. Integration patterns emphasize open standards and API-first architecture.</p>
-                </div>
-                <div class="process-step">
-                    <div class="step-number">04</div>
-                    <h3 class="step-title">Scale</h3>
-                    <div class="step-duration">12-16 weeks</div>
-                    <p class="step-description">Roll out proven solutions, build internal capabilities, and establish continuous improvement.</p>
+                    <div class="service-deliverable">3-12 month engagements — from first deployment to organisation-wide rollout</div>
                 </div>
             </div>
         </div>
@@ -978,8 +1291,8 @@
     <section class="bottom-cta" id="contact">
         <div class="container">
             <div class="cta-box">
-                <h2>Ready to <strong>Future-Proof</strong> Your Operations?</h2>
-                <p>Schedule a 30-minute discovery call to discuss your operational challenges and explore how we can help.</p>
+                <h2>Ready to Get More From <strong>What You Have?</strong></h2>
+                <p>Schedule a 30-minute discovery call to discuss your operational challenges and explore where the hidden capacity is.</p>
                 <div class="cta-buttons">
                     <a href="mailto:hopektettey@gmail.com" class="btn-primary">Schedule Discovery Call</a>
                     <a href="#services" class="btn-outline">View Services</a>
@@ -992,7 +1305,7 @@
         <div class="footer-content">
             <div>
                 <div class="footer-brand">Workflow Partners</div>
-                <p class="footer-tagline">Technology-agnostic workflow optimization and data strategy. Building adaptive operational foundations for lasting growth.</p>
+                <p class="footer-tagline">Technology-agnostic workflow optimization. We fix broken processes and apply the right technology so your team delivers more without growing proportionally.</p>
             </div>
             <div>
                 <h4>Services</h4>
@@ -1000,14 +1313,13 @@
                     <li><a href="#services">Diagnostic</a></li>
                     <li><a href="#services">Strategy</a></li>
                     <li><a href="#services">Implementation</a></li>
-                    <li><a href="/dashboard">Dashboard</a></li>
+                    <li><a href="/portal">Portal</a></li>
                 </ul>
             </div>
             <div>
                 <h4>Company</h4>
                 <ul>
                     <li><a href="#approach">Approach</a></li>
-                    <li><a href="#process">Methodology</a></li>
                     <li><a href="#contact">Contact</a></li>
                 </ul>
             </div>
@@ -1044,7 +1356,7 @@
         const revealObserver = new IntersectionObserver((entries) => {
             entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
         }, { threshold: 0.06, rootMargin: '0px 0px -40px 0px' });
-        document.querySelectorAll('.approach-card, .service-card, .process-step, .section-header, .cta-box, .diagnostic-stat, .comp-panel, .comp-point').forEach((el, i) => {
+        document.querySelectorAll('.approach-card, .service-card, .process-step, .section-header, .cta-box, .diagnostic-stat, .comp-panel, .comp-table-row').forEach((el, i) => {
             el.classList.add('scroll-reveal');
             el.style.transitionDelay = `${(i % 4) * 0.1}s`;
             revealObserver.observe(el);

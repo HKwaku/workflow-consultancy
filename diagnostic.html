@@ -8,27 +8,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <!-- jsPDF for PDF report generation -->
-    <script src="/assets/jspdf.umd.min.js"></script>
-    <!-- Supabase client for portal auth check (edit mode) -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="/styles/base.css">
+    <!-- jsPDF and Supabase are lazy-loaded when first needed -->
     <!-- Flow diagram rendered with custom SVG (no external dependency) -->
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
+        body { line-height: 1.65; }
         :root {
-            --primary: #1a2f4a;
-            --primary-light: #2a4a6b;
-            --accent: #3d8ea6;
-            --accent-light: #5bb8d4;
+            --radius-md: 14px;
+            --radius-lg: 20px;
             --dark: #0c1b2e;
-            --text: #1e293b;
-            --text-mid: #475569;
-            --text-light: #64748b;
-            --bg: #fafbfc;
-            --bg-alt: #f1f5f9;
-            --white: #ffffff;
-            --border: #e2e8f0;
             --border-light: #f1f5f9;
             --success: #16a34a;
             --success-bg: rgba(22,163,74,0.06);
@@ -38,18 +26,6 @@
             --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
             --shadow-md: 0 4px 20px rgba(0,0,0,0.06);
             --shadow-lg: 0 12px 40px rgba(0,0,0,0.08);
-            --radius-sm: 8px;
-            --radius-md: 14px;
-            --radius-lg: 20px;
-        }
-
-        body {
-            font-family: 'Work Sans', sans-serif;
-            color: var(--text);
-            line-height: 1.65;
-            background: var(--bg);
-            -webkit-font-smoothing: antialiased;
-            min-height: 100vh;
         }
 
         h1, h2, h3, h4 {
@@ -1004,6 +980,221 @@
             border-style: solid;
         }
 
+        .step-item-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            align-items: flex-end;
+            flex-shrink: 0;
+        }
+
+        .insert-step-divider {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            margin: -0.25rem 0;
+            position: relative;
+            height: 28px;
+            opacity: 0.35;
+            transition: opacity 0.2s;
+        }
+
+        .insert-step-divider:hover {
+            opacity: 1;
+        }
+
+        .insert-step-divider::before,
+        .insert-step-divider::after {
+            content: '';
+            flex: 1;
+            height: 1.5px;
+            background: var(--accent);
+            opacity: 0.4;
+        }
+
+        .insert-step-divider:hover::before,
+        .insert-step-divider:hover::after {
+            opacity: 0.7;
+        }
+
+        .insert-step-divider button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: 1.5px solid var(--accent);
+            background: white;
+            color: var(--accent);
+            font-size: 1.1rem;
+            line-height: 1;
+            cursor: pointer;
+            margin: 0 0.5rem;
+            padding: 0;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .insert-step-divider button:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        /* ── Drag handle for step reordering ── */
+        .step-drag-handle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            cursor: grab;
+            opacity: 0;
+            transition: opacity 0.2s;
+            flex-shrink: 0;
+            margin-top: 0.5rem;
+            color: var(--text-light);
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .step-drag-handle:active { cursor: grabbing; }
+
+        .list-item:hover .step-drag-handle { opacity: 0.5; }
+
+        .list-item.step-dragging {
+            opacity: 0.35;
+            background: rgba(56, 163, 165, 0.04);
+            border: 2px dashed var(--accent);
+            border-radius: var(--radius-md);
+        }
+
+        .list-item.step-drag-over-above {
+            box-shadow: 0 -3px 0 0 var(--accent);
+        }
+
+        .list-item.step-drag-over-below {
+            box-shadow: 0 3px 0 0 var(--accent);
+        }
+
+        .list-item[draggable="true"] input,
+        .list-item[draggable="true"] select,
+        .list-item[draggable="true"] textarea {
+            -webkit-user-drag: none;
+        }
+
+        /* ── Contributor badge on steps ── */
+        .step-contributor-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.2rem;
+            font-size: 0.7rem;
+            color: var(--text-light);
+            background: rgba(56, 163, 165, 0.07);
+            padding: 0.12rem 0.45rem;
+            border-radius: 10px;
+            margin-top: 0.1rem;
+        }
+
+        .step-contributor-badge svg {
+            width: 10px;
+            height: 10px;
+        }
+
+        /* ── Handover banner on Screen 7 ── */
+        .handover-banner {
+            background: linear-gradient(135deg, rgba(56, 163, 165, 0.08), rgba(56, 163, 165, 0.02));
+            border: 1px solid rgba(56, 163, 165, 0.2);
+            border-radius: var(--radius-md);
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+
+        .handover-banner.show { display: block; }
+
+        .handover-banner h4 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.1rem;
+            margin: 0 0 0.35rem;
+            color: var(--text);
+        }
+
+        .handover-banner p {
+            font-size: 0.85rem;
+            color: var(--text-mid);
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .handover-banner .handover-note {
+            margin-top: 0.5rem;
+            padding: 0.6rem 0.8rem;
+            background: white;
+            border-radius: var(--radius-sm);
+            font-style: italic;
+            font-size: 0.85rem;
+            color: var(--text);
+            border-left: 3px solid var(--accent);
+        }
+
+        /* ── Handover button ── */
+        .handover-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.55rem 1rem;
+            font-size: 0.85rem;
+            background: linear-gradient(135deg, rgba(56, 163, 165, 0.08), rgba(56, 163, 165, 0.03));
+            border: 1.5px solid rgba(56, 163, 165, 0.25);
+            border-radius: var(--radius-sm);
+            color: var(--accent);
+            font-family: 'Work Sans', sans-serif;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .handover-btn:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .handover-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* ── Handover modal ── */
+        .handover-modal-form .handover-name-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .handover-modal-form .handover-name-row input {
+            flex: 1;
+        }
+
+        .handover-modal-form textarea {
+            width: 100%;
+            min-height: 70px;
+            padding: 0.7rem 0.9rem;
+            font-size: 0.9rem;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'Work Sans', sans-serif;
+            resize: vertical;
+            margin-bottom: 0.75rem;
+        }
+
+        .handover-modal-form textarea:focus {
+            border-color: var(--accent);
+            outline: none;
+            transform: scale(1.15);
+        }
+
         .remove-item {
             padding: 0.4rem 0.8rem;
             background: transparent;
@@ -1185,11 +1376,6 @@
             margin: 0 auto 1rem;
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
         /* ===== Diagram Controls ===== */
         .diagram-ctrl-btn {
             background: var(--bg-alt);
@@ -1205,6 +1391,42 @@
         .diagram-ctrl-btn:hover {
             background: var(--border);
             border-color: var(--text-mid);
+        }
+        .flow-mobile-hint {
+            display: none;
+            font-size: 0.78rem;
+            color: var(--text-mid);
+            padding: 8px 12px;
+            background: #f0f9ff;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+        .flow-list-view { padding: 0; list-style: none; }
+        .flow-list-item {
+            display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px;
+            border-bottom: 1px solid var(--border); position: relative;
+        }
+        .flow-list-item:last-child { border-bottom: none; }
+        .flow-list-num {
+            width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.72rem; font-weight: 700; color: white;
+            background: var(--primary, #1a5a6e);
+        }
+        .flow-list-num.decision { background: #d97706; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); width: 32px; height: 32px; }
+        .flow-list-num.external { background: #7c3aed; }
+        .flow-list-body { flex: 1; min-width: 0; }
+        .flow-list-name { font-size: 0.88rem; font-weight: 500; color: var(--text-dark); margin-bottom: 2px; }
+        .flow-list-dept { font-size: 0.72rem; color: var(--text-mid); }
+        .flow-list-badge {
+            font-size: 0.6rem; font-weight: 700; padding: 2px 6px; border-radius: 3px;
+            letter-spacing: 0.3px; flex-shrink: 0; align-self: center;
+        }
+        .flow-list-arrow { text-align: center; color: var(--text-light); font-size: 0.75rem; padding: 2px 0; }
+        .flow-list-branches { margin-top: 6px; padding-left: 4px; }
+        .flow-list-branch { font-size: 0.78rem; color: var(--text-mid); padding: 2px 0; }
+        .flow-list-branch::before { content: '↳ '; color: #d97706; font-weight: 600;
         }
 
         /* Fullscreen via native Fullscreen API */
@@ -1413,6 +1635,13 @@
 
             .progress-bar { padding: 0.75rem 1rem; }
             .progress-bar .step-text { font-size: 0.8rem; }
+
+            .diagram-viewport { max-height: 400px !important; }
+            .flow-view-toggle { flex-wrap: wrap; }
+            .flow-view-toggle button { font-size: 0.72rem !important; padding: 0.35rem 0.7rem !important; }
+            .diagram-controls { flex-wrap: wrap; gap: 0.35rem !important; }
+            .diagram-controls .diagram-ctrl-btn { min-width: 36px; min-height: 36px; }
+            .flow-mobile-hint { display: block !important; }
         }
 
         @media (max-width: 480px) {
@@ -1501,6 +1730,123 @@
         @keyframes insightFadeIn {
             from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Step Import Zone */
+        .step-import-zone {
+            margin-bottom: 1.5rem;
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-md);
+            background: var(--bg-alt);
+            transition: all 0.25s;
+        }
+        .step-import-zone.drag-over {
+            border-color: var(--accent);
+            background: rgba(61, 142, 166, 0.06);
+        }
+        .step-import-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+        }
+        .step-import-tab {
+            flex: 1;
+            padding: 0.65rem 1rem;
+            font-size: 0.82rem;
+            font-weight: 500;
+            text-align: center;
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: var(--text-mid);
+            font-family: inherit;
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+        }
+        .step-import-tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+            background: rgba(61, 142, 166, 0.04);
+        }
+        .step-import-tab:hover:not(.active) {
+            color: var(--text);
+            background: rgba(0,0,0,0.02);
+        }
+        .step-import-body {
+            padding: 1.25rem;
+        }
+        .step-import-upload {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1.5rem;
+            cursor: pointer;
+        }
+        .step-import-upload svg { opacity: 0.4; transition: opacity 0.2s; }
+        .step-import-upload:hover svg { opacity: 0.7; }
+        .step-import-upload p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: var(--text-mid);
+            text-align: center;
+        }
+        .step-import-upload .import-hint {
+            font-size: 0.75rem;
+            color: var(--text-light);
+        }
+        .step-import-textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 0.8rem;
+            font-size: 0.9rem;
+            font-family: 'Work Sans', sans-serif;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            resize: vertical;
+            transition: border-color 0.2s;
+        }
+        .step-import-textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .step-import-textarea::placeholder { color: var(--text-light); font-size: 0.82rem; }
+        .step-import-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+        .step-import-btn {
+            padding: 0.55rem 1.2rem;
+            font-size: 0.82rem;
+            font-weight: 500;
+            border-radius: 100px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+            border: none;
+        }
+        .step-import-btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+        .step-import-btn-primary:hover { background: #2d7a8f; }
+        .step-import-btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .step-import-status {
+            text-align: center;
+            padding: 1.5rem;
+        }
+        .step-import-status .spinner { margin: 0 auto 0.75rem; }
+        .step-import-preview {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 0.75rem;
+            object-fit: contain;
         }
 
         /* Step Suggestions */
@@ -1760,7 +2106,7 @@
     <!-- Top Bar -->
     <div class="top-bar">
         <div class="top-bar-inner">
-            <a href="index.html">Workflow Partners</a>
+            <a href="/">Workflow<span style="color:#b8976a">.</span></a>
             <span class="top-bar-badge">Process Diagnostic</span>
         </div>
     </div>
@@ -1964,12 +2310,12 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Between start and finish, approximately how many steps?</label>
+                    <label>How many different people or roles need to be involved?</label>
                     <div class="radio-group">
-                        <label class="radio-option"><input type="radio" name="complexity" value="2-5"> 2-5 steps (Simple)</label>
-                        <label class="radio-option"><input type="radio" name="complexity" value="6-10"> 6-10 steps (Moderate)</label>
-                        <label class="radio-option"><input type="radio" name="complexity" value="11-20"> 11-20 steps (Complex)</label>
-                        <label class="radio-option"><input type="radio" name="complexity" value="20+"> 20+ steps (Very complex)</label>
+                        <label class="radio-option"><input type="radio" name="complexity" value="1-2"> 1–2 people (Mostly self-contained)</label>
+                        <label class="radio-option"><input type="radio" name="complexity" value="3-5"> 3–5 people (Cross-functional)</label>
+                        <label class="radio-option"><input type="radio" name="complexity" value="6-10"> 6–10 people (Multiple teams)</label>
+                        <label class="radio-option"><input type="radio" name="complexity" value="10+"> 10+ people (Organisation-wide)</label>
                     </div>
                 </div>
 
@@ -2050,50 +2396,44 @@
                 <p class="screen-subtitle">For this specific instance of "<span class="process-ref" id="processRef5">your process</span>":</p>
                 <p id="exampleSummary" class="helper-text" style="margin-bottom: 2rem;"></p>
 
-                <div class="input-group">
-                    <div class="form-group">
-                        <label for="timeMeetings">Time in MEETINGS about this:</label>
-                        <input type="number" id="timeMeetings" placeholder="hours" min="0" step="0.5" oninput="calculateTimeTotal()">
-                        <p class="helper-text">Kickoff calls, status updates, alignment</p>
+                <div class="form-group">
+                    <label>Roughly, how many hours did YOU personally spend on this from start to finish?</label>
+                    <p class="helper-text" style="margin-bottom:0.5rem;">Include meetings, emails, execution, and chasing — everything.</p>
+                    <div class="radio-group">
+                        <label class="radio-option"><input type="radio" name="totalTimeRange" value="0-2" onchange="recalcTimeFromRanges()"> Under 2 hours</label>
+                        <label class="radio-option"><input type="radio" name="totalTimeRange" value="2-5" onchange="recalcTimeFromRanges()"> 2–5 hours</label>
+                        <label class="radio-option"><input type="radio" name="totalTimeRange" value="5-10" onchange="recalcTimeFromRanges()"> 5–10 hours</label>
+                        <label class="radio-option"><input type="radio" name="totalTimeRange" value="10-20" onchange="recalcTimeFromRanges()"> 10–20 hours (1–2.5 full days)</label>
+                        <label class="radio-option"><input type="radio" name="totalTimeRange" value="20-40" onchange="recalcTimeFromRanges()"> 20–40 hours (half a week to a week)</label>
+                        <label class="radio-option"><input type="radio" name="totalTimeRange" value="40+" onchange="recalcTimeFromRanges()"> 40+ hours (more than a working week)</label>
                     </div>
-                    <div class="form-group">
-                        <label for="timeEmails">Time writing/reading EMAILS:</label>
-                        <input type="number" id="timeEmails" placeholder="hours" min="0" step="0.5" oninput="calculateTimeTotal()">
-                        <p class="helper-text">Coordination, questions, updates</p>
-                    </div>
-                </div>
-
-                <div class="input-group">
-                    <div class="form-group">
-                        <label for="timeExecution">Time on ACTUAL EXECUTION:</label>
-                        <input type="number" id="timeExecution" placeholder="hours" min="0" step="0.5" oninput="calculateTimeTotal()">
-                        <p class="helper-text">Configuring, creating, data entry</p>
-                    </div>
-                    <div class="form-group">
-                        <label for="timeWaiting">Time WAITING for others:</label>
-                        <input type="number" id="timeWaiting" placeholder="hours" min="0" step="0.5" oninput="calculateTimeTotal()">
-                        <p class="helper-text">Approvals, responses, dependencies</p>
-                    </div>
-                </div>
-
-                <div class="calculated">
-                    <div class="calculated-label">Your total time:</div>
-                    <div class="calculated-value" id="timeTotal">&mdash;</div>
-                </div>
-
-                <div class="calculated">
-                    <div class="calculated-label">Your effective rate:</div>
-                    <div class="calculated-value" id="effectiveRate">&mdash;</div>
                 </div>
 
                 <div class="form-group">
-                    <label>Does this feel accurate?</label>
+                    <label>Of that time, how much was spent WAITING for other people?</label>
+                    <p class="helper-text" style="margin-bottom:0.5rem;">Waiting for approvals, responses, handoffs, external parties.</p>
                     <div class="radio-group">
-                        <label class="radio-option"><input type="radio" name="timeAccuracy" value="yes"> Yes, about right</label>
-                        <label class="radio-option"><input type="radio" name="timeAccuracy" value="too-high"> Too high - I spent less time</label>
-                        <label class="radio-option"><input type="radio" name="timeAccuracy" value="too-low"> Too low - I spent more time</label>
-                        <label class="radio-option"><input type="radio" name="timeAccuracy" value="unsure"> Not sure - hard to estimate</label>
+                        <label class="radio-option"><input type="radio" name="waitingPortion" value="almost-none" onchange="recalcTimeFromRanges()"> Almost none — I drove it end to end</label>
+                        <label class="radio-option"><input type="radio" name="waitingPortion" value="quarter" onchange="recalcTimeFromRanges()"> About a quarter — some handoff delays</label>
+                        <label class="radio-option"><input type="radio" name="waitingPortion" value="half" onchange="recalcTimeFromRanges()"> About half — significant back-and-forth</label>
+                        <label class="radio-option"><input type="radio" name="waitingPortion" value="most" onchange="recalcTimeFromRanges()"> Most of it — I spent more time chasing than doing</label>
+                        <label class="radio-option"><input type="radio" name="waitingPortion" value="almost-all" onchange="recalcTimeFromRanges()"> Almost all — I was blocked for days at a time</label>
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <label>When you WERE actively working, what consumed the most time?</label>
+                    <div class="radio-group">
+                        <label class="radio-option"><input type="radio" name="primaryActivity" value="meetings" onchange="recalcTimeFromRanges()"> Meetings &amp; calls (kickoffs, status updates, alignment)</label>
+                        <label class="radio-option"><input type="radio" name="primaryActivity" value="emails" onchange="recalcTimeFromRanges()"> Emails &amp; chasing (coordination, questions, following up)</label>
+                        <label class="radio-option"><input type="radio" name="primaryActivity" value="execution" onchange="recalcTimeFromRanges()"> Actual execution (configuring, creating, data entry)</label>
+                        <label class="radio-option"><input type="radio" name="primaryActivity" value="rework" onchange="recalcTimeFromRanges()"> Rework &amp; corrections (fixing mistakes, re-doing work)</label>
+                    </div>
+                </div>
+
+                <div class="calculated" id="timeEstimateBox" style="display:none;">
+                    <div class="calculated-label">Estimated breakdown:</div>
+                    <div class="calculated-value" id="timeTotal" style="font-size:1.1rem;">&mdash;</div>
                 </div>
 
                 <div id="insightCard5" style="display: none;"></div>
@@ -2168,10 +2508,49 @@
                 <p class="screen-subtitle">Let's break down "<span class="process-ref" id="processRef7">your process</span>" into major steps.</p>
                 <p class="helper-text" style="margin-bottom: 1.5rem;">For the instance: <span id="exampleNameRef7" class="process-ref"></span></p>
 
+                <!-- Import zone: upload or paste steps -->
+                <div class="step-import-zone" id="stepImportZone">
+                    <div class="step-import-tabs">
+                        <button class="step-import-tab active" onclick="switchImportTab('upload', this)">Upload Process Map</button>
+                        <button class="step-import-tab" onclick="switchImportTab('paste', this)">Paste Steps</button>
+                    </div>
+                    <div class="step-import-body" id="importBodyUpload">
+                        <div class="step-import-upload" id="importDropArea" onclick="document.getElementById('importFileInput').click()">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            <p><strong>Click to upload</strong> or drag &amp; drop</p>
+                            <p class="import-hint">Process map image (PNG, JPG, GIF, WebP) or PDF</p>
+                        </div>
+                        <input type="file" id="importFileInput" accept="image/png,image/jpeg,image/gif,image/webp,application/pdf" style="display:none" onchange="handleImportFile(this)">
+                        <div id="importFilePreview" style="display:none; text-align:center;"></div>
+                    </div>
+                    <div class="step-import-body" id="importBodyPaste" style="display:none;">
+                        <textarea class="step-import-textarea" id="importPasteText" placeholder="Paste your steps here, e.g.:&#10;1. Receive order from customer&#10;2. Verify inventory availability&#10;3. Process payment&#10;4. Pick and pack items&#10;5. Ship to customer&#10;&#10;Or paste any format — AI will extract the steps."></textarea>
+                        <div class="step-import-actions">
+                            <button class="step-import-btn step-import-btn-primary" onclick="handleImportPaste()" id="importPasteBtn">Extract Steps</button>
+                        </div>
+                    </div>
+                    <div class="step-import-status" id="importStatus" style="display:none;">
+                        <div class="spinner"></div>
+                        <p style="color:var(--text-mid); font-size:0.9rem;" id="importStatusText">Analysing your process map...</p>
+                    </div>
+                </div>
+
+                <!-- Handover banner (shown when colleague opens a shared link) -->
+                <div class="handover-banner" id="handoverBanner">
+                    <h4 id="handoverBannerTitle">A colleague shared this diagnostic with you</h4>
+                    <p id="handoverBannerDesc">Review the steps below and add any that are missing. You can reorder steps by dragging, or insert new ones anywhere.</p>
+                    <div class="handover-note" id="handoverBannerNote" style="display:none;"></div>
+                </div>
+
+                <p class="helper-text" style="margin-bottom:0.75rem; color: var(--text-mid); font-size: 0.82rem;">
+                    <svg style="width:14px;height:14px;vertical-align:-2px;margin-right:2px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M12 16v-4"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg>
+                    Drag steps to reorder. Don't know every step? Add what you know and hand over to a colleague.
+                </p>
+
                 <div class="dynamic-list" id="stepsList"></div>
 
                 <button type="button" class="add-item" onclick="addStep()" id="addStepBtn">+ Add Step</button>
-                <p class="helper-text">Minimum 3 steps. Maximum 25.</p>
+                <p class="helper-text">Minimum 3 steps. Maximum 50.</p>
 
                 <!-- AI Step Suggestions -->
                 <div id="stepSuggestionsBox" class="step-suggestions" style="display: none;">
@@ -2185,6 +2564,10 @@
 
                 <div class="button-group">
                     <button class="button button-secondary" onclick="goToScreen(6)">&larr; Back</button>
+                    <button type="button" class="handover-btn" onclick="openHandoverModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                        Hand over to colleague
+                    </button>
                     <button class="button button-primary" onclick="validateAndContinue(7)">Continue &rarr;</button>
                 </div>
             </div>
@@ -2785,6 +3168,22 @@
     </div>
 
     <script>
+        function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+        function showBanner(msg, type) {
+            var existing = document.getElementById('inlineBanner');
+            if (existing) existing.remove();
+            var div = document.createElement('div');
+            div.id = 'inlineBanner';
+            var bg = type === 'error' ? '#fef2f2' : type === 'success' ? '#f0fdf4' : '#fffbeb';
+            var border = type === 'error' ? '#fca5a5' : type === 'success' ? '#86efac' : '#fcd34d';
+            var color = type === 'error' ? '#991b1b' : type === 'success' ? '#166534' : '#92400e';
+            div.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:10001;padding:12px 24px;border-radius:8px;background:' + bg + ';border:1px solid ' + border + ';color:' + color + ';font-size:0.88rem;max-width:500px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.1);animation:fadeIn 0.3s;';
+            div.textContent = msg;
+            document.body.appendChild(div);
+            setTimeout(function() { if (div.parentNode) div.remove(); }, 5000);
+        }
+
         // ============================================================
         // GLOBAL STATE
         // ============================================================
@@ -2811,7 +3210,7 @@
                 definition: { startsWhen: '', completesWhen: '', complexity: '', departments: [] },
                 lastExample: { name: '', startDate: '', endDate: '', elapsedDays: 0 },
                 userTime: { meetings: 0, emails: 0, execution: 0, waiting: 0, total: 0 },
-                timeAccuracy: '',
+                timeRangeSelections: { totalTimeRange: '', waitingPortion: '', primaryActivity: '' },
                 performance: '',
                 issues: [],
                 biggestDelay: '',
@@ -2971,19 +3370,47 @@
             }
         }
 
-        function calculateTimeTotal() {
-            const m = parseFloat(document.getElementById('timeMeetings').value) || 0;
-            const e = parseFloat(document.getElementById('timeEmails').value) || 0;
-            const x = parseFloat(document.getElementById('timeExecution').value) || 0;
-            const w = parseFloat(document.getElementById('timeWaiting').value) || 0;
-            const total = m + e + x + w;
+        const _timeRangeMidpoints = { '0-2': 1, '2-5': 3.5, '5-10': 7.5, '10-20': 15, '20-40': 30, '40+': 55 };
+        const _waitingFractions = { 'almost-none': 0.05, 'quarter': 0.25, 'half': 0.5, 'most': 0.75, 'almost-all': 0.9 };
+        const _activitySplits = {
+            'meetings':  { meetings: 0.50, emails: 0.25, execution: 0.25 },
+            'emails':    { meetings: 0.20, emails: 0.50, execution: 0.30 },
+            'execution': { meetings: 0.15, emails: 0.20, execution: 0.65 },
+            'rework':    { meetings: 0.10, emails: 0.15, execution: 0.75 }
+        };
+
+        function recalcTimeFromRanges() {
+            const rangeVal = getRadioValue('totalTimeRange');
+            const waitVal = getRadioValue('waitingPortion');
+            const actVal = getRadioValue('primaryActivity');
+
+            if (!rangeVal) { processData.userTime = { meetings: 0, emails: 0, execution: 0, waiting: 0, total: 0 }; return; }
+
+            const total = _timeRangeMidpoints[rangeVal] || 0;
+            const waitFrac = _waitingFractions[waitVal] || 0.25;
+            const waiting = Math.round(total * waitFrac * 10) / 10;
+            const active = total - waiting;
+
+            const split = _activitySplits[actVal] || _activitySplits['execution'];
+            const meetings = Math.round(active * split.meetings * 10) / 10;
+            const emails = Math.round(active * split.emails * 10) / 10;
+            const execution = Math.round((active - meetings - emails) * 10) / 10;
+
+            processData.userTime = { meetings, emails, execution, waiting, total };
+
             const days = processData.lastExample.elapsedDays || 1;
-
-            processData.userTime = { meetings: m, emails: e, execution: x, waiting: w, total: total };
-
-            document.getElementById('timeTotal').textContent = `${total} hours over ${days} days`;
-            document.getElementById('effectiveRate').textContent = `${(total / days).toFixed(1)} hours per day`;
+            const box = document.getElementById('timeEstimateBox');
+            const display = document.getElementById('timeTotal');
+            if (box && display) {
+                box.style.display = 'block';
+                display.innerHTML =
+                    `~${total}h total over ${days} days` +
+                    `<br><span style="font-size:0.85rem;font-weight:400;color:var(--text-mid);">` +
+                    `Meetings ~${meetings}h · Emails ~${emails}h · Execution ~${execution}h · Waiting ~${waiting}h</span>`;
+            }
         }
+
+        function calculateTimeTotal() { recalcTimeFromRanges(); }
 
         // ============================================================
         // SCREEN 6: PERFORMANCE
@@ -3217,58 +3644,280 @@
             }
         }
 
-        function addStep() {
-            if (stepCount >= 25) return;
+        // ── Step Import (upload image / paste text) ──
+        function switchImportTab(tab, btn) {
+            document.querySelectorAll('.step-import-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('importBodyUpload').style.display = tab === 'upload' ? '' : 'none';
+            document.getElementById('importBodyPaste').style.display = tab === 'paste' ? '' : 'none';
+        }
+
+        // Drag-and-drop
+        (function() {
+            document.addEventListener('DOMContentLoaded', function() {
+                var zone = document.getElementById('stepImportZone');
+                if (!zone) return;
+                var drop = document.getElementById('importDropArea');
+                if (!drop) return;
+                ['dragenter', 'dragover'].forEach(function(ev) {
+                    drop.addEventListener(ev, function(e) { e.preventDefault(); zone.classList.add('drag-over'); });
+                });
+                ['dragleave', 'drop'].forEach(function(ev) {
+                    drop.addEventListener(ev, function(e) { e.preventDefault(); zone.classList.remove('drag-over'); });
+                });
+                drop.addEventListener('drop', function(e) {
+                    var files = e.dataTransfer.files;
+                    if (files.length > 0) processImportFile(files[0]);
+                });
+            });
+        })();
+
+        function handleImportFile(input) {
+            if (input.files && input.files[0]) processImportFile(input.files[0]);
+        }
+
+        function processImportFile(file) {
+            var allowed = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf'];
+            if (allowed.indexOf(file.type) === -1) {
+                showBanner('Unsupported file type. Please upload an image (PNG, JPG, GIF, WebP) or PDF.', 'error');
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                showBanner('File is too large. Maximum 10MB.', 'error');
+                return;
+            }
+
+            var preview = document.getElementById('importFilePreview');
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var base64Full = e.target.result;
+                var base64Data = base64Full.split(',')[1];
+                var mediaType = file.type;
+
+                if (file.type.startsWith('image/')) {
+                    preview.innerHTML = '<img src="' + base64Full + '" style="max-height:120px;max-width:100%;border-radius:8px;margin:0.5rem 0;" alt="Preview"><p style="font-size:0.82rem;color:var(--text-mid);">' + esc(file.name) + '</p>';
+                } else {
+                    preview.innerHTML = '<div style="padding:1rem;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p style="font-size:0.82rem;color:var(--text-mid);margin-top:0.5rem;">' + esc(file.name) + '</p></div>';
+                }
+                preview.style.display = '';
+                document.getElementById('importDropArea').style.display = 'none';
+
+                sendExtractRequest({ imageBase64: base64Data, imageMediaType: mediaType });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleImportPaste() {
+            var text = document.getElementById('importPasteText').value.trim();
+            if (!text) { showBanner('Please paste your steps first.', 'error'); return; }
+            sendExtractRequest({ text: text });
+        }
+
+        function sendExtractRequest(payload) {
+            var status = document.getElementById('importStatus');
+            var statusText = document.getElementById('importStatusText');
+            status.style.display = 'flex';
+            statusText.textContent = payload.imageBase64 ? 'Analysing your process map...' : 'Extracting steps from text...';
+
+            var body = { mode: 'extract-steps' };
+            if (payload.imageBase64) {
+                body.imageBase64 = payload.imageBase64;
+                body.imageMediaType = payload.imageMediaType;
+            } else {
+                body.text = payload.text;
+            }
+
+            fetch('/api/analyze-symptoms', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            })
+            .then(function(resp) { return resp.json(); })
+            .then(function(data) {
+                status.style.display = 'none';
+                if (!data.success || !data.steps || data.steps.length === 0) {
+                    showBanner('Could not extract steps: ' + (data.error || 'No steps found. Try a clearer image or more detailed text.'), 'error');
+                    resetImportUI();
+                    return;
+                }
+                if (data.processName) {
+                    var nameInput = document.getElementById('processName');
+                    if (nameInput && !nameInput.value.trim()) nameInput.value = data.processName;
+                }
+                populateStepsFromImport(data.steps);
+            })
+            .catch(function(err) {
+                status.style.display = 'none';
+                showBanner('Extraction failed. Please try again.', 'error');
+                resetImportUI();
+            });
+        }
+
+        function resetImportUI() {
+            document.getElementById('importFilePreview').style.display = 'none';
+            document.getElementById('importDropArea').style.display = '';
+            document.getElementById('importFileInput').value = '';
+        }
+
+        function populateStepsFromImport(steps) {
+            var list = document.getElementById('stepsList');
+            list.innerHTML = '';
+            stepCount = 0;
+            _stepUid = 0;
+
+            steps.forEach(function(s) {
+                var div = addStep();
+                var pfx = getStepPrefix(div);
+
+                var nameEl = document.getElementById(pfx + '_name');
+                if (nameEl) nameEl.value = s.name || '';
+
+                var deptEl = document.getElementById(pfx + '_dept');
+                if (deptEl && s.department) {
+                    var opts = Array.from(deptEl.options).map(function(o) { return o.value; });
+                    if (opts.indexOf(s.department) >= 0) {
+                        deptEl.value = s.department;
+                    } else if (s.department.includes('External')) {
+                        var extOpt = opts.find(function(o) { return o.startsWith('External'); });
+                        if (extOpt) deptEl.value = extOpt;
+                        else deptEl.value = 'Other';
+                    } else {
+                        deptEl.value = 'Other';
+                    }
+                }
+
+                if (s.isExternal) {
+                    var extRadio = document.querySelector('input[name="' + pfx + '_ext"][value="external"]');
+                    if (extRadio) { extRadio.checked = true; extRadio.dispatchEvent(new Event('change')); }
+                }
+
+                if (s.isDecision && s.branches && s.branches.length > 0) {
+                    var uid = div.dataset.stepUid;
+                    var uidKey = 'u' + uid;
+                    var cb = document.getElementById(pfx + '_decision');
+                    if (cb) { cb.checked = true; toggleDecisionBranches(uidKey); }
+                    s.branches.forEach(function(br, bi) {
+                        if (bi >= 2) addBranch(uidKey);
+                        var lbl = document.getElementById(pfx + '_branch_' + bi + '_label');
+                        var tgt = document.getElementById(pfx + '_branch_' + bi + '_target');
+                        if (lbl) lbl.value = br.label || '';
+                        if (tgt) tgt.value = br.target || '';
+                    });
+                }
+            });
+
+            // Collapse the import zone to show the populated steps
+            var zone = document.getElementById('stepImportZone');
+            zone.style.maxHeight = '0';
+            zone.style.overflow = 'hidden';
+            zone.style.padding = '0';
+            zone.style.border = 'none';
+            zone.style.marginBottom = '0';
+
+            // Add a small banner showing import was successful
+            var banner = document.createElement('div');
+            banner.style.cssText = 'padding:0.6rem 1rem;background:linear-gradient(135deg,rgba(22,163,74,0.08),rgba(22,163,74,0.03));border:1px solid rgba(22,163,74,0.2);border-radius:var(--radius-sm);margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;font-size:0.85rem;';
+            banner.innerHTML = '<span style="color:#16a34a;font-weight:500;">&#10003; ' + steps.length + ' steps imported — review and adjust below</span><button onclick="this.parentElement.remove();var z=document.getElementById(\'stepImportZone\');z.style.maxHeight=\'\';z.style.overflow=\'\';z.style.padding=\'\';z.style.border=\'\';z.style.marginBottom=\'\';" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:0.82rem;font-family:inherit;">Import again</button>';
+            var list = document.getElementById('stepsList');
+            list.parentElement.insertBefore(banner, list);
+        }
+
+        const MAX_STEPS = 50;
+        let _stepUid = 0;
+        let _currentContributor = '';
+        let _handoverData = null;
+        let _dragHandleActive = false;
+
+        document.addEventListener('pointerup', function() { _dragHandleActive = false; });
+
+        function addStep(afterElement, beforeElement) {
+            if (stepCount >= MAX_STEPS) return;
             const list = document.getElementById('stepsList');
-            const idx = stepCount;
-            stepCount++;
+            const uid = _stepUid++;
 
             const div = document.createElement('div');
             div.className = 'list-item';
-            div.dataset.stepIndex = idx;
+            div.dataset.stepUid = uid;
+            if (_currentContributor) div.dataset.contributor = _currentContributor;
             div.innerHTML = `
-                <div class="list-item-number">${stepCount}</div>
+                <div class="step-drag-handle" title="Drag to reorder">
+                    <svg width="12" height="18" viewBox="0 0 12 18" fill="currentColor"><circle cx="3" cy="3" r="1.5"/><circle cx="9" cy="3" r="1.5"/><circle cx="3" cy="9" r="1.5"/><circle cx="9" cy="9" r="1.5"/><circle cx="3" cy="15" r="1.5"/><circle cx="9" cy="15" r="1.5"/></svg>
+                </div>
+                <div class="list-item-number"></div>
                 <div class="list-item-content">
-                    <input type="text" id="step_${idx}_name" placeholder="Step name, e.g., Create customer account">
+                    <input type="text" id="step_u${uid}_name" placeholder="Step name, e.g., Create customer account">
                     <div class="step-dept-row">
-                        <select id="step_${idx}_dept" onchange="toggleStepDeptOther(this, ${idx})">${getDeptOptionsHTML()}</select>
+                        <select id="step_u${uid}_dept" onchange="toggleStepDeptOther(this, 'u${uid}')">${getDeptOptionsHTML()}</select>
                         <div class="int-ext-toggle">
                             <label title="Internal team/department">
-                                <input type="radio" name="step_${idx}_ext" value="internal" checked>
+                                <input type="radio" name="step_u${uid}_ext" value="internal" checked>
                                 <span>INT</span>
                             </label>
                             <label title="External party (vendor, client, regulator, etc.)">
-                                <input type="radio" name="step_${idx}_ext" value="external">
+                                <input type="radio" name="step_u${uid}_ext" value="external">
                                 <span>EXT</span>
                             </label>
                         </div>
                     </div>
                     <div class="step-decision-toggle">
-                        <input type="checkbox" id="step_${idx}_decision" onchange="toggleDecisionBranches(${idx})">
-                        <label for="step_${idx}_decision">This step has a decision / routing point</label>
+                        <input type="checkbox" id="step_u${uid}_decision" onchange="toggleDecisionBranches('u${uid}')">
+                        <label for="step_u${uid}_decision">This step has a decision / routing point</label>
                     </div>
-                    <div class="step-branches" id="step_${idx}_branches">
+                    <div class="step-branches" id="step_u${uid}_branches">
                         <div class="step-branches-label">&#9670; Define the possible routes from this step:</div>
-                        <div id="step_${idx}_branchList">
+                        <div id="step_u${uid}_branchList">
                             <div class="branch-row">
                                 <span class="branch-icon">&#10132;</span>
-                                <input type="text" id="step_${idx}_branch_0_label" placeholder="Route label, e.g., Approved">
-                                <input type="text" id="step_${idx}_branch_0_target" placeholder="Goes to... e.g., Step 5 or Send Invoice" style="max-width: 180px;">
+                                <input type="text" id="step_u${uid}_branch_0_label" placeholder="Route label, e.g., Approved">
+                                <input type="text" id="step_u${uid}_branch_0_target" placeholder="Goes to... e.g., Step 5 or Send Invoice" style="max-width: 180px;">
                             </div>
                             <div class="branch-row">
                                 <span class="branch-icon">&#10132;</span>
-                                <input type="text" id="step_${idx}_branch_1_label" placeholder="Route label, e.g., Rejected">
-                                <input type="text" id="step_${idx}_branch_1_target" placeholder="Goes to... e.g., Step 3 or Review" style="max-width: 180px;">
+                                <input type="text" id="step_u${uid}_branch_1_label" placeholder="Route label, e.g., Rejected">
+                                <input type="text" id="step_u${uid}_branch_1_target" placeholder="Goes to... e.g., Step 3 or Review" style="max-width: 180px;">
                             </div>
                         </div>
-                        <button type="button" class="add-branch-btn" onclick="addBranch(${idx})">+ Add another route</button>
+                        <button type="button" class="add-branch-btn" onclick="addBranch('u${uid}')">+ Add another route</button>
                     </div>
+                    <div class="step-contributor-badge" style="display:none;" id="step_u${uid}_contributor"></div>
                 </div>
-                ${stepCount > 3 ? '<button type="button" class="remove-item" onclick="removeStep(' + idx + ')">Remove</button>' : ''}
+                <div class="step-item-actions">
+                    <button type="button" class="remove-item" onclick="removeStep(this)">Remove</button>
+                </div>
             `;
-            list.appendChild(div);
 
-            // Wire up INT/EXT toggle styling via JS (robust cross-browser)
+            if (beforeElement) {
+                list.insertBefore(div, beforeElement);
+            } else if (afterElement) {
+                const afterDivider = afterElement.nextElementSibling;
+                if (afterDivider && afterDivider.classList.contains('insert-step-divider')) {
+                    afterDivider.after(div);
+                } else {
+                    afterElement.after(div);
+                }
+            } else {
+                list.appendChild(div);
+            }
+
+            const insertDiv = document.createElement('div');
+            insertDiv.className = 'insert-step-divider';
+            insertDiv.innerHTML = '<button type="button" onclick="insertStepAfter(this)" title="Insert a step here">+</button>';
+            div.after(insertDiv);
+
+            // Wire drag handle — flag-based so browser sees draggable before gesture starts
+            div.setAttribute('draggable', 'true');
+            const handle = div.querySelector('.step-drag-handle');
+            handle.addEventListener('pointerdown', function() { _dragHandleActive = true; });
+
+            // Show contributor badge if tagged
+            if (div.dataset.contributor) {
+                const badge = document.getElementById('step_u' + uid + '_contributor');
+                if (badge) {
+                    badge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4-4v2"/><circle cx="12" cy="7" r="4"/></svg> ' + esc(div.dataset.contributor);
+                    badge.style.display = 'inline-flex';
+                }
+            }
+
             div.querySelectorAll('.int-ext-toggle input[type="radio"]').forEach(radio => {
                 radio.addEventListener('change', function() {
                     const toggle = this.closest('.int-ext-toggle');
@@ -3279,7 +3928,24 @@
             const checkedRadio = div.querySelector('.int-ext-toggle input:checked');
             if (checkedRadio) checkedRadio.closest('label').classList.add('active');
 
-            if (stepCount >= 25) document.getElementById('addStepBtn').style.display = 'none';
+            renumberSteps();
+            return div;
+        }
+
+        function insertStepAfter(btn) {
+            const divider = btn.closest('.insert-step-divider');
+            if (!divider) return;
+            const prevStep = divider.previousElementSibling;
+            if (!prevStep || !prevStep.classList.contains('list-item')) return;
+            if (stepCount >= MAX_STEPS) return;
+            const newStep = addStep(prevStep);
+            if (newStep) {
+                const nameInput = newStep.querySelector('input[type="text"]');
+                if (nameInput) {
+                    nameInput.focus();
+                    nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
         }
 
         function toggleDecisionBranches(idx) {
@@ -3309,40 +3975,93 @@
             document.getElementById('step_' + stepIdx + '_branchList').appendChild(row);
         }
 
-        function removeStep(idx) {
-            const el = document.querySelector('[data-step-index="' + idx + '"]');
-            if (el) el.remove();
+        function removeStep(elOrIdx) {
+            let el;
+            if (typeof elOrIdx === 'object') {
+                el = elOrIdx.closest('.list-item');
+            } else {
+                el = document.querySelector('[data-step-index="' + elOrIdx + '"]') ||
+                     document.querySelector('[data-step-uid="' + elOrIdx + '"]');
+            }
+            if (el) {
+                const nextSib = el.nextElementSibling;
+                if (nextSib && nextSib.classList.contains('insert-step-divider')) {
+                    nextSib.remove();
+                }
+                el.remove();
+            }
             renumberSteps();
         }
 
         function renumberSteps() {
-            const items = document.querySelectorAll('#stepsList .list-item');
+            const list = document.getElementById('stepsList');
+            const items = list.querySelectorAll('.list-item');
             items.forEach((item, i) => {
                 const num = item.querySelector('.list-item-number');
                 if (num) num.textContent = i + 1;
+                const actions = item.querySelector('.step-item-actions');
+                if (actions) {
+                    const removeBtn = actions.querySelector('.remove-item');
+                    if (removeBtn) removeBtn.style.display = items.length <= 3 ? 'none' : '';
+                }
             });
             stepCount = items.length;
-            if (stepCount < 25) document.getElementById('addStepBtn').style.display = '';
+            const atMax = stepCount >= MAX_STEPS;
+            document.getElementById('addStepBtn').style.display = atMax ? 'none' : '';
+            list.querySelectorAll('.insert-step-divider').forEach(d => {
+                d.style.display = atMax ? 'none' : '';
+            });
+
+            // Ensure a leading insert divider exists before the first step
+            if (items.length > 0) {
+                const first = list.firstElementChild;
+                if (!first || !first.classList.contains('insert-step-divider')) {
+                    const leadDiv = document.createElement('div');
+                    leadDiv.className = 'insert-step-divider insert-step-leading';
+                    leadDiv.innerHTML = '<button type="button" onclick="insertStepAtStart()" title="Insert a step at the beginning">+</button>';
+                    list.insertBefore(leadDiv, first);
+                    if (atMax) leadDiv.style.display = 'none';
+                }
+            }
+        }
+
+        function insertStepAtStart() {
+            if (stepCount >= MAX_STEPS) return;
+            const firstStep = document.querySelector('#stepsList .list-item');
+            if (!firstStep) return;
+            const newStep = addStep(null, firstStep);
+            if (newStep) {
+                const nameInput = newStep.querySelector('input[type="text"]');
+                if (nameInput) {
+                    nameInput.focus();
+                    nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        }
+
+        function getStepPrefix(item) {
+            if (item.dataset.stepUid !== undefined) return 'step_u' + item.dataset.stepUid;
+            return 'step_' + item.dataset.stepIndex;
         }
 
         function collectSteps() {
             const items = document.querySelectorAll('#stepsList .list-item');
             const steps = [];
             items.forEach((item, i) => {
-                const idx = item.dataset.stepIndex;
-                const name = document.getElementById('step_' + idx + '_name')?.value?.trim() || '';
-                let dept = document.getElementById('step_' + idx + '_dept')?.value || '';
+                const pfx = getStepPrefix(item);
+                const name = document.getElementById(pfx + '_name')?.value?.trim() || '';
+                let dept = document.getElementById(pfx + '_dept')?.value || '';
                 if (dept === 'Other') {
-                    const otherVal = document.getElementById('step_' + idx + '_deptOther')?.value?.trim();
+                    const otherVal = document.getElementById(pfx + '_deptOther')?.value?.trim();
                     if (otherVal) dept = otherVal;
                 }
-                const extRadio = document.querySelector('input[name="step_' + idx + '_ext"]:checked');
+                const extRadio = document.querySelector('input[name="' + pfx + '_ext"]:checked');
                 const isExternal = extRadio ? extRadio.value === 'external' : false;
 
-                const isDecision = document.getElementById('step_' + idx + '_decision')?.checked || false;
+                const isDecision = document.getElementById(pfx + '_decision')?.checked || false;
                 let branches = [];
                 if (isDecision) {
-                    const branchList = document.getElementById('step_' + idx + '_branchList');
+                    const branchList = document.getElementById(pfx + '_branchList');
                     if (branchList) {
                         branchList.querySelectorAll('.branch-row').forEach(row => {
                             const inputs = row.querySelectorAll('input[type="text"]');
@@ -3359,6 +4078,7 @@
                         step.isDecision = true;
                         step.branches = branches;
                     }
+                    if (item.dataset.contributor) step.contributor = item.dataset.contributor;
                     steps.push(step);
                 }
             });
@@ -3619,7 +4339,7 @@
             updateProcessRefs();
             const t = processData.userTime;
             document.getElementById('costBreakdownValue').innerHTML =
-                `Meetings: ${t.meetings}h &middot; Emails: ${t.emails}h &middot; Execution: ${t.execution}h &middot; Waiting: ${t.waiting}h<br><strong>Total: ${t.total} hours</strong>`;
+                `Meetings: ~${t.meetings}h &middot; Emails: ~${t.emails}h &middot; Execution: ~${t.execution}h &middot; Waiting: ~${t.waiting}h<br><strong>Total: ~${t.total} hours</strong>`;
             calculateCosts();
         }
 
@@ -3727,15 +4447,14 @@
             completedProcesses.push(JSON.parse(JSON.stringify(processData)));
 
             if (another === 'yes' && completedProcesses.length < 3) {
-                // Reset for next process
                 processData = createEmptyProcess();
                 stepCount = 0;
+                _stepUid = 0;
                 systemCount = 0;
                 document.getElementById('stepsList').innerHTML = '';
                 document.getElementById('systemsList').innerHTML = '';
                 goToScreen(1);
             } else {
-                // Show dependency mapping if multiple processes
                 if (completedProcesses.length >= 2) {
                     showDependencyMapping();
                 } else {
@@ -3782,19 +4501,24 @@
             const list = document.getElementById('stepsList');
             list.innerHTML = '';
             stepCount = 0;
+            _stepUid = 0;
 
             if (steps.length === 0) {
                 addStep(); addStep(); addStep();
                 return;
             }
 
-            steps.forEach((s, i) => {
-                addStep();
-                const idx = i;
-                const nameEl = document.getElementById('step_' + idx + '_name');
+            steps.forEach((s) => {
+                const prevContributor = _currentContributor;
+                if (s.contributor) _currentContributor = s.contributor;
+                const div = addStep();
+                _currentContributor = prevContributor;
+                const pfx = getStepPrefix(div);
+
+                const nameEl = document.getElementById(pfx + '_name');
                 if (nameEl) nameEl.value = s.name || '';
 
-                const deptEl = document.getElementById('step_' + idx + '_dept');
+                const deptEl = document.getElementById(pfx + '_dept');
                 if (deptEl && s.department) {
                     const options = Array.from(deptEl.options).map(o => o.value);
                     if (options.includes(s.department)) {
@@ -3805,24 +4529,26 @@
                 }
 
                 if (s.isExternal) {
-                    const extRadio = document.querySelector('input[name="step_' + idx + '_ext"][value="external"]');
+                    const extRadio = document.querySelector('input[name="' + pfx + '_ext"][value="external"]');
                     if (extRadio) {
                         extRadio.checked = true;
                         extRadio.dispatchEvent(new Event('change'));
                     }
                 }
 
+                const uid = div.dataset.stepUid;
+                const uidKey = 'u' + uid;
                 if (s.isDecision) {
-                    const cb = document.getElementById('step_' + idx + '_decision');
+                    const cb = document.getElementById(pfx + '_decision');
                     if (cb) {
                         cb.checked = true;
-                        toggleDecisionBranches(idx);
+                        toggleDecisionBranches(uidKey);
                     }
                     if (s.branches && s.branches.length > 0) {
                         s.branches.forEach((br, bi) => {
-                            if (bi >= 2) addBranch(idx);
-                            const labelEl = document.getElementById('step_' + idx + '_branch_' + bi + '_label');
-                            const targetEl = document.getElementById('step_' + idx + '_branch_' + bi + '_target');
+                            if (bi >= 2) addBranch(uidKey);
+                            const labelEl = document.getElementById(pfx + '_branch_' + bi + '_label');
+                            const targetEl = document.getElementById(pfx + '_branch_' + bi + '_target');
                             if (labelEl) labelEl.value = br.label || '';
                             if (targetEl) targetEl.value = br.target || '';
                         });
@@ -3878,6 +4604,7 @@
                 if (another === 'yes' && completedProcesses.length < 3) {
                     processData = createEmptyProcess();
                     stepCount = 0;
+                    _stepUid = 0;
                     systemCount = 0;
                     document.getElementById('stepsList').innerHTML = '';
                     document.getElementById('systemsList').innerHTML = '';
@@ -3965,10 +4692,66 @@
                 if (!resp.ok) throw new Error('API returned ' + resp.status);
                 const result = await resp.json();
                 displayResults(result, contact);
+                autoSaveReport(result, contact);
             } catch (err) {
                 console.warn('API unavailable, using client-side analysis:', err.message);
                 const result = buildLocalResults(completedProcesses, contact);
                 displayResults(result, contact);
+                autoSaveReport(result, contact);
+            }
+        }
+
+        async function autoSaveReport(result, contact) {
+            try {
+                var scoreData = typeof lastScoreData !== 'undefined' ? lastScoreData : null;
+                var roadmapData = typeof lastRoadmapData !== 'undefined' ? lastRoadmapData : null;
+                var payload = {
+                    contact: {
+                        name: contact.name || '',
+                        email: contact.email || '',
+                        company: contact.company || '',
+                        title: contact.title || '',
+                        industry: contact.industry || '',
+                        teamSize: contact.teamSize || ''
+                    },
+                    summary: {
+                        totalProcesses: (result.processes || []).length,
+                        totalAnnualCost: result.totalCost || 0,
+                        potentialSavings: result.potentialSavings || 0,
+                        analysisType: result.analysisType || 'rule-based',
+                        qualityScore: result.qualityScore?.averageScore || 0
+                    },
+                    recommendations: result.recommendations || [],
+                    automationScore: scoreData ? {
+                        percentage: scoreData.readinessScore,
+                        grade: scoreData.scoreGrade,
+                        categories: scoreData.cats,
+                        totalSteps: scoreData.totalSteps,
+                        totalAutomatable: scoreData.totalAutomatable
+                    } : {},
+                    roadmap: roadmapData ? {
+                        phases: roadmapData.phases,
+                        totalSavings: roadmapData.annualSavings,
+                        cumulative: roadmapData.cumulative
+                    } : {},
+                    processes: result.processes || [],
+                    rawProcesses: completedProcesses || [],
+                    customDepartments: (typeof customDepartments !== 'undefined' ? customDepartments : []),
+                    pdfBase64: null,
+                    timestamp: new Date().toISOString()
+                };
+                var resp = await fetch('/api/send-diagnostic-report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                var data = await resp.json();
+                if (data.success && data.reportId) {
+                    window._autoSavedReportId = data.reportId;
+                    console.log('Report auto-saved:', data.reportId);
+                }
+            } catch (e) {
+                console.warn('Auto-save failed:', e.message);
             }
         }
 
@@ -4429,19 +5212,50 @@
             if (processDependencies.length === 0) return '';
             const names = [...new Set(completedProcesses.map(p => p.processName))];
 
-            // Build a simple SVG dependency graph
-            const W = 600, H = Math.max(200, names.length * 80 + 60);
-            const nodeW = 180, nodeH = 40;
+            const W = 640, chromeH = 36, titleH = 40;
+            const contentTop = chromeH + titleH;
+            const nodeW = 220, nodeH = 52;
+            const H = Math.max(260, contentTop + names.length * 85 + 60);
             const positions = names.map((n, i) => ({
                 name: n,
-                x: i % 2 === 0 ? 60 : W - nodeW - 60,
-                y: 40 + i * 70
+                x: i % 2 === 0 ? 50 : W - nodeW - 50,
+                y: contentTop + 20 + i * 75
             }));
 
-            let svg = `<svg viewBox="0 0 ${W} ${H}" style="width: 100%; max-height: 320px;" xmlns="http://www.w3.org/2000/svg">`;
-            svg += `<defs><marker id="arrowDep" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#3d8ea6"/></marker></defs>`;
+            let svg = `<svg viewBox="0 0 ${W} ${H}" style="width: 100%; max-height: 400px;" xmlns="http://www.w3.org/2000/svg">`;
 
-            // Draw edges
+            // Card background
+            svg += `<rect x="0" y="0" width="${W}" height="${H}" fill="#ffffff" rx="16" filter="url(#depCardShadow)"/>`;
+
+            // Browser chrome header
+            svg += `<rect x="0" y="0" width="${W}" height="${chromeH}" rx="16" fill="#f8fafb"/>`;
+            svg += `<rect x="0" y="24" width="${W}" height="12" fill="#f8fafb"/>`;
+            svg += `<circle cx="18" cy="18" r="3.5" fill="#e5e7eb"/><circle cx="30" cy="18" r="3.5" fill="#e5e7eb"/><circle cx="42" cy="18" r="3.5" fill="#e5e7eb"/>`;
+            svg += `<text x="${W/2}" y="20" text-anchor="middle" font-size="9" font-weight="400" fill="#94a3b8" letter-spacing="0.5" font-family="Work Sans,sans-serif">dependency-map</text>`;
+
+            // Title area
+            svg += `<text x="${W/2}" y="${chromeH + 18}" text-anchor="middle" font-size="14" font-weight="600" fill="#1a2f4a" letter-spacing="-0.3" font-family="Work Sans,sans-serif">Process Dependency Map</text>`;
+            svg += `<text x="${W/2}" y="${chromeH + 33}" text-anchor="middle" font-size="10" fill="#94a3b8" font-family="Work Sans,sans-serif">Solid arrows = blocking · Dashed lines = shared resource</text>`;
+
+            // Defs
+            svg += `<defs>`;
+            svg += `<marker id="arrowDep" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#3d8ea6"/></marker>`;
+            svg += `<marker id="arrowDepWarn" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#d97706"/></marker>`;
+            svg += `<filter id="depShadow" x="-8%" y="-8%" width="116%" height="120%"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.06"/></filter>`;
+            svg += `<filter id="depCardShadow" x="-2%" y="-2%" width="104%" height="106%"><feDropShadow dx="0" dy="4" stdDeviation="12" flood-opacity="0.04"/><feDropShadow dx="0" dy="1" stdDeviation="3" flood-opacity="0.03"/></filter>`;
+            svg += `<filter id="depGlow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="6" flood-opacity="0.12" flood-color="#3d8ea6"/></filter>`;
+            svg += `</defs>`;
+
+            // CSS
+            svg += `<style>
+                @keyframes depDash { to { stroke-dashoffset: -30; } }
+                @keyframes depNodeIn { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: none; } }
+                .dep-edge { animation: depDash 2s linear infinite; }
+                .dep-node { cursor: pointer; transition: filter 0.25s ease, transform 0.25s cubic-bezier(0.16,1,0.3,1); transform-origin: center; transform-box: fill-box; animation: depNodeIn 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+                .dep-node:hover { filter: url(#depGlow); transform: scale(1.04) translateY(-2px); }
+            </style>`;
+
+            // Draw edges (curved Bezier paths)
             processDependencies.forEach(dep => {
                 const fromNode = positions.find(p => p.name === dep.from);
                 const toNode = positions.find(p => p.name === dep.to);
@@ -4449,27 +5263,68 @@
 
                 const x1 = fromNode.x + nodeW / 2, y1 = fromNode.y + nodeH / 2;
                 const x2 = toNode.x + nodeW / 2, y2 = toNode.y + nodeH / 2;
-                const color = dep.type === 'blocks' ? '#3d8ea6' : '#d97706';
-                const dash = dep.type === 'shared-resource' ? 'stroke-dasharray="6,4"' : '';
-                const marker = dep.type === 'blocks' ? 'marker-end="url(#arrowDep)"' : '';
-                svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="2" ${dash} ${marker}/>`;
+                const isBlock = dep.type === 'blocks';
+                const color = isBlock ? '#3d8ea6' : '#d97706';
+                const dash = isBlock ? 'stroke-dasharray="8,6"' : 'stroke-dasharray="6,4"';
+                const marker = isBlock ? 'marker-end="url(#arrowDep)"' : 'marker-end="url(#arrowDepWarn)"';
 
-                const mx = (x1 + x2) / 2, my = (y1 + y2) / 2 - 8;
-                const label = dep.type === 'blocks' ? 'blocks' : 'shared resource';
-                svg += `<text x="${mx}" y="${my}" text-anchor="middle" font-size="10" fill="${color}" font-family="Work Sans, sans-serif">${label}</text>`;
+                const dx = x2 - x1, dy = y2 - y1;
+                const len = Math.sqrt(dx * dx + dy * dy) || 1;
+                const offX = (-dy / len) * 20;
+                const offY = (dx / len) * 20;
+                const mx = (x1 + x2) / 2 + offX;
+                const my = (y1 + y2) / 2 + offY;
+                const pathD = `M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`;
+                svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.8" ${dash} ${marker} class="dep-edge" opacity="0.55"/>`;
+
+                const lx = (x1 + 2 * mx + x2) / 4, ly = (y1 + 2 * my + y2) / 4;
+                const label = isBlock ? 'blocks' : 'shared resource';
+                const tw = label.length * 5 + 12;
+                svg += `<rect x="${lx - tw/2}" y="${ly - 9}" width="${tw}" height="14" rx="4" fill="#fff" stroke="${color}" stroke-width="0.5" opacity="0.92"/>`;
+                svg += `<text x="${lx}" y="${ly + 1}" text-anchor="middle" font-size="8" fill="${color}" font-weight="600" font-family="Work Sans,sans-serif">${label}</text>`;
             });
 
-            // Draw nodes
-            positions.forEach(p => {
-                svg += `<rect x="${p.x}" y="${p.y}" width="${nodeW}" height="${nodeH}" rx="8" fill="white" stroke="#e2e8f0" stroke-width="1.5"/>`;
-                svg += `<text x="${p.x + nodeW / 2}" y="${p.y + nodeH / 2 + 4}" text-anchor="middle" font-size="12" fill="#1e293b" font-weight="500" font-family="Work Sans, sans-serif">${p.name.length > 22 ? p.name.slice(0, 20) + '...' : p.name}</text>`;
+            // Draw nodes (each with unique accent color)
+            function depWrap(text, maxC) {
+                const words = text.split(/\s+/);
+                const lines = []; let cur = '';
+                words.forEach(w => { const t = cur ? cur + ' ' + w : w; if (t.length > maxC && cur) { lines.push(cur); cur = w; } else { cur = t; } });
+                if (cur) lines.push(cur);
+                return lines;
+            }
+            const depColors = ['#3d8ea6', '#2563eb', '#059669', '#7c3aed', '#d97706', '#dc2626', '#0891b2', '#6366f1'];
+            positions.forEach((p, i) => {
+                const nc = depColors[i % depColors.length];
+                svg += `<g class="dep-node" style="animation-delay:${i * 0.08}s">`;
+                svg += `<rect x="${p.x}" y="${p.y}" width="${nodeW}" height="${nodeH}" rx="12" fill="#ffffff" stroke="${nc}" stroke-width="1.5" filter="url(#depShadow)"/>`;
+                svg += `<rect x="${p.x}" y="${p.y}" width="${nodeW}" height="${nodeH}" rx="12" fill="${nc}" opacity="0.06"/>`;
+                svg += `<circle cx="${p.x + 18}" cy="${p.y + nodeH/2}" r="11" fill="${nc}" opacity="0.12"/>`;
+                svg += `<text x="${p.x + 18}" y="${p.y + nodeH/2 + 4}" text-anchor="middle" font-size="9" font-weight="700" fill="${nc}">${i + 1}</text>`;
+                const nameLines = depWrap(p.name, 26);
+                const nFS = nameLines.length > 2 ? 9 : 10.5;
+                const nLH = nFS + 2;
+                const nBH = nameLines.length * nLH;
+                const nSY = p.y + (nodeH - nBH) / 2 + nFS;
+                nameLines.forEach((line, li) => {
+                    svg += `<text x="${p.x + 38}" y="${nSY + li * nLH}" font-size="${nFS}" fill="#1e293b" font-weight="500" font-family="Work Sans,sans-serif">${escSvg(line)}</text>`;
+                });
+                svg += `</g>`;
             });
+
+            // Legend
+            const lastNodeY = positions.length > 0 ? positions[positions.length - 1].y + nodeH : contentTop + 60;
+            const legY = lastNodeY + 20;
+            let lx = 60;
+            svg += `<path d="M ${lx} ${legY + 5} Q ${lx + 12} ${legY - 2} ${lx + 24} ${legY + 5}" fill="none" stroke="#3d8ea6" stroke-width="2" stroke-dasharray="8,6"/>`;
+            svg += `<polygon points="${lx + 22},${legY + 2} ${lx + 28},${legY + 5} ${lx + 22},${legY + 8}" fill="#3d8ea6"/>`;
+            svg += `<text x="${lx + 34}" y="${legY + 9}" font-size="9" fill="#64748b" font-family="Work Sans,sans-serif">Blocking dependency</text>`;
+            lx += 170;
+            svg += `<line x1="${lx}" y1="${legY + 5}" x2="${lx + 24}" y2="${legY + 5}" stroke="#d97706" stroke-width="2" stroke-dasharray="6,4"/>`;
+            svg += `<text x="${lx + 30}" y="${legY + 9}" font-size="9" fill="#64748b" font-family="Work Sans,sans-serif">Shared resource</text>`;
 
             svg += '</svg>';
 
-            return `<div style="margin: 2rem 0; padding: 1.5rem; background: var(--bg-alt); border-radius: var(--radius-lg); border: 1px solid var(--border);">
-                <h3 style="font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; font-weight: 700; color: var(--primary); margin-bottom: 0.75rem;">Process Dependency Map</h3>
-                <p style="font-size: 0.85rem; color: var(--text-mid); margin-bottom: 1rem;">Solid arrows = blocking dependency. Dashed lines = shared resource contention.</p>
+            return `<div style="margin: 2rem 0; padding: 0; background: transparent; border-radius: var(--radius-lg); overflow: hidden;">
                 ${svg}
             </div>`;
         }
@@ -4684,7 +5539,12 @@
             processData.lastExample.name = document.getElementById('exampleName')?.value?.trim() || '';
 
             // Screen 5
-            processData.timeAccuracy = getRadioValue('timeAccuracy');
+            recalcTimeFromRanges();
+            processData.timeRangeSelections = {
+                totalTimeRange: getRadioValue('totalTimeRange'),
+                waitingPortion: getRadioValue('waitingPortion'),
+                primaryActivity: getRadioValue('primaryActivity')
+            };
 
             // Screen 6
             processData.performance = getRadioValue('performance');
@@ -4933,10 +5793,9 @@
                 chip.className = 'step-suggestion-chip';
                 chip.textContent = '+ ' + s;
                 chip.onclick = function() {
-                    // Add this step
-                    addStep();
-                    const lastIdx = stepCount - 1;
-                    const nameInput = document.getElementById('step_' + lastIdx + '_name');
+                    const newDiv = addStep();
+                    const pfx = getStepPrefix(newDiv);
+                    const nameInput = document.getElementById(pfx + '_name');
                     if (nameInput) nameInput.value = s;
                     chip.classList.add('used');
                     // Refresh suggestions after a short delay
@@ -5140,7 +5999,9 @@
                     }
                     break;
                 case 5:
-                    if (processData.userTime.total <= 0) { valid = false; msg = 'Please enter your time investment.'; }
+                    if (!getRadioValue('totalTimeRange')) { valid = false; msg = 'Please select how much time you spent.'; }
+                    else if (!getRadioValue('waitingPortion')) { valid = false; msg = 'Please select how much time was spent waiting.'; }
+                    else if (!getRadioValue('primaryActivity')) { valid = false; msg = 'Please select your primary activity.'; }
                     break;
                 case 6:
                     if (!getRadioValue('performance')) { valid = false; msg = 'Please select a performance assessment.'; }
@@ -5461,14 +6322,30 @@
         // ============================================================
         // GRID VIEW (compact serpentine layout)
         // ============================================================
+        /*
+         * GRID FLOWCHART ROUTING CONTRACT
+         * ────────────────────────────────
+         * 1. LINE_GAP (32px) between every pair of parallel routing lines.
+         * 2. Global channel allocator — unique channel per inter-row gap across ALL decisions.
+         * 3. 32px minimum clearance between any node edge and the nearest routing line.
+         * 4. Loop-backs route vertically through the LEFT margin (outside node columns).
+         * 5. Forward same-row / multi-row routes use the RIGHT margin for vertical segments.
+         * 6. Next-row forward uses a simple L-route through the inter-row gap (no margin).
+         * 7. All branch lines enter target nodes from ABOVE (gap above target row).
+         * 8. PAD_L expands dynamically to fit left-margin channels.
+         * 9. SVG width expands to fit right-margin channels.
+         * 10. Labels render AFTER all paths and nodes (always in front).
+         * 11. Labels are positioned on their path's actual horizontal segment.
+         * 12. Label collision avoidance: horizontal nudge first, then vertical.
+         */
         function buildGridSVG(process) {
-            const NODE_W = 180;
-            const NODE_H = 68;
-            const NODE_GAP_X = 50;
-            const NODE_GAP_Y = 50;
+            const NODE_W = 210;
+            const NODE_H = 76;
+            const NODE_GAP_X = 60;
+            const NODE_GAP_Y = 70;
             const COLS = Math.min(6, Math.max(4, Math.ceil(Math.sqrt((process.steps || []).length * 1.5))));
-            const PAD_L = 55;
-            const PAD_T = 90;
+            let PAD_L = 80;
+            const PAD_T = 180;
             const TERM_W = 180;
             const TERM_H = 50;
             const TERM_RX = 25;
@@ -5538,13 +6415,45 @@
             });
 
             // ── Grid layout: serpentine rows ──
-            const DIAMOND_W = 160;
-            const DIAMOND_H = 100;
+            const DIAMOND_W = 170;
+            const DIAMOND_H = 110;
+            const LINE_GAP = 32;
             const colW = NODE_W + NODE_GAP_X;
             const hasDecisions = allSteps.some(s => s.isDecision && s.branches.length > 0);
-            const rowH = NODE_H + NODE_GAP_Y + (hasDecisions ? 50 : 20);
-            const nodePos = [];
             const numRows = Math.ceil(allSteps.length / COLS);
+
+            // Pre-count branch lines per inter-row gap to size rows dynamically
+            const gapLineCount = {};
+            allSteps.forEach((s, i) => {
+                if (!s.isDecision || !s.branches || s.branches.length === 0) return;
+                const srcRow = Math.floor(i / COLS);
+                s.branches.forEach(br => {
+                    const m = (br.target || '').match(/(\d+)/);
+                    if (!m) return;
+                    const tgtIdx = parseInt(m[1]) - 1;
+                    if (tgtIdx < 0 || tgtIdx >= allSteps.length) return;
+                    const tgtRow = Math.floor(tgtIdx / COLS);
+                    if (tgtIdx < i) {
+                        const gapKey = 'above_' + srcRow;
+                        gapLineCount[gapKey] = (gapLineCount[gapKey] || 0) + 1;
+                    } else if (tgtRow > srcRow) {
+                        const gapKey = 'below_' + srcRow;
+                        gapLineCount[gapKey] = (gapLineCount[gapKey] || 0) + 1;
+                    } else {
+                        const gapKey = 'above_' + srcRow;
+                        gapLineCount[gapKey] = (gapLineCount[gapKey] || 0) + 1;
+                    }
+                });
+            });
+            const maxLinesInAnyGap = Math.max(1, ...Object.values(gapLineCount), 0);
+            const minGapForLines = maxLinesInAnyGap * LINE_GAP + 2 * LINE_GAP;
+            const baseRowH = NODE_H + NODE_GAP_Y + (hasDecisions ? 40 : 20);
+            const rowH = Math.max(baseRowH, NODE_H + minGapForLines);
+
+            // Ensure left margin has room for loop-back routing channels
+            PAD_L = Math.max(80, maxLinesInAnyGap * LINE_GAP + 40);
+
+            const nodePos = [];
 
             allSteps.forEach((s, i) => {
                 const row = Math.floor(i / COLS);
@@ -5555,20 +6464,26 @@
                 nodePos[i] = { x: nx, y: ny, cx: nx + NODE_W / 2, cy: ny + NODE_H / 2, row, col };
             });
 
-            // SVG dimensions
-            const contentW = PAD_L + COLS * colW + 60;
+            // SVG dimensions — include space for right-margin routing channels
+            const contentW = PAD_L + COLS * colW + maxLinesInAnyGap * LINE_GAP + 60;
             const contentH = PAD_T + numRows * rowH + 60;
             const totalW = Math.max(contentW, 700);
             const totalH = contentH;
 
             let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${totalH}" width="${totalW}" height="${totalH}" style="font-family: 'Work Sans', Arial, sans-serif;">`;
-            svg += `<rect x="0" y="0" width="${totalW}" height="${totalH}" fill="#ffffff" rx="8"/>`;
+            svg += `<rect x="0" y="0" width="${totalW}" height="${totalH}" fill="#ffffff" rx="16" filter="url(#gridCardShadow)"/>`;
+
+            // Card header bar (browser chrome)
+            svg += `<rect x="0" y="0" width="${totalW}" height="36" rx="16" fill="#f8fafb"/>`;
+            svg += `<rect x="0" y="24" width="${totalW}" height="12" fill="#f8fafb"/>`;
+            svg += `<circle cx="18" cy="18" r="3.5" fill="#e5e7eb"/><circle cx="30" cy="18" r="3.5" fill="#e5e7eb"/><circle cx="42" cy="18" r="3.5" fill="#e5e7eb"/>`;
+            svg += `<text x="${totalW / 2}" y="20" text-anchor="middle" font-size="9" font-weight="400" fill="#94a3b8" letter-spacing="0.5">grid</text>`;
 
             // Title
-            svg += `<text x="${totalW / 2}" y="28" text-anchor="middle" font-size="16" font-weight="600" fill="#1a2f4a">${escSvg(p.processName || 'Process Flow')}</text>`;
+            svg += `<text x="${totalW / 2}" y="56" text-anchor="middle" font-size="14" font-weight="600" fill="#1a2f4a" letter-spacing="-0.3">${escSvg(p.processName || 'Process Flow')}</text>`;
             const decCount = allSteps.filter(s => s.isDecision).length;
             const extCount = allSteps.filter(s => s.isExternal).length;
-            svg += `<text x="${totalW / 2}" y="46" text-anchor="middle" font-size="10" fill="#94a3b8">${allSteps.length} steps · ${[...new Set(allSteps.map(s => s.department))].length} depts${decCount ? ' · ' + decCount + ' decisions' : ''}${extCount ? ' · ' + extCount + ' external' : ''}</text>`;
+            svg += `<text x="${totalW / 2}" y="72" text-anchor="middle" font-size="10" fill="#94a3b8" letter-spacing="0.3">${allSteps.length} steps · ${[...new Set(allSteps.map(s => s.department))].length} depts${decCount ? ' · ' + decCount + ' decisions' : ''}${extCount ? ' · ' + extCount + ' external' : ''}</text>`;
 
             // Defs
             svg += `<defs>`;
@@ -5577,15 +6492,20 @@
             ['#7c3aed','#2563eb','#059669','#d97706','#dc2626'].forEach((c, ci) => {
                 svg += `<marker id="arwc${ci}" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 1 L 10 5 L 0 9 z" fill="${c}"/></marker>`;
             });
-            svg += `<filter id="shadow" x="-4%" y="-4%" width="108%" height="108%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>`;
+            svg += `<filter id="shadow" x="-8%" y="-8%" width="116%" height="120%"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.06"/></filter>`;
+            svg += `<filter id="gridCardShadow" x="-2%" y="-2%" width="104%" height="106%"><feDropShadow dx="0" dy="4" stdDeviation="12" flood-opacity="0.04"/><feDropShadow dx="0" dy="1" stdDeviation="3" flood-opacity="0.03"/></filter>`;
+            svg += `<filter id="gridGlow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="6" flood-opacity="0.12" flood-color="#3d8ea6"/></filter>`;
             svg += `</defs>`;
 
-            // CSS: only animate lines, not nodes
+            // CSS: animate lines + hover interactivity on nodes
             svg += `<style>
                 @keyframes flowDash { to { stroke-dashoffset: -40; } }
                 @keyframes particleMove { 0% { offset-distance: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { offset-distance: 100%; opacity: 0; } }
+                @keyframes nodeIn { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: none; } }
                 .flow-arrow { stroke-dasharray: 8 6; animation: flowDash 1.5s linear infinite; }
                 .flow-particle { r: 3; fill: #3d8ea6; animation: particleMove 3s linear infinite; }
+                .gnode { cursor: pointer; transition: filter 0.25s ease, transform 0.25s cubic-bezier(0.16,1,0.3,1); transform-origin: center; transform-box: fill-box; animation: nodeIn 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+                .gnode:hover { filter: url(#gridGlow); transform: scale(1.04) translateY(-2px); }
             </style>`;
 
             // ── Draw sequential arrows (orthogonal 90°) ──
@@ -5595,29 +6515,50 @@
                 const hd = handoffMap[hk] || { method: '', isBad: false };
                 const color = hd.isBad ? '#ef4444' : '#94a3b8';
                 const marker = hd.isBad ? 'url(#arw-bad)' : 'url(#arw)';
+                const fromIsDec = allSteps[fromIdx].isDecision && (allSteps[fromIdx].branches || []).length > 0;
+                const toIsDec = allSteps[toIdx].isDecision && (allSteps[toIdx].branches || []).length > 0;
                 let pathD;
 
                 if (fp.row === tp.row) {
-                    // Same row: horizontal line
-                    const x1 = fp.col < tp.col ? fp.x + NODE_W : fp.x;
-                    const x2 = fp.col < tp.col ? tp.x : tp.x + NODE_W;
+                    const goRight = fp.col < tp.col;
+                    const x1 = goRight
+                        ? (fromIsDec ? fp.cx + DIAMOND_W / 2 : fp.x + NODE_W)
+                        : (fromIsDec ? fp.cx - DIAMOND_W / 2 : fp.x);
+                    const x2 = goRight
+                        ? (toIsDec ? tp.cx - DIAMOND_W / 2 : tp.x)
+                        : (toIsDec ? tp.cx + DIAMOND_W / 2 : tp.x + NODE_W);
                     pathD = `M ${x1} ${fp.cy} L ${x2} ${tp.cy}`;
                 } else {
-                    // Row wrap: orthogonal right-angle route
                     const x1 = fp.cx;
-                    const y1 = fp.y + NODE_H;
+                    const y1 = fromIsDec ? fp.cy + DIAMOND_H / 2 : fp.y + NODE_H;
                     const channelY = fp.y + NODE_H + (rowH - NODE_H) / 2;
                     const x2 = tp.cx;
-                    const y2 = tp.y;
+                    const y2 = toIsDec ? tp.cy - DIAMOND_H / 2 : tp.y;
                     pathD = `M ${x1} ${y1} L ${x1} ${channelY} L ${x2} ${channelY} L ${x2} ${y2}`;
                 }
                 svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.8" class="flow-arrow" marker-end="${marker}" opacity="0.5"/>`;
                 svg += `<circle class="flow-particle" style="offset-path:path('${pathD}');animation-duration:2.5s;fill:${hd.isBad ? '#ef4444' : '#3d8ea6'};"/>`;
             }
 
+            // Build set of nodes that receive at least one incoming connection
+            const hasIncoming = new Set();
             for (let i = 0; i < allSteps.length - 1; i++) {
-                if (allSteps[i].isDecision && allSteps[i].branches && allSteps[i].branches.length > 0) continue;
-                drawSeqArrow(i, i + 1);
+                if (!(allSteps[i].isDecision && allSteps[i].branches && allSteps[i].branches.length > 0)) {
+                    hasIncoming.add(i + 1);
+                    drawSeqArrow(i, i + 1);
+                }
+            }
+            // Decision branches also provide incoming connections
+            allSteps.forEach((s, i) => {
+                if (!s.isDecision || !s.branches) return;
+                s.branches.forEach(br => {
+                    const m = (br.target || '').match(/(\d+)/);
+                    if (m) hasIncoming.add(parseInt(m[1]) - 1);
+                });
+            });
+            // Draw arrows to orphaned nodes (no sequential and no branch targets them)
+            for (let i = 1; i < allSteps.length; i++) {
+                if (!hasIncoming.has(i)) drawSeqArrow(i - 1, i);
             }
 
             // ── Build incoming-route map for target badges ──
@@ -5632,6 +6573,129 @@
                         if (!incomingRoutes[targetIdx]) incomingRoutes[targetIdx] = [];
                         incomingRoutes[targetIdx].push({ fromStep: i + 1, color: branchColors[bi % branchColors.length], label: br.label });
                     }
+                });
+            });
+
+            // ── Decision branch connecting lines (rendered BEFORE nodes so lines appear behind) ──
+            // Routes through inter-row gaps with globally allocated channels for consistent LINE_GAP spacing.
+            const TITLE_ZONE = 90;
+            function rowGapMidY(row) {
+                const raw = PAD_T + row * rowH - (rowH - NODE_H) / 2;
+                return Math.max(raw, TITLE_ZONE);
+            }
+
+            // Global channel allocator: each gap gets unique channel indices across ALL decisions
+            const gapChannels = {};
+            function allocateChannel(gapKey) {
+                if (!(gapKey in gapChannels)) gapChannels[gapKey] = 0;
+                return gapChannels[gapKey]++;
+            }
+            const pendingLabels = [];
+            const RIGHT_MARGIN_BASE = PAD_L + COLS * colW + 30;
+
+            allSteps.forEach((s, i) => {
+                if (!s.isDecision || !s.branches || s.branches.length === 0) return;
+                const pos = nodePos[i];
+                if (!pos) return;
+                const cx = pos.cx, cy = pos.cy;
+                const hw = DIAMOND_W / 2, hh = DIAMOND_H / 2;
+
+                s.branches.forEach((br, bi) => {
+                    const color = branchColors[bi % branchColors.length];
+                    const targetMatch = (br.target || '').match(/(\d+)/);
+                    const targetIdx = targetMatch ? parseInt(targetMatch[1]) - 1 : -1;
+                    if (targetIdx < 0 || targetIdx >= allSteps.length) return;
+
+                    const tp = nodePos[targetIdx];
+                    if (!tp) return;
+                    const isTargetDec = allSteps[targetIdx].isDecision && (allSteps[targetIdx].branches || []).length > 0;
+                    const tHH = isTargetDec ? DIAMOND_H / 2 : 0;
+                    const goesBack = targetIdx < i;
+                    const sameRow = pos.row === tp.row;
+
+                    const entryX = tp.cx;
+                    const entryY = isTargetDec ? tp.cy - tHH : tp.y;
+                    const clampY = y => Math.max(y, TITLE_ZONE);
+
+                    let pathD;
+                    let chOff;
+                    let ch;
+                    let labelSegX1, labelSegX2, labelSegY;
+
+                    if (goesBack) {
+                        // LOOP-BACK: route through LEFT margin, enter target from ABOVE
+                        const gapKey = 'above_' + tp.row;
+                        ch = allocateChannel(gapKey);
+                        chOff = ch * LINE_GAP;
+                        const exitX = cx - hw;
+                        const exitY = cy;
+                        const marginX = Math.max(8, PAD_L - 30 - ch * LINE_GAP);
+                        const tgtGapY = clampY(rowGapMidY(tp.row) - chOff);
+                        pathD = `M ${exitX} ${exitY} L ${marginX} ${exitY} L ${marginX} ${tgtGapY} L ${entryX} ${tgtGapY} L ${entryX} ${entryY}`;
+                        labelSegX1 = marginX; labelSegX2 = entryX; labelSegY = tgtGapY;
+
+                    } else if (sameRow) {
+                        // Same-row forward branch: exit towards the target
+                        const gapKey = 'above_' + pos.row;
+                        ch = allocateChannel(gapKey);
+                        chOff = ch * LINE_GAP;
+                        const targetIsRight = tp.col > pos.col;
+                        const exitX = targetIsRight ? cx + hw : cx - hw;
+                        const exitY = cy;
+                        const gapY = clampY(rowGapMidY(pos.row) - chOff);
+                        pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${entryX} ${gapY} L ${entryX} ${entryY}`;
+                        labelSegX1 = Math.min(exitX, entryX); labelSegX2 = Math.max(exitX, entryX); labelSegY = gapY;
+
+                    } else if (tp.row > pos.row) {
+                        // FORWARD to later row
+                        const gapKey = 'below_' + pos.row;
+                        ch = allocateChannel(gapKey);
+                        chOff = ch * LINE_GAP;
+                        const exitX = cx;
+                        const exitY = cy + hh;
+                        const gapY = rowGapMidY(pos.row + 1) + chOff;
+                        if (tp.row === pos.row + 1) {
+                            pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${entryX} ${gapY} L ${entryX} ${entryY}`;
+                            labelSegX1 = Math.min(exitX, entryX); labelSegX2 = Math.max(exitX, entryX); labelSegY = gapY;
+                        } else {
+                            const marginX = RIGHT_MARGIN_BASE + ch * LINE_GAP;
+                            const targetGapY = clampY(rowGapMidY(tp.row) - chOff);
+                            pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${marginX} ${gapY} L ${marginX} ${targetGapY} L ${entryX} ${targetGapY} L ${entryX} ${entryY}`;
+                            labelSegX1 = Math.min(exitX, marginX); labelSegX2 = Math.max(exitX, marginX); labelSegY = gapY;
+                        }
+
+                    } else {
+                        // Forward to earlier row (rare): enter target from ABOVE
+                        const gapKey = 'above_' + pos.row;
+                        ch = allocateChannel(gapKey);
+                        chOff = ch * LINE_GAP;
+                        const exitX = cx;
+                        const exitY = cy - hh;
+                        const gapY = clampY(rowGapMidY(pos.row) - chOff);
+                        const marginX = RIGHT_MARGIN_BASE + ch * LINE_GAP;
+                        const targetGapY = clampY(rowGapMidY(tp.row) - chOff);
+                        pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${marginX} ${gapY} L ${marginX} ${targetGapY} L ${entryX} ${targetGapY} L ${entryX} ${entryY}`;
+                        labelSegX1 = Math.min(exitX, marginX); labelSegX2 = Math.max(exitX, marginX); labelSegY = gapY;
+                    }
+
+                    // Draw line
+                    const dashAttr = goesBack ? 'stroke-dasharray="6,4"' : '';
+                    svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" ${dashAttr} marker-end="url(#arwc${bi % 5})" opacity="0.75"/>`;
+
+                    // Animated particle
+                    svg += `<circle r="3" fill="${color}" opacity="0.8"><animateMotion dur="${2.5 + bi * 0.5}s" repeatCount="indefinite" begin="${bi * 0.4}s" path="${pathD}"><\/animateMotion><\/circle>`;
+
+                    // Collect label: position between source & target, clamped to the actual line segment
+                    const brText = escSvg(br.label);
+                    const pillW = brText.length * 4.8 + 14;
+                    const pillH = 15;
+                    const idealX = (cx + entryX) / 2;
+                    const segMin = Math.min(labelSegX1, labelSegX2);
+                    const segMax = Math.max(labelSegX1, labelSegX2);
+                    let elX = Math.max(segMin + pillW / 2, Math.min(idealX, segMax - pillW / 2));
+                    let elY = labelSegY;
+                    elX = Math.max(pillW / 2 + 10, Math.min(elX, totalW - pillW / 2 - 10));
+                    pendingLabels.push({ x: elX, y: elY, w: pillW, h: pillH, color, text: brText });
                 });
             });
 
@@ -5651,7 +6715,7 @@
                 const dc = getDeptColor(s.department);
                 const isDecNode = s.isDecision && s.branches.length > 0;
 
-                svg += `<g>`;
+                svg += `<g class="gnode" style="animation-delay:${i * 0.06}s">`;
 
                 if (isDecNode) {
                     // ── DIAMOND (standard flowchart decision symbol) ──
@@ -5663,9 +6727,9 @@
                     svg += `<circle cx="${cx}" cy="${cy - hh + 8}" r="8" fill="#7c3aed" opacity="0.15"/>`;
                     svg += `<text x="${cx}" y="${cy - hh + 11}" text-anchor="middle" font-size="8" font-weight="700" fill="#7c3aed">${i + 1}</text>`;
 
-                    // Name inside diamond (full text, up to 3 lines)
-                    let dLines = wrapText(s.name, 18);
-                    const dFontSize = dLines.length > 3 ? 7.5 : 8.5;
+                    // Name inside diamond (full text)
+                    let dLines = wrapText(s.name, 20);
+                    const dFontSize = dLines.length > 3 ? 7.5 : 9;
                     const dLineH = dFontSize + 2.5;
                     const dBlockH = dLines.length * dLineH;
                     const dStartY = cy - dBlockH / 2 + dFontSize;
@@ -5694,23 +6758,25 @@
 
                 } else {
                     // ── RECTANGLE (regular process step) ──
+                    const incoming = incomingRoutes[i] || [];
                     let fill = dc.bg, stroke = dc.stroke, sw = 1.5, textCol = '#1e293b';
-                    if (s.isBottleneck) { fill = '#fee2e2'; stroke = '#ef4444'; sw = 2.5; textCol = '#991b1b'; }
-                    else if (s.isApproval) { fill = '#fef3c7'; stroke = '#d97706'; sw = 2; textCol = '#92400e'; }
-                    const rx = s.isApproval ? 16 : 8;
+                    if (s.isBottleneck) { fill = '#fee2e2'; stroke = '#ef4444'; sw = 2; textCol = '#991b1b'; }
+                    else if (s.isApproval) { fill = '#fef3c7'; stroke = '#d97706'; sw = 1.8; textCol = '#92400e'; }
+                    else if (incoming.length === 1) { stroke = incoming[0].color; sw = 1.8; }
+                    const rx = s.isApproval ? 14 : 10;
 
-                    svg += `<rect x="${pos.x}" y="${pos.y}" width="${NODE_W}" height="${NODE_H}" rx="${rx}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" filter="url(#shadow)"/>`;
+                    svg += `<rect x="${pos.x}" y="${pos.y}" width="${NODE_W}" height="${NODE_H}" rx="${rx}" fill="#ffffff" stroke="${stroke}" stroke-width="${sw}" filter="url(#shadow)"/>`;
+                    svg += `<rect x="${pos.x}" y="${pos.y}" width="${NODE_W}" height="${NODE_H}" rx="${rx}" fill="${fill}" opacity="0.45"/>`;
 
                     // Step badge
                     const badgeBg = s.isBottleneck ? '#ef4444' : s.isApproval ? '#d97706' : stroke;
-                    svg += `<circle cx="${pos.x + 15}" cy="${pos.y + 15}" r="10" fill="${badgeBg}" opacity="0.15"/>`;
+                    svg += `<circle cx="${pos.x + 15}" cy="${pos.y + 15}" r="10" fill="${badgeBg}" opacity="0.12"/>`;
                     svg += `<text x="${pos.x + 15}" y="${pos.y + 19}" text-anchor="middle" font-size="9" font-weight="700" fill="${badgeBg}">${i + 1}</text>`;
 
                     // Department label (full text)
                     svg += `<text x="${pos.x + NODE_W - 6}" y="${pos.y + 12}" text-anchor="end" font-size="7" fill="${stroke}" opacity="0.7">${escSvg(s.department)}</text>`;
 
                     // Incoming route indicators
-                    const incoming = incomingRoutes[i] || [];
                     incoming.forEach((inc, ii) => {
                         const by = pos.y + 14 + ii * 12;
                         svg += `<circle cx="${pos.x - 1}" cy="${by}" r="5" fill="${inc.color}" stroke="#fff" stroke-width="1.5"/>`;
@@ -5718,9 +6784,9 @@
                         svg += `<title>From Step ${inc.fromStep}: ${escSvg(inc.label)}</title>`;
                     });
 
-                    // Name (full text, auto-sized)
-                    let lines = wrapText(s.name, 24);
-                    const fontSize = lines.length > 3 ? 8.5 : 10;
+                    // Name (full text, auto-sized to fit wider nodes)
+                    let lines = wrapText(s.name, 28);
+                    const fontSize = lines.length > 3 ? 8.5 : 10.5;
                     const lineH = fontSize + 2;
                     const blockH = lines.length * lineH;
                     const textStartY = pos.y + 18 + (NODE_H - 18 - blockH) / 2 + fontSize;
@@ -5739,129 +6805,66 @@
                 svg += `</g>`;
             });
 
-            // ── Decision branch connecting lines ──
-            // Orthogonal routing through margins and row gaps — lines never cross nodes.
-            // Lines connect at top/bottom of targets when arriving vertically.
-            const LEFT_MARGIN = 8;                         // left routing channel
-            const RIGHT_MARGIN = totalW - 8;               // right routing channel
-
-            allSteps.forEach((s, i) => {
-                if (!s.isDecision || !s.branches || s.branches.length === 0) return;
-                const pos = nodePos[i];
-                if (!pos) return;
-                const cx = pos.cx, cy = pos.cy;
-                const hw = DIAMOND_W / 2, hh = DIAMOND_H / 2;
-                const brCount = s.branches.length;
-
-                s.branches.forEach((br, bi) => {
-                    const color = branchColors[bi % branchColors.length];
-                    const targetMatch = (br.target || '').match(/(\d+)/);
-                    const targetIdx = targetMatch ? parseInt(targetMatch[1]) - 1 : -1;
-                    if (targetIdx < 0 || targetIdx >= allSteps.length) return;
-
-                    const tp = nodePos[targetIdx];
-                    if (!tp) return;
-                    const isTargetDec = allSteps[targetIdx].isDecision && (allSteps[targetIdx].branches || []).length > 0;
-                    const tHH = isTargetDec ? DIAMOND_H / 2 : 0;
-                    const goesBack = targetIdx < i;
-                    const sameRow = pos.row === tp.row;
-
-                    // Stagger channels so parallel branches don't overlap
-                    const chOff = bi * 6;
-                    let pathD;
-                    let lblX, lblY, anchor;
-
-                    // All routes: exit top or bottom of diamond into gap, THEN go horizontal (never at node level).
-                    const entryX = tp.cx;
-                    const entryY = isTargetDec ? tp.cy - tHH : tp.y;
-
-                    if (goesBack) {
-                        // LOOP-BACK: exit TOP of diamond → up into gap above row → left to margin → up → right to target col → down into target top
-                        const exitX = cx + (bi - (brCount - 1) / 2) * 10;
-                        const exitY = cy - hh;
-                        const gapY = pos.y - 12 - chOff;          // gap above current row
-                        const channelX = LEFT_MARGIN + chOff;      // left margin
-                        const targetGapY = entryY - 12 - chOff;    // gap above target row
-                        pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${channelX} ${gapY} L ${channelX} ${targetGapY} L ${entryX} ${targetGapY} L ${entryX} ${entryY}`;
-                        lblX = channelX + 3;
-                        lblY = (gapY + targetGapY) / 2;
-                        anchor = 'start';
-
-                    } else if (sameRow && pos.col !== tp.col) {
-                        // SAME ROW forward: exit TOP → up into gap → across to target col → down into target top
-                        const exitX = cx + (bi - (brCount - 1) / 2) * 10;
-                        const exitY = cy - hh;
-                        const gapY = pos.y - 14 - bi * 12;
-                        pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${entryX} ${gapY} L ${entryX} ${entryY}`;
-                        lblX = exitX + 6;
-                        lblY = gapY - 3;
-                        anchor = 'start';
-
-                    } else if (tp.row > pos.row) {
-                        // FORWARD to later row: exit BOTTOM → down into gap below row → right margin if needed → down to target gap → left to target → down into target
-                        const exitX = cx + (bi - (brCount - 1) / 2) * 12;
-                        const exitY = cy + hh;
-                        const gapY = pos.y + rowH - (NODE_GAP_Y * 0.35) + chOff;
-
-                        if (tp.row === pos.row + 1 && Math.abs(entryX - exitX) < colW * 0.5) {
-                            // Adjacent row, nearby column — route through gap: down, across, down
-                            pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${entryX} ${gapY} L ${entryX} ${entryY}`;
-                        } else {
-                            // Distant target: down to gap, right to margin, down margin, left to target gap, down into target
-                            const mX = RIGHT_MARGIN - chOff;
-                            const targetGapY = entryY - 12 - chOff;
-                            pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${mX} ${gapY} L ${mX} ${targetGapY} L ${entryX} ${targetGapY} L ${entryX} ${entryY}`;
-                        }
-                        lblX = exitX + 4;
-                        lblY = exitY + 12;
-                        anchor = 'start';
-
-                    } else {
-                        // Forward to earlier row (rare wrapping): exit TOP → up to gap → right margin → down to target gap → left → down
-                        const exitX = cx + (bi - (brCount - 1) / 2) * 10;
-                        const exitY = cy - hh;
-                        const gapY = pos.y - 12 - chOff;
-                        const mX = RIGHT_MARGIN - chOff;
-                        const targetGapY = entryY - 12 - chOff;
-                        pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${mX} ${gapY} L ${mX} ${targetGapY} L ${entryX} ${targetGapY} L ${entryX} ${entryY}`;
-                        lblX = mX - 3;
-                        lblY = (gapY + targetGapY) / 2;
-                        anchor = 'end';
+            // ── Render deferred labels (in front of all lines and nodes) with collision avoidance ──
+            const placedLabels = [];
+            function labelsOverlap(ax, ay, aw, ah) {
+                return placedLabels.some(p =>
+                    Math.abs(ax - p.x) < (aw + p.w) / 2 + 6 &&
+                    Math.abs(ay - p.y) < (ah + p.h) / 2 + 2
+                );
+            }
+            pendingLabels.forEach(lbl => {
+                let { x, y, w, h, color, text } = lbl;
+                if (labelsOverlap(x, y, w, h)) {
+                    // Try horizontal nudge first (left then right)
+                    let resolved = false;
+                    for (let dx = 1; dx <= 6 && !resolved; dx++) {
+                        const shift = dx * (w * 0.6);
+                        if (!labelsOverlap(x - shift, y, w, h)) { x -= shift; resolved = true; }
+                        else if (!labelsOverlap(x + shift, y, w, h)) { x += shift; resolved = true; }
                     }
-
-                    // Draw the orthogonal connecting line
-                    svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.6" stroke-dasharray="6,4" marker-end="url(#arwc${bi % 5})" opacity="0.6"/>`;
-
-                    // Condition label with white background (full text)
-                    const brText = escSvg(br.label);
-                    const textW = brText.length * 4.5 + 10;
-                    const rectX = anchor === 'end' ? lblX - textW : anchor === 'start' ? lblX - 2 : lblX - textW / 2;
-                    svg += `<rect x="${rectX}" y="${lblY - 8}" width="${textW}" height="11" rx="3" fill="#fff" opacity="0.9"/>`;
-                    svg += `<text x="${lblX}" y="${lblY}" text-anchor="${anchor}" font-size="7" fill="${color}" font-weight="600">${brText}</text>`;
-                });
+                    // Fall back to vertical nudge (max 3 steps)
+                    if (!resolved) {
+                        for (let dy = 1; dy <= 3; dy++) {
+                            y += h + 4;
+                            if (!labelsOverlap(x, y, w, h)) break;
+                        }
+                    }
+                }
+                x = Math.max(w / 2 + 4, Math.min(x, totalW - w / 2 - 4));
+                placedLabels.push({ x, y, w, h });
+                svg += `<rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="${h / 2}" fill="#fff" stroke="${color}" stroke-width="0.8" opacity="0.97"/>`;
+                svg += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="7" fill="${color}" font-weight="600">${text}</text>`;
             });
 
             // ── Legend ──
             const autoCount = allSteps.filter(s => s.auto).length;
             const legendY = totalH - 50;
+            svg += `<line x1="${PAD_L}" y1="${legendY - 8}" x2="${totalW - PAD_L}" y2="${legendY - 8}" stroke="#e2e8f0" stroke-width="0.5"/>`;
             let lx = PAD_L;
-            svg += `<rect x="${lx}" y="${legendY}" width="14" height="14" rx="3" fill="#fff" stroke="#94a3b8" stroke-width="1.5"/>`;
+            svg += `<rect x="${lx}" y="${legendY}" width="14" height="14" rx="4" fill="#fff" stroke="#94a3b8" stroke-width="1.2"/>`;
             svg += `<text x="${lx + 20}" y="${legendY + 11}" font-size="9" fill="#64748b">Process Step</text>`;
             lx += 100;
             if (hasDecisions) {
                 const dx = lx + 7, dy = legendY + 7, dd = 7;
-                svg += `<polygon points="${dx},${dy - dd} ${dx + dd},${dy} ${dx},${dy + dd} ${dx - dd},${dy}" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.5"/>`;
+                svg += `<polygon points="${dx},${dy - dd} ${dx + dd},${dy} ${dx},${dy + dd} ${dx - dd},${dy}" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.2"/>`;
                 svg += `<text x="${lx + 20}" y="${legendY + 11}" font-size="9" fill="#64748b">Decision</text>`;
                 lx += 80;
             }
-            svg += `<rect x="${lx}" y="${legendY}" width="14" height="14" rx="3" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>`;
+            svg += `<rect x="${lx}" y="${legendY}" width="14" height="14" rx="4" fill="#fee2e2" stroke="#ef4444" stroke-width="1.2"/>`;
             svg += `<text x="${lx + 20}" y="${legendY + 11}" font-size="9" fill="#64748b">Bottleneck</text>`;
             lx += 90;
-            svg += `<rect x="${lx}" y="${legendY}" width="14" height="14" rx="3" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>`;
+            svg += `<rect x="${lx}" y="${legendY}" width="14" height="14" rx="4" fill="#fef3c7" stroke="#d97706" stroke-width="1.2"/>`;
             svg += `<text x="${lx + 20}" y="${legendY + 11}" font-size="9" fill="#64748b">Approval</text>`;
             lx += 85;
             svg += `<line x1="${lx}" y1="${legendY + 7}" x2="${lx + 20}" y2="${legendY + 7}" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="5,3"/>`;
             svg += `<text x="${lx + 26}" y="${legendY + 11}" font-size="9" fill="#64748b">Bad handoff</text>`;
+            if (hasDecisions) {
+                lx += 100;
+                svg += `<line x1="${lx}" y1="${legendY + 7}" x2="${lx + 20}" y2="${legendY + 7}" stroke="#7c3aed" stroke-width="2"/>`;
+                svg += `<polygon points="${lx + 18},${legendY + 4} ${lx + 24},${legendY + 7} ${lx + 18},${legendY + 10}" fill="#7c3aed"/>`;
+                svg += `<text x="${lx + 30}" y="${legendY + 11}" font-size="9" fill="#64748b">Alternate path</text>`;
+            }
 
             if (autoCount > 0) {
                 const row2Y = legendY + 18;
@@ -5888,14 +6891,14 @@
         // SWIMLANE VIEW (classic horizontal department lanes)
         // ============================================================
         function buildSwimlaneSVG(process) {
-            const LANE_LABEL_W = 130;
-            const NODE_W = 170;
-            const NODE_H = 64;
-            const NODE_GAP_X = 50;
-            const LANE_PAD_Y = 24;
+            const LANE_LABEL_W = 140;
+            const NODE_W = 190;
+            const NODE_H = 72;
+            const NODE_GAP_X = 60;
+            const LANE_PAD_Y = 28;
             const LANE_GAP = 3;
             const START_X = LANE_LABEL_W + 30;
-            const TOP_PAD = 90;
+            const TOP_PAD = 130;
             const TERM_W = 160;
             const TERM_H = 46;
             const TERM_RX = 23;
@@ -6025,11 +7028,17 @@
             const totalH = laneY + (autoCount > 0 ? 70 : 50);
 
             let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${totalH}" width="${totalW}" height="${totalH}" style="font-family:'Work Sans',Arial,sans-serif;">`;
-            svg += `<rect x="0" y="0" width="${totalW}" height="${totalH}" fill="#ffffff" rx="8"/>`;
+            svg += `<rect x="0" y="0" width="${totalW}" height="${totalH}" fill="#ffffff" rx="16" filter="url(#slCardShadow)"/>`;
+
+            // Card header bar (browser chrome)
+            svg += `<rect x="0" y="0" width="${totalW}" height="36" rx="16" fill="#f8fafb"/>`;
+            svg += `<rect x="0" y="24" width="${totalW}" height="12" fill="#f8fafb"/>`;
+            svg += `<circle cx="18" cy="18" r="3.5" fill="#e5e7eb"/><circle cx="30" cy="18" r="3.5" fill="#e5e7eb"/><circle cx="42" cy="18" r="3.5" fill="#e5e7eb"/>`;
 
             // Title
-            svg += `<text x="${totalW / 2}" y="28" text-anchor="middle" font-size="16" font-weight="600" fill="#1a2f4a">${escSvg(p.processName || 'Process Flow')}</text>`;
-            svg += `<text x="${totalW / 2}" y="45" text-anchor="middle" font-size="10" fill="#94a3b8">Swimlane view · ${allSteps.length} steps · ${deptOrder.length} departments</text>`;
+            svg += `<text x="${totalW / 2}" y="20" text-anchor="middle" font-size="9" font-weight="400" fill="#94a3b8" letter-spacing="0.5">swimlane</text>`;
+            svg += `<text x="${totalW / 2}" y="54" text-anchor="middle" font-size="14" font-weight="600" fill="#1a2f4a" letter-spacing="-0.3">${escSvg(p.processName || 'Process Flow')}</text>`;
+            svg += `<text x="${totalW / 2}" y="70" text-anchor="middle" font-size="10" fill="#94a3b8" letter-spacing="0.3">Swimlane view · ${allSteps.length} steps · ${deptOrder.length} departments</text>`;
 
             // Lane bands
             lanes.forEach(l => {
@@ -6046,15 +7055,20 @@
             ['#7c3aed','#2563eb','#059669','#d97706','#dc2626'].forEach((c, ci) => {
                 svg += `<marker id="sarwc${ci}" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 1 L 10 5 L 0 9 z" fill="${c}"/></marker>`;
             });
-            svg += `<filter id="sshadow" x="-4%" y="-4%" width="108%" height="108%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.08"/></filter>`;
+            svg += `<filter id="sshadow" x="-8%" y="-8%" width="116%" height="120%"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.06"/></filter>`;
+            svg += `<filter id="slCardShadow" x="-2%" y="-2%" width="104%" height="106%"><feDropShadow dx="0" dy="4" stdDeviation="12" flood-opacity="0.04"/><feDropShadow dx="0" dy="1" stdDeviation="3" flood-opacity="0.03"/></filter>`;
+            svg += `<filter id="slGlow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="6" flood-opacity="0.12" flood-color="#3d8ea6"/></filter>`;
             svg += `</defs>`;
 
-            // CSS: only line animations
+            // CSS: animate lines + hover effects on nodes
             svg += `<style>
                 @keyframes flowDash { to { stroke-dashoffset: -40; } }
                 @keyframes particleMove { 0% { offset-distance: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { offset-distance: 100%; opacity: 0; } }
+                @keyframes slNodeIn { from { opacity: 0; transform: translateY(6px) scale(0.96); } to { opacity: 1; transform: none; } }
                 .sl-arrow { stroke-dasharray: 8 6; animation: flowDash 1.5s linear infinite; }
                 .sl-particle { r: 3; fill: #3d8ea6; animation: particleMove 3s linear infinite; }
+                .sl-node { cursor: pointer; transition: filter 0.25s ease, transform 0.25s cubic-bezier(0.16,1,0.3,1); transform-origin: center; transform-box: fill-box; animation: slNodeIn 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+                .sl-node:hover { filter: url(#slGlow); transform: scale(1.04) translateY(-2px); }
             </style>`;
 
             // Draw sequential arrows
@@ -6130,7 +7144,7 @@
                 });
             });
 
-            // Step nodes (static, no animation) — with diamond decisions
+            // Step nodes — with diamond decisions
             function slWrapText(text, maxC) {
                 const words = text.split(/\s+/);
                 const lines = []; let cur = '';
@@ -6144,7 +7158,7 @@
                 if (!pos) return;
                 const isDecNode = s.isDecision && s.branches.length > 0;
 
-                svg += `<g>`;
+                svg += `<g class="sl-node" style="animation-delay:${i * 0.06}s">`;
 
                 if (isDecNode) {
                     // ── DIAMOND decision symbol ──
@@ -6183,19 +7197,24 @@
 
                 } else {
                     // ── RECTANGLE (regular step) ──
-                    let fill = '#ffffff', stroke = '#cbd5e1', sw = 1.5, textCol = '#1e293b';
-                    if (s.isBottleneck) { fill = '#fee2e2'; stroke = '#ef4444'; sw = 2.5; textCol = '#991b1b'; }
-                    else if (s.isApproval) { fill = '#fef3c7'; stroke = '#d97706'; sw = 2; textCol = '#92400e'; }
-                    const rx = s.isApproval ? 16 : 8;
+                    const incoming = slIncoming[i] || [];
+                    const laneData = lanes.find(l => l.dept === pos.dept);
+                    let deptStroke = laneData ? laneData.stroke : '#cbd5e1';
+                    let deptBg = laneData ? laneData.bg : '#f8fafc';
+                    let fill = '#ffffff', stroke = deptStroke, sw = 1.5, textCol = '#1e293b';
+                    if (s.isBottleneck) { fill = '#fee2e2'; deptBg = '#fee2e2'; stroke = '#ef4444'; sw = 2.5; textCol = '#991b1b'; }
+                    else if (s.isApproval) { fill = '#fef3c7'; deptBg = '#fef3c7'; stroke = '#d97706'; sw = 2; textCol = '#92400e'; }
+                    else if (incoming.length === 1) { stroke = incoming[0].color; sw = 1.8; }
+                    const rx = s.isApproval ? 14 : 10;
 
-                    svg += `<rect x="${pos.x}" y="${pos.y}" width="${NODE_W}" height="${NODE_H}" rx="${rx}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" filter="url(#sshadow)"/>`;
+                    svg += `<rect x="${pos.x}" y="${pos.y}" width="${NODE_W}" height="${NODE_H}" rx="${rx}" fill="#ffffff" stroke="${stroke}" stroke-width="${sw}" filter="url(#sshadow)"/>`;
+                    svg += `<rect x="${pos.x}" y="${pos.y}" width="${NODE_W}" height="${NODE_H}" rx="${rx}" fill="${deptBg}" opacity="0.45"/>`;
 
-                    const badgeBg = s.isBottleneck ? '#ef4444' : s.isApproval ? '#d97706' : '#64748b';
-                    svg += `<circle cx="${pos.x + 14}" cy="${pos.y + 14}" r="10" fill="${badgeBg}" opacity="0.15"/>`;
+                    const badgeBg = s.isBottleneck ? '#ef4444' : s.isApproval ? '#d97706' : stroke;
+                    svg += `<circle cx="${pos.x + 14}" cy="${pos.y + 14}" r="10" fill="${badgeBg}" opacity="0.12"/>`;
                     svg += `<text x="${pos.x + 14}" y="${pos.y + 18}" text-anchor="middle" font-size="9" font-weight="700" fill="${badgeBg}">${i + 1}</text>`;
 
                     // Incoming route indicators
-                    const incoming = slIncoming[i] || [];
                     incoming.forEach((inc, ii) => {
                         const by = pos.y + 14 + ii * 12;
                         svg += `<circle cx="${pos.x - 1}" cy="${by}" r="4.5" fill="${inc.color}" stroke="#fff" stroke-width="1"/>`;
@@ -6244,16 +7263,16 @@
                     if (!tp) return;
                     const isTargetDec = allSteps[targetIdx].isDecision && (allSteps[targetIdx].branches || []).length > 0;
                     const goesBack = targetIdx < i;
-                    const chOff = bi * 8;
+                    const chOff = bi * 12;
 
                     let pathD;
                     let lblX, lblY, anchor;
 
                     if (goesBack) {
                         // LOOP-BACK: exit top of diamond → up above lanes → left to target col → down into target top
-                        const exitX = cx + (bi - (brCount - 1) / 2) * 8;
+                        const exitX = cx + (bi - (brCount - 1) / 2) * 14;
                         const exitY = cy - SL_DIA_HH;
-                        const channelY = TOP_PAD - 12 - chOff;
+                        const channelY = TOP_PAD - 28 - chOff;
                         const entryX = tp.cx;
                         const entryY = isTargetDec ? tp.cy - SL_DIA_HH : tp.y;
                         pathD = `M ${exitX} ${exitY} L ${exitX} ${channelY} L ${entryX} ${channelY} L ${entryX} ${entryY}`;
@@ -6263,7 +7282,7 @@
 
                     } else {
                         // FORWARD: exit bottom of diamond → down to lane gap → right to column gap → vertical to target lane → left to target
-                        const exitX = cx + (bi - (brCount - 1) / 2) * 8;
+                        const exitX = cx + (bi - (brCount - 1) / 2) * 14;
                         const exitY = cy + SL_DIA_HH;
                         const entryX = isTargetDec ? tp.cx - SL_DIA_HW : tp.x;
                         const entryY = isTargetDec ? tp.cy : tp.cy;
@@ -6271,7 +7290,7 @@
                         // Find the lane bottom for the source node
                         const srcLane = lanes.find(l => l.dept === pos.dept);
                         const laneBottom = srcLane ? srcLane.y + srcLane.h : exitY + 20;
-                        const jogY = laneBottom - 6 + chOff;
+                        const jogY = laneBottom + chOff;
                         const gapMidX = pos.x + NODE_W + NODE_GAP_X / 2 + chOff;
 
                         if (Math.abs(exitY - entryY) < 5 && Math.abs(exitX - entryX) < colW * 2) {
@@ -6287,14 +7306,28 @@
                         anchor = 'start';
                     }
 
-                    svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.6" stroke-dasharray="6,4" marker-end="url(#sarwc${bi % 5})" opacity="0.55"/>`;
+                    // Draw branch line (solid for forward, dashed for loop-back)
+                    const slDashAttr = goesBack ? 'stroke-dasharray="6,4"' : '';
+                    svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" ${slDashAttr} marker-end="url(#sarwc${bi % 5})" opacity="0.8"/>`;
 
-                    // Condition label with white background (full text)
+                    // Animated particle following the branch path
+                    svg += `<circle r="3" fill="${color}" opacity="0.85"><animateMotion dur="${2.5 + bi * 0.5}s" repeatCount="indefinite" begin="${bi * 0.4}s" path="${pathD}"><\/animateMotion><\/circle>`;
+
+                    // Prominent exit label pill at the diamond side — full text, no truncation
                     const brText = escSvg(br.label);
-                    const textW = brText.length * 4.2 + 8;
-                    const rectX = anchor === 'middle' ? lblX - textW / 2 : anchor === 'end' ? lblX - textW : lblX - 2;
-                    svg += `<rect x="${rectX}" y="${lblY - 8}" width="${textW}" height="11" rx="3" fill="#fff" opacity="0.85"/>`;
-                    svg += `<text x="${lblX}" y="${lblY}" text-anchor="${anchor}" font-size="6.5" fill="${color}" font-weight="600">${brText}</text>`;
+                    const slPillW = brText.length * 5.2 + 18;
+                    const slPillH = 18;
+                    if (goesBack) {
+                        const elX = cx + (bi - (brCount - 1) / 2) * 14;
+                        const elY = cy - SL_DIA_HH - 20;
+                        svg += `<rect x="${elX - slPillW / 2}" y="${elY - slPillH / 2}" width="${slPillW}" height="${slPillH}" rx="${slPillH / 2}" fill="#fff" stroke="${color}" stroke-width="1" opacity="0.95"/>`;
+                        svg += `<text x="${elX}" y="${elY + 4}" text-anchor="middle" font-size="8" fill="${color}" font-weight="700">${brText}</text>`;
+                    } else {
+                        const elX = cx + (bi - (brCount - 1) / 2) * 14;
+                        const elY = cy + SL_DIA_HH + 22;
+                        svg += `<rect x="${elX - slPillW / 2}" y="${elY - slPillH / 2}" width="${slPillW}" height="${slPillH}" rx="${slPillH / 2}" fill="#fff" stroke="${color}" stroke-width="1" opacity="0.95"/>`;
+                        svg += `<text x="${elX}" y="${elY + 4}" text-anchor="middle" font-size="8" fill="${color}" font-weight="700">${brText}</text>`;
+                    }
                 });
             });
 
@@ -6322,6 +7355,12 @@
             slx += 85;
             svg += `<line x1="${slx}" y1="${legendY + 7}" x2="${slx + 20}" y2="${legendY + 7}" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="5,3"/>`;
             svg += `<text x="${slx + 26}" y="${legendY + 11}" font-size="9" fill="#64748b">Bad handoff</text>`;
+            if (hasDecisions) {
+                slx += 100;
+                svg += `<line x1="${slx}" y1="${legendY + 7}" x2="${slx + 20}" y2="${legendY + 7}" stroke="#7c3aed" stroke-width="2"/>`;
+                svg += `<polygon points="${slx + 18},${legendY + 4} ${slx + 24},${legendY + 7} ${slx + 18},${legendY + 10}" fill="#7c3aed"/>`;
+                svg += `<text x="${slx + 30}" y="${legendY + 11}" font-size="9" fill="#64748b">Alternate path</text>`;
+            }
 
             if (autoCount > 0) {
                 const row2Y = legendY + 18;
@@ -6356,6 +7395,109 @@
             if (_flowProcesses.length > 0) renderFlowDiagram(_flowProcesses);
         }
 
+        function buildListView(process, classified) {
+            const steps = process.steps || [];
+            const classMap = {};
+            (classified || []).forEach(c => { classMap[c.step] = c; });
+
+            let html = '<div style="background:#f8fafb;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border);">';
+            html += '<div class="flow-list-view">';
+
+            steps.forEach((s, i) => {
+                const isDecision = s.isDecision;
+                const isExt = s.isExternal;
+                const auto = classMap[s.name];
+                const catInfo = auto ? AUTOMATION_CATEGORIES[auto.key === 'human-loop' ? 'humanLoop' : auto.key === 'multi-agent' ? 'multiAgent' : auto.key] : null;
+
+                html += '<div class="flow-list-item">';
+                html += `<div class="flow-list-num${isDecision ? ' decision' : ''}${isExt ? ' external' : ''}">${s.number || (i + 1)}</div>`;
+                html += '<div class="flow-list-body">';
+                html += `<div class="flow-list-name">${escSvg(s.name)}</div>`;
+                html += `<div class="flow-list-dept">${escSvg(s.department || 'Unknown')}${isExt ? ' (External)' : ''}</div>`;
+
+                if (isDecision && s.branches && s.branches.length) {
+                    html += '<div class="flow-list-branches">';
+                    s.branches.forEach(b => {
+                        html += `<div class="flow-list-branch">${escSvg(b.label || '')}${b.target ? ' → ' + escSvg(b.target) : ''}</div>`;
+                    });
+                    html += '</div>';
+                }
+                html += '</div>';
+
+                if (catInfo) {
+                    html += `<span class="flow-list-badge" style="background:${catInfo.bg};color:${catInfo.color};">${catInfo.badge}</span>`;
+                }
+
+                html += '</div>';
+
+                if (i < steps.length - 1 && !isDecision) {
+                    html += '<div class="flow-list-arrow">↓</div>';
+                }
+            });
+
+            html += '</div></div>';
+            return html;
+        }
+
+        function renderRedesignView() {
+            try {
+                const raw = sessionStorage.getItem('redesignProcesses');
+                if (!raw) {
+                    document.body.innerHTML = '<div style="max-width:700px;margin:60px auto;padding:20px;font-family:Work Sans,sans-serif;text-align:center;"><h2>No redesign data found</h2><p style="color:#64748b;">Please generate a redesign from the <a href="/portal">portal</a> first.</p></div>';
+                    return;
+                }
+                const procs = JSON.parse(raw);
+                document.title = 'Redesigned Process Flow | Workflow Partners';
+
+                // Hide all screens and show a custom container
+                document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+                const progressBar = document.querySelector('.progress-bar');
+                if (progressBar) progressBar.style.display = 'none';
+
+                const wrap = document.createElement('div');
+                wrap.style.cssText = 'max-width:1100px;margin:0 auto;padding:2rem 1.5rem;';
+                wrap.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:12px;">' +
+                    '<div><h1 style="font-family:Cormorant Garamond,serif;font-size:1.8rem;font-weight:700;color:#1a5a6e;margin:0;">Redesigned Process Flow</h1>' +
+                    '<p style="font-size:0.88rem;color:#64748b;margin-top:4px;">AI-generated optimised operating model</p></div>' +
+                    '<a href="/portal" style="padding:8px 20px;background:#1a5a6e;color:white;text-decoration:none;border-radius:8px;font-size:0.85rem;font-weight:500;">\u2190 Back to Portal</a></div>' +
+                    '<div id="flowDiagramLoading" style="display:none;"></div>' +
+                    '<div id="flowDiagramError" style="display:none;"><span></span><span></span></div>' +
+                    '<div id="flowDiagramsContainer"></div>';
+                document.querySelector('.container').appendChild(wrap);
+
+                // Convert AI steps to the format buildGridSVG expects
+                const flowProcesses = procs.map(function(p) {
+                    var activeSteps = (p.steps || []).filter(function(s) { return !s.removed; });
+                    return {
+                        processName: p.processName || 'Redesigned Process',
+                        steps: activeSteps.map(function(s, i) {
+                            return {
+                                number: i + 1,
+                                name: s.name,
+                                department: s.department || 'Operations',
+                                isDecision: s.isDecision || false,
+                                isExternal: s.isExternal || false,
+                                branches: (s.branches || []).map(function(b) {
+                                    var tgt = b.target || '';
+                                    if (typeof b.targetStep === 'number') tgt = 'Step ' + b.targetStep;
+                                    return { label: b.label || '', target: tgt };
+                                })
+                            };
+                        }),
+                        handoffs: [],
+                        systems: [],
+                        approvals: []
+                    };
+                });
+
+                _flowViewMode = 'grid';
+                renderFlowDiagram(flowProcesses);
+            } catch (e) {
+                console.error('Failed to render redesign:', e);
+                document.body.innerHTML = '<div style="max-width:700px;margin:60px auto;padding:20px;font-family:Work Sans,sans-serif;text-align:center;"><h2>Error loading redesign</h2><p style="color:#dc2626;">' + e.message + '</p><a href="/portal">Back to Portal</a></div>';
+            }
+        }
+
         function renderFlowDiagram(processes) {
             _flowProcesses = processes;
             const loading = document.getElementById('flowDiagramLoading');
@@ -6367,16 +7509,17 @@
                 const allSvgs = [];
 
                 // View toggle
-                const isGrid = _flowViewMode === 'grid';
-                allHtml += `<div style="display:flex;align-items:center;gap:0.25rem;margin-bottom:1rem;background:var(--bg-light,#f1f5f9);padding:4px;border-radius:8px;width:fit-content;">`;
-                allHtml += `<button onclick="switchFlowView('grid')" style="padding:0.4rem 1rem;font-size:0.8rem;font-weight:600;border:none;border-radius:6px;cursor:pointer;transition:all 0.2s;${isGrid ? 'background:var(--primary,#1a5a6e);color:white;box-shadow:0 1px 3px rgba(0,0,0,0.15);' : 'background:transparent;color:var(--text-mid,#64748b);'}">&#9638; Grid View</button>`;
-                allHtml += `<button onclick="switchFlowView('swimlane')" style="padding:0.4rem 1rem;font-size:0.8rem;font-weight:600;border:none;border-radius:6px;cursor:pointer;transition:all 0.2s;${!isGrid ? 'background:var(--primary,#1a5a6e);color:white;box-shadow:0 1px 3px rgba(0,0,0,0.15);' : 'background:transparent;color:var(--text-mid,#64748b);'}">&#9776; Swimlane View</button>`;
+                const isList = _flowViewMode === 'list';
+                const activeStyle = 'background:var(--primary,#1a5a6e);color:white;box-shadow:0 1px 3px rgba(0,0,0,0.15);';
+                const inactiveStyle = 'background:transparent;color:var(--text-mid,#64748b);';
+                const btnBase = 'padding:0.4rem 1rem;font-size:0.8rem;font-weight:600;border:none;border-radius:6px;cursor:pointer;transition:all 0.2s;';
+                allHtml += `<div class="flow-view-toggle" style="display:flex;align-items:center;gap:0.25rem;margin-bottom:1rem;background:var(--bg-light,#f1f5f9);padding:4px;border-radius:8px;width:fit-content;">`;
+                allHtml += `<button onclick="switchFlowView('grid')" style="${btnBase}${_flowViewMode === 'grid' ? activeStyle : inactiveStyle}">&#9638; Grid</button>`;
+                allHtml += `<button onclick="switchFlowView('swimlane')" style="${btnBase}${_flowViewMode === 'swimlane' ? activeStyle : inactiveStyle}">&#9776; Swimlane</button>`;
+                allHtml += `<button onclick="switchFlowView('list')" style="${btnBase}${isList ? activeStyle : inactiveStyle}">&#9776; List</button>`;
                 allHtml += `</div>`;
 
                 processes.forEach((p, pi) => {
-                    const svg = buildFlowSVG(p);
-                    allSvgs.push(svg);
-
                     const steps = p.steps || [];
                     const classified = steps.map((s, i) => {
                         const auto = classifyAutomation(s, i, p);
@@ -6385,23 +7528,32 @@
 
                     allHtml += `<div class="result-section" style="margin-bottom: 2rem;">`;
                     allHtml += `<h3 style="margin-bottom: 0.5rem;">${pi + 1}. ${escSvg(p.processName || 'Process')} — Flow Diagram</h3>`;
-                    allHtml += `<p class="helper-text" style="margin-bottom: 0.75rem;">Zoom: scroll wheel · Pan: click &amp; drag · Coloured badges show automation type (hover for details)</p>`;
 
-                    // Zoom controls
-                    allHtml += `<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">`;
-                    allHtml += `<button onclick="diagramZoomFor(${pi},-0.2)" class="diagram-ctrl-btn">&#8722;</button>`;
-                    allHtml += `<span id="zoomLabel_${pi}" style="font-size:0.8rem;color:var(--text-mid);min-width:3rem;text-align:center;">100%</span>`;
-                    allHtml += `<button onclick="diagramZoomFor(${pi},0.2)" class="diagram-ctrl-btn">&#43;</button>`;
-                    allHtml += `<button onclick="diagramResetFor(${pi})" class="diagram-ctrl-btn" style="font-size:0.75rem;padding:0.35rem 0.75rem;">Fit</button>`;
-                    allHtml += `<button onclick="diagramFsFor(${pi})" class="diagram-ctrl-btn" id="fsBtn_${pi}" style="margin-left:auto;font-size:0.75rem;padding:0.35rem 0.75rem;">&#x26F6; Fullscreen</button>`;
-                    allHtml += `</div>`;
+                    if (isList) {
+                        allHtml += buildListView(p, classified);
+                    } else {
+                        const svg = buildFlowSVG(p);
+                        allSvgs.push(svg);
 
-                    // Diagram viewport
-                    allHtml += `<div id="diagramFsWrap_${pi}">`;
-                    allHtml += `<div id="diagramVp_${pi}" class="diagram-viewport" style="background:white;border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;cursor:grab;position:relative;max-height:500px;">`;
-                    allHtml += `<div id="diagramInner_${pi}" class="diagram-inner" style="transform-origin:0 0;transition:transform 0.15s ease;padding:1rem;min-width:100%;">`;
-                    allHtml += svg;
-                    allHtml += `</div></div></div>`;
+                        allHtml += `<div class="flow-mobile-hint">&#128588; Pinch to zoom · Drag to pan · Use Fullscreen for best mobile viewing</div>`;
+                        allHtml += `<p class="helper-text" style="margin-bottom: 0.75rem;">Zoom: scroll wheel · Pan: click &amp; drag · Coloured badges show automation type (hover for details)</p>`;
+
+                        // Zoom controls
+                        allHtml += `<div class="diagram-controls" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">`;
+                        allHtml += `<button onclick="diagramZoomFor(${pi},-0.2)" class="diagram-ctrl-btn">&#8722;</button>`;
+                        allHtml += `<span id="zoomLabel_${pi}" style="font-size:0.8rem;color:var(--text-mid);min-width:3rem;text-align:center;">100%</span>`;
+                        allHtml += `<button onclick="diagramZoomFor(${pi},0.2)" class="diagram-ctrl-btn">&#43;</button>`;
+                        allHtml += `<button onclick="diagramResetFor(${pi})" class="diagram-ctrl-btn" style="font-size:0.75rem;padding:0.35rem 0.75rem;">Fit</button>`;
+                        allHtml += `<button onclick="diagramFsFor(${pi})" class="diagram-ctrl-btn" id="fsBtn_${pi}" style="margin-left:auto;font-size:0.75rem;padding:0.35rem 0.75rem;">&#x26F6; Fullscreen</button>`;
+                        allHtml += `</div>`;
+
+                        // Diagram viewport
+                        allHtml += `<div id="diagramFsWrap_${pi}">`;
+                        allHtml += `<div id="diagramVp_${pi}" class="diagram-viewport" style="background:#f8fafb;border:none;border-radius:var(--radius-md);overflow:hidden;cursor:grab;position:relative;max-height:500px;">`;
+                        allHtml += `<div id="diagramInner_${pi}" class="diagram-inner" style="transform-origin:0 0;transition:transform 0.15s ease;padding:1rem;min-width:100%;">`;
+                        allHtml += svg;
+                        allHtml += `</div></div></div>`;
+                    }
 
                     // Automation opportunities
                     if (classified.length > 0) {
@@ -6885,14 +8037,23 @@
             btnText.textContent = 'Generating report...';
 
             try {
-                // Step 1: Generate PDF as base64
                 btnText.textContent = 'Building PDF...';
                 const pdfBase64 = await generatePDFBase64();
 
-                // Step 2: Build payload
                 btnText.textContent = 'Sending report...';
                 const contact = lastContact || {};
                 const result = lastResult || {};
+
+                if (window._autoSavedReportId) {
+                    btnText.innerHTML = '&#10003; Report Saved!';
+                    btn.style.background = 'linear-gradient(135deg, #16a34a, #15803d)';
+                    confirmation.style.display = 'block';
+                    var confText = document.getElementById('emailConfirmText');
+                    var confDetail = document.getElementById('emailConfirmDetail');
+                    confText.textContent = 'Your report has been saved to your portal.';
+                    confDetail.innerHTML = '<a href="/portal" style="color: #6366f1; font-weight: 600;">View in Portal &rarr;</a>';
+                    return;
+                }
 
                 const payload = {
                     contact: {
@@ -7008,15 +8169,26 @@
                 doc.save(fileName);
             } catch (err) {
                 console.error('PDF generation error:', err);
-                alert('PDF generation failed: ' + (err.message || err) + '\n\nCheck the browser console for details.');
+                showBanner('PDF generation failed. Check the browser console for details.', 'error');
             } finally {
                 btn.disabled = false;
                 btnText.textContent = 'Download PDF Report';
             }
         }
 
-        // Shared PDF builder - returns jsPDF doc instance
+        async function loadJsPDF() {
+            if (window.jspdf) return;
+            return new Promise(function(resolve, reject) {
+                var s = document.createElement('script');
+                s.src = '/assets/jspdf.umd.min.js';
+                s.onload = resolve;
+                s.onerror = function() { reject(new Error('Failed to load jsPDF')); };
+                document.head.appendChild(s);
+            });
+        }
+
         async function buildPDFDocument() {
+                await loadJsPDF();
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('p', 'mm', 'a4');
                 const pageW = 210;
@@ -7887,9 +9059,62 @@
             document.getElementById('loadingState').style.display = 'block';
             document.getElementById('resultsContainer').style.display = 'none';
 
-            // Build results client-side (no API needed)
             const result = buildLocalResults(completedProcesses, contact);
             displayResults(result, contact);
+
+            autoSaveSampleReport(result, contact);
+        }
+
+        async function autoSaveSampleReport(result, contact) {
+            try {
+                const payload = {
+                    contact: {
+                        name: contact.name || '',
+                        email: contact.email || '',
+                        company: contact.company || '',
+                        title: contact.title || '',
+                        industry: contact.industry || '',
+                        teamSize: contact.teamSize || ''
+                    },
+                    summary: {
+                        totalProcesses: (result.processes || []).length,
+                        totalAnnualCost: result.totalCost || 0,
+                        potentialSavings: result.potentialSavings || 0,
+                        analysisType: result.analysisType || 'rule-based',
+                        qualityScore: result.qualityScore?.averageScore || 0
+                    },
+                    recommendations: result.recommendations || [],
+                    automationScore: lastScoreData ? {
+                        percentage: lastScoreData.readinessScore,
+                        grade: lastScoreData.scoreGrade,
+                        categories: lastScoreData.cats,
+                        totalSteps: lastScoreData.totalSteps,
+                        totalAutomatable: lastScoreData.totalAutomatable
+                    } : {},
+                    roadmap: lastRoadmapData ? {
+                        phases: lastRoadmapData.phases,
+                        totalSavings: lastRoadmapData.annualSavings,
+                        cumulative: lastRoadmapData.cumulative
+                    } : {},
+                    processes: result.processes || [],
+                    rawProcesses: completedProcesses || [],
+                    customDepartments: customDepartments || [],
+                    pdfBase64: null,
+                    timestamp: new Date().toISOString()
+                };
+
+                const resp = await fetch('/api/send-diagnostic-report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    console.log('Sample data saved to portal. Report ID:', data.reportId || 'stored');
+                }
+            } catch (e) {
+                console.warn('Auto-save of sample data failed (portal may not show it):', e.message);
+            }
         }
 
         function loadComplexitySample() {
@@ -7915,7 +9140,8 @@
             const result = buildLocalResults(completedProcesses, contact);
             displayResults(result, contact);
 
-            // Also trigger AI analysis
+            autoSaveSampleReport(result, contact);
+
             triggerAIDiagnostic(complex, contact);
         }
 
@@ -8375,6 +9601,130 @@
         }
 
         // ============================================================
+        // VIEW MODE: Load and render a saved report
+        // ============================================================
+        async function loadReportView(reportId) {
+            // Hide all screens and show the results screen directly
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            const screen19 = document.getElementById('screen19');
+            screen19.classList.add('active');
+            document.getElementById('loadingState').style.display = 'flex';
+            document.getElementById('resultsContainer').style.display = 'none';
+
+            // Hide progress bar and navigation
+            const progressBar = document.querySelector('.progress-bar');
+            if (progressBar) progressBar.style.display = 'none';
+
+            try {
+                const resp = await fetch('/api/get-diagnostic?id=' + encodeURIComponent(reportId));
+                const data = await resp.json();
+
+                if (!resp.ok || !data.success) {
+                    document.getElementById('loadingState').innerHTML = '<div style="text-align:center;padding:2rem;"><h3 style="color:var(--danger);">Report Not Found</h3><p style="color:var(--text-mid);margin:1rem 0;">' + (data.error || 'This report may have been deleted or the link is invalid.') + '</p><a href="/portal" style="color:var(--accent);font-weight:500;">← Back to Portal</a></div>';
+                    return;
+                }
+
+                const report = data.report;
+                const dd = report.diagnosticData || {};
+
+                // Restore completedProcesses from rawProcesses (needed for automation score, roadmap, flowcharts)
+                if (dd.rawProcesses && dd.rawProcesses.length > 0) {
+                    completedProcesses = dd.rawProcesses;
+                } else {
+                    // Build minimal completedProcesses from summary data for flowchart rendering
+                    completedProcesses = (dd.processes || []).map(function(p) {
+                        return {
+                            processName: p.name || 'Process',
+                            processType: p.type || 'other',
+                            definition: { startsWhen: '', completesWhen: '', complexity: 'complex', departments: [] },
+                            lastExample: { name: '', startDate: '', endDate: '', elapsedDays: p.elapsedDays || 0 },
+                            userTime: { meetings: 0, emails: 0, execution: 0, waiting: 0, total: 0 },
+                            timeAccuracy: 'confident',
+                            performance: 'typical',
+                            issues: [],
+                            biggestDelay: '',
+                            delayDetails: '',
+                            steps: (p.steps || []).map(function(s, si) {
+                                return {
+                                    number: si + 1,
+                                    name: s.name || 'Step ' + (si + 1),
+                                    department: s.department || 'Operations',
+                                    isDecision: s.isDecision || false,
+                                    isExternal: s.isExternal || false,
+                                    branches: s.branches || []
+                                };
+                            }),
+                            handoffs: [],
+                            systems: [],
+                            approvals: [],
+                            knowledge: {},
+                            newHire: {},
+                            frequency: { type: 'monthly', annual: 12, inFlight: 0, progressing: 0, stuck: 0, waiting: 0 },
+                            costs: { hourlyRate: 50, instanceCost: 0, annualUserCost: 0, totalAnnualCost: p.annualCost || 0, teamSize: p.teamSize || 1 },
+                            savings: {},
+                            priority: {},
+                            bottleneck: {}
+                        };
+                    });
+                }
+
+                // Build the result object that displayResults expects
+                var processes = dd.processes || [];
+                var totalCost = (dd.summary || {}).totalAnnualCost || 0;
+                var potentialSavings = (dd.summary || {}).potentialSavings || 0;
+
+                // Enrich process entries with quality data if missing
+                var resultProcesses = processes.map(function(p) {
+                    return {
+                        name: p.name || 'Process',
+                        elapsedDays: p.elapsedDays || 0,
+                        annualCost: p.annualCost || 0,
+                        annualInstances: p.annualInstances || 0,
+                        teamSize: p.teamSize || 1,
+                        stepsCount: p.stepsCount || (p.steps || []).length || 0,
+                        quality: p.quality || { grade: p.qualityGrade || 'MEDIUM', score: 0 },
+                        bottleneck: p.bottleneck || {},
+                        priority: p.priority || {},
+                        steps: p.steps || []
+                    };
+                });
+
+                var result = {
+                    processes: resultProcesses,
+                    totalCost: totalCost,
+                    potentialSavings: potentialSavings,
+                    recommendations: dd.recommendations || [],
+                    analysisType: (dd.summary || {}).analysisType || 'rule-based',
+                    qualityScore: dd.summary ? dd.summary.qualityScore : 0
+                };
+
+                var contact = dd.contact || {
+                    name: report.contactName || '',
+                    email: report.contactEmail || '',
+                    company: report.company || ''
+                };
+
+                // Add a back-to-portal link above the results
+                var resultsContainer = document.getElementById('resultsContainer');
+                var backBar = document.createElement('div');
+                backBar.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding:0.75rem 1rem;background:linear-gradient(135deg,rgba(61,142,166,0.08),rgba(61,142,166,0.03));border-radius:var(--radius-sm);border:1px solid rgba(61,142,166,0.15);';
+                backBar.innerHTML = '<a href="/portal" style="color:var(--accent);text-decoration:none;font-weight:500;font-size:0.9rem;">← Back to Portal</a>' +
+                    '<span style="color:var(--text-mid);font-size:0.82rem;">' + (report.company || '') + ' · ' + (report.createdAt ? new Date(report.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '') + '</span>';
+                resultsContainer.insertBefore(backBar, resultsContainer.firstChild);
+
+                // Hide the email/save buttons since this is a read-only view
+                var emailSection = document.getElementById('emailReportBtn');
+                if (emailSection) emailSection.closest('.button-group').style.display = 'none';
+
+                displayResults(result, contact);
+
+            } catch (err) {
+                console.error('View mode error:', err);
+                document.getElementById('loadingState').innerHTML = '<div style="text-align:center;padding:2rem;"><h3 style="color:var(--danger);">Failed to Load Report</h3><p style="color:var(--text-mid);margin:1rem 0;">Unable to reach the server. Please try again.</p><a href="/portal" style="color:var(--accent);font-weight:500;">← Back to Portal</a></div>';
+            }
+        }
+
+        // ============================================================
         // INIT
         // ============================================================
         document.addEventListener('DOMContentLoaded', async function() {
@@ -8387,6 +9737,59 @@
             const devToolbar = document.getElementById('devToolbar');
             if (devToolbar && showDev) {
                 devToolbar.style.display = 'block';
+            }
+
+            // Render redesigned process flow from portal
+            if (params.has('render-redesign')) {
+                try {
+                    const rdData = JSON.parse(sessionStorage.getItem('redesignProcesses') || '[]');
+                    if (rdData.length > 0) {
+                        document.querySelector('.container').innerHTML = `
+                            <div style="padding: 1.5rem 0;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+                                    <div>
+                                        <h1 style="font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:700;color:var(--primary);margin-bottom:4px;">Redesigned Process Flow</h1>
+                                        <p style="color:var(--text-mid);font-size:0.9rem;">AI-generated optimised operating model</p>
+                                    </div>
+                                    <a href="/portal" style="font-size:0.85rem;color:var(--accent);text-decoration:none;font-weight:500;">← Back to Portal</a>
+                                </div>
+                                <div id="flowDiagramsContainer"></div>
+                            </div>`;
+                        const processes = rdData.map(function(p) {
+                            return {
+                                processName: p.processName,
+                                steps: (p.steps || []).filter(function(s) { return !s.removed; }).map(function(s, i) {
+                                    return {
+                                        number: i + 1,
+                                        name: s.name,
+                                        department: s.department || 'Operations',
+                                        isDecision: s.isDecision || false,
+                                        isExternal: s.isExternal || false,
+                                        branches: (s.branches || []).map(function(b) {
+                                            return { label: b.label, target: b.target || ('Step ' + b.targetStep) };
+                                        })
+                                    };
+                                })
+                            };
+                        });
+                        _flowViewMode = 'grid';
+                        renderFlowDiagram(processes);
+                    }
+                } catch (e) { console.error('Render redesign error:', e); }
+                return;
+            }
+
+            // Render redesigned process flowchart from sessionStorage
+            if (params.has('render-redesign')) {
+                renderRedesignView();
+                return;
+            }
+
+            // VIEW MODE: render full report from saved diagnostic data
+            const viewId = params.get('view');
+            if (viewId) {
+                await loadReportView(viewId);
+                return;
             }
 
             // Also support ?sample query param to skip straight to results
@@ -8725,20 +10128,50 @@
                     stepCount = 0;
                 }
 
+                // Restore handover context if present
+                if (data.handover) {
+                    _handoverData = data.handover;
+                    _currentContributor = '';
+                }
+
                 // Navigate to saved screen
                 const targetScreen = data.currentScreen || 0;
                 goToScreen(targetScreen);
 
-                // Show resume banner
-                const banner = document.getElementById('resumeBanner');
-                if (banner) {
-                    const processName = result.progress.processName;
-                    if (processName) {
-                        banner.innerHTML = '<strong>Welcome back!</strong> Your progress on "' +
-                            processName.replace(/</g, '&lt;') + '" has been restored.';
+                // Show handover banner if this was a handover link
+                if (data.handover) {
+                    const hb = document.getElementById('handoverBanner');
+                    if (hb) {
+                        const fromName = data.handover.from || 'A colleague';
+                        document.getElementById('handoverBannerTitle').textContent =
+                            fromName + ' shared this diagnostic with you';
+                        const contribList = (data.handover.contributors || []).filter(Boolean);
+                        let desc = 'Review the steps below and add any that are missing. You can drag to reorder or insert new steps anywhere.';
+                        if (contribList.length > 0) {
+                            desc += ' Contributors so far: ' + contribList.join(', ') + '.';
+                        }
+                        document.getElementById('handoverBannerDesc').textContent = desc;
+                        const noteEl = document.getElementById('handoverBannerNote');
+                        if (data.handover.note) {
+                            noteEl.textContent = '"' + data.handover.note + '"';
+                            noteEl.style.display = 'block';
+                        }
+                        hb.classList.add('show');
                     }
-                    banner.classList.add('show');
-                    setTimeout(() => banner.classList.remove('show'), 8000);
+                }
+
+                // Show resume banner (only if not a handover)
+                if (!data.handover) {
+                    const banner = document.getElementById('resumeBanner');
+                    if (banner) {
+                        const processName = result.progress.processName;
+                        if (processName) {
+                            banner.innerHTML = '<strong>Welcome back!</strong> Your progress on "' +
+                                processName.replace(/</g, '&lt;') + '" has been restored.';
+                        }
+                        banner.classList.add('show');
+                        setTimeout(() => banner.classList.remove('show'), 8000);
+                    }
                 }
 
                 // Clean URL without reloading
@@ -8886,8 +10319,235 @@
         }
 
         // Submit team response when diagnostic completes (hook into submitForAnalysis)
-        async function submitTeamResponse() {
+        async         function submitTeamResponse() {
             if (!teamMode) return;
+
+        // ============================================================
+        // HANDOVER TO COLLEAGUE
+        // ============================================================
+        function openHandoverModal() {
+            collectAllProcessData();
+            const modal = document.getElementById('handoverModalOverlay');
+            const form = document.getElementById('handoverModalForm');
+            const success = document.getElementById('handoverModalSuccess');
+            const linkBox = document.getElementById('handoverLinkBox');
+            form.style.display = 'block';
+            success.style.display = 'none';
+            linkBox.classList.remove('show');
+            document.getElementById('handoverYourName').value = _currentContributor || '';
+            document.getElementById('handoverNote').value = '';
+            document.getElementById('handoverColleagueEmail').value = '';
+            const btn = document.getElementById('handoverSaveBtn');
+            btn.disabled = false;
+            btn.textContent = 'Save & Generate Link';
+            modal.classList.add('show');
+        }
+
+        function closeHandoverModal() {
+            document.getElementById('handoverModalOverlay').classList.remove('show');
+        }
+
+        async function saveAndHandover() {
+            const btn = document.getElementById('handoverSaveBtn');
+            const yourName = document.getElementById('handoverYourName').value.trim();
+            const note = document.getElementById('handoverNote').value.trim();
+            const colleagueEmail = document.getElementById('handoverColleagueEmail').value.trim();
+
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            try {
+                collectAllProcessData();
+
+                if (yourName) {
+                    _currentContributor = yourName;
+                    document.querySelectorAll('#stepsList .list-item').forEach(item => {
+                        if (!item.dataset.contributor) {
+                            item.dataset.contributor = yourName;
+                            const uid = item.dataset.stepUid;
+                            const badge = document.getElementById('step_u' + uid + '_contributor');
+                            if (badge) {
+                                badge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4-4v2"/><circle cx="12" cy="7" r="4"/></svg> ' + yourName.replace(/</g, '&lt;');
+                                badge.style.display = 'inline-flex';
+                            }
+                        }
+                    });
+                }
+
+                const contributors = _handoverData ? [...(_handoverData.contributors || [])] : [];
+                if (yourName && !contributors.includes(yourName)) contributors.push(yourName);
+
+                const body = {
+                    email: colleagueEmail || null,
+                    progressData: {
+                        currentScreen: 7,
+                        processData,
+                        completedProcesses,
+                        customDepartments,
+                        stepCount: typeof stepCount !== 'undefined' ? stepCount : 0,
+                        handover: {
+                            from: yourName || 'A colleague',
+                            note: note,
+                            contributors: contributors,
+                            timestamp: new Date().toISOString()
+                        }
+                    },
+                    currentScreen: 7,
+                    processName: processData.processName || ''
+                };
+
+                if (cloudProgressId) {
+                    body.progressId = cloudProgressId;
+                }
+
+                const resp = await fetch('/api/progress', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                const result = await resp.json();
+                if (!resp.ok || !result.success) throw new Error(result.error || 'Save failed');
+
+                cloudProgressId = result.progressId;
+
+                const form = document.getElementById('handoverModalForm');
+                const success = document.getElementById('handoverModalSuccess');
+                const linkBox = document.getElementById('handoverLinkBox');
+
+                form.style.display = 'none';
+                success.style.display = 'block';
+                linkBox.classList.add('show');
+
+                document.getElementById('handoverLinkInput').value = result.resumeUrl;
+
+                if (colleagueEmail) {
+                    document.getElementById('handoverSuccessMsg').textContent =
+                        'A link has been sent to ' + colleagueEmail + '. They can add their steps and hand over to the next person.';
+                } else {
+                    document.getElementById('handoverSuccessMsg').textContent =
+                        'Copy the link below and send it to your colleague.';
+                }
+
+            } catch (err) {
+                console.error('Handover save error:', err);
+                btn.textContent = 'Error — try again';
+                btn.disabled = false;
+                setTimeout(() => { btn.textContent = 'Save & Generate Link'; }, 3000);
+            }
+        }
+
+        function copyHandoverLink() {
+            const input = document.getElementById('handoverLinkInput');
+            input.select();
+            navigator.clipboard.writeText(input.value).then(() => {
+                const btn = input.nextElementSibling;
+                const orig = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => { btn.textContent = orig; }, 2000);
+            });
+        }
+
+        // ============================================================
+        // DRAG-AND-DROP STEP REORDERING
+        // ============================================================
+        (function initStepsDragDrop() {
+            const list = document.getElementById('stepsList');
+            if (!list) return;
+
+            let draggedItem = null;
+
+            list.addEventListener('dragstart', function(e) {
+                if (!_dragHandleActive) { e.preventDefault(); return; }
+                const item = e.target.closest('.list-item');
+                if (!item) { e.preventDefault(); return; }
+                draggedItem = item;
+                item.classList.add('step-dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', '');
+            });
+
+            list.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                if (!draggedItem) return;
+
+                const target = e.target.closest('.list-item');
+                if (!target || target === draggedItem) return;
+
+                list.querySelectorAll('.list-item').forEach(el => {
+                    el.classList.remove('step-drag-over-above', 'step-drag-over-below');
+                });
+
+                const rect = target.getBoundingClientRect();
+                const midY = rect.top + rect.height / 2;
+                if (e.clientY < midY) {
+                    target.classList.add('step-drag-over-above');
+                } else {
+                    target.classList.add('step-drag-over-below');
+                }
+            });
+
+            list.addEventListener('dragleave', function(e) {
+                const target = e.target.closest('.list-item');
+                if (target) {
+                    target.classList.remove('step-drag-over-above', 'step-drag-over-below');
+                }
+            });
+
+            list.addEventListener('drop', function(e) {
+                e.preventDefault();
+                if (!draggedItem) return;
+
+                const target = e.target.closest('.list-item');
+                if (!target || target === draggedItem) {
+                    cleanup();
+                    return;
+                }
+
+                const dragDivider = draggedItem.nextElementSibling;
+                if (dragDivider && dragDivider.classList.contains('insert-step-divider')) {
+                    dragDivider.remove();
+                }
+
+                const rect = target.getBoundingClientRect();
+                const midY = rect.top + rect.height / 2;
+
+                if (e.clientY < midY) {
+                    list.insertBefore(draggedItem, target);
+                } else {
+                    const afterTarget = target.nextElementSibling;
+                    if (afterTarget && afterTarget.classList.contains('insert-step-divider')) {
+                        afterTarget.after(draggedItem);
+                    } else {
+                        target.after(draggedItem);
+                    }
+                }
+
+                const newDivider = document.createElement('div');
+                newDivider.className = 'insert-step-divider';
+                newDivider.innerHTML = '<button type="button" onclick="insertStepAfter(this)" title="Insert a step here">+</button>';
+                draggedItem.after(newDivider);
+
+                cleanup();
+                renumberSteps();
+            });
+
+            list.addEventListener('dragend', function() {
+                cleanup();
+            });
+
+            function cleanup() {
+                if (draggedItem) {
+                    draggedItem.classList.remove('step-dragging');
+                    draggedItem.removeAttribute('draggable');
+                    draggedItem = null;
+                }
+                list.querySelectorAll('.list-item').forEach(el => {
+                    el.classList.remove('step-drag-over-above', 'step-drag-over-below');
+                });
+            }
+        })();
 
             try {
                 collectAllProcessData();
@@ -8949,6 +10609,44 @@
                 <div class="save-modal-link-row">
                     <input type="text" id="saveModalLinkInput" readonly onclick="this.select()">
                     <button onclick="copySaveLink()">Copy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Handover Modal -->
+    <div class="save-modal-overlay" id="handoverModalOverlay" onclick="if(event.target===this)closeHandoverModal()">
+        <div class="save-modal">
+            <button class="save-modal-close" onclick="closeHandoverModal()">&times;</button>
+
+            <div id="handoverModalForm" class="handover-modal-form">
+                <h3>Hand Over to a Colleague</h3>
+                <p>Save your progress and share a link so a colleague can add the steps they know about.</p>
+
+                <div class="handover-name-row">
+                    <input type="text" class="save-modal-input" id="handoverYourName" placeholder="Your name (so they know who shared)" style="margin-bottom:0;">
+                </div>
+
+                <textarea id="handoverNote" placeholder="Optional note for your colleague, e.g. 'I've added the intake steps — please add the approval and fulfilment steps.'"></textarea>
+
+                <input type="email" class="save-modal-input" id="handoverColleagueEmail" placeholder="Colleague's email (optional)" style="margin-bottom:0.75rem;">
+
+                <div class="save-modal-actions">
+                    <button class="button button-primary" id="handoverSaveBtn" onclick="saveAndHandover()">Save &amp; Generate Link</button>
+                </div>
+            </div>
+
+            <div class="save-modal-success" id="handoverModalSuccess">
+                <div class="checkmark">&#10003;</div>
+                <h4>Ready to Share!</h4>
+                <p id="handoverSuccessMsg">Copy the link below and send it to your colleague.</p>
+            </div>
+
+            <div class="save-modal-link-box" id="handoverLinkBox">
+                <label>Share this link with your colleague</label>
+                <div class="save-modal-link-row">
+                    <input type="text" id="handoverLinkInput" readonly onclick="this.select()">
+                    <button onclick="copyHandoverLink()">Copy</button>
                 </div>
             </div>
         </div>
@@ -9017,4 +10715,6 @@
         </div>
     </div>
 </body>
+</html>
+
 </html>

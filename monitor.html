@@ -7,13 +7,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles/base.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        :root { --primary: #1a2f4a; --accent: #3d8ea6; --text: #1e293b; --text-mid: #475569; --text-light: #64748b; --bg: #fafbfc; --bg-alt: #f1f5f9; --white: #fff; --border: #e2e8f0; --green: #16a34a; --red: #dc2626; --amber: #d97706; --blue: #1e40af; --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --shadow-lg: 0 12px 40px rgba(0,0,0,0.08); }
-        body { font-family: 'Work Sans', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-        .header { background: linear-gradient(135deg, var(--primary), #2a4a6b); color: white; padding: 40px 0; text-align: center; }
-        .header h1 { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 600; margin-bottom: 6px; }
-        .header p { opacity: 0.75; font-size: 0.95rem; }
+        :root { --blue: #1e40af; }
         .container { max-width: 900px; margin: -30px auto 60px; padding: 0 20px; }
         .card { background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 40px; margin-bottom: 24px; }
         .state { text-align: center; padding: 40px 20px; }
@@ -53,8 +49,6 @@
         .event-notes { font-size: 0.82rem; color: var(--text-mid); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
         .section-title { font-size: 1rem; font-weight: 600; color: var(--primary); margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid var(--border); }
-        .footer { text-align: center; padding: 24px; font-size: 0.82rem; color: var(--text-light); }
-        .footer a { color: var(--accent); text-decoration: none; }
         @media (max-width: 600px) {
             .card { padding: 20px; }
             .log-form { grid-template-columns: 1fr; }
@@ -71,6 +65,10 @@
 </head>
 <body>
     <div class="header">
+        <div class="header-nav">
+            <a href="/">Workflow<span>.</span></a>
+            <a href="/" class="header-back">&larr; Home</a>
+        </div>
         <h1>Process Monitor</h1>
         <p>Track process instances in real time and spot trends</p>
     </div>
@@ -122,6 +120,7 @@
 
     <script>
         let currentEmail = '';
+        function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
         function formatDate(d) { return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); }
         function formatTime(d) { return new Date(d).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
@@ -154,7 +153,7 @@
                 procs.forEach(([name, stats]) => {
                     html += `<div class="stat-card">
                         <div class="stat-value" style="color: var(--accent);">${stats.totalInstances}</div>
-                        <div class="stat-label">${name}</div>
+                        <div class="stat-label">${esc(name)}</div>
                         ${stats.avgCompletionDays ? `<div style="font-size: 0.78rem; color: var(--green); margin-top: 4px;">Avg: ${stats.avgCompletionDays} days</div>` : ''}
                     </div>`;
                 });
@@ -169,9 +168,9 @@
                 log.innerHTML = data.recentEvents.map(e => `
                     <li class="event-item">
                         <span class="event-time">${formatDate(e.logged_at)} ${formatTime(e.logged_at)}</span>
-                        <span class="badge badge-${e.status}">${e.status}</span>
-                        <span class="event-name">${e.instance_name || e.process_name}</span>
-                        <span class="event-notes">${e.notes || ''}</span>
+                        <span class="badge badge-${esc(e.status)}">${esc(e.status)}</span>
+                        <span class="event-name">${esc(e.instance_name || e.process_name)}</span>
+                        <span class="event-notes">${esc(e.notes || '')}</span>
                     </li>`).join('');
             }
         }

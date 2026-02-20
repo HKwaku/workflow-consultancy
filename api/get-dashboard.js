@@ -2,12 +2,10 @@
 // Vercel Serverless Function - Fetches all diagnostic reports for an email
 // Used by /dashboard?email=xxx to show comparative results over time
 
+const { setCorsHeaders, getSupabaseHeaders, isValidEmail, fetchWithTimeout } = require('../lib/api-helpers');
+
 module.exports = async function handler(req, res) {
-  // CORS
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  setCorsHeaders(res, 'GET,OPTIONS');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
@@ -19,8 +17,7 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Email is required. Use ?email=xxx' });
     }
 
-    // Basic email validation
-    if (!email.includes('@') || !email.includes('.')) {
+    if (!isValidEmail(email)) {
       return res.status(400).json({ error: 'Invalid email format.' });
     }
 
@@ -33,19 +30,18 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // Fetch all reports for this email, ordered by date (newest first)
-    // Exclude pdf_base64 to keep response lightweight
     const encodedEmail = encodeURIComponent(email.toLowerCase());
-    const url = `${supabaseUrl}/rest/v1/diagnostic_reports?contact_email=ilike.${encodedEmail}&select=id,contact_email,contact_name,company,lead_score,lead_grade,diagnostic_data,created_at&order=created_at.desc`;
 
-    const sbResp = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
-        'Accept': 'application/json'
-      }
-    });
+    // Fetch from both tables in parallel
+    const reportsUrl = `${supabaseUrl}/rest/v1/diagnostic_reports?contact_email=ilike.${encodedEmail}&select=id,contact_email,contact_name,company,lead_score,lead_grade,diagnostic_data,created_at&order=created_at.desc`;
+    const diagUrl = `${supabaseUrl}/rest/v1/diagnostics?email=ilike.${encodedEmail}&select=id,email,name,company,total_processes,annual_process_cost,potential_savings,automation_percentage,automation_grade,automation_insight,quality_score,analysis_type,recommendations,processes,lead_score,lead_grade,completed_at&order=completed_at.desc`;
+
+    const sbHeaders = getSupabaseHeaders(supabaseKey);
+
+    const [sbResp, diagResp] = await Promise.all([
+      fetchWithTimeout(reportsUrl, { method: 'GET', headers: sbHeaders }),
+      fetchWithTimeout(diagUrl, { method: 'GET', headers: sbHeaders }).catch(() => null)
+    ]);
 
     if (!sbResp.ok) {
       const errText = await sbResp.text();
@@ -55,14 +51,56 @@ module.exports = async function handler(req, res) {
 
     const rows = await sbResp.json();
 
-    if (!rows || rows.length === 0) {
+    // Merge records from the diagnostics table that aren't in diagnostic_reports
+    let diagRows = [];
+    if (diagResp && diagResp.ok) {
+      try { diagRows = await diagResp.json(); } catch (e) { console.error('Failed to parse diagnostics response:', e.message); diagRows = []; }
+    }
+
+    const reportIds = new Set((rows || []).map(r => r.id));
+    const extraRows = (diagRows || []).filter(d => !reportIds.has(d.id) && d.total_processes > 0).map(d => {
+      let procs = [];
+      let recs = [];
+      try { procs = typeof d.processes === 'string' ? JSON.parse(d.processes) : (d.processes || []); } catch (e) { console.error('Failed to parse processes:', e.message); }
+      try { recs = typeof d.recommendations === 'string' ? JSON.parse(d.recommendations) : (d.recommendations || []); } catch (e) { console.error('Failed to parse recommendations:', e.message); }
+      return {
+        id: d.id,
+        contact_email: d.email,
+        contact_name: d.name || '',
+        company: d.company || '',
+        lead_score: d.lead_score || 0,
+        lead_grade: d.lead_grade || '',
+        diagnostic_data: {
+          contact: { name: d.name, email: d.email, company: d.company },
+          summary: {
+            totalProcesses: d.total_processes || 0,
+            totalAnnualCost: d.annual_process_cost || 0,
+            potentialSavings: d.potential_savings || 0,
+            analysisType: d.analysis_type || 'rule-based',
+            qualityScore: d.quality_score || 0
+          },
+          automationScore: {
+            percentage: d.automation_percentage || 0,
+            grade: d.automation_grade || 'N/A',
+            insight: d.automation_insight || ''
+          },
+          recommendations: recs,
+          processes: procs,
+          roadmap: null
+        },
+        created_at: d.completed_at || d.created_at
+      };
+    });
+
+    const allRows = [...(rows || []), ...extraRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    if (!allRows.length) {
       return res.status(404).json({
         error: 'No diagnostics found for this email address.'
       });
     }
 
-    // Extract key metrics from each report for comparison
-    const reports = rows.map(row => {
+    const reports = allRows.map(row => {
       const d = row.diagnostic_data || {};
       const summary = d.summary || {};
       const auto = d.automationScore || {};

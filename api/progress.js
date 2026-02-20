@@ -3,12 +3,10 @@
 // Combines former save-progress.js and load-progress.js into one function
 
 const crypto = require('crypto');
+const { setCorsHeaders, getSupabaseHeaders, isValidUUID, fetchWithTimeout } = require('../lib/api-helpers');
 
 module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  setCorsHeaders(res, 'GET,OPTIONS,POST');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
@@ -26,6 +24,11 @@ async function saveProgress(req, res) {
 
     if (!progressData) {
       return res.status(400).json({ error: 'Progress data is required.' });
+    }
+
+    const payloadSize = JSON.stringify(progressData).length;
+    if (payloadSize > 2 * 1024 * 1024) {
+      return res.status(413).json({ error: 'Progress data too large. Maximum size is 2MB.' });
     }
 
     const supabaseUrl = process.env.SUPABASE_URL;
@@ -57,12 +60,11 @@ async function saveProgress(req, res) {
       payload.created_at = new Date().toISOString();
     }
 
-    const sbResp = await fetch(`${supabaseUrl}/rest/v1/diagnostic_progress`, {
+    const sbResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_progress`, {
       method: 'POST',
       headers: {
+        ...getSupabaseHeaders(supabaseKey),
         'Content-Type': 'application/json',
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
         'Prefer': 'resolution=merge-duplicates,return=minimal'
       },
       body: JSON.stringify(payload)
@@ -138,8 +140,7 @@ async function loadProgress(req, res) {
       return res.status(400).json({ error: 'Progress ID is required. Use ?id=xxx' });
     }
 
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(id)) {
+    if (!isValidUUID(id)) {
       return res.status(400).json({ error: 'Invalid progress ID format.' });
     }
 
@@ -153,13 +154,9 @@ async function loadProgress(req, res) {
     }
 
     const url = `${supabaseUrl}/rest/v1/diagnostic_progress?id=eq.${id}&select=*`;
-    const sbResp = await fetch(url, {
+    const sbResp = await fetchWithTimeout(url, {
       method: 'GET',
-      headers: {
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
-        'Accept': 'application/json'
-      }
+      headers: getSupabaseHeaders(supabaseKey)
     });
 
     if (!sbResp.ok) {

@@ -7,26 +7,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles/base.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        :root {
-            --primary: #1a2f4a; --primary-light: #2a4a6b;
-            --accent: #3d8ea6; --accent-light: #5bb8d4;
-            --text: #1e293b; --text-mid: #475569; --text-light: #64748b;
-            --bg: #fafbfc; --bg-alt: #f1f5f9; --white: #ffffff; --border: #e2e8f0;
-            --green: #16a34a; --green-bg: #f0fdf4;
-            --red: #dc2626; --red-bg: #fef2f2;
-            --blue: #1e40af; --blue-bg: #f0f9ff;
-            --purple: #7c3aed; --purple-bg: #faf5ff;
-            --amber: #d97706; --amber-bg: #fffbeb;
-            --shadow-md: 0 4px 20px rgba(0,0,0,0.06);
-            --shadow-lg: 0 12px 40px rgba(0,0,0,0.08);
-            --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
-        }
-        body { font-family: 'Work Sans', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
-        .header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 40px 0; text-align: center; }
-        .header h1 { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 600; margin-bottom: 6px; }
-        .header p { opacity: 0.75; font-size: 0.95rem; }
+        body { display: flex; flex-direction: column; }
+        :root { --green-bg: #f0fdf4; --red-bg: #fef2f2; --blue-bg: #f0f9ff; --purple-bg: #faf5ff; --amber-bg: #fffbeb; --blue: #1e40af; }
         .container { max-width: 900px; margin: -30px auto 60px; padding: 0 20px; flex: 1; }
         .card { background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); overflow: hidden; }
         .card-body { padding: 40px; }
@@ -34,8 +18,6 @@
         .state { text-align: center; padding: 60px 20px; }
         .state h2 { font-size: 1.3rem; margin-bottom: 8px; }
         .state p { color: var(--text-mid); font-size: 0.95rem; }
-        .loading-spinner { width: 48px; height: 48px; border: 4px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 20px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
 
         /* Lookup */
         .lookup-form { display: flex; gap: 12px; max-width: 420px; margin: 0 auto; }
@@ -158,9 +140,6 @@
         .cta-button { display: inline-block; padding: 12px 32px; background: linear-gradient(135deg, var(--accent), var(--primary)); color: white; text-decoration: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 0.95rem; }
         .cta-button.secondary { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); margin-left: 12px; }
 
-        .footer { text-align: center; padding: 24px; font-size: 0.82rem; color: var(--text-light); }
-        .footer a { color: var(--accent); text-decoration: none; }
-
         @media (max-width: 600px) {
             .card-body { padding: 20px; }
             .metrics-grid { grid-template-columns: repeat(2, 1fr); }
@@ -179,6 +158,10 @@
 </head>
 <body>
     <div class="header">
+        <div class="header-nav">
+            <a href="/">Workflow<span>.</span></a>
+            <a href="/" class="header-back">&larr; Home</a>
+        </div>
         <h1>Team Diagnostic Comparison</h1>
         <p>See how your team's perspectives align — and where they diverge</p>
     </div>
@@ -237,6 +220,8 @@
     <div class="footer"><a href="/">Workflow Partners</a> &middot; Technology-agnostic workflow optimisation</div>
 
     <script>
+        function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
         const issueLabels = {
             'approval-delay': 'Approval delays',
             'slow-response': 'Slow stakeholder response',
@@ -568,21 +553,21 @@
 
             // Executive Summary
             if (analysis.executiveSummary) {
-                html += `<div class="ai-summary">${analysis.executiveSummary}</div>`;
+                html += `<div class="ai-summary">${esc(analysis.executiveSummary)}</div>`;
             }
 
             // Root Causes
             if (analysis.rootCauses && analysis.rootCauses.length > 0) {
                 html += `<h4 style="font-size: 0.95rem; font-weight: 600; color: var(--primary); margin-bottom: 12px;">Root Causes Identified</h4>`;
                 analysis.rootCauses.forEach(rc => {
-                    html += `<div class="root-cause ${rc.severity}">
+                    html += `<div class="root-cause ${esc(rc.severity)}">
                         <div class="root-cause-header">
-                            <span class="root-cause-title">${rc.title}</span>
-                            <span class="root-cause-sev ${rc.severity}">${rc.severity}</span>
+                            <span class="root-cause-title">${esc(rc.title)}</span>
+                            <span class="root-cause-sev ${esc(rc.severity)}">${esc(rc.severity)}</span>
                         </div>
-                        <p>${rc.explanation}</p>
-                        ${rc.evidence ? `<p class="evidence">Evidence: ${rc.evidence}</p>` : ''}
-                        ${rc.affectedDepartments ? `<p style="font-size:0.78rem;color:var(--text-light);margin-top:4px;">Departments: ${rc.affectedDepartments.join(', ')}</p>` : ''}
+                        <p>${esc(rc.explanation)}</p>
+                        ${rc.evidence ? `<p class="evidence">Evidence: ${esc(rc.evidence)}</p>` : ''}
+                        ${rc.affectedDepartments ? `<p style="font-size:0.78rem;color:var(--text-light);margin-top:4px;">Departments: ${rc.affectedDepartments.map(d => esc(d)).join(', ')}</p>` : ''}
                     </div>`;
                 });
             }
@@ -591,7 +576,7 @@
             if (analysis.hiddenInefficiencies && analysis.hiddenInefficiencies.length > 0) {
                 html += `<h4 style="font-size: 0.95rem; font-weight: 600; color: var(--amber); margin: 20px 0 12px;">Hidden Inefficiencies</h4>`;
                 analysis.hiddenInefficiencies.forEach(hi => {
-                    html += `<div class="insight-card"><strong>${hi.title}</strong><p>${hi.insight}</p></div>`;
+                    html += `<div class="insight-card"><strong>${esc(hi.title)}</strong><p>${esc(hi.insight)}</p></div>`;
                 });
             }
 
@@ -602,13 +587,13 @@
                 analysis.recommendations.forEach(rec => {
                     const tfClass = rec.timeframe === 'quick-win' ? 'quick-win' : rec.timeframe === '30-day' ? 'thirty' : 'ninety';
                     html += `<li class="rec-item">
-                        <div class="rec-num">${rec.priority}</div>
+                        <div class="rec-num">${esc(rec.priority)}</div>
                         <div class="rec-body">
-                            <strong>${rec.action}</strong>
-                            <p>${rec.impact || ''}</p>
+                            <strong>${esc(rec.action)}</strong>
+                            <p>${esc(rec.impact || '')}</p>
                             <div class="rec-tags">
-                                <span class="rec-tag ${tfClass}">${rec.timeframe}</span>
-                                ${rec.owner ? `<span class="rec-tag">${rec.owner}</span>` : ''}
+                                <span class="rec-tag ${esc(tfClass)}">${esc(rec.timeframe)}</span>
+                                ${rec.owner ? `<span class="rec-tag">${esc(rec.owner)}</span>` : ''}
                             </div>
                         </div>
                     </li>`;
@@ -621,7 +606,7 @@
                 html += `<h4 style="font-size: 0.95rem; font-weight: 600; color: var(--accent); margin: 20px 0 12px;">Alignment Actions</h4>
                 <ul class="alignment-list">`;
                 analysis.alignmentActions.forEach(a => {
-                    html += `<li>${a}</li>`;
+                    html += `<li>${esc(a)}</li>`;
                 });
                 html += `</ul>`;
             }
@@ -654,8 +639,8 @@
 
             // Header (always visible, not collapsible)
             html += `<div style="margin-bottom: 24px;">
-                <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 700; color: var(--primary);">${team.processName}</h2>
-                <p style="color: var(--text-light); font-size: 0.9rem;">${team.company ? team.company + ' &middot; ' : ''}${data.responseCount} team members responded &middot; Created ${formatDate(team.createdAt)}</p>
+                <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 700; color: var(--primary);">${esc(team.processName)}</h2>
+                <p style="color: var(--text-light); font-size: 0.9rem;">${team.company ? esc(team.company) + ' &middot; ' : ''}${data.responseCount} team members responded &middot; Created ${formatDate(team.createdAt)}</p>
             </div>`;
 
             // 1. Consensus score (always open)
@@ -672,8 +657,8 @@
             responses.forEach(r => {
                 const initials = r.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
                 respHtml += `<div class="respondent-chip">
-                    <div class="respondent-avatar">${initials}</div>
-                    <div class="respondent-info"><strong>${r.name}</strong><span>${r.department || 'No department'}</span></div>
+                    <div class="respondent-avatar">${esc(initials)}</div>
+                    <div class="respondent-info"><strong>${esc(r.name)}</strong><span>${esc(r.department || 'No department')}</span></div>
                 </div>`;
             });
             respHtml += '</div>';
@@ -706,8 +691,8 @@
                             <span class="gap-metric">${g.metric}</span>
                             <span class="gap-severity ${g.severity}">${g.severity} gap</span>
                         </div>
-                        <div class="gap-detail">${g.detail}</div>
-                        <ul class="gap-people">${g.byPerson.map(p => `<li>${p}</li>`).join('')}</ul>
+                        <div class="gap-detail">${esc(g.detail)}</div>
+                        <ul class="gap-people">${g.byPerson.map(p => `<li>${esc(p)}</li>`).join('')}</ul>
                     </div>`;
                 });
                 html += sec('Perception Gaps &#9888;', gapHtml);
@@ -737,7 +722,7 @@
 
             // 7. Side-by-side comparison table
             let tableHtml = '<div style="overflow-x: auto;"><table class="comp-table"><thead><tr><th>Metric</th>';
-            responses.forEach(r => { tableHtml += `<th>${r.name}<br><span style="font-weight:400;text-transform:none;letter-spacing:0;">${r.department || ''}</span></th>`; });
+            responses.forEach(r => { tableHtml += `<th>${esc(r.name)}<br><span style="font-weight:400;text-transform:none;letter-spacing:0;">${esc(r.department || '')}</span></th>`; });
             tableHtml += '</tr></thead><tbody>';
             const rows = [
                 { label: 'Cycle Time', key: 'elapsedDays', suffix: ' days' },
@@ -753,7 +738,7 @@
                 responses.forEach(r => {
                     const val = r.metrics[row.key];
                     const display = val ? val + row.suffix : '—';
-                    tableHtml += `<td>${display}</td>`;
+                    tableHtml += `<td>${esc(display)}</td>`;
                 });
                 tableHtml += '</tr>';
             });
@@ -798,10 +783,9 @@
         document.addEventListener('DOMContentLoaded', function() {
             const params = new URLSearchParams(location.search);
 
-            // Show dev toolbar on localhost or with ?sample param
             const isLocal = ['localhost', '127.0.0.1', '0.0.0.0'].includes(location.hostname) || location.port;
             const devToolbar = document.getElementById('devToolbar');
-            if (devToolbar && (isLocal || params.has('sample'))) {
+            if (devToolbar && isLocal) {
                 devToolbar.style.display = 'block';
             }
 
@@ -810,7 +794,7 @@
                 document.getElementById('codeInput').value = code;
                 loadResults();
             }
-            if (params.has('sample')) {
+            if (isLocal && params.has('sample')) {
                 loadSampleTeamData();
             }
         });

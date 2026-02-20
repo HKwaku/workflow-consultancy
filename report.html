@@ -7,51 +7,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles/base.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        :root {
-            --primary: #1a2f4a;
-            --primary-light: #2a4a6b;
-            --accent: #3d8ea6;
-            --accent-light: #5bb8d4;
-            --text: #1e293b;
-            --text-mid: #475569;
-            --text-light: #64748b;
-            --bg: #fafbfc;
-            --bg-alt: #f1f5f9;
-            --white: #ffffff;
-            --border: #e2e8f0;
-            --shadow-md: 0 4px 20px rgba(0,0,0,0.06);
-            --shadow-lg: 0 12px 40px rgba(0,0,0,0.08);
-        }
-
-        body {
-            font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* ── Header ─────────────────────────────────── */
-        .header {
-            background: linear-gradient(135deg, var(--primary), var(--primary-light));
-            color: white;
-            padding: 40px 0;
-            text-align: center;
-        }
-        .header h1 {
-            font-family: 'Cormorant Garamond', serif;
-            font-size: 2rem;
-            font-weight: 600;
-            margin-bottom: 6px;
-        }
-        .header p {
-            opacity: 0.75;
-            font-size: 0.95rem;
-        }
+        body { display: flex; flex-direction: column; }
+        .header-nav { max-width: 720px; }
 
         /* ── Container ──────────────────────────────── */
         .container {
@@ -74,17 +33,6 @@
 
         /* ── States ──────────────────────────────────── */
         .state { text-align: center; padding: 60px 20px; }
-
-        /* Loading */
-        .loading-spinner {
-            width: 48px; height: 48px;
-            border: 4px solid var(--border);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 0 auto 20px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
 
         .state h2 { font-size: 1.3rem; margin-bottom: 8px; color: var(--text); }
         .state p  { color: var(--text-mid); font-size: 0.95rem; }
@@ -235,14 +183,7 @@
             flex-wrap: wrap;
         }
 
-        /* ── Footer ──────────────────────────────────── */
-        .footer {
-            text-align: center;
-            padding: 30px 20px;
-            font-size: 0.82rem;
-            color: var(--text-light);
-        }
-        .footer a { color: var(--accent); text-decoration: none; }
+        .footer { padding: 30px 20px; }
 
         /* ── Responsive ──────────────────────────────── */
         @media (max-width: 600px) {
@@ -264,8 +205,12 @@
 <body>
 
     <div class="header">
-        <h1>Workflow Partners</h1>
-        <p>Process Diagnostic Report</p>
+        <div class="header-nav">
+            <a href="/">Workflow<span>.</span></a>
+            <a href="/" class="header-back">&larr; Home</a>
+        </div>
+        <h1>Process Diagnostic Report</h1>
+        <p>Workflow Partners</p>
     </div>
 
     <div class="container">
@@ -340,12 +285,12 @@
                         </div>
                     </div>
 
-                    <!-- Dashboard link -->
+                    <!-- Portal link -->
                     <div id="dashboardLink" class="download-section" style="display: none; margin-top: 16px; background: linear-gradient(135deg, #faf5ff, #eff6ff);">
                         <h3>Track Your Progress Over Time</h3>
-                        <p>Run another diagnostic in the future and compare results side-by-side on your dashboard.</p>
-                        <a id="dashboardBtn" href="/dashboard" class="btn btn-accent" style="text-decoration: none;">
-                            View Your Dashboard
+                        <p>Run another diagnostic in the future and compare results side-by-side in your portal.</p>
+                        <a id="dashboardBtn" href="/portal" class="btn btn-accent" style="text-decoration: none;">
+                            View in Portal
                         </a>
                     </div>
                 </div>
@@ -437,12 +382,12 @@
                 btn.style.cursor = 'not-allowed';
             }
 
-            // Dashboard link — set email in href
+            // Portal link
             const dashEmail = report.contactEmail || c.email || '';
             if (dashEmail) {
                 const dashLink = document.getElementById('dashboardLink');
                 const dashBtn = document.getElementById('dashboardBtn');
-                dashBtn.href = '/dashboard?email=' + encodeURIComponent(dashEmail);
+                dashBtn.href = '/portal';
                 dashLink.style.display = '';
             }
 

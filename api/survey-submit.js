@@ -1,12 +1,10 @@
 // api/survey-submit.js - Vercel Serverless Function
 // Processes comprehensive workflow survey submissions
 
+const { setCorsHeaders, fetchWithTimeout } = require('../lib/api-helpers');
+
 module.exports = async function handler(req, res) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  setCorsHeaders(res, 'POST,OPTIONS');
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -54,10 +52,7 @@ module.exports = async function handler(req, res) {
 
   } catch (error) {
     console.error('Survey submission error:', error);
-    return res.status(500).json({
-      error: 'Failed to process survey',
-      message: error.message
-    });
+    return res.status(500).json({ error: 'Failed to process survey.' });
   }
 }
 
@@ -183,7 +178,7 @@ Workflow: ${wf.workflowName || wf.name}
 - Biggest pain: ${wf.suggestions ? wf.suggestions.biggestPain : 'Not specified'}`;
     }).join('\n');
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'x-api-key': process.env.ANTHROPIC_API_KEY,

@@ -1,13 +1,10 @@
-// api/analyze-symptoms.js - UPDATED VERSION
+// api/analyze-symptoms.js
 // Vercel Serverless Function for AI-Powered Diagnostic Analysis with Workflow Context
 
+const { setCorsHeaders, fetchWithTimeout } = require('../lib/api-helpers');
 
 module.exports = async function handler(req, res) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  setCorsHeaders(res, 'POST,OPTIONS');
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -19,10 +16,19 @@ module.exports = async function handler(req, res) {
   }
 
   try {
+    // ── MODE: extract-steps (image or text → structured steps) ──
+    if (req.body.mode === 'extract-steps') {
+      return handleExtractSteps(req, res);
+    }
+
     const { evidence, workflows, channels, toolConsent, contact } = req.body;
+
+    if (!contact || !evidence) {
+      return res.status(400).json({ error: 'Evidence and contact data are required.' });
+    }
     
-    // Calculate evidence-based metrics
-    const metrics = calculateMetrics(evidence, contact.teamSize);
+    const teamSize = contact.teamSize || 1;
+    const metrics = calculateMetrics(evidence, teamSize);
     
     // Detect operating model
     const operatingModel = detectOperatingModel(evidence);
@@ -33,7 +39,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Call Claude API for deep analysis
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'x-api-key': process.env.ANTHROPIC_API_KEY,
@@ -109,13 +115,8 @@ Use THEIR actual numbers. Show the MATH. Be specific and concise.`
 
     if (!response.ok) {
       const errorText = await response.text();
-      let errorJson;
-      try { errorJson = JSON.parse(errorText); } catch(e) { errorJson = { raw: errorText }; }
-      console.error('Claude API Error:', response.status, errorJson);
-      return res.status(500).json({ 
-        error: `Claude API returned ${response.status}`, 
-        details: errorJson 
-      });
+      console.error('Claude API Error:', response.status, errorText);
+      return res.status(502).json({ error: 'AI analysis service returned an error. Please try again.' });
     }
 
     const data = await response.json();
@@ -127,10 +128,8 @@ Use THEIR actual numbers. Show the MATH. Be specific and concise.`
       analysis = JSON.parse(rawText);
     } catch (parseErr) {
       console.error('JSON parse error:', parseErr.message, 'Raw:', rawText.substring(0, 200));
-      return res.status(500).json({
-        error: 'Failed to parse AI response as JSON',
-        rawPreview: rawText.substring(0, 500)
-      });
+      console.error('Failed to parse AI response as JSON, raw preview:', rawText.substring(0, 500));
+      return res.status(502).json({ error: 'AI returned an unparseable response. Please try again.' });
     }
 
     // Return the comprehensive AI analysis
@@ -144,11 +143,7 @@ Use THEIR actual numbers. Show the MATH. Be specific and concise.`
 
   } catch (error) {
     console.error('Analysis error:', error);
-    return res.status(500).json({ 
-      error: 'Failed to analyze symptoms',
-      message: error.message,
-      stack: error.stack ? error.stack.split('\n').slice(0, 3).join('\n') : undefined
-    });
+    return res.status(500).json({ error: 'Failed to analyze symptoms. Please try again.' });
   }
 }
 
@@ -317,7 +312,122 @@ function detectOperatingModel(evidence) {
   return {
     pattern: primary,
     confidence: confidence,
-    evidence: evidencePoints.filter((v, i, a) => a.indexOf(v) === i).slice(0, 5), // Unique, top 5
+    evidence: evidencePoints.filter((v, i, a) => a.indexOf(v) === i).slice(0, 5),
     allScores: scores
   };
+}
+
+// ── Extract structured steps from an image or text description ──
+async function handleExtractSteps(req, res) {
+  const { imageBase64, imageMediaType, text } = req.body;
+
+  if (!imageBase64 && !text) {
+    return res.status(400).json({ error: 'Provide either imageBase64 or text.' });
+  }
+
+  if (imageBase64 && imageBase64.length > 7 * 1024 * 1024) {
+    return res.status(413).json({ error: 'Image too large. Maximum size is 5MB.' });
+  }
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured.' });
+  }
+
+  const systemPrompt = `You are an expert process analyst. Extract a structured list of process steps from the input provided (either an image of a process map/flowchart, or a text description of steps).
+
+Return ONLY valid JSON with this exact structure:
+{
+  "processName": "Name of the process (infer from context)",
+  "steps": [
+    {
+      "number": 1,
+      "name": "Step name — concise but descriptive",
+      "department": "Department or team responsible (e.g. Finance, IT, Operations, Legal, HR, Sales, Compliance, External Vendor). Use 'Operations' if unclear.",
+      "isExternal": false,
+      "isDecision": false,
+      "branches": []
+    }
+  ]
+}
+
+Rules:
+- Extract EVERY step visible in the process map or described in the text.
+- For decision/gateway nodes, set isDecision: true and populate branches as: [{"label": "Yes/Approved/etc.", "target": "Step N"}, {"label": "No/Rejected/etc.", "target": "Step M"}] where N and M are the step numbers the branches lead to.
+- Set isExternal: true for steps performed by external parties (vendors, clients, regulators, auditors, banks, external counsel).
+- Infer departments from context — use standard department names.
+- Keep step names concise (under 60 chars) but meaningful.
+- Maintain the correct sequential order.
+- If the input is a numbered list, preserve the order as-is.
+- Do NOT add steps that aren't in the source material.
+- Maximum 50 steps.`;
+
+  const messages = [{ role: 'user', content: [] }];
+
+  if (imageBase64) {
+    messages[0].content.push({
+      type: 'image',
+      source: { type: 'base64', media_type: imageMediaType || 'image/png', data: imageBase64 }
+    });
+    messages[0].content.push({
+      type: 'text',
+      text: 'Extract all process steps from this process map / flowchart image. Return structured JSON.'
+    });
+  } else {
+    messages[0].content.push({
+      type: 'text',
+      text: 'Extract structured process steps from this description:\n\n' + text
+    });
+  }
+
+  try {
+    const resp = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4096,
+        temperature: 0,
+        system: systemPrompt,
+        messages
+      })
+    }, 45000);
+
+    if (!resp.ok) {
+      const errText = await resp.text();
+      console.error('Claude API error:', resp.status, errText);
+      return res.status(502).json({ error: 'AI extraction failed (' + resp.status + ')' });
+    }
+
+    const data = await resp.json();
+    let rawText = (data.content && data.content[0] && data.content[0].text) || '';
+    rawText = rawText.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(rawText);
+    } catch (e) {
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try { parsed = JSON.parse(jsonMatch[0]); } catch (e2) {}
+      }
+      if (!parsed) {
+        console.error('Failed to parse AI extract-steps response, preview:', rawText.substring(0, 300));
+        return res.status(502).json({ error: 'Failed to parse AI response. Please try again.' });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      processName: parsed.processName || '',
+      steps: (parsed.steps || []).slice(0, 50)
+    });
+
+  } catch (err) {
+    console.error('Extract steps error:', err);
+    return res.status(500).json({ error: 'Step extraction failed: ' + err.message });
+  }
 }

@@ -4,12 +4,10 @@
 // Combines former create-team-diagnostic.js, submit-team-response.js, get-team-results.js
 
 const crypto = require('crypto');
+const { setCorsHeaders, getSupabaseHeaders, getSupabaseWriteHeaders, fetchWithTimeout } = require('../lib/api-helpers');
 
 module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  setCorsHeaders(res, 'GET,OPTIONS,POST');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
@@ -61,14 +59,9 @@ async function createTeam(req, res) {
       created_at: new Date().toISOString()
     };
 
-    const sbResp = await fetch(`${supabaseUrl}/rest/v1/team_diagnostics`, {
+    const sbResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/team_diagnostics`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
-        'Prefer': 'return=minimal'
-      },
+      headers: getSupabaseWriteHeaders(supabaseKey),
       body: JSON.stringify(payload)
     });
 
@@ -111,9 +104,9 @@ async function submitResponse(req, res) {
     if (!supabaseUrl || !supabaseKey) return res.status(503).json({ error: 'Storage not configured.' });
 
     const lookupUrl = `${supabaseUrl}/rest/v1/team_diagnostics?team_code=eq.${encodeURIComponent(teamCode)}&select=id,process_name,status`;
-    const lookupResp = await fetch(lookupUrl, {
+    const lookupResp = await fetchWithTimeout(lookupUrl, {
       method: 'GET',
-      headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Accept': 'application/json' }
+      headers: getSupabaseHeaders(supabaseKey)
     });
 
     const teams = await lookupResp.json();
@@ -139,14 +132,9 @@ async function submitResponse(req, res) {
       created_at: new Date().toISOString()
     };
 
-    const sbResp = await fetch(`${supabaseUrl}/rest/v1/team_responses`, {
+    const sbResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/team_responses`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
-        'Prefer': 'return=minimal'
-      },
+      headers: getSupabaseWriteHeaders(supabaseKey),
       body: JSON.stringify(payload)
     });
 
@@ -190,11 +178,10 @@ async function getResults(req, res) {
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
     if (!supabaseUrl || !supabaseKey) return res.status(503).json({ error: 'Storage not configured.' });
 
+    const sbHeaders = getSupabaseHeaders(supabaseKey);
+
     const teamUrl = `${supabaseUrl}/rest/v1/team_diagnostics?team_code=eq.${encodeURIComponent(code)}&select=*`;
-    const teamResp = await fetch(teamUrl, {
-      method: 'GET',
-      headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Accept': 'application/json' }
-    });
+    const teamResp = await fetchWithTimeout(teamUrl, { method: 'GET', headers: sbHeaders });
     const teams = await teamResp.json();
 
     if (!teams || teams.length === 0) {
@@ -203,10 +190,7 @@ async function getResults(req, res) {
     const team = teams[0];
 
     const respUrl = `${supabaseUrl}/rest/v1/team_responses?team_code=eq.${encodeURIComponent(code)}&select=*&order=created_at.asc`;
-    const respResp = await fetch(respUrl, {
-      method: 'GET',
-      headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Accept': 'application/json' }
-    });
+    const respResp = await fetchWithTimeout(respUrl, { method: 'GET', headers: sbHeaders });
     const responses = await respResp.json();
 
     if (!responses || responses.length === 0) {
@@ -476,7 +460,7 @@ Analyse these team results and provide your response as JSON with this exact str
 
 Return ONLY valid JSON, no markdown fences or extra text.`;
 
-    const claudeResp = await fetch('https://api.anthropic.com/v1/messages', {
+    const claudeResp = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'x-api-key': apiKey,
