@@ -16,6 +16,7 @@ module.exports = async function handler(req, res) {
 
   try {
     const {
+      editingReportId,
       contact,
       summary,
       recommendations,
@@ -32,8 +33,9 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Contact email is required' });
     }
 
-    // ── Generate Report ID ─────────────────────────────────────
-    const reportId = crypto.randomUUID();
+    // ── Use existing ID for edits, or generate new one ──────────
+    const reportId = editingReportId || crypto.randomUUID();
+    const isUpdate = !!editingReportId;
 
     // ── Build Report URL ───────────────────────────────────────
     // Use the request host to build the full URL (works in dev + production)
@@ -52,7 +54,7 @@ module.exports = async function handler(req, res) {
 
     if (supabaseUrl && supabaseKey) {
       try {
-        const insertPayload = {
+        const reportPayload = {
           id: reportId,
           contact_email: contact.email || '',
           contact_name: contact.name || '',
@@ -74,18 +76,29 @@ module.exports = async function handler(req, res) {
           created_at: timestamp || new Date().toISOString()
         };
 
-        const sbResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports`, {
-          method: 'POST',
-          headers: getSupabaseWriteHeaders(supabaseKey),
-          body: JSON.stringify(insertPayload)
-        });
+        let sbResp;
+        if (isUpdate) {
+          const updatePayload = { ...reportPayload };
+          delete updatePayload.id;
+          updatePayload.updated_at = new Date().toISOString();
+          sbResp = await fetchWithTimeout(
+            `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}`,
+            { method: 'PATCH', headers: getSupabaseWriteHeaders(supabaseKey), body: JSON.stringify(updatePayload) }
+          );
+        } else {
+          sbResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports`, {
+            method: 'POST',
+            headers: getSupabaseWriteHeaders(supabaseKey),
+            body: JSON.stringify(reportPayload)
+          });
+        }
 
-        if (sbResp.ok || sbResp.status === 201) {
+        if (sbResp.ok || sbResp.status === 201 || sbResp.status === 204) {
           storedInSupabase = true;
-          console.log('Diagnostic report stored in Supabase:', reportId);
+          console.log('Diagnostic report ' + (isUpdate ? 'updated' : 'stored') + ' in Supabase:', reportId);
         } else {
           const errText = await sbResp.text();
-          console.warn('Supabase insert failed:', sbResp.status, errText);
+          console.warn('Supabase ' + (isUpdate ? 'update' : 'insert') + ' failed:', sbResp.status, errText);
         }
       } catch (sbErr) {
         console.warn('Supabase error:', sbErr.message);

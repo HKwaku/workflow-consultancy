@@ -1049,7 +1049,7 @@
             justify-content: center;
             width: 18px;
             cursor: grab;
-            opacity: 0;
+            opacity: 0.25;
             transition: opacity 0.2s;
             flex-shrink: 0;
             margin-top: 0.5rem;
@@ -2397,42 +2397,64 @@
                 <p id="exampleSummary" class="helper-text" style="margin-bottom: 2rem;"></p>
 
                 <div class="form-group">
-                    <label>Roughly, how many hours did YOU personally spend on this from start to finish?</label>
-                    <p class="helper-text" style="margin-bottom:0.5rem;">Include meetings, emails, execution, and chasing — everything.</p>
+                    <label>How many meetings or calls were involved from start to finish?</label>
+                    <p class="helper-text" style="margin-bottom:0.5rem;">Kickoffs, status updates, alignment calls, reviews, approvals.</p>
                     <div class="radio-group">
-                        <label class="radio-option"><input type="radio" name="totalTimeRange" value="0-2" onchange="recalcTimeFromRanges()"> Under 2 hours</label>
-                        <label class="radio-option"><input type="radio" name="totalTimeRange" value="2-5" onchange="recalcTimeFromRanges()"> 2–5 hours</label>
-                        <label class="radio-option"><input type="radio" name="totalTimeRange" value="5-10" onchange="recalcTimeFromRanges()"> 5–10 hours</label>
-                        <label class="radio-option"><input type="radio" name="totalTimeRange" value="10-20" onchange="recalcTimeFromRanges()"> 10–20 hours (1–2.5 full days)</label>
-                        <label class="radio-option"><input type="radio" name="totalTimeRange" value="20-40" onchange="recalcTimeFromRanges()"> 20–40 hours (half a week to a week)</label>
-                        <label class="radio-option"><input type="radio" name="totalTimeRange" value="40+" onchange="recalcTimeFromRanges()"> 40+ hours (more than a working week)</label>
+                        <label class="radio-option"><input type="radio" name="meetingCount" value="0" onchange="recalcTimeFromRanges()"> None</label>
+                        <label class="radio-option"><input type="radio" name="meetingCount" value="1-2" onchange="recalcTimeFromRanges()"> 1–2 meetings</label>
+                        <label class="radio-option"><input type="radio" name="meetingCount" value="3-5" onchange="recalcTimeFromRanges()"> 3–5 meetings</label>
+                        <label class="radio-option"><input type="radio" name="meetingCount" value="6-10" onchange="recalcTimeFromRanges()"> 6–10 meetings</label>
+                        <label class="radio-option"><input type="radio" name="meetingCount" value="10+" onchange="recalcTimeFromRanges()"> 10+ meetings</label>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label>Of that time, how much was spent WAITING for other people?</label>
+                    <label>How many emails or messages did you send/receive for this process?</label>
+                    <p class="helper-text" style="margin-bottom:0.5rem;">Coordination, questions, follow-ups, status chasing — across email, Slack, Teams, etc.</p>
+                    <div class="radio-group">
+                        <label class="radio-option"><input type="radio" name="emailCount" value="0" onchange="recalcTimeFromRanges()"> None</label>
+                        <label class="radio-option"><input type="radio" name="emailCount" value="1-5" onchange="recalcTimeFromRanges()"> 1–5 messages</label>
+                        <label class="radio-option"><input type="radio" name="emailCount" value="6-15" onchange="recalcTimeFromRanges()"> 6–15 messages</label>
+                        <label class="radio-option"><input type="radio" name="emailCount" value="16-30" onchange="recalcTimeFromRanges()"> 16–30 messages</label>
+                        <label class="radio-option"><input type="radio" name="emailCount" value="30+" onchange="recalcTimeFromRanges()"> 30+ messages</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>How much hands-on execution work was involved?</label>
+                    <p class="helper-text" style="margin-bottom:0.5rem;">Configuring systems, creating documents, data entry, building deliverables.</p>
+                    <div class="radio-group">
+                        <label class="radio-option"><input type="radio" name="executionLevel" value="minimal" onchange="recalcTimeFromRanges()"> Minimal — mostly coordination, little hands-on work</label>
+                        <label class="radio-option"><input type="radio" name="executionLevel" value="moderate" onchange="recalcTimeFromRanges()"> Moderate — a few hours of focused work</label>
+                        <label class="radio-option"><input type="radio" name="executionLevel" value="substantial" onchange="recalcTimeFromRanges()"> Substantial — a day or more of focused work</label>
+                        <label class="radio-option"><input type="radio" name="executionLevel" value="heavy" onchange="recalcTimeFromRanges()"> Heavy — multiple days of focused work</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>How much time was lost waiting for other people?</label>
                     <p class="helper-text" style="margin-bottom:0.5rem;">Waiting for approvals, responses, handoffs, external parties.</p>
                     <div class="radio-group">
                         <label class="radio-option"><input type="radio" name="waitingPortion" value="almost-none" onchange="recalcTimeFromRanges()"> Almost none — I drove it end to end</label>
-                        <label class="radio-option"><input type="radio" name="waitingPortion" value="quarter" onchange="recalcTimeFromRanges()"> About a quarter — some handoff delays</label>
-                        <label class="radio-option"><input type="radio" name="waitingPortion" value="half" onchange="recalcTimeFromRanges()"> About half — significant back-and-forth</label>
-                        <label class="radio-option"><input type="radio" name="waitingPortion" value="most" onchange="recalcTimeFromRanges()"> Most of it — I spent more time chasing than doing</label>
-                        <label class="radio-option"><input type="radio" name="waitingPortion" value="almost-all" onchange="recalcTimeFromRanges()"> Almost all — I was blocked for days at a time</label>
+                        <label class="radio-option"><input type="radio" name="waitingPortion" value="quarter" onchange="recalcTimeFromRanges()"> Some delays — a few hours lost waiting</label>
+                        <label class="radio-option"><input type="radio" name="waitingPortion" value="half" onchange="recalcTimeFromRanges()"> Significant — days spent waiting in total</label>
+                        <label class="radio-option"><input type="radio" name="waitingPortion" value="most" onchange="recalcTimeFromRanges()"> Most of it — more time chasing than doing</label>
+                        <label class="radio-option"><input type="radio" name="waitingPortion" value="almost-all" onchange="recalcTimeFromRanges()"> Blocked — stuck for days at a time</label>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label>When you WERE actively working, what consumed the most time?</label>
+                    <label>Was any rework or corrections required?</label>
                     <div class="radio-group">
-                        <label class="radio-option"><input type="radio" name="primaryActivity" value="meetings" onchange="recalcTimeFromRanges()"> Meetings &amp; calls (kickoffs, status updates, alignment)</label>
-                        <label class="radio-option"><input type="radio" name="primaryActivity" value="emails" onchange="recalcTimeFromRanges()"> Emails &amp; chasing (coordination, questions, following up)</label>
-                        <label class="radio-option"><input type="radio" name="primaryActivity" value="execution" onchange="recalcTimeFromRanges()"> Actual execution (configuring, creating, data entry)</label>
-                        <label class="radio-option"><input type="radio" name="primaryActivity" value="rework" onchange="recalcTimeFromRanges()"> Rework &amp; corrections (fixing mistakes, re-doing work)</label>
+                        <label class="radio-option"><input type="radio" name="reworkLevel" value="none" onchange="recalcTimeFromRanges()"> No rework needed</label>
+                        <label class="radio-option"><input type="radio" name="reworkLevel" value="minor" onchange="recalcTimeFromRanges()"> Minor — a few small corrections</label>
+                        <label class="radio-option"><input type="radio" name="reworkLevel" value="moderate" onchange="recalcTimeFromRanges()"> Moderate — had to redo a portion of the work</label>
+                        <label class="radio-option"><input type="radio" name="reworkLevel" value="major" onchange="recalcTimeFromRanges()"> Major — significant rework required</label>
                     </div>
                 </div>
 
                 <div class="calculated" id="timeEstimateBox" style="display:none;">
-                    <div class="calculated-label">Estimated breakdown:</div>
+                    <div class="calculated-label">Estimated time breakdown:</div>
                     <div class="calculated-value" id="timeTotal" style="font-size:1.1rem;">&mdash;</div>
                 </div>
 
@@ -3240,6 +3262,7 @@
                 currentScreen = screenNum;
                 updateProgress();
                 updateHealthScore();
+                saveProgress();
                 window.scrollTo({ top: 0, behavior: 'smooth' });
 
                 // Populate dynamic content when entering screens
@@ -3368,45 +3391,64 @@
             if (ex.name && ex.startDate && ex.endDate) {
                 summary.textContent = `${ex.name} — ${formatDate(ex.startDate)} to ${formatDate(ex.endDate)}, ${ex.elapsedDays} days`;
             }
+            // Restore saved radio selections for time investment fields
+            const trs = processData.timeRangeSelections || {};
+            ['meetingCount', 'emailCount', 'executionLevel', 'waitingPortion', 'reworkLevel'].forEach(function(name) {
+                if (trs[name]) {
+                    const r = document.querySelector('input[name="' + name + '"][value="' + trs[name] + '"]');
+                    if (r) { r.checked = true; r.closest('.radio-option')?.classList.add('selected'); }
+                }
+            });
+            recalcTimeFromRanges();
         }
 
-        const _timeRangeMidpoints = { '0-2': 1, '2-5': 3.5, '5-10': 7.5, '10-20': 15, '20-40': 30, '40+': 55 };
-        const _waitingFractions = { 'almost-none': 0.05, 'quarter': 0.25, 'half': 0.5, 'most': 0.75, 'almost-all': 0.9 };
-        const _activitySplits = {
-            'meetings':  { meetings: 0.50, emails: 0.25, execution: 0.25 },
-            'emails':    { meetings: 0.20, emails: 0.50, execution: 0.30 },
-            'execution': { meetings: 0.15, emails: 0.20, execution: 0.65 },
-            'rework':    { meetings: 0.10, emails: 0.15, execution: 0.75 }
-        };
+        // Compute hours from concrete activity counts
+        const _meetingHours = { '0': 0, '1-2': 1.5, '3-5': 4, '6-10': 8, '10+': 14 };
+        const _emailHours = { '0': 0, '1-5': 0.4, '6-15': 1.2, '16-30': 2.5, '30+': 5 };
+        const _executionHours = { 'minimal': 0.5, 'moderate': 3, 'substantial': 8, 'heavy': 20 };
+        const _waitingHours = { 'almost-none': 0.5, 'quarter': 3, 'half': 8, 'most': 16, 'almost-all': 30 };
+        const _reworkHours = { 'none': 0, 'minor': 0.5, 'moderate': 3, 'major': 8 };
 
         function recalcTimeFromRanges() {
-            const rangeVal = getRadioValue('totalTimeRange');
+            const meetVal = getRadioValue('meetingCount');
+            const emailVal = getRadioValue('emailCount');
+            const execVal = getRadioValue('executionLevel');
             const waitVal = getRadioValue('waitingPortion');
-            const actVal = getRadioValue('primaryActivity');
+            const reworkVal = getRadioValue('reworkLevel');
 
-            if (!rangeVal) { processData.userTime = { meetings: 0, emails: 0, execution: 0, waiting: 0, total: 0 }; return; }
+            const meetings = _meetingHours[meetVal] || 0;
+            const emails = _emailHours[emailVal] || 0;
+            const execution = _executionHours[execVal] || 0;
+            const waiting = _waitingHours[waitVal] || 0;
+            const rework = _reworkHours[reworkVal] || 0;
+            const total = Math.round((meetings + emails + execution + waiting + rework) * 10) / 10;
 
-            const total = _timeRangeMidpoints[rangeVal] || 0;
-            const waitFrac = _waitingFractions[waitVal] || 0.25;
-            const waiting = Math.round(total * waitFrac * 10) / 10;
-            const active = total - waiting;
+            processData.userTime = { meetings, emails, execution, waiting, rework, total };
+            processData.timeRangeSelections = {
+                meetingCount: meetVal || '',
+                emailCount: emailVal || '',
+                executionLevel: execVal || '',
+                waitingPortion: waitVal || '',
+                reworkLevel: reworkVal || ''
+            };
 
-            const split = _activitySplits[actVal] || _activitySplits['execution'];
-            const meetings = Math.round(active * split.meetings * 10) / 10;
-            const emails = Math.round(active * split.emails * 10) / 10;
-            const execution = Math.round((active - meetings - emails) * 10) / 10;
-
-            processData.userTime = { meetings, emails, execution, waiting, total };
-
-            const days = processData.lastExample.elapsedDays || 1;
-            const box = document.getElementById('timeEstimateBox');
-            const display = document.getElementById('timeTotal');
-            if (box && display) {
-                box.style.display = 'block';
-                display.innerHTML =
-                    `~${total}h total over ${days} days` +
-                    `<br><span style="font-size:0.85rem;font-weight:400;color:var(--text-mid);">` +
-                    `Meetings ~${meetings}h · Emails ~${emails}h · Execution ~${execution}h · Waiting ~${waiting}h</span>`;
+            if (meetVal || emailVal || execVal) {
+                const days = processData.lastExample.elapsedDays || 1;
+                const box = document.getElementById('timeEstimateBox');
+                const display = document.getElementById('timeTotal');
+                if (box && display) {
+                    box.style.display = 'block';
+                    const parts = [];
+                    if (meetings > 0) parts.push('Meetings ~' + meetings + 'h');
+                    if (emails > 0) parts.push('Emails ~' + emails + 'h');
+                    if (execution > 0) parts.push('Execution ~' + execution + 'h');
+                    if (rework > 0) parts.push('Rework ~' + rework + 'h');
+                    if (waiting > 0) parts.push('Waiting ~' + waiting + 'h');
+                    display.innerHTML =
+                        '~' + total + 'h total over ' + days + ' days' +
+                        '<br><span style="font-size:0.85rem;font-weight:400;color:var(--text-mid);">' +
+                        parts.join(' · ') + '</span>';
+                }
             }
         }
 
@@ -4468,10 +4510,15 @@
         // ============================================================
         let editingProcessIndex = -1;
 
+        function editGoToProcess(index) {
+            if (completedProcesses.length === 0) { goToScreen(1); return; }
+            const idx = Math.min(index, completedProcesses.length - 1);
+            editProcess(idx);
+        }
+
         function editProcess(index) {
             if (index < 0 || index >= completedProcesses.length) return;
 
-            // Pull the process out and load it into processData
             editingProcessIndex = index;
             processData = JSON.parse(JSON.stringify(completedProcesses[index]));
 
@@ -4481,8 +4528,69 @@
             // Rebuild systems DOM from processData.systems
             rebuildSystemsFromData(processData.systems || []);
 
-            // Navigate to screen 2 (process name) so the user can walk through
-            goToScreen(2);
+            // Restore screen 1 selection
+            if (processData.processType) {
+                document.querySelectorAll('#screen1 .process-card').forEach(c => c.classList.remove('selected'));
+                const cards = document.querySelectorAll('#screen1 .process-card');
+                cards.forEach(c => {
+                    if (c.textContent.trim().includes(processData.processName)) c.classList.add('selected');
+                });
+                document.getElementById('continueBtn1').disabled = false;
+            }
+
+            // Restore screen 2
+            const nameInput = document.getElementById('processNameInput');
+            if (nameInput) nameInput.value = processData.processName || '';
+
+            // Restore screen 3
+            const def = processData.definition || {};
+            if (def.startsWhen) document.getElementById('processStarts').value = def.startsWhen;
+            if (def.completesWhen) document.getElementById('processCompletes').value = def.completesWhen;
+            if (def.complexity) {
+                const r = document.querySelector('input[name="complexity"][value="' + def.complexity + '"]');
+                if (r) { r.checked = true; r.closest('.radio-option')?.classList.add('selected'); }
+            }
+            if (def.departments) {
+                document.querySelectorAll('input[name="departments"]').forEach(cb => {
+                    cb.checked = def.departments.includes(cb.value);
+                });
+            }
+
+            // Restore screen 4
+            const ex = processData.lastExample || {};
+            if (ex.name) document.getElementById('exampleName').value = ex.name;
+            if (ex.startDate) document.getElementById('startDate').value = ex.startDate;
+            if (ex.endDate) document.getElementById('endDate').value = ex.endDate;
+
+            // Restore screen 5 radio selections from saved timeRangeSelections
+            const trs = processData.timeRangeSelections || {};
+            ['meetingCount', 'emailCount', 'executionLevel', 'waitingPortion', 'reworkLevel',
+             'totalTimeRange', 'primaryActivity'].forEach(function(name) {
+                if (trs[name]) {
+                    const r = document.querySelector('input[name="' + name + '"][value="' + trs[name] + '"]');
+                    if (r) { r.checked = true; r.closest('.radio-option')?.classList.add('selected'); }
+                }
+            });
+
+            // Restore screen 6
+            if (processData.performance) {
+                const r = document.querySelector('input[name="performance"][value="' + processData.performance + '"]');
+                if (r) { r.checked = true; r.closest('.radio-option')?.classList.add('selected'); }
+                toggleIssuesSection();
+            }
+            if (processData.issues && processData.issues.length) {
+                document.querySelectorAll('input[name="issues"]').forEach(cb => {
+                    cb.checked = processData.issues.includes(cb.value);
+                });
+                updateBiggestDelay();
+                if (processData.biggestDelay) document.getElementById('biggestDelay').value = processData.biggestDelay;
+            }
+            if (processData.delayDetails) {
+                const dd = document.getElementById('delayDetails');
+                if (dd) dd.value = processData.delayDetails;
+            }
+
+            goToScreen(1);
 
             // Show a banner
             const banner = document.getElementById('resumeBanner');
@@ -4627,9 +4735,7 @@
 
             completedProcesses.forEach((p, i) => {
                 totalCost += p.costs.totalAnnualCost;
-                const editBtn = editingReportId
-                    ? ` <button onclick="editProcess(${i})" style="float:right;padding:4px 14px;background:transparent;color:var(--accent);border:1.5px solid var(--accent);border-radius:100px;font-size:0.78rem;font-weight:500;cursor:pointer;font-family:inherit;">Edit</button>`
-                    : '';
+                const editBtn = ` <button onclick="editProcess(${i})" style="float:right;padding:4px 14px;background:transparent;color:var(--accent);border:1.5px solid var(--accent);border-radius:100px;font-size:0.78rem;font-weight:500;cursor:pointer;font-family:inherit;">Edit</button>`;
                 html += `<div class="calculated">
                     <div class="calculated-label">Process #${i + 1}: ${p.processName}${editBtn}</div>
                     <div class="calculated-value" style="font-size: 1.3rem;">${formatCurrency(p.costs.totalAnnualCost)}/year</div>
@@ -4706,6 +4812,7 @@
                 var scoreData = typeof lastScoreData !== 'undefined' ? lastScoreData : null;
                 var roadmapData = typeof lastRoadmapData !== 'undefined' ? lastRoadmapData : null;
                 var payload = {
+                    editingReportId: editingReportId || null,
                     contact: {
                         name: contact.name || '',
                         email: contact.email || '',
@@ -5541,9 +5648,11 @@
             // Screen 5
             recalcTimeFromRanges();
             processData.timeRangeSelections = {
-                totalTimeRange: getRadioValue('totalTimeRange'),
-                waitingPortion: getRadioValue('waitingPortion'),
-                primaryActivity: getRadioValue('primaryActivity')
+                meetingCount: getRadioValue('meetingCount') || '',
+                emailCount: getRadioValue('emailCount') || '',
+                executionLevel: getRadioValue('executionLevel') || '',
+                waitingPortion: getRadioValue('waitingPortion') || '',
+                reworkLevel: getRadioValue('reworkLevel') || ''
             };
 
             // Screen 6
@@ -5999,9 +6108,11 @@
                     }
                     break;
                 case 5:
-                    if (!getRadioValue('totalTimeRange')) { valid = false; msg = 'Please select how much time you spent.'; }
+                    if (!getRadioValue('meetingCount')) { valid = false; msg = 'Please select how many meetings were involved.'; }
+                    else if (!getRadioValue('emailCount')) { valid = false; msg = 'Please select how many emails/messages were involved.'; }
+                    else if (!getRadioValue('executionLevel')) { valid = false; msg = 'Please select the level of execution work.'; }
                     else if (!getRadioValue('waitingPortion')) { valid = false; msg = 'Please select how much time was spent waiting.'; }
-                    else if (!getRadioValue('primaryActivity')) { valid = false; msg = 'Please select your primary activity.'; }
+                    else if (!getRadioValue('reworkLevel')) { valid = false; msg = 'Please indicate the amount of rework needed.'; }
                     break;
                 case 6:
                     if (!getRadioValue('performance')) { valid = false; msg = 'Please select a performance assessment.'; }
@@ -8699,6 +8810,9 @@
                     currentScreen,
                     processData,
                     completedProcesses,
+                    customDepartments: typeof customDepartments !== 'undefined' ? customDepartments : [],
+                    stepCount: typeof stepCount !== 'undefined' ? stepCount : 0,
+                    editingReportId: editingReportId || null,
                     timestamp: new Date().toISOString()
                 }));
             } catch (e) { /* ignore */ }
@@ -8714,6 +8828,10 @@
                         if (confirm('You have saved progress from ' + formatDate(data.timestamp) + '. Continue where you left off?')) {
                             processData = data.processData || createEmptyProcess();
                             completedProcesses = data.completedProcesses || [];
+                            if (data.customDepartments) customDepartments = data.customDepartments;
+                            if (data.stepCount) stepCount = data.stepCount;
+                            if (data.editingReportId) editingReportId = data.editingReportId;
+                            restoreRadioSelections(processData);
                             goToScreen(data.currentScreen);
                             return true;
                         }
@@ -8721,6 +8839,25 @@
                 }
             } catch (e) { /* ignore */ }
             return false;
+        }
+
+        function restoreRadioSelections(pd) {
+            const trs = pd.timeRangeSelections || {};
+            ['meetingCount', 'emailCount', 'executionLevel', 'waitingPortion', 'reworkLevel',
+             'totalTimeRange', 'primaryActivity'].forEach(function(name) {
+                if (trs[name]) {
+                    const r = document.querySelector('input[name="' + name + '"][value="' + trs[name] + '"]');
+                    if (r) { r.checked = true; r.closest('.radio-option')?.classList.add('selected'); }
+                }
+            });
+            if (pd.performance) {
+                const r = document.querySelector('input[name="performance"][value="' + pd.performance + '"]');
+                if (r) { r.checked = true; r.closest('.radio-option')?.classList.add('selected'); }
+            }
+            if (pd.definition?.complexity) {
+                const r = document.querySelector('input[name="complexity"][value="' + pd.definition.complexity + '"]');
+                if (r) { r.checked = true; r.closest('.radio-option')?.classList.add('selected'); }
+            }
         }
 
         // ============================================================
@@ -10192,9 +10329,9 @@
         let teamMode = null; // { code, processName }
         let teamSelectedProcess = '';
 
-        function selectTeamProcess(chip, name) {
-            document.querySelectorAll('.team-process-chip').forEach(c => c.classList.remove('selected'));
-            chip.classList.add('selected');
+        function selectTeamProcess(card, name) {
+            document.querySelectorAll('#teamProcessGrid .process-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
             teamSelectedProcess = name;
             document.getElementById('teamProcessName').value = '';
             document.getElementById('teamProcessName').style.borderColor = '';
@@ -10204,7 +10341,7 @@
         function handleTeamCustomProcess() {
             const val = document.getElementById('teamProcessName').value.trim();
             if (val) {
-                document.querySelectorAll('.team-process-chip').forEach(c => c.classList.remove('selected'));
+                document.querySelectorAll('#teamProcessGrid .process-card').forEach(c => c.classList.remove('selected'));
                 teamSelectedProcess = '';
                 document.getElementById('teamCreateBtn').disabled = false;
             } else if (!teamSelectedProcess) {
@@ -10540,7 +10677,6 @@
             function cleanup() {
                 if (draggedItem) {
                     draggedItem.classList.remove('step-dragging');
-                    draggedItem.removeAttribute('draggable');
                     draggedItem = null;
                 }
                 list.querySelectorAll('.list-item').forEach(el => {
@@ -10662,16 +10798,43 @@
                 <p>Create a team session and share the code with colleagues. Each person fills out the diagnostic independently, then you compare perspectives.</p>
 
                 <label style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Select a process:</label>
-                <div class="team-process-grid" id="teamProcessGrid">
-                    <div class="team-process-chip" onclick="selectTeamProcess(this, 'Customer Onboarding')">&#128230; Customer Onboarding</div>
-                    <div class="team-process-chip" onclick="selectTeamProcess(this, 'Sales to Delivery')">&#128176; Sales to Delivery</div>
-                    <div class="team-process-chip" onclick="selectTeamProcess(this, 'Employee Onboarding')">&#128100; Employee Onboarding</div>
-                    <div class="team-process-chip" onclick="selectTeamProcess(this, 'Order Fulfillment')">&#9989; Order Fulfillment</div>
-                    <div class="team-process-chip" onclick="selectTeamProcess(this, 'Invoice to Payment')">&#128179; Invoice to Payment</div>
-                    <div class="team-process-chip" onclick="selectTeamProcess(this, 'Issue Resolution')">&#128295; Issue Resolution</div>
-                    <div class="team-process-chip" onclick="selectTeamProcess(this, 'Approval Workflow')">&#128203; Approval Workflow</div>
-                    <div class="team-process-chip" onclick="selectTeamProcess(this, 'Product Launch')">&#128640; Product Launch</div>
-                    <div class="team-process-chip" onclick="selectTeamProcess(this, 'Reporting Cycle')">&#128202; Reporting Cycle</div>
+                <div class="process-grid" id="teamProcessGrid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem; margin: 1rem 0 0.5rem;">
+                    <div class="process-card" onclick="selectTeamProcess(this, 'Customer Onboarding')" style="padding: 1rem 0.75rem;">
+                        <div class="process-icon" style="font-size: 1.8rem; margin-bottom: 0.4rem;">&#128230;</div>
+                        <div class="process-name" style="font-size: 0.82rem;">Customer Onboarding</div>
+                    </div>
+                    <div class="process-card" onclick="selectTeamProcess(this, 'Sales to Delivery')" style="padding: 1rem 0.75rem;">
+                        <div class="process-icon" style="font-size: 1.8rem; margin-bottom: 0.4rem;">&#128176;</div>
+                        <div class="process-name" style="font-size: 0.82rem;">Sales to Delivery</div>
+                    </div>
+                    <div class="process-card" onclick="selectTeamProcess(this, 'Employee Onboarding')" style="padding: 1rem 0.75rem;">
+                        <div class="process-icon" style="font-size: 1.8rem; margin-bottom: 0.4rem;">&#128100;</div>
+                        <div class="process-name" style="font-size: 0.82rem;">Employee Onboarding</div>
+                    </div>
+                    <div class="process-card" onclick="selectTeamProcess(this, 'Order Fulfillment')" style="padding: 1rem 0.75rem;">
+                        <div class="process-icon" style="font-size: 1.8rem; margin-bottom: 0.4rem;">&#9989;</div>
+                        <div class="process-name" style="font-size: 0.82rem;">Order Fulfillment</div>
+                    </div>
+                    <div class="process-card" onclick="selectTeamProcess(this, 'Invoice to Payment')" style="padding: 1rem 0.75rem;">
+                        <div class="process-icon" style="font-size: 1.8rem; margin-bottom: 0.4rem;">&#128179;</div>
+                        <div class="process-name" style="font-size: 0.82rem;">Invoice to Payment</div>
+                    </div>
+                    <div class="process-card" onclick="selectTeamProcess(this, 'Issue Resolution')" style="padding: 1rem 0.75rem;">
+                        <div class="process-icon" style="font-size: 1.8rem; margin-bottom: 0.4rem;">&#128295;</div>
+                        <div class="process-name" style="font-size: 0.82rem;">Issue Resolution</div>
+                    </div>
+                    <div class="process-card" onclick="selectTeamProcess(this, 'Approval Workflow')" style="padding: 1rem 0.75rem;">
+                        <div class="process-icon" style="font-size: 1.8rem; margin-bottom: 0.4rem;">&#128203;</div>
+                        <div class="process-name" style="font-size: 0.82rem;">Approval Workflow</div>
+                    </div>
+                    <div class="process-card" onclick="selectTeamProcess(this, 'Product Launch')" style="padding: 1rem 0.75rem;">
+                        <div class="process-icon" style="font-size: 1.8rem; margin-bottom: 0.4rem;">&#128640;</div>
+                        <div class="process-name" style="font-size: 0.82rem;">Product Launch</div>
+                    </div>
+                    <div class="process-card" onclick="selectTeamProcess(this, 'Reporting Cycle')" style="padding: 1rem 0.75rem;">
+                        <div class="process-icon" style="font-size: 1.8rem; margin-bottom: 0.4rem;">&#128202;</div>
+                        <div class="process-name" style="font-size: 0.82rem;">Reporting Cycle</div>
+                    </div>
                 </div>
                 <div style="margin-top: 0.75rem;">
                     <input type="text" class="save-modal-input" id="teamProcessName" placeholder="Or type a custom process name..." oninput="handleTeamCustomProcess()">
