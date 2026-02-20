@@ -263,6 +263,21 @@
         .timeline-metrics-row { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.76rem; color: var(--text-mid); }
         .timeline-metrics-row span { display: inline-flex; align-items: center; gap: 3px; }
 
+        /* Process selector */
+        .process-selector {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 20px;
+            padding: 12px 16px; background: var(--white); border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+        }
+        .process-selector label { font-size: 0.82rem; font-weight: 600; color: var(--text-mid); white-space: nowrap; }
+        .process-selector select {
+            flex: 1; padding: 7px 12px; border: 1.5px solid var(--border); border-radius: 6px;
+            font-family: inherit; font-size: 0.84rem; color: var(--text);
+            background: var(--bg); cursor: pointer; transition: border-color 0.2s;
+            max-width: 400px;
+        }
+        .process-selector select:focus { outline: none; border-color: var(--accent); }
+
         /* Trends CTA */
         .trends-cta { background: linear-gradient(135deg, #eff6ff, #f0fdf4); border: 1px solid #e0f2fe; border-radius: var(--radius-md); padding: 28px; text-align: center; margin-top: 12px; }
         .trends-cta h3 { font-size: 1.05rem; margin-bottom: 6px; color: var(--text); font-weight: 600; }
@@ -350,6 +365,22 @@
         /* Redesign button */
         .process-btn-redesign { background: #f5f0ff; color: var(--purple); border: 1.5px solid #ddd6fe; }
         .process-btn-redesign:hover { background: var(--purple); color: white; border-color: var(--purple); }
+        .process-btn-delete { background: transparent; color: var(--text-light); border: 1.5px solid var(--border); }
+        .process-btn-delete:hover { background: var(--red); color: white; border-color: var(--red); }
+        .delete-confirm-bar {
+            display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+            background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-sm);
+            margin-top: 6px; font-size: 0.82rem; color: #991b1b; animation: fadeIn 0.2s ease;
+        }
+        .delete-confirm-bar button {
+            padding: 5px 14px; border-radius: 6px; font-size: 0.74rem; font-weight: 600;
+            cursor: pointer; font-family: inherit; border: none; transition: all 0.2s;
+        }
+        .delete-confirm-yes { background: var(--red); color: white; }
+        .delete-confirm-yes:hover { background: #b91c1c; }
+        .delete-confirm-no { background: white; color: var(--text-mid); border: 1px solid var(--border) !important; }
+        .delete-confirm-no:hover { background: var(--bg-alt); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
         .footer { padding: 32px 24px; font-size: 0.76rem; border-top: 1px solid var(--border); margin-top: auto; font-weight: 500; }
 
@@ -466,7 +497,7 @@
             <div id="tabOverview" role="tabpanel" aria-labelledby="tab-overview">
                 <!-- Metrics -->
                 <div class="metrics-row" id="metricsRow">
-                    <div class="metric-card skeleton"><span class="metric-val" id="metricProcesses"><span class="skeleton-val"></span></span><span class="metric-lbl">Processes Analysed</span></div>
+                    <div class="metric-card skeleton"><span class="metric-val" id="metricProcesses"><span class="skeleton-val"></span></span><span class="metric-lbl">Process Analyses</span></div>
                     <div class="metric-card skeleton">
                         <div id="automationRing" style="margin: 0 auto 6px;"><div class="skeleton-ring"></div></div>
                         <span class="metric-lbl">Automation Readiness</span>
@@ -540,16 +571,22 @@
                         <div><strong id="trendsName" style="display:block; font-size:1.05rem;"></strong><span id="trendsCompany" style="font-size:0.82rem; color:var(--text-light);"></span></div>
                         <span id="trendsCount" style="display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:100px; font-size:0.78rem; font-weight:600; background:#f0f9ff; color:#1e40af;"></span>
                     </div>
+                    <div class="process-selector" id="processSelector" style="display: none;">
+                        <label for="processSelect">Track process:</label>
+                        <select id="processSelect" onchange="onProcessFilterChange()">
+                            <option value="__all__">All Processes (report-level)</option>
+                        </select>
+                    </div>
                     <div class="delta-banner" id="trendsDelta" style="display: none;"></div>
-                    <h3 class="trends-section-title">Latest Diagnostic Snapshot</h3>
+                    <h3 class="trends-section-title" id="trendsSnapshotTitle">Latest Diagnostic Snapshot</h3>
                     <div class="trends-metrics" id="trendsMetrics"></div>
                     <div id="trendsCharts" class="chart-row" style="display: none;">
                         <div class="chart-card">
-                            <div class="chart-card-title">Automation Readiness Over Time</div>
+                            <div class="chart-card-title" id="chartTitle1">Automation Readiness Over Time</div>
                             <div id="automationBarChart"></div>
                         </div>
                         <div class="chart-card">
-                            <div class="chart-card-title">Cost vs Savings</div>
+                            <div class="chart-card-title" id="chartTitle2">Cost vs Savings</div>
                             <div id="costSavingsChart"></div>
                         </div>
                     </div>
@@ -931,7 +968,7 @@
                     const procs = r.processes.map(p => p.name).join(', ') || 'Process Diagnostic';
                     const editUrl = '/diagnostic?edit=' + r.id + '&email=' + encodeURIComponent(email);
                     const s = getStatusInfo(r);
-                    return '<div class="process-row">' +
+                    return '<div class="process-row" data-report-id="' + r.id + '">' +
                         '<span class="process-dot ' + s.dot + '"></span>' +
                         '<span class="process-name">' + esc(procs) + '</span>' +
                         '<span class="process-tag ' + s.tag + '">' + esc(s.tagText) + '</span>' +
@@ -940,6 +977,7 @@
                             '<button class="process-btn process-btn-redesign" onclick="openRedesign(\'' + r.id + '\')">Redesign</button>' +
                             '<a href="' + editUrl + '" class="process-btn process-btn-edit">Edit</a>' +
                             '<a href="/diagnostic?view=' + r.id + '" class="process-btn process-btn-view">View</a>' +
+                            '<button class="process-btn process-btn-delete" onclick="confirmDeleteReport(\'' + r.id + '\', this)">Delete</button>' +
                         '</div>' +
                     '</div>';
                 }).join('');
@@ -962,6 +1000,79 @@
                 listFull.innerHTML = failedHtml;
                 document.querySelectorAll('[data-retry-email]').forEach(function(b) { b.addEventListener('click', function() { loadReports(email); }); });
                 cachedReports = null;
+            }
+        }
+
+        /* ── Delete report ─────────────────────────── */
+        function confirmDeleteReport(reportId, btn) {
+            const row = btn.closest('.process-row');
+            if (!row || row.querySelector('.delete-confirm-bar')) return;
+            const bar = document.createElement('div');
+            bar.className = 'delete-confirm-bar';
+            bar.innerHTML = '<span>Delete this report permanently?</span>' +
+                '<button class="delete-confirm-yes" onclick="executeDeleteReport(\'' + reportId + '\', this)">Delete</button>' +
+                '<button class="delete-confirm-no" onclick="this.closest(\'.delete-confirm-bar\').remove()">Cancel</button>';
+            row.appendChild(bar);
+        }
+
+        async function executeDeleteReport(reportId, btn) {
+            const bar = btn.closest('.delete-confirm-bar');
+            const row = bar.closest('.process-row');
+            bar.innerHTML = '<span>Deleting...</span>';
+
+            try {
+                const resp = await fetch('/api/delete-report', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reportId, email: currentUser.email })
+                });
+                const data = await resp.json();
+
+                if (!resp.ok || !data.success) {
+                    bar.innerHTML = '<span>' + esc(data.error || 'Failed to delete.') + '</span>' +
+                        '<button class="delete-confirm-no" onclick="this.closest(\'.delete-confirm-bar\').remove()">Dismiss</button>';
+                    return;
+                }
+
+                row.style.transition = 'opacity 0.3s, max-height 0.3s';
+                row.style.opacity = '0';
+                row.style.maxHeight = row.offsetHeight + 'px';
+                row.style.overflow = 'hidden';
+                setTimeout(() => { row.style.maxHeight = '0'; row.style.padding = '0'; row.style.margin = '0'; }, 50);
+                setTimeout(() => {
+                    row.remove();
+                    // Remove from both lists
+                    document.querySelectorAll('.process-row[data-report-id="' + reportId + '"]').forEach(el => el.remove());
+                }, 400);
+
+                // Update cached data
+                if (cachedReports && cachedReports.reports) {
+                    cachedReports.reports = cachedReports.reports.filter(r => r.id !== reportId);
+                    cachedReports.totalReports = cachedReports.reports.length;
+                    const reports = cachedReports.reports;
+
+                    const totalProcs = reports.reduce((sum, r) => sum + r.metrics.totalProcesses, 0);
+                    const reviewCount = reports.filter(r => r.metrics.automationPercentage < 40).length;
+                    const optimisedCount = reports.filter(r => r.metrics.automationPercentage >= 70).length;
+                    const progressCount = reports.filter(r => r.metrics.automationPercentage >= 40 && r.metrics.automationPercentage < 70).length;
+                    const avgAuto = reports.length ? Math.round(reports.reduce((sum, r) => sum + r.metrics.automationPercentage, 0) / reports.length) : 0;
+
+                    document.getElementById('metricProcesses').textContent = totalProcs;
+                    document.getElementById('metricReports').textContent = reports.length;
+                    document.getElementById('metricReportsTotal').textContent = reports.length;
+                    document.getElementById('metricNeedsReview').textContent = reviewCount;
+                    renderAutomationRing('automationRing', avgAuto);
+                    renderStatusDonut('statusDonut', optimisedCount, progressCount, reviewCount);
+
+                    if (trendsLoaded) {
+                        trendsLoaded = false;
+                        renderTrends(cachedReports);
+                    }
+                }
+            } catch (err) {
+                console.error('Delete failed:', err);
+                bar.innerHTML = '<span>Network error. Try again.</span>' +
+                    '<button class="delete-confirm-no" onclick="this.closest(\'.delete-confirm-bar\').remove()">Dismiss</button>';
             }
         }
 
@@ -1016,9 +1127,11 @@
             return '<span class="metric-delta ' + cls + '">' + arrow + ' ' + display + (abs < 200 ? '%' : '') + '</span>';
         }
 
+        let _currentProcessFilter = '__all__';
+
         function renderTrends(data) {
             trendsLoaded = true;
-            const { reports, deltas, totalReports } = data;
+            const { reports, totalReports } = data;
             if (!reports || !reports.length) {
                 document.getElementById('trendsLoading').style.display = 'none';
                 document.getElementById('trendsEmpty').style.display = '';
@@ -1026,11 +1139,58 @@
             }
 
             const latest = reports[0];
-            const m = latest.metrics;
-
             document.getElementById('trendsName').textContent = latest.contactName || 'Your Trends';
             document.getElementById('trendsCompany').textContent = latest.company || '';
             document.getElementById('trendsCount').textContent = totalReports + ' diagnostic' + (totalReports !== 1 ? 's' : '');
+
+            // Build unique process names across all reports
+            const nameSet = new Set();
+            reports.forEach(function(r) { (r.processes || []).forEach(function(p) { if (p.name) nameSet.add(p.name); }); });
+            const processNames = Array.from(nameSet).sort();
+
+            const selector = document.getElementById('processSelector');
+            const select = document.getElementById('processSelect');
+            if (processNames.length > 0) {
+                const prev = _currentProcessFilter;
+                select.innerHTML = '<option value="__all__">All Processes (report-level)</option>' +
+                    processNames.map(function(n) { return '<option value="' + esc(n) + '">' + esc(n) + '</option>'; }).join('');
+                if (prev !== '__all__' && processNames.includes(prev)) select.value = prev;
+                else select.value = '__all__';
+                _currentProcessFilter = select.value;
+                selector.style.display = '';
+            } else {
+                selector.style.display = 'none';
+                _currentProcessFilter = '__all__';
+            }
+
+            renderTrendsForFilter(data);
+
+            document.getElementById('trendsLoading').style.display = 'none';
+            document.getElementById('trendsContent').style.display = '';
+        }
+
+        function onProcessFilterChange() {
+            _currentProcessFilter = document.getElementById('processSelect').value;
+            if (cachedReports) renderTrendsForFilter(cachedReports);
+        }
+
+        function renderTrendsForFilter(data) {
+            const { reports } = data;
+            const filter = _currentProcessFilter;
+            const isAll = filter === '__all__';
+
+            if (isAll) {
+                renderTrendsAllProcesses(data);
+            } else {
+                renderTrendsPerProcess(reports, filter);
+            }
+        }
+
+        function renderTrendsAllProcesses(data) {
+            const { reports, deltas } = data;
+            const m = reports[0].metrics;
+
+            document.getElementById('trendsSnapshotTitle').textContent = 'Latest Diagnostic Snapshot';
 
             const banner = document.getElementById('trendsDelta');
             if (deltas) {
@@ -1059,40 +1219,20 @@
                 { value: m.automationPercentage + '%', label: 'Automation Readiness', color: 'purple', delta: deltas ? deltas.automationReadiness.change : null, inv: false },
                 { value: m.totalProcesses, label: 'Processes Analysed', color: 'amber', delta: deltas ? deltas.processCount.change : null, inv: false }
             ];
-            document.getElementById('trendsMetrics').innerHTML = cards.map(c =>
-                '<div class="trends-metric"><div class="trends-metric-val ' + c.color + '">' + c.value + '</div><div class="trends-metric-lbl">' + c.label + '</div>' + (c.delta !== null && c.delta !== 0 ? deltaArrow(c.delta, c.inv) : '') + '</div>'
-            ).join('');
+            document.getElementById('trendsMetrics').innerHTML = cards.map(function(c) {
+                return '<div class="trends-metric"><div class="trends-metric-val ' + c.color + '">' + c.value + '</div><div class="trends-metric-lbl">' + c.label + '</div>' + (c.delta !== null && c.delta !== 0 ? deltaArrow(c.delta, c.inv) : '') + '</div>';
+            }).join('');
 
             if (reports.length >= 2) {
-                const headers = ['Metric'].concat(reports.slice(0,4).map(function(r, i) { return fmtDate(r.createdAt) + (i === 0 ? ' <span class="latest-tag">Latest</span>' : ''); }));
-                const rows = [
+                renderComparisonTable(reports, [
                     { label: 'Annual Process Cost', key: 'totalAnnualCost', fmt: fmtCur, inv: true },
                     { label: 'Potential Savings', key: 'potentialSavings', fmt: fmtCur, inv: false },
                     { label: 'Automation Readiness', key: 'automationPercentage', fmt: function(v){return v+'%';}, inv: false },
                     { label: 'Processes Analysed', key: 'totalProcesses', fmt: function(v){return v;}, inv: false },
                     { label: 'Data Quality', key: 'qualityScore', fmt: function(v){return v+'%';}, inv: false }
-                ];
-                let html = '<thead><tr>' + headers.map(function(h){return '<th>'+h+'</th>';}).join('') + '</tr></thead><tbody>';
-                rows.forEach(function(row) {
-                    html += '<tr><td style="font-weight:500;">' + row.label + '</td>';
-                    reports.slice(0,4).forEach(function(r, i) {
-                        const val = row.fmt(r.metrics[row.key]);
-                        let delta = '';
-                        if (i === 0 && reports.length >= 2) {
-                            const diff = r.metrics[row.key] - reports[1].metrics[row.key];
-                            if (diff !== 0) {
-                                const imp = row.inv ? diff < 0 : diff > 0;
-                                delta = ' <span style="font-size:0.72rem;color:' + (imp ? 'var(--green)' : 'var(--red)') + ';">' + (imp ? '&#9650;' : '&#9660;') + '</span>';
-                            }
-                        }
-                        html += '<td>' + val + delta + '</td>';
-                    });
-                    html += '</tr>';
-                });
-                html += '</tbody>';
-                document.getElementById('trendsCompTable').innerHTML = html;
-                document.getElementById('trendsComparison').style.display = '';
-
+                ]);
+                document.getElementById('chartTitle1').textContent = 'Automation Readiness Over Time';
+                document.getElementById('chartTitle2').textContent = 'Cost vs Savings';
                 renderAutomationBarChart('automationBarChart', reports);
                 renderCostSavingsChart('costSavingsChart', reports);
                 document.getElementById('trendsCharts').style.display = '';
@@ -1110,9 +1250,136 @@
                     '<div class="timeline-metrics-row"><span>Cost: ' + fmtCur(rm.totalAnnualCost) + '</span><span>Savings: ' + fmtCur(rm.potentialSavings) + '</span><span>Automation: ' + rm.automationPercentage + '%</span><span>' + rm.totalProcesses + ' process' + (rm.totalProcesses !== 1 ? 'es' : '') + '</span></div>' +
                 '</div>';
             }).join('');
+        }
 
-            document.getElementById('trendsLoading').style.display = 'none';
-            document.getElementById('trendsContent').style.display = '';
+        function renderTrendsPerProcess(allReports, processName) {
+            // Build a timeline of {report, process} entries for this process name
+            const entries = [];
+            allReports.forEach(function(r) {
+                const match = (r.processes || []).find(function(p) { return p.name === processName; });
+                if (match) entries.push({ report: r, proc: match });
+            });
+
+            if (entries.length === 0) {
+                document.getElementById('trendsMetrics').innerHTML = '<div style="padding:20px;color:var(--text-light);font-size:0.88rem;">No data found for "' + esc(processName) + '".</div>';
+                document.getElementById('trendsDelta').style.display = 'none';
+                document.getElementById('trendsComparison').style.display = 'none';
+                document.getElementById('trendsCharts').style.display = 'none';
+                document.getElementById('trendsTimeline').innerHTML = '';
+                return;
+            }
+
+            document.getElementById('trendsSnapshotTitle').textContent = 'Latest: ' + processName;
+
+            const latestProc = entries[0].proc;
+            const prevProc = entries.length >= 2 ? entries[1].proc : null;
+
+            // Delta banner for this process
+            const banner = document.getElementById('trendsDelta');
+            if (prevProc) {
+                const costChange = (latestProc.annualCost || 0) - (prevProc.annualCost || 0);
+                const stepsChange = (latestProc.stepsCount || 0) - (prevProc.stepsCount || 0);
+                const daysChange = (latestProc.elapsedDays || 0) - (prevProc.elapsedDays || 0);
+                const improved = costChange < 0 || stepsChange < 0 || daysChange < 0;
+                const parts = [];
+                if (costChange !== 0) parts.push('Annual cost ' + (costChange < 0 ? 'reduced' : 'increased') + ' by ' + fmtCur(Math.abs(costChange)));
+                if (daysChange !== 0) parts.push('Cycle time ' + (daysChange < 0 ? 'improved' : 'increased') + ' by ' + Math.abs(daysChange) + ' day' + (Math.abs(daysChange) !== 1 ? 's' : ''));
+                if (stepsChange !== 0) parts.push('Steps ' + (stepsChange < 0 ? 'reduced' : 'increased') + ' from ' + (prevProc.stepsCount || 0) + ' to ' + (latestProc.stepsCount || 0));
+                banner.innerHTML = '<h3>' + (parts.length ? parts.join('. ') + '.' : 'Latest data for this process.') + '</h3><p>Compared to diagnostic from ' + fmtDate(entries[1].report.createdAt) + '</p>';
+                banner.className = 'delta-banner' + (improved ? '' : ' negative');
+                banner.style.display = '';
+            } else {
+                banner.style.display = 'none';
+            }
+
+            // Metric cards for this process
+            const costDelta = prevProc ? ((latestProc.annualCost || 0) - (prevProc.annualCost || 0)) : null;
+            const costDeltaPct = prevProc && prevProc.annualCost ? (costDelta / prevProc.annualCost * 100) : null;
+            const daysDelta = prevProc ? ((latestProc.elapsedDays || 0) - (prevProc.elapsedDays || 0)) : null;
+            const stepsDelta = prevProc ? ((latestProc.stepsCount || 0) - (prevProc.stepsCount || 0)) : null;
+
+            const cards = [
+                { value: fmtCur(latestProc.annualCost || 0), label: 'Annual Cost', color: 'blue', delta: costDeltaPct, inv: true },
+                { value: (latestProc.elapsedDays || 0) + ' days', label: 'Cycle Time', color: 'green', delta: daysDelta, inv: true },
+                { value: latestProc.stepsCount || 0, label: 'Steps', color: 'purple', delta: stepsDelta, inv: true },
+                { value: entries.length, label: 'Diagnostics', color: 'amber', delta: null, inv: false }
+            ];
+            document.getElementById('trendsMetrics').innerHTML = cards.map(function(c) {
+                return '<div class="trends-metric"><div class="trends-metric-val ' + c.color + '">' + c.value + '</div><div class="trends-metric-lbl">' + c.label + '</div>' + (c.delta !== null && c.delta !== 0 ? deltaArrow(c.delta, c.inv) : '') + '</div>';
+            }).join('');
+
+            // Comparison table for this process across reports
+            if (entries.length >= 2) {
+                const headers = ['Metric'].concat(entries.slice(0, 4).map(function(e, i) { return fmtDate(e.report.createdAt) + (i === 0 ? ' <span class="latest-tag">Latest</span>' : ''); }));
+                const rows = [
+                    { label: 'Annual Cost', getter: function(e) { return e.proc.annualCost || 0; }, fmt: fmtCur, inv: true },
+                    { label: 'Cycle Time (days)', getter: function(e) { return e.proc.elapsedDays || 0; }, fmt: function(v) { return v; }, inv: true },
+                    { label: 'Steps', getter: function(e) { return e.proc.stepsCount || 0; }, fmt: function(v) { return v; }, inv: true }
+                ];
+                let html = '<thead><tr>' + headers.map(function(h) { return '<th>' + h + '</th>'; }).join('') + '</tr></thead><tbody>';
+                rows.forEach(function(row) {
+                    html += '<tr><td style="font-weight:500;">' + row.label + '</td>';
+                    entries.slice(0, 4).forEach(function(e, i) {
+                        const val = row.fmt(row.getter(e));
+                        let delta = '';
+                        if (i === 0 && entries.length >= 2) {
+                            const diff = row.getter(entries[0]) - row.getter(entries[1]);
+                            if (diff !== 0) {
+                                const imp = row.inv ? diff < 0 : diff > 0;
+                                delta = ' <span style="font-size:0.72rem;color:' + (imp ? 'var(--green)' : 'var(--red)') + ';">' + (imp ? '&#9650;' : '&#9660;') + '</span>';
+                            }
+                        }
+                        html += '<td>' + val + delta + '</td>';
+                    });
+                    html += '</tr>';
+                });
+                html += '</tbody>';
+                document.getElementById('trendsCompTable').innerHTML = html;
+                document.getElementById('trendsComparison').style.display = '';
+
+                document.getElementById('chartTitle1').textContent = 'Cycle Time Over Time';
+                document.getElementById('chartTitle2').textContent = 'Annual Cost Over Time';
+                renderProcessCostChart('costSavingsChart', entries);
+                renderProcessStepsChart('automationBarChart', entries);
+                document.getElementById('trendsCharts').style.display = '';
+            } else {
+                document.getElementById('trendsComparison').style.display = 'none';
+                document.getElementById('trendsCharts').style.display = 'none';
+            }
+
+            // Timeline for this process
+            document.getElementById('trendsTimeline').innerHTML = entries.map(function(e, i) {
+                return '<div class="timeline-item" onclick="window.open(\'/report?id=' + e.report.id + '\',\'_blank\')">' +
+                    '<div class="timeline-dot"></div>' +
+                    '<div class="timeline-date">' + fmtDate(e.report.createdAt) + (i === 0 ? ' &mdash; Latest' : '') + '</div>' +
+                    '<div class="timeline-title">' + esc(processName) + '</div>' +
+                    '<div class="timeline-metrics-row"><span>Cost: ' + fmtCur(e.proc.annualCost || 0) + '</span><span>Cycle: ' + (e.proc.elapsedDays || 0) + ' days</span><span>' + (e.proc.stepsCount || 0) + ' steps</span></div>' +
+                '</div>';
+            }).join('');
+        }
+
+        function renderComparisonTable(reports, rows) {
+            const headers = ['Metric'].concat(reports.slice(0, 4).map(function(r, i) { return fmtDate(r.createdAt) + (i === 0 ? ' <span class="latest-tag">Latest</span>' : ''); }));
+            let html = '<thead><tr>' + headers.map(function(h) { return '<th>' + h + '</th>'; }).join('') + '</tr></thead><tbody>';
+            rows.forEach(function(row) {
+                html += '<tr><td style="font-weight:500;">' + row.label + '</td>';
+                reports.slice(0, 4).forEach(function(r, i) {
+                    const val = row.fmt(r.metrics[row.key]);
+                    let delta = '';
+                    if (i === 0 && reports.length >= 2) {
+                        const diff = r.metrics[row.key] - reports[1].metrics[row.key];
+                        if (diff !== 0) {
+                            const imp = row.inv ? diff < 0 : diff > 0;
+                            delta = ' <span style="font-size:0.72rem;color:' + (imp ? 'var(--green)' : 'var(--red)') + ';">' + (imp ? '&#9650;' : '&#9660;') + '</span>';
+                        }
+                    }
+                    html += '<td>' + val + delta + '</td>';
+                });
+                html += '</tr>';
+            });
+            html += '</tbody>';
+            document.getElementById('trendsCompTable').innerHTML = html;
+            document.getElementById('trendsComparison').style.display = '';
         }
 
         /* ── Chart helpers ─────────────────────────── */
@@ -1217,6 +1484,57 @@
             svg += '</svg>';
             const legend = '<div class="chart-legend"><span class="chart-legend-item"><span class="chart-legend-dot" style="background:#1e40af;"></span>Annual Cost</span><span class="chart-legend-item"><span class="chart-legend-dot" style="background:#16a34a;"></span>Potential Savings</span></div>';
             el.innerHTML = svg + legend;
+        }
+
+        /* ── Per-process chart helpers ────────────────── */
+        function renderProcessCostChart(containerId, entries) {
+            const el = document.getElementById(containerId);
+            if (!el) return;
+            const items = entries.slice(0, 6).reverse();
+            const barW = 36, gap = 12, h = 140, padL = 38, padB = 40;
+            const totalW = padL + items.length * (barW + gap) + 10;
+            let maxVal = 0;
+            items.forEach(function(e) { maxVal = Math.max(maxVal, e.proc.annualCost || 0); });
+            if (maxVal === 0) maxVal = 1;
+            let svg = '<svg width="100%" height="' + (h + padB) + '" viewBox="0 0 ' + totalW + ' ' + (h + padB) + '" preserveAspectRatio="xMidYMid meet">';
+            svg += '<line x1="' + padL + '" y1="' + h + '" x2="' + totalW + '" y2="' + h + '" stroke="#e2e8f0" stroke-width="1"/>';
+            items.forEach(function(e, i) {
+                const cost = e.proc.annualCost || 0;
+                const barH = Math.max(2, (cost / maxVal) * (h - 10));
+                const x = padL + i * (barW + gap) + gap / 2;
+                const y = h - barH;
+                svg += '<rect x="' + x + '" y="' + y + '" width="' + barW + '" height="' + barH + '" rx="4" fill="#1e40af" opacity="0.85"><animate attributeName="height" from="0" to="' + barH + '" dur="0.5s" fill="freeze"/><animate attributeName="y" from="' + h + '" to="' + y + '" dur="0.5s" fill="freeze"/></rect>';
+                svg += '<text x="' + (x + barW / 2) + '" y="' + (y - 5) + '" text-anchor="middle" font-size="9" font-weight="600" fill="#1e40af" font-family="Work Sans,sans-serif">' + fmtCur(cost) + '</text>';
+                const dateStr = new Date(e.report.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                svg += '<text x="' + (x + barW / 2) + '" y="' + (h + 14) + '" text-anchor="middle" font-size="8" fill="#94a3b8" font-family="Work Sans,sans-serif">' + dateStr + '</text>';
+            });
+            svg += '</svg>';
+            el.innerHTML = svg;
+        }
+
+        function renderProcessStepsChart(containerId, entries) {
+            const el = document.getElementById(containerId);
+            if (!el) return;
+            const items = entries.slice(0, 6).reverse();
+            const barW = 36, gap = 12, h = 140, padL = 30, padB = 40;
+            const totalW = padL + items.length * (barW + gap) + 10;
+            let maxVal = 0;
+            items.forEach(function(e) { maxVal = Math.max(maxVal, e.proc.stepsCount || 0, e.proc.elapsedDays || 0); });
+            if (maxVal === 0) maxVal = 1;
+            let svg = '<svg width="100%" height="' + (h + padB) + '" viewBox="0 0 ' + totalW + ' ' + (h + padB) + '" preserveAspectRatio="xMidYMid meet">';
+            svg += '<line x1="' + padL + '" y1="' + h + '" x2="' + totalW + '" y2="' + h + '" stroke="#e2e8f0" stroke-width="1"/>';
+            items.forEach(function(e, i) {
+                const days = e.proc.elapsedDays || 0;
+                const barH = Math.max(2, (days / maxVal) * (h - 10));
+                const x = padL + i * (barW + gap) + gap / 2;
+                const y = h - barH;
+                svg += '<rect x="' + x + '" y="' + y + '" width="' + barW + '" height="' + barH + '" rx="4" fill="#7c3aed" opacity="0.8"><animate attributeName="height" from="0" to="' + barH + '" dur="0.5s" fill="freeze"/><animate attributeName="y" from="' + h + '" to="' + y + '" dur="0.5s" fill="freeze"/></rect>';
+                svg += '<text x="' + (x + barW / 2) + '" y="' + (y - 5) + '" text-anchor="middle" font-size="10" font-weight="600" fill="#7c3aed" font-family="Work Sans,sans-serif">' + days + 'd</text>';
+                const dateStr = new Date(e.report.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                svg += '<text x="' + (x + barW / 2) + '" y="' + (h + 14) + '" text-anchor="middle" font-size="8" fill="#94a3b8" font-family="Work Sans,sans-serif">' + dateStr + '</text>';
+            });
+            svg += '</svg>';
+            el.innerHTML = svg;
         }
 
         /* ── Redesign helpers ─────────────────────────── */
