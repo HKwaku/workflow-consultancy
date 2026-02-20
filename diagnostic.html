@@ -4101,6 +4101,7 @@
             const deptSelect = document.getElementById('step_u' + uid + '_dept');
             if (nameInput) nameInput.addEventListener('input', scheduleLiveFlowUpdate);
             if (deptSelect) deptSelect.addEventListener('change', scheduleLiveFlowUpdate);
+            div.querySelectorAll('.branch-row input').forEach(function(inp) { inp.addEventListener('input', scheduleLiveFlowUpdate); });
 
             renumberSteps();
             return div;
@@ -4130,6 +4131,7 @@
             } else {
                 panel.classList.remove('show');
             }
+            scheduleLiveFlowUpdate();
         }
 
         const branchCounts = {};
@@ -4144,9 +4146,11 @@
                 <span class="branch-icon">&#10132;</span>
                 <input type="text" id="step_${stepIdx}_branch_${bIdx}_label" placeholder="Route label">
                 <input type="text" id="step_${stepIdx}_branch_${bIdx}_target" placeholder="Goes to..." style="max-width: 180px;">
-                <button type="button" class="branch-remove" onclick="this.parentElement.remove()">&times;</button>
+                <button type="button" class="branch-remove" onclick="this.parentElement.remove();scheduleLiveFlowUpdate();">&times;</button>
             `;
             document.getElementById('step_' + stepIdx + '_branchList').appendChild(row);
+            row.querySelectorAll('input').forEach(function(inp) { inp.addEventListener('input', scheduleLiveFlowUpdate); });
+            scheduleLiveFlowUpdate();
         }
 
         function removeStep(elOrIdx) {
@@ -4243,83 +4247,196 @@
             const result = [];
             items.forEach(function(item) {
                 const uid = item.dataset.stepUid;
-                const nameEl = document.getElementById('step_u' + uid + '_name');
-                const deptEl = document.getElementById('step_u' + uid + '_dept');
+                const pfx = 'step_u' + uid;
+                const nameEl = document.getElementById(pfx + '_name');
+                const deptEl = document.getElementById(pfx + '_dept');
                 const name = nameEl ? nameEl.value.trim() : '';
                 const dept = deptEl ? deptEl.value : '';
-                const isDecision = item.querySelector('.decision-toggle input[type="checkbox"]');
+                const decisionCb = document.getElementById(pfx + '_decision');
+                const isDecision = decisionCb ? decisionCb.checked : false;
+
+                var branches = [];
+                if (isDecision) {
+                    var branchList = document.getElementById(pfx + '_branchList');
+                    if (branchList) {
+                        branchList.querySelectorAll('.branch-row').forEach(function(row) {
+                            var inputs = row.querySelectorAll('input[type="text"]');
+                            var label = inputs[0] ? inputs[0].value.trim() : '';
+                            var target = inputs[1] ? inputs[1].value.trim() : '';
+                            if (label || target) branches.push({ label: label, target: target });
+                        });
+                    }
+                }
+
                 result.push({
                     name: name || 'Step ' + (result.length + 1),
                     department: dept || 'Other',
-                    isDecision: isDecision ? isDecision.checked : false,
+                    isDecision: isDecision && branches.length > 0,
+                    branches: branches,
                     hasName: !!name
                 });
             });
             return result;
         }
 
+        function resolveBranchTargetIdx(target, steps) {
+            if (!target) return -1;
+            var m = target.match(/(\d+)/);
+            if (m) {
+                var idx = parseInt(m[1]) - 1;
+                if (idx >= 0 && idx < steps.length) return idx;
+            }
+            var lower = target.toLowerCase();
+            for (var i = 0; i < steps.length; i++) {
+                if (steps[i].name.toLowerCase().indexOf(lower) >= 0) return i;
+            }
+            return -1;
+        }
+
         function buildLiveFlowSVG(steps) {
-            const DEPT_COLORS = {
+            var DEPT_COLORS = {
                 'Sales': '#3b82f6', 'Operations': '#f59e0b', 'Finance': '#22c55e',
                 'IT': '#6366f1', 'Customer Success': '#ec4899', 'Product': '#a855f7',
-                'Leadership': '#ca8a04', 'HR': '#ea580c', 'Other': '#94a3b8'
+                'Leadership': '#ca8a04', 'HR': '#ea580c', 'Procurement': '#0284c7',
+                'Legal': '#e91e63', 'Compliance': '#9c27b0', 'Engineering': '#3f51b5',
+                'Risk': '#e65100', 'Data Protection': '#2e7d32', 'Quality Assurance': '#0277bd',
+                'Quality': '#0277bd', 'Facilities': '#795548', 'Executive Board': '#ca8a04',
+                'Other': '#94a3b8'
             };
-            const DEPT_BG = {
+            var DEPT_BG = {
                 'Sales': '#dbeafe', 'Operations': '#fef3c7', 'Finance': '#dcfce7',
                 'IT': '#e0e7ff', 'Customer Success': '#fce7f3', 'Product': '#f3e8ff',
-                'Leadership': '#fef9c3', 'HR': '#ffedd5', 'Other': '#f1f5f9'
+                'Leadership': '#fef9c3', 'HR': '#ffedd5', 'Procurement': '#e0f2fe',
+                'Legal': '#fce4ec', 'Compliance': '#f3e5f5', 'Engineering': '#e8eaf6',
+                'Risk': '#fff3e0', 'Data Protection': '#e8f5e9', 'Quality Assurance': '#e1f5fe',
+                'Quality': '#e1f5fe', 'Facilities': '#efebe9', 'Executive Board': '#fef9c3',
+                'Other': '#f1f5f9'
             };
 
-            const nodeW = 160, nodeH = 48, gapX = 32, padX = 20, padY = 20;
-            const cols = Math.min(steps.length, 5);
-            const rows = Math.ceil(steps.length / cols);
-            const svgW = cols * (nodeW + gapX) - gapX + padX * 2;
-            const svgH = rows * (nodeH + 44) - 44 + padY * 2 + 10;
+            var nodeW = 160, nodeH = 52, gapX = 48, padY = 30;
+            var LINE_GAP = 14;
+            var cols = Math.min(steps.length, 5);
+            var rows = Math.ceil(steps.length / cols);
 
-            let svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + svgW + '" height="' + svgH + '" viewBox="0 0 ' + svgW + ' ' + svgH + '" style="max-width:100%;height:auto;">';
-            svg += '<defs><marker id="lfArrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/></marker></defs>';
-
-            const positions = [];
+            // Pre-count loop-back channels so left margin is wide enough
+            var loopBackCount = 0;
             steps.forEach(function(step, i) {
-                const col = i % cols;
-                const row = Math.floor(i / cols);
-                const x = padX + col * (nodeW + gapX);
-                const y = padY + row * (nodeH + 44);
-                positions.push({ x: x, y: y, cx: x + nodeW / 2, cy: y + nodeH / 2 });
+                if (!step.isDecision) return;
+                step.branches.forEach(function(br) {
+                    var tgtIdx = resolveBranchTargetIdx(br.target, steps);
+                    if (tgtIdx >= 0 && tgtIdx < i) loopBackCount++;
+                });
+            });
+            var padX = Math.max(30, loopBackCount * LINE_GAP + 20);
 
-                const color = DEPT_COLORS[step.department] || '#94a3b8';
-                const bg = DEPT_BG[step.department] || '#f1f5f9';
-                const textColor = step.hasName ? '#1e293b' : '#94a3b8';
-                const rounding = step.isDecision ? '0' : '8';
-                const strokeW = step.isDecision ? '2' : '1.5';
-                const strokeColor = step.isDecision ? '#7c3aed' : color;
-                const fillColor = step.isDecision ? '#ede9fe' : bg;
+            var hasDecisions = steps.some(function(s) { return s.isDecision; });
+            var rowH = nodeH + (hasDecisions ? 64 : 44);
+            var svgW = cols * (nodeW + gapX) - gapX + padX + 30;
+            var svgH = rows * rowH - (rowH - nodeH) + padY * 2 + 20;
+
+            var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + svgW + '" height="' + svgH + '" viewBox="0 0 ' + svgW + ' ' + svgH + '" style="max-width:100%;height:auto;">';
+            svg += '<defs>';
+            svg += '<marker id="lfArrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/></marker>';
+            svg += '<marker id="lfArrowBranch" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#7c3aed"/></marker>';
+            svg += '</defs>';
+
+            var positions = [];
+            steps.forEach(function(step, i) {
+                var col = i % cols;
+                var row = Math.floor(i / cols);
+                var x = padX + col * (nodeW + gapX);
+                var y = padY + row * rowH;
+                positions.push({ x: x, y: y, cx: x + nodeW / 2, cy: y + nodeH / 2 });
+            });
+
+            // Draw nodes
+            steps.forEach(function(step, i) {
+                var p = positions[i];
+                var color = DEPT_COLORS[step.department] || '#94a3b8';
+                var bg = DEPT_BG[step.department] || '#f1f5f9';
+                var textColor = step.hasName ? '#1e293b' : '#94a3b8';
 
                 if (step.isDecision) {
-                    var cx = x + nodeW / 2, cy = y + nodeH / 2;
+                    var cx = p.x + nodeW / 2, cy = p.y + nodeH / 2;
                     var dx = nodeW / 2, dy = nodeH / 2;
-                    svg += '<polygon points="' + cx + ',' + (cy - dy) + ' ' + (cx + dx) + ',' + cy + ' ' + cx + ',' + (cy + dy) + ' ' + (cx - dx) + ',' + cy + '" fill="' + fillColor + '" stroke="' + strokeColor + '" stroke-width="' + strokeW + '"/>';
+                    svg += '<polygon points="' + cx + ',' + (cy - dy) + ' ' + (cx + dx) + ',' + cy + ' ' + cx + ',' + (cy + dy) + ' ' + (cx - dx) + ',' + cy + '" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>';
                 } else {
-                    svg += '<rect x="' + x + '" y="' + y + '" width="' + nodeW + '" height="' + nodeH + '" rx="' + rounding + '" fill="' + fillColor + '" stroke="' + strokeColor + '" stroke-width="' + strokeW + '"/>';
+                    svg += '<rect x="' + p.x + '" y="' + p.y + '" width="' + nodeW + '" height="' + nodeH + '" rx="8" fill="' + bg + '" stroke="' + color + '" stroke-width="1.5"/>';
                 }
 
                 var label = step.name.length > 22 ? step.name.substring(0, 20) + '...' : step.name;
-                svg += '<text x="' + (x + nodeW / 2) + '" y="' + (y + nodeH / 2 - 4) + '" text-anchor="middle" fill="' + textColor + '" font-size="11" font-weight="500" font-family="system-ui,sans-serif">' + escSvgText(label) + '</text>';
-                svg += '<text x="' + (x + nodeW / 2) + '" y="' + (y + nodeH / 2 + 10) + '" text-anchor="middle" fill="' + color + '" font-size="9" font-family="system-ui,sans-serif">' + escSvgText(step.department) + '</text>';
-                svg += '<text x="' + (x + 8) + '" y="' + (y + 13) + '" fill="' + color + '" font-size="9" font-weight="600" font-family="system-ui,sans-serif">' + (i + 1) + '</text>';
+                svg += '<text x="' + p.cx + '" y="' + (p.cy - 4) + '" text-anchor="middle" fill="' + textColor + '" font-size="11" font-weight="500" font-family="system-ui,sans-serif">' + escSvgText(label) + '</text>';
+                svg += '<text x="' + p.cx + '" y="' + (p.cy + 10) + '" text-anchor="middle" fill="' + (step.isDecision ? '#7c3aed' : color) + '" font-size="9" font-family="system-ui,sans-serif">' + escSvgText(step.department) + '</text>';
+                svg += '<text x="' + (p.x + 8) + '" y="' + (p.y + 13) + '" fill="' + (step.isDecision ? '#7c3aed' : color) + '" font-size="9" font-weight="600" font-family="system-ui,sans-serif">' + (i + 1) + '</text>';
             });
 
-            // Arrows
-            for (var i = 0; i < positions.length - 1; i++) {
+            // Sequential arrows (skip FROM decision nodes — branches handle those)
+            for (var i = 0; i < steps.length - 1; i++) {
+                if (steps[i].isDecision) continue;
                 var from = positions[i], to = positions[i + 1];
                 if (from.y === to.y) {
                     svg += '<line x1="' + (from.x + nodeW) + '" y1="' + from.cy + '" x2="' + to.x + '" y2="' + to.cy + '" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#lfArrow)"/>';
                 } else {
-                    var midY = from.y + nodeH + 18;
-                    svg += '<path d="M' + (from.x + nodeW / 2) + ',' + (from.y + nodeH) + ' L' + (from.x + nodeW / 2) + ',' + midY + ' L' + (to.x + nodeW / 2) + ',' + midY + ' L' + (to.x + nodeW / 2) + ',' + to.y + '" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#lfArrow)"/>';
+                    var midY = from.y + nodeH + 14;
+                    svg += '<path d="M' + from.cx + ',' + (from.y + nodeH) + ' L' + from.cx + ',' + midY + ' L' + to.cx + ',' + midY + ' L' + to.cx + ',' + to.y + '" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#lfArrow)"/>';
                 }
             }
 
+            // Branch arrows from decision nodes
+            var loopChannel = 0;
+            var branchPaths = '';
+            var branchLabels = '';
+
+            steps.forEach(function(step, i) {
+                if (!step.isDecision) return;
+                var from = positions[i];
+                step.branches.forEach(function(br, bi) {
+                    var tgtIdx = resolveBranchTargetIdx(br.target, steps);
+                    if (tgtIdx < 0 || tgtIdx >= steps.length) {
+                        tgtIdx = Math.min(i + 1, steps.length - 1);
+                    }
+                    var to = positions[tgtIdx];
+                    var vertOff = (bi - (step.branches.length - 1) / 2) * 10;
+
+                    if (tgtIdx === i + 1 && from.y === to.y) {
+                        // Next step, same row — simple forward line
+                        var startY = from.cy + vertOff;
+                        branchPaths += '<line x1="' + (from.x + nodeW) + '" y1="' + startY + '" x2="' + to.x + '" y2="' + to.cy + '" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#lfArrowBranch)"/>';
+                        if (br.label) {
+                            var lx = (from.x + nodeW + to.x) / 2;
+                            var ly = startY - 5;
+                            branchLabels += '<rect x="' + (lx - 2) + '" y="' + (ly - 8) + '" width="' + (br.label.length * 5.5 + 8) + '" height="12" rx="3" fill="white" fill-opacity="0.92"/>';
+                            branchLabels += '<text x="' + (lx + 2) + '" y="' + ly + '" fill="#7c3aed" font-size="8" font-weight="600" font-family="system-ui,sans-serif">' + escSvgText(br.label) + '</text>';
+                        }
+                    } else if (tgtIdx < i) {
+                        // Loop-back: route through left margin
+                        var leftX = padX - 8 - loopChannel * LINE_GAP;
+                        loopChannel++;
+                        var dropY = from.y + nodeH + 10 + bi * 8;
+                        var riseY = to.cy;
+                        branchPaths += '<path d="M' + from.cx + ',' + (from.y + nodeH) + ' L' + from.cx + ',' + dropY + ' L' + leftX + ',' + dropY + ' L' + leftX + ',' + riseY + ' L' + to.x + ',' + riseY + '" fill="none" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#lfArrowBranch)"/>';
+                        if (br.label) {
+                            var lx2 = leftX + 3;
+                            var ly2 = (dropY + riseY) / 2;
+                            branchLabels += '<rect x="' + (lx2 - 2) + '" y="' + (ly2 - 6) + '" width="' + (br.label.length * 5.5 + 8) + '" height="12" rx="3" fill="white" fill-opacity="0.92"/>';
+                            branchLabels += '<text x="' + (lx2 + 2) + '" y="' + (ly2 + 2) + '" fill="#7c3aed" font-size="8" font-weight="600" font-family="system-ui,sans-serif">' + escSvgText(br.label) + '</text>';
+                        }
+                    } else {
+                        // Forward skip or next row
+                        var midY = from.y + nodeH + 10 + bi * 8;
+                        branchPaths += '<path d="M' + from.cx + ',' + (from.y + nodeH) + ' L' + from.cx + ',' + midY + ' L' + to.cx + ',' + midY + ' L' + to.cx + ',' + to.y + '" fill="none" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#lfArrowBranch)"/>';
+                        if (br.label) {
+                            var lx3 = from.cx + 6;
+                            var ly3 = midY - 3;
+                            branchLabels += '<rect x="' + (lx3 - 2) + '" y="' + (ly3 - 8) + '" width="' + (br.label.length * 5.5 + 8) + '" height="12" rx="3" fill="white" fill-opacity="0.92"/>';
+                            branchLabels += '<text x="' + (lx3 + 2) + '" y="' + ly3 + '" fill="#7c3aed" font-size="8" font-weight="600" font-family="system-ui,sans-serif">' + escSvgText(br.label) + '</text>';
+                        }
+                    }
+                });
+            });
+
+            svg += branchPaths;
+            svg += branchLabels;
             svg += '</svg>';
             return svg;
         }
