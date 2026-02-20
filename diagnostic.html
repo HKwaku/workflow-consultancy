@@ -10462,8 +10462,33 @@
         }
 
         // Submit team response when diagnostic completes (hook into submitForAnalysis)
-        async         function submitTeamResponse() {
+        async function submitTeamResponse() {
             if (!teamMode) return;
+            try {
+                collectAllProcessData();
+                const contactName = document.getElementById('contactName')?.value?.trim() || 'Anonymous';
+                const contactEmail = document.getElementById('contactEmail')?.value?.trim() || '';
+                const contactDept = processData.definition?.departments?.[0] || '';
+
+                await fetch('/api/team?action=submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        teamCode: teamMode.code,
+                        respondentName: contactName,
+                        respondentEmail: contactEmail,
+                        respondentDepartment: contactDept,
+                        responseData: {
+                            processData,
+                            completedProcesses,
+                            customDepartments
+                        }
+                    })
+                });
+            } catch (err) {
+                console.warn('Team response submission error:', err);
+            }
+        }
 
         // ============================================================
         // HANDOVER TO COLLEAGUE
@@ -10695,32 +10720,6 @@
                 });
             }
         })();
-
-            try {
-                collectAllProcessData();
-                const contactName = document.getElementById('contactName')?.value?.trim() || 'Anonymous';
-                const contactEmail = document.getElementById('contactEmail')?.value?.trim() || '';
-                const contactDept = processData.definition?.departments?.[0] || '';
-
-                await fetch('/api/team?action=submit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        teamCode: teamMode.code,
-                        respondentName: contactName,
-                        respondentEmail: contactEmail,
-                        respondentDepartment: contactDept,
-                        responseData: {
-                            processData,
-                            completedProcesses,
-                            customDepartments
-                        }
-                    })
-                });
-            } catch (err) {
-                console.warn('Team response submission error:', err);
-            }
-        }
     </script>
 
     <!-- Save Progress Modal -->
