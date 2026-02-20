@@ -1021,7 +1021,7 @@
             bar.innerHTML = '<span>Deleting...</span>';
 
             try {
-                const resp = await fetch('/api/delete-report', {
+                const resp = await fetch('/api/get-dashboard', {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ reportId, email: currentUser.email })

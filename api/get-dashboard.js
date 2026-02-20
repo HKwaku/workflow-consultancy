@@ -1,13 +1,16 @@
 // api/get-dashboard.js
-// Vercel Serverless Function - Fetches all diagnostic reports for an email
-// Used by /dashboard?email=xxx to show comparative results over time
+// Vercel Serverless Function - Dashboard operations for diagnostic reports
+// GET  /api/get-dashboard?email=xxx  — fetch all reports for an email
+// DELETE /api/get-dashboard           — delete a report by ID (body: { reportId, email })
 
-const { setCorsHeaders, getSupabaseHeaders, isValidEmail, fetchWithTimeout } = require('../lib/api-helpers');
+const { setCorsHeaders, getSupabaseHeaders, isValidEmail, isValidUUID, fetchWithTimeout } = require('../lib/api-helpers');
 
 module.exports = async function handler(req, res) {
-  setCorsHeaders(res, 'GET,OPTIONS');
+  setCorsHeaders(res, 'GET,DELETE,OPTIONS');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  if (req.method === 'DELETE') return handleDelete(req, res);
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
@@ -189,3 +192,75 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: 'Failed to retrieve dashboard data.' });
   }
 };
+
+async function handleDelete(req, res) {
+  try {
+    const { reportId, email } = req.body || {};
+
+    if (!reportId || !email) {
+      return res.status(400).json({ error: 'reportId and email are required.' });
+    }
+    if (!isValidUUID(reportId)) {
+      return res.status(400).json({ error: 'Invalid report ID format.' });
+    }
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ error: 'Invalid email format.' });
+    }
+
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+    if (!supabaseUrl || !supabaseKey) {
+      return res.status(503).json({ error: 'Storage not configured.' });
+    }
+
+    const sbHeaders = getSupabaseHeaders(supabaseKey);
+    const normalEmail = email.toLowerCase();
+    let deleted = false;
+
+    const checkUrl = `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}&select=id,contact_email`;
+    const checkResp = await fetchWithTimeout(checkUrl, { method: 'GET', headers: sbHeaders });
+
+    if (checkResp.ok) {
+      const rows = await checkResp.json();
+      if (rows.length > 0) {
+        if (rows[0].contact_email?.toLowerCase() !== normalEmail) {
+          return res.status(403).json({ error: 'You can only delete your own reports.' });
+        }
+        const delResp = await fetchWithTimeout(
+          `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}`,
+          { method: 'DELETE', headers: { ...sbHeaders, 'Prefer': 'return=minimal' } }
+        );
+        if (delResp.ok || delResp.status === 204) deleted = true;
+      }
+    }
+
+    const legacyResp = await fetchWithTimeout(
+      `${supabaseUrl}/rest/v1/diagnostics?id=eq.${reportId}&select=id,email`,
+      { method: 'GET', headers: sbHeaders }
+    ).catch(() => null);
+
+    if (legacyResp && legacyResp.ok) {
+      const legacyRows = await legacyResp.json();
+      if (legacyRows.length > 0) {
+        if (legacyRows[0].email?.toLowerCase() !== normalEmail) {
+          if (!deleted) return res.status(403).json({ error: 'You can only delete your own reports.' });
+        } else {
+          const legacyDelResp = await fetchWithTimeout(
+            `${supabaseUrl}/rest/v1/diagnostics?id=eq.${reportId}`,
+            { method: 'DELETE', headers: { ...sbHeaders, 'Prefer': 'return=minimal' } }
+          );
+          if (legacyDelResp.ok || legacyDelResp.status === 204) deleted = true;
+        }
+      }
+    }
+
+    if (!deleted) {
+      return res.status(404).json({ error: 'Report not found or already deleted.' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Report deleted.' });
+  } catch (error) {
+    console.error('Delete report error:', error);
+    return res.status(500).json({ error: 'Failed to delete report.' });
+  }
+}
