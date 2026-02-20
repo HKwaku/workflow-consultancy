@@ -3870,8 +3870,6 @@
         let _handoverData = null;
         let _dragHandleActive = false;
 
-        document.addEventListener('pointerup', function() { _dragHandleActive = false; });
-
         function addStep(afterElement, beforeElement) {
             if (stepCount >= MAX_STEPS) return;
             const list = document.getElementById('stepsList');
@@ -3946,10 +3944,10 @@
             insertDiv.innerHTML = '<button type="button" onclick="insertStepAfter(this)" title="Insert a step here">+</button>';
             div.after(insertDiv);
 
-            // Wire drag handle — flag-based so browser sees draggable before gesture starts
             div.setAttribute('draggable', 'true');
             const handle = div.querySelector('.step-drag-handle');
-            handle.addEventListener('pointerdown', function() { _dragHandleActive = true; });
+            handle.addEventListener('mousedown', function() { _dragHandleActive = true; });
+            handle.addEventListener('touchstart', function() { _dragHandleActive = true; }, { passive: true });
 
             // Show contributor badge if tagged
             if (div.dataset.contributor) {
@@ -10260,9 +10258,14 @@
                     syncCustomDeptsToStepDropdowns();
                 }
 
-                // Restore step count
-                if (typeof data.stepCount === 'number' && data.stepCount > 0) {
-                    stepCount = 0;
+                // Rebuild step DOM from saved processData
+                if (processData.steps && processData.steps.length > 0) {
+                    rebuildStepsFromData(processData.steps);
+                }
+
+                // Rebuild systems DOM from saved processData
+                if (processData.systems && processData.systems.length > 0) {
+                    rebuildSystemsFromData(processData.systems);
                 }
 
                 // Restore handover context if present
@@ -10270,6 +10273,9 @@
                     _handoverData = data.handover;
                     _currentContributor = '';
                 }
+
+                // Restore radio selections for time/performance screens
+                restoreRadioSelections(processData);
 
                 // Navigate to saved screen
                 const targetScreen = data.currentScreen || 0;
@@ -10672,6 +10678,11 @@
 
             list.addEventListener('dragend', function() {
                 cleanup();
+                _dragHandleActive = false;
+            });
+
+            document.addEventListener('mouseup', function() {
+                setTimeout(function() { _dragHandleActive = false; }, 50);
             });
 
             function cleanup() {
