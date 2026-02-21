@@ -1,0 +1,21 @@
+---
+description: Keep DIAGNOSTICS_CAPABILITIES.md up to date when diagnostic flow changes
+globs: diagnostic.html
+alwaysApply: false
+---
+
+# Diagnostics Capabilities Document
+
+When making changes to `diagnostic.html` that affect the diagnostics flow, **always update `DIAGNOSTICS_CAPABILITIES.md`** to reflect the change.
+
+This includes changes to:
+- Screens (adding, removing, reordering, renaming)
+- Data inputs (new fields, removed fields, changed options)
+- Features (live preview, drag-and-drop, import, branching, etc.)
+- Flowchart rendering logic
+- Automation classification rules
+- Report generation or export formats
+- Data persistence / resume behaviour
+- Team diagnostics or handover flow
+
+Update the relevant section of the document and set the "Last updated" date at the top.
