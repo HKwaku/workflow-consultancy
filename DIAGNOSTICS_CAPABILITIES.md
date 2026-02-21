@@ -1,6 +1,6 @@
 # Diagnostics Flow — Capabilities Document
 
-> **Last updated:** 2026-02-20
+> **Last updated:** 2026-02-21
 > This document describes every screen, feature, and capability of the diagnostic tool in `diagnostic.html`. It should be updated whenever changes are made to the diagnostics flow.
 
 ---
@@ -9,13 +9,14 @@
 
 1. [Flow Overview](#flow-overview)
 2. [Screen-by-Screen Breakdown](#screen-by-screen-breakdown)
-3. [Core Features](#core-features)
-4. [Data Persistence & Resume](#data-persistence--resume)
-5. [Flowchart Rendering](#flowchart-rendering)
-6. [Automation Classification](#automation-classification)
-7. [Report Generation & Export](#report-generation--export)
-8. [Team Diagnostics](#team-diagnostics)
-9. [Handover](#handover)
+3. [User Experience & Navigation](#user-experience--navigation)
+4. [Core Features](#core-features)
+5. [Data Persistence & Resume](#data-persistence--resume)
+6. [Flowchart Rendering](#flowchart-rendering)
+7. [Automation Classification](#automation-classification)
+8. [Report Generation & Export](#report-generation--export)
+9. [Team Diagnostics](#team-diagnostics)
+10. [Handover](#handover)
 
 ---
 
@@ -93,11 +94,16 @@ Structured inputs replacing vague "how many hours" questions:
 ### Screen 7 — Step Breakdown
 The most feature-rich screen. Users build the process step-by-step.
 
+**Contextual guidance:**
+- A blue tip box at the top reads: "Start by listing the major steps in order. You can add details, decisions, and branches later."
+- The import section is collapsed behind a toggle link ("Have a process map or step list? Import it") to reduce initial cognitive load.
+- The decision toggle on each step is hidden until the step has a name entered (progressive disclosure).
+
 **Per step:**
 - Step name (text input).
 - Department (select with 17+ options, including custom departments from screen 3).
 - Internal / External radio toggle.
-- **Decision toggle**: Checkbox to mark a step as a decision/routing point.
+- **Decision toggle**: Checkbox to mark a step as a decision/routing point (visible only after step name is entered).
   - When checked, shows branch rows with label + target inputs.
   - "Add another route" button for 3+ branches.
   - Targets resolved by step number ("Step 5") or name match.
@@ -109,10 +115,13 @@ The most feature-rich screen. Users build the process step-by-step.
 - Step numbers auto-renumber after any change.
 - Minimum 3 steps, maximum 50.
 
-**Import:**
+**Import (collapsed by default):**
 - **Upload file**: Drag-and-drop or click to upload an image (PNG, JPG, GIF, WebP) or PDF (≤10 MB). Sent to `/api/analyze-symptoms` with mode `extract-steps`. AI extracts steps automatically.
 - **Paste text**: Paste a process description; AI extracts steps from text.
 - **AI suggestions**: After 3+ steps, an AI can suggest missing steps as clickable chips.
+
+**Handover button:**
+- "Hand over to colleague" button in the action bar with explanatory hint: "Don't know all the steps? Send to a colleague to continue."
 
 **Live Flow Preview:**
 - Toggle "Show Live Flow Preview" to see an SVG flowchart built in real time.
@@ -192,6 +201,7 @@ Dynamic list of systems used in the process:
 - Name, email, company, job title.
 - Industry (select: Technology, Financial Services, Healthcare, Manufacturing, Retail, Professional Services, Government, Education, Other).
 - Team size (radio: 1–5 → 200+).
+- **Two-step submit confirmation**: First click changes button to "Confirm and Generate" with a pulsing highlight; second click submits. Auto-resets after 5 seconds if the user doesn't confirm.
 
 ### Screen 19 — Results & Report
 Final analysis output with multiple sections:
@@ -204,6 +214,51 @@ Final analysis output with multiple sections:
 - **ROI Projection Calculator** — interactive sliders.
 - **Process Dependency Graph** (if multiple processes).
 - **Edit buttons** on each section to go back and modify data.
+
+---
+
+## User Experience & Navigation
+
+### Progress Bar & Phase Labels
+- A gradient progress bar at the top of every screen shows completion percentage.
+- Text reads "Step X of 18 — Phase: Screen Name" (e.g., "Step 5 of 18 — Measure: Time Investment").
+- Below the bar, five phase dots provide a mental map of the journey:
+  - **Define** (screens 1–3): Process selection and boundaries.
+  - **Measure** (screens 4–6): Real example, time, and performance data.
+  - **Map** (screens 7–9): Step breakdown, handoffs, and bottlenecks.
+  - **Assess** (screens 10–13): Systems, approvals, knowledge, new hire experience.
+  - **Quantify** (screens 14–18): Volume, cost, savings, priority, and contact.
+- Active phase is highlighted; completed phases are struck through.
+- Phase dots are hidden on the welcome (screen 0) and results (screen 19) screens.
+
+### Contextual Helper Text
+Every screen includes a "why this matters" helper line connecting the question to the analysis value:
+- Screen 8: Defines what a "handoff" is and why handoff delays matter.
+- Screen 9: "The step where time stalls most reveals your highest-impact improvement opportunity."
+- Screen 10: "Knowing which systems are involved helps identify integration and automation opportunities."
+- Screen 11: "Approval bottlenecks are one of the top causes of process delays."
+- Screen 12: "How people find answers reveals whether your process relies on documentation or on specific people."
+- Screen 13: "How fast new hires ramp up reveals how well the process is documented and transferable."
+- Screen 14: "Volume drives the business case — even small per-instance savings compound dramatically."
+- Screen 15: "Putting a real number on process cost makes the case for improvement tangible."
+- Screen 16: "Your time is just part of the picture. The full team cost reveals the true organisational impact."
+- Screen 17: "Your assessment helps us focus recommendations on what matters most to you right now."
+
+### Soft Validation Nudges
+Screens without hard validation requirements (8, 9, 10, 11, 12, 13, 15, 16, 17) show a gentle nudge when the user clicks Continue without entering data:
+- Message: "Skipping this? Your analysis will be more accurate with this data."
+- Two buttons: "Skip anyway" (proceeds) and "Fill it in" (dismisses the nudge).
+- Once dismissed for a screen, the nudge does not appear again for that screen.
+
+### Navigation
+- **Back**: "← Back" button on every screen (consistent label).
+- **Continue**: "Continue →" on screens 1–17.
+- **Submit**: "Generate My Analysis →" on screen 18 with two-step confirmation.
+- **Transitions**: Fade-in animation (0.3s ease with translateY) and smooth scroll to top.
+
+### Time Estimate
+- Welcome screen displays: "Evidence-based workflow analysis. 12–15 minutes per process."
+- Screen 17 reminds: "You can analyse up to 3 processes total. Each takes about 12–15 minutes."
 
 ---
 

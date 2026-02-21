@@ -110,6 +110,35 @@
             color: var(--text-light);
             text-align: center;
         }
+        .phase-dots {
+            display: flex;
+            justify-content: center;
+            gap: 0.25rem;
+            margin-top: 0.5rem;
+        }
+        .phase-dot {
+            font-size: 0.72rem;
+            color: var(--text-light);
+            opacity: 0.45;
+            padding: 0.2rem 0.6rem;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        .phase-dot-num {
+            font-weight: 700;
+            margin-right: 0.15rem;
+        }
+        .phase-dot-active {
+            opacity: 1;
+            color: var(--primary);
+            background: var(--bg-alt);
+            font-weight: 600;
+        }
+        .phase-dot-done {
+            opacity: 0.7;
+            text-decoration: line-through;
+        }
 
         .progress-bar-row {
             display: flex;
@@ -1167,6 +1196,19 @@
             width: 16px;
             height: 16px;
         }
+        .handover-btn-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .handover-btn-hint {
+            font-size: 0.72rem;
+            color: var(--text-light);
+            text-align: center;
+            max-width: 200px;
+            line-height: 1.3;
+        }
 
         /* ── Handover modal ── */
         .handover-modal-form .handover-name-row {
@@ -1347,6 +1389,8 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
+        @keyframes confirmPulse { 0%,100%{box-shadow:0 0 0 0 rgba(61,142,166,0.3);} 50%{box-shadow:0 0 0 8px rgba(61,142,166,0);} }
+        .confirm-pulse { animation: confirmPulse 1.2s ease infinite; }
 
         .button-secondary {
             background: var(--bg-alt);
@@ -1732,6 +1776,39 @@
         @keyframes insightFadeIn {
             from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Screen 7 tip */
+        .screen7-tip {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: var(--radius-md);
+            padding: 0.65rem 1rem;
+            font-size: 0.85rem;
+            color: #0369a1;
+            margin-bottom: 1rem;
+            line-height: 1.45;
+        }
+        .import-toggle-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: none;
+            border: 1px dashed var(--border);
+            border-radius: var(--radius-md);
+            padding: 0.6rem 1rem;
+            font-size: 0.85rem;
+            color: var(--text-mid);
+            cursor: pointer;
+            margin-bottom: 1rem;
+            width: 100%;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .import-toggle-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(61, 142, 166, 0.04);
         }
 
         /* Step Import Zone */
@@ -2126,6 +2203,13 @@
                 </button>
             </div>
             <div class="progress-text" id="progressText">Getting Started</div>
+            <div class="phase-dots" id="phaseDots" style="display: none;">
+                <div class="phase-dot"><span class="phase-dot-num">1</span> Define</div>
+                <div class="phase-dot"><span class="phase-dot-num">2</span> Measure</div>
+                <div class="phase-dot"><span class="phase-dot-num">3</span> Map</div>
+                <div class="phase-dot"><span class="phase-dot-num">4</span> Assess</div>
+                <div class="phase-dot"><span class="phase-dot-num">5</span> Quantify</div>
+            </div>
         </div>
 
         <!-- Resume banner (shown when restoring from link) -->
@@ -2645,10 +2729,17 @@
             <div class="screen-card">
                 <h2 class="screen-title">Step Breakdown</h2>
                 <p class="screen-subtitle">Let's break down "<span class="process-ref" id="processRef7">your process</span>" into major steps.</p>
-                <p class="helper-text" style="margin-bottom: 1.5rem;">For the instance: <span id="exampleNameRef7" class="process-ref"></span></p>
+                <p class="helper-text" style="margin-bottom: 0.75rem;">For the instance: <span id="exampleNameRef7" class="process-ref"></span></p>
+                <div class="screen7-tip" id="screen7Tip">
+                    <strong>Tip:</strong> Start by listing the major steps in order. You can add details, decisions, and branches later.
+                </div>
 
-                <!-- Import zone: upload or paste steps -->
-                <div class="step-import-zone" id="stepImportZone">
+                <!-- Import zone: collapsed by default -->
+                <button type="button" class="import-toggle-btn" id="importToggleBtn" onclick="toggleImportZone()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Have a process map or step list? Import it
+                </button>
+                <div class="step-import-zone" id="stepImportZone" style="display:none;">
                     <div class="step-import-tabs">
                         <button class="step-import-tab active" onclick="switchImportTab('upload', this)">Upload Process Map</button>
                         <button class="step-import-tab" onclick="switchImportTab('paste', this)">Paste Steps</button>
@@ -2714,10 +2805,13 @@
 
                 <div class="button-group">
                     <button class="button button-secondary" onclick="goToScreen(6)">&larr; Back</button>
-                    <button type="button" class="handover-btn" onclick="openHandoverModal()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-                        Hand over to colleague
-                    </button>
+                    <span class="handover-btn-wrapper">
+                        <button type="button" class="handover-btn" onclick="openHandoverModal()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                            Hand over to colleague
+                        </button>
+                        <span class="handover-btn-hint">Don't know all the steps? Send to a colleague to continue.</span>
+                    </span>
                     <button class="button button-primary" onclick="validateAndContinue(7)">Continue &rarr;</button>
                 </div>
             </div>
@@ -2728,6 +2822,7 @@
             <div class="screen-card">
                 <h2 class="screen-title">Handoff Analysis</h2>
                 <p class="screen-subtitle">Let's look at what happens between steps.</p>
+                <p class="helper-text" style="margin-bottom: 1rem;">A "handoff" is any point where work passes from one person or team to another. Poor handoffs cause delays, rework, and lost information.</p>
 
                 <div id="handoffContainer"></div>
 
@@ -2749,6 +2844,7 @@
             <div class="screen-card">
                 <h2 class="screen-title">Bottleneck Identification</h2>
                 <p class="screen-subtitle">Where did time get stuck?</p>
+                <p class="helper-text" style="margin-bottom: 1rem;">The step where time stalls most reveals your highest-impact improvement opportunity.</p>
 
                 <div id="bottleneckSummary"></div>
 
@@ -2798,7 +2894,8 @@
             <div class="screen-card">
                 <h2 class="screen-title">Systems &amp; Tools</h2>
                 <p class="screen-subtitle">Which systems did you use for "<span class="process-ref" id="processRef10">your process</span>"?</p>
-                <p class="helper-text" style="margin-bottom: 1.5rem;">Think of the <span id="exampleNameRef10" class="process-ref"></span> instance. Every system you touched.</p>
+                <p class="helper-text" style="margin-bottom: 1rem;">Knowing which systems are involved helps identify integration and automation opportunities.</p>
+                <p class="helper-text" style="margin-bottom: 1.5rem;">Think of the <span id="exampleNameRef10" class="process-ref"></span> instance. Every system you touched &mdash; e.g., CRM, ERP, email, spreadsheets, project management tools.</p>
 
                 <div class="dynamic-list" id="systemsList"></div>
 
@@ -2823,7 +2920,8 @@
             <div class="screen-card">
                 <h2 class="screen-title">Approvals &amp; Decisions</h2>
                 <p class="screen-subtitle">In "<span class="process-ref" id="processRef11">your process</span>", how many approval points exist?</p>
-                <p class="helper-text" style="margin-bottom: 1.5rem;">Approval points = decisions where someone must explicitly approve before work continues.</p>
+                <p class="helper-text" style="margin-bottom: 0.5rem;">Approval bottlenecks are one of the top causes of process delays &mdash; even a single slow approval can stall everything.</p>
+                <p class="helper-text" style="margin-bottom: 1.5rem;">Approval points = decisions where someone must explicitly approve before work continues. E.g., manager sign-off, budget approval, compliance review.</p>
 
                 <div class="form-group">
                     <label for="approvalCount">How many approval points?</label>
@@ -2846,6 +2944,7 @@
             <div class="screen-card">
                 <h2 class="screen-title">Knowledge &amp; Documentation</h2>
                 <p class="screen-subtitle">You're doing "<span class="process-ref" id="processRef12">your process</span>" and realise:<br><em>"Wait, what's the approval threshold for this?"</em></p>
+                <p class="helper-text" style="margin-bottom: 1rem;">How people find answers reveals whether your process relies on documentation or on specific people &mdash; a key risk factor.</p>
 
                 <div class="form-group">
                     <label>Where do you look FIRST?</label>
@@ -2912,6 +3011,7 @@
             <div class="screen-card">
                 <h2 class="screen-title">New Hire Reality</h2>
                 <p class="screen-subtitle">If someone new started tomorrow and needed to do "<span class="process-ref" id="processRef13">your process</span>", how would they learn it?</p>
+                <p class="helper-text" style="margin-bottom: 1rem;">How fast new hires ramp up reveals how well the process is documented and transferable. Long ramp-up = fragile process.</p>
 
                 <div class="form-group">
                     <label>How would they learn?</label>
@@ -2969,6 +3069,7 @@
             <div class="screen-card">
                 <h2 class="screen-title">Frequency &amp; Volume</h2>
                 <p class="screen-subtitle">How often does "<span class="process-ref" id="processRef14">your process</span>" occur?</p>
+                <p class="helper-text" style="margin-bottom: 1rem;">Volume drives the business case &mdash; even small per-instance savings compound dramatically at high frequency.</p>
 
                 <div class="form-group">
                     <div class="radio-group">
@@ -3022,6 +3123,7 @@
             <div class="screen-card">
                 <h2 class="screen-title">Let's Calculate the Real Cost</h2>
                 <p class="screen-subtitle">The numbers behind "<span class="process-ref" id="processRef15">your process</span>"</p>
+                <p class="helper-text" style="margin-bottom: 1rem;">Putting a real number on process cost makes the case for improvement tangible and prioritisable.</p>
 
                 <div class="form-group">
                     <label for="hourlyRate">Your estimated hourly rate:</label>
@@ -3065,6 +3167,7 @@
             <div class="screen-card">
                 <h2 class="screen-title">Team Cost &amp; Savings</h2>
                 <p class="screen-subtitle">How many OTHER people are involved in "<span class="process-ref" id="processRef16">your process</span>"?</p>
+                <p class="helper-text" style="margin-bottom: 1rem;">Your time is just part of the picture. The full team cost reveals the true organisational impact.</p>
 
                 <div class="form-group">
                     <label for="teamPeopleCount">Count everyone who touches any step:</label>
@@ -3139,6 +3242,7 @@
             <div class="screen-card">
                 <h2 class="screen-title">Priority Assessment</h2>
                 <p class="screen-subtitle">Based on everything you've shared about "<span class="process-ref" id="processRef17">your process</span>":</p>
+                <p class="helper-text" style="margin-bottom: 1rem;">Your assessment helps us focus recommendations on what matters most to you right now.</p>
 
                 <div id="prioritySummary"></div>
 
@@ -3242,7 +3346,7 @@
 
                 <div class="button-group">
                     <button class="button button-secondary" onclick="goToScreen(17)">&larr; Back</button>
-                    <button class="button button-primary" onclick="submitDiagnostic()">Generate My Analysis &rarr;</button>
+                    <button class="button button-primary" id="submitBtn" onclick="confirmBeforeSubmit()">Generate My Analysis &rarr;</button>
                 </div>
             </div>
         </div>
@@ -3426,10 +3530,37 @@
                 16: 'Team Cost & Savings', 17: 'Priority', 18: 'Your Details', 19: 'Results'
             };
 
-            document.getElementById('progressText').textContent =
-                currentScreen === 0 ? screenLabels[0] :
-                currentScreen === TOTAL_SCREENS ? 'Complete!' :
-                `Step ${currentScreen} of ${TOTAL_SCREENS - 1} — ${screenLabels[currentScreen] || ''}`;
+            const screenPhases = {
+                1: 'Define', 2: 'Define', 3: 'Define',
+                4: 'Measure', 5: 'Measure', 6: 'Measure',
+                7: 'Map', 8: 'Map', 9: 'Map',
+                10: 'Assess', 11: 'Assess', 12: 'Assess', 13: 'Assess',
+                14: 'Quantify', 15: 'Quantify', 16: 'Quantify', 17: 'Quantify', 18: 'Quantify'
+            };
+
+            let text;
+            if (currentScreen === 0) {
+                text = screenLabels[0];
+            } else if (currentScreen === TOTAL_SCREENS) {
+                text = 'Complete!';
+            } else {
+                const phase = screenPhases[currentScreen] ? screenPhases[currentScreen] + ': ' : '';
+                text = `Step ${currentScreen} of ${TOTAL_SCREENS - 1} — ${phase}${screenLabels[currentScreen] || ''}`;
+            }
+            document.getElementById('progressText').textContent = text;
+
+            // Update phase dots
+            const phaseDots = document.getElementById('phaseDots');
+            if (phaseDots) {
+                var phases = ['Define', 'Measure', 'Map', 'Assess', 'Quantify'];
+                var currentPhase = screenPhases[currentScreen] || '';
+                var currentPhaseIdx = phases.indexOf(currentPhase);
+                phaseDots.querySelectorAll('.phase-dot').forEach(function(dot, idx) {
+                    dot.classList.toggle('phase-dot-active', idx === currentPhaseIdx);
+                    dot.classList.toggle('phase-dot-done', idx < currentPhaseIdx);
+                });
+                phaseDots.style.display = (currentScreen >= 1 && currentScreen <= 18) ? 'flex' : 'none';
+            }
         }
 
         function updateProcessRefs() {
@@ -3815,6 +3946,18 @@
         }
 
         // ── Step Import (upload image / paste text) ──
+        function toggleImportZone() {
+            var zone = document.getElementById('stepImportZone');
+            var btn = document.getElementById('importToggleBtn');
+            if (zone.style.display === 'none') {
+                zone.style.display = '';
+                btn.style.display = 'none';
+            } else {
+                zone.style.display = 'none';
+                btn.style.display = '';
+            }
+        }
+
         function switchImportTab(tab, btn) {
             document.querySelectorAll('.step-import-tab').forEach(t => t.classList.remove('active'));
             btn.classList.add('active');
@@ -4027,7 +4170,7 @@
                             </label>
                         </div>
                     </div>
-                    <div class="step-decision-toggle">
+                    <div class="step-decision-toggle" id="step_u${uid}_decisionToggle" style="display:none;">
                         <input type="checkbox" id="step_u${uid}_decision" onchange="toggleDecisionBranches('u${uid}')">
                         <label for="step_u${uid}_decision">This step has a decision / routing point</label>
                     </div>
@@ -4096,10 +4239,16 @@
             const checkedRadio = div.querySelector('.int-ext-toggle input:checked');
             if (checkedRadio) checkedRadio.closest('label').classList.add('active');
 
-            // Hook step changes to live flow preview
+            // Hook step changes to live flow preview + progressive disclosure
             const nameInput = document.getElementById('step_u' + uid + '_name');
             const deptSelect = document.getElementById('step_u' + uid + '_dept');
-            if (nameInput) nameInput.addEventListener('input', scheduleLiveFlowUpdate);
+            if (nameInput) {
+                nameInput.addEventListener('input', scheduleLiveFlowUpdate);
+                nameInput.addEventListener('input', function() {
+                    var toggle = document.getElementById('step_u' + uid + '_decisionToggle');
+                    if (toggle) toggle.style.display = this.value.trim() ? '' : 'none';
+                });
+            }
             if (deptSelect) deptSelect.addEventListener('change', scheduleLiveFlowUpdate);
             div.querySelectorAll('.branch-row input').forEach(function(inp) { inp.addEventListener('input', scheduleLiveFlowUpdate); });
 
@@ -5105,6 +5254,10 @@
 
                 const uid = div.dataset.stepUid;
                 const uidKey = 'u' + uid;
+                if (s.name) {
+                    var decToggle = document.getElementById(pfx + '_decisionToggle');
+                    if (decToggle) decToggle.style.display = '';
+                }
                 if (s.isDecision) {
                     const cb = document.getElementById(pfx + '_decision');
                     if (cb) {
@@ -5214,6 +5367,26 @@
         // ============================================================
         // SUBMIT & RESULTS
         // ============================================================
+        var _submitConfirmed = false;
+        function confirmBeforeSubmit() {
+            if (_submitConfirmed) {
+                submitDiagnostic();
+                return;
+            }
+            var name = document.getElementById('contactName').value.trim();
+            var email = document.getElementById('contactEmail').value.trim();
+            if (!name || !email) {
+                showError(18, 'Please provide your name and email.');
+                return;
+            }
+            _submitConfirmed = true;
+            var btn = document.getElementById('submitBtn');
+            btn.textContent = 'Confirm and Generate \u2192';
+            btn.style.background = 'var(--primary)';
+            btn.classList.add('confirm-pulse');
+            setTimeout(function() { _submitConfirmed = false; btn.textContent = 'Generate My Analysis \u2192'; btn.style.background = ''; btn.classList.remove('confirm-pulse'); }, 5000);
+        }
+
         async function submitDiagnostic() {
             // Validate contact info
             const name = document.getElementById('contactName').value.trim();
@@ -6590,6 +6763,62 @@
                 return;
             }
 
+            // Soft nudge on optional screens if no data was entered
+            var nudgeScreens = [8, 9, 10, 11, 12, 13, 15, 16, 17];
+            if (nudgeScreens.indexOf(screen) >= 0 && !_skipNudge[screen] && !screenHasData(screen)) {
+                showSoftNudge(screen);
+                return;
+            }
+
+            goToScreen(screen + 1);
+        }
+
+        var _skipNudge = {};
+
+        function screenHasData(screen) {
+            switch (screen) {
+                case 8:
+                    return !!document.querySelector('#handoffContainer input[type="radio"]:checked');
+                case 9:
+                    return !!document.getElementById('longestStep').value || !!document.querySelector('input[name="bottleneckReason"]:checked');
+                case 10:
+                    var sysNames = document.querySelectorAll('#systemsList input[type="text"]');
+                    for (var i = 0; i < sysNames.length; i++) { if (sysNames[i].value.trim()) return true; }
+                    return false;
+                case 11:
+                    return parseInt(document.getElementById('approvalCount').value || '0') > 0;
+                case 12:
+                    return !!document.querySelector('input[name="knowledgeFirst"]:checked');
+                case 13:
+                    return !!document.querySelector('input[name="learningMethod"]:checked');
+                case 15:
+                    return false;
+                case 16:
+                    return parseInt(document.getElementById('teamPeopleCount').value || '0') > 1;
+                case 17:
+                    return !!document.querySelector('input[name="priority"]:checked');
+                default:
+                    return true;
+            }
+        }
+
+        function showSoftNudge(screen) {
+            var box = document.getElementById('errorBox' + screen);
+            var text = document.getElementById('errorText' + screen);
+            if (box && text) {
+                text.innerHTML = '<span style="display:flex;flex-direction:column;align-items:center;gap:0.5rem;text-align:center;">' +
+                    '<span>Skipping this? Your analysis will be more accurate with this data.</span>' +
+                    '<span style="display:flex;gap:0.5rem;">' +
+                    '<button class="button button-secondary" style="padding:0.35rem 0.9rem;font-size:0.82rem;" onclick="dismissNudge(' + screen + ')">Skip anyway</button>' +
+                    '<button class="button button-primary" style="padding:0.35rem 0.9rem;font-size:0.82rem;" onclick="clearError(' + screen + ')">Fill it in</button>' +
+                    '</span></span>';
+                box.classList.add('show');
+            }
+        }
+
+        function dismissNudge(screen) {
+            _skipNudge[screen] = true;
+            clearError(screen);
             goToScreen(screen + 1);
         }
 
