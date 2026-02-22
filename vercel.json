@@ -2,18 +2,11 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "cleanUrls": true,
+  "framework": null,
+  "cleanUrls": false,
   "rewrites": [
-    { "source": "/diagnostic", "destination": "/app.html" },
-    { "source": "/diagnostic/(.*)", "destination": "/app.html" },
-    { "source": "/portal", "destination": "/app.html" },
-    { "source": "/portal/(.*)", "destination": "/app.html" },
-    { "source": "/report", "destination": "/app.html" },
-    { "source": "/report/(.*)", "destination": "/app.html" },
-    {
-      "source": "/((?!api/|diagnostic\\.html|landing\\.html|styles/|assets/|videos/|images/).*)",
-      "destination": "/index.html"
-    }
+    { "source": "/(portal|diagnostic|report)(/.*)?", "destination": "/app.html" },
+    { "source": "/((?!api/|diagnostic\\.html|landing\\.html|styles/|assets/|videos/|images/).*)", "destination": "/index.html" }
   ],
   "redirects": [
     { "source": "/dashboard", "destination": "/portal", "statusCode": 301 }
