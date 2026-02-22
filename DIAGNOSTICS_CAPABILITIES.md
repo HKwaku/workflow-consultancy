@@ -7,16 +7,96 @@
 
 ## Table of Contents
 
-1. [Flow Overview](#flow-overview)
-2. [Screen-by-Screen Breakdown](#screen-by-screen-breakdown)
-3. [User Experience & Navigation](#user-experience--navigation)
-4. [Core Features](#core-features)
-5. [Data Persistence & Resume](#data-persistence--resume)
-6. [Flowchart Rendering](#flowchart-rendering)
-7. [Automation Classification](#automation-classification)
-8. [Report Generation & Export](#report-generation--export)
-9. [Team Diagnostics](#team-diagnostics)
-10. [Handover](#handover)
+1. [Client Journey Paths](#client-journey-paths)
+2. [Flow Overview](#flow-overview)
+3. [Screen-by-Screen Breakdown](#screen-by-screen-breakdown)
+4. [User Experience & Navigation](#user-experience--navigation)
+5. [Core Features](#core-features)
+6. [Data Persistence & Resume](#data-persistence--resume)
+7. [Flowchart Rendering](#flowchart-rendering)
+8. [Automation Classification](#automation-classification)
+9. [Report Generation & Export](#report-generation--export)
+10. [Team Diagnostics](#team-diagnostics)
+11. [Handover](#handover)
+12. [Database Schema](#database-schema)
+
+---
+
+## Client Journey Paths
+
+Six distinct paths through the diagnostic tool, each touching different screens, APIs, and database tables.
+
+```
+                                ┌─────────────────┐
+                                │   Welcome Page   │
+                                │    (screen 0)    │
+                                └────────┬────────┘
+                   ┌─────────────────────┼─────────────────────┐
+                   │                     │                     │
+                   ▼                     ▼                     ▼
+        ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+        │  START DIAGNOSTIC │  │  TEAM DIAGNOSTIC  │  │  RESUME / LOAD   │
+        │   (Individual)    │  │  (Collaborative)  │  │  (Saved Draft)   │
+        └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘
+                 │                     │                     │
+                 ▼                     ▼                     │
+        ┌──────────────────┐  ┌──────────────────┐           │
+        │ Screens 1 → 17   │  │  Team Setup       │           │
+        │ Define, Measure,  │  │  Create session   │           │
+        │ Map, Assess,      │  │  Share team code  │           │
+        │ Quantify          │  └────────┬─────────┘           │
+        │                   │           │                     │
+        │  ┌──────────┐    │           ▼                     │
+        │  │ HANDOVER  │◄───┤  ┌──────────────────┐           │
+        │  │ (screen 7)│    │  │ Team Members Join │           │
+        │  │ Save &    │    │  │ Each completes    │           │
+        │  │ share link│    │  │ their own view    │           │
+        │  └─────┬─────┘    │  │ of the process    │           │
+        │        │          │  └────────┬─────────┘           │
+        │        ▼          │           │                     │
+        │  Colleague        │           ▼                     │
+        │  resumes from     │  ┌──────────────────┐           │
+        │  screen 7         │  │ Gap Analysis &    │           │
+        │                   │  │ Team Results      │           │
+        └────────┬─────────┘  └──────────────────┘           │
+                 │                                            │
+                 ▼                                            │
+        ┌──────────────────┐                                  │
+        │ Contact Details   │                                  │
+        │ (screen 18)       │                                  │
+        └────────┬─────────┘                                  │
+                 │                                            │
+                 ▼                                            │
+        ┌──────────────────┐                                  │
+        │ Results & Report  │◄─────────────────────────────────┘
+        │ (screen 19)       │
+        │                   │
+        │ Flowcharts, AI    │
+        │ recommendations,  │
+        │ roadmap, exports  │
+        └────────┬─────────┘
+                 │
+        ┌────────┴─────────────────────────┐
+        │                                  │
+        ▼                                  ▼
+┌──────────────────┐            ┌──────────────────┐
+│  PORTAL: View    │            │  PORTAL: Edit    │
+│  Read-only report│            │  Re-enter from   │
+│  with PDF export │            │  screen 7 with   │
+│                  │            │  original data    │
+└──────────────────┘            └──────────────────┘
+```
+
+### Path Summary
+
+| # | Path | Entry Point | Key Screens | Database Tables |
+|---|------|-------------|-------------|-----------------|
+| 1 | **New Individual Diagnostic** | Welcome → Start Diagnostic | 0 → 1–17 → 18 → 19 | `diagnostic_progress` (mid-session), `diagnostic_reports` (on submit) |
+| 2 | **Team Diagnostic** | Welcome → Start Team | 0 → Team Setup → Members join | `team_diagnostics` (session), `team_responses` (each submission) |
+| 3 | **Resume Saved Draft** | Welcome → Resume | 0 → last saved screen → continue | `diagnostic_progress` (read), then path 1 continues |
+| 4 | **View Report** | Portal → View | 19 (read-only) | `diagnostic_reports` (read) |
+| 5 | **Edit Report** | Portal → Edit | 7 → 17 → 18 → 19 | `diagnostic_reports` (read + write) |
+| 6 | **Handover** | Screen 7 → Hand over | 7 (save) → colleague resumes at 7 | `diagnostic_progress` (write + read) |
 
 ---
 
@@ -411,3 +491,78 @@ The classification feeds into the **Automation Readiness Score** shown on the re
 - **Share**: Generates a handover URL with `?resume=<id>&handover=true`.
 - **Resume**: Colleague opens the link, sees a handover banner, continues from screen 7.
 - **Attribution**: Steps added after handover are tagged with the contributor's name.
+
+---
+
+## Database Schema
+
+All data is stored in Supabase (PostgreSQL). Five active tables serve distinct purposes across the diagnostic lifecycle.
+
+```
+┌─────────────────────────┐       ┌─────────────────────────┐
+│   diagnostic_progress   │       │   diagnostic_reports    │
+│  (in-progress drafts)   │──────▶│  (completed reports)    │
+│                         │ submit│                         │
+│  id, email, progress_   │       │  id, contact_email,     │
+│  data, created_at,      │       │  contact_name, company, │
+│  updated_at             │       │  lead_score, lead_grade,│
+│                         │       │  diagnostic_data (JSON),│
+│  API: /api/progress     │       │  pdf_base64, created_at │
+└─────────────────────────┘       │                         │
+                                  │  APIs: /api/save-diag,  │
+                                  │  /api/get-diagnostic,   │
+                                  │  /api/get-dashboard,    │
+                                  │  /api/generate-redesign │
+                                  └─────────────────────────┘
+
+┌─────────────────────────┐       ┌─────────────────────────┐
+│   team_diagnostics      │       │   team_responses        │
+│  (team sessions)        │──1:N─▶│  (member submissions)   │
+│                         │       │                         │
+│  id, team_code,         │       │  id, team_id,           │
+│  created_by_email,      │       │  team_code,             │
+│  created_by_name,       │       │  respondent_name,       │
+│  process_name, company, │       │  respondent_email,      │
+│  description, status,   │       │  respondent_department, │
+│  created_at             │       │  response_data (JSON),  │
+│                         │       │  created_at             │
+│  API: /api/team         │       │                         │
+│  (?action=create)       │       │  API: /api/team         │
+│                         │       │  (?action=submit)       │
+└─────────────────────────┘       └─────────────────────────┘
+
+┌─────────────────────────┐
+│   process_instances     │
+│  (live process tracking)│
+│                         │
+│  Tracks individual      │
+│  running instances of   │
+│  mapped processes       │
+└─────────────────────────┘
+```
+
+### Table Reference
+
+| Table | Purpose | Lifecycle Stage | Key APIs |
+|-------|---------|-----------------|----------|
+| `diagnostic_progress` | Saves mid-session state so users can resume later | In-progress | `GET/POST /api/progress` |
+| `diagnostic_reports` | Stores completed diagnostic reports with full JSON data and PDF | Completed | `/api/save-diagnostic-report`, `/api/get-diagnostic`, `/api/get-dashboard`, `/api/generate-redesign` |
+| `team_diagnostics` | Stores team diagnostic sessions (process name, team code, status) | Team session | `POST /api/team?action=create`, `GET /api/team?action=results` |
+| `team_responses` | Stores each team member's individual perspective on a process | Team submission | `POST /api/team?action=submit`, `GET /api/team?action=results`, `POST /api/team?action=analyze` |
+| `process_instances` | Tracks live running instances of mapped processes | Operational | `/api/process-instances` |
+
+### Data Flow
+
+```
+User starts diagnostic
+        │
+        ├──▶ Auto-save every 30s ──▶ localStorage (processDiagnosticProgress)
+        │
+        ├──▶ Cloud save (optional) ──▶ diagnostic_progress
+        │
+        └──▶ Submit final report ──▶ diagnostic_reports
+                                          │
+                                          ├──▶ Portal: View / Edit
+                                          ├──▶ Dashboard: /api/get-dashboard
+                                          └──▶ AI Redesign: /api/generate-redesign
+```
