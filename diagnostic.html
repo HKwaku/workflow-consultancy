@@ -7394,6 +7394,7 @@
                 if (!pos) return;
                 const cx = pos.cx, cy = pos.cy;
                 const hw = DIAMOND_W / 2, hh = DIAMOND_H / 2;
+                const exitSideCounts = { left: 0, right: 0, top: 0, bottom: 0 };
 
                 s.branches.forEach((br, bi) => {
                     const color = branchColors[bi % branchColors.length];
@@ -7414,10 +7415,12 @@
 
                     let pathD;
                     let ch, chOff;
+                    let exitDir;
 
                     if (sameRow && !goesBack) {
                         // SAME-ROW FORWARD: Exit LEFT or RIGHT side directly toward target
                         const targetIsRight = tp.col > pos.col;
+                        exitDir = targetIsRight ? 'right' : 'left';
                         const exitX = targetIsRight ? cx + hw : cx - hw;
                         const exitY = cy;
                         const sideEntryX = isTargetDec
@@ -7436,6 +7439,7 @@
 
                     } else if (goesBack) {
                         // LOOP-BACK: Exit TOP of diamond, route through inter-row gap
+                        exitDir = 'top';
                         const gapKey = 'above_' + pos.row;
                         ch = allocateChannel(gapKey);
                         chOff = ch * LINE_GAP;
@@ -7446,6 +7450,7 @@
 
                     } else if (tp.row > pos.row) {
                         // FORWARD CROSS-ROW: Exit BOTTOM, route through inter-row gap
+                        exitDir = 'bottom';
                         const gapKey = 'below_' + pos.row;
                         ch = allocateChannel(gapKey);
                         chOff = ch * LINE_GAP;
@@ -7456,6 +7461,7 @@
 
                     } else {
                         // Forward to earlier row (rare): Exit TOP, route through gap
+                        exitDir = 'top';
                         const gapKey = 'above_' + pos.row;
                         ch = allocateChannel(gapKey);
                         chOff = ch * LINE_GAP;
@@ -7472,31 +7478,24 @@
                     // Animated particle
                     svg += `<circle r="3" fill="${color}" opacity="0.8"><animateMotion dur="${2.5 + bi * 0.5}s" repeatCount="indefinite" begin="${bi * 0.4}s" path="${pathD}"><\/animateMotion><\/circle>`;
 
-                    // Position label at LEFT or RIGHT tip of diamond
+                    // Position label at the actual exit side of the diamond
                     const brText = escSvg(br.label);
                     const pillW = brText.length * 4.8 + 14;
                     const pillH = 15;
-                    const numBranches = s.branches.length;
+                    const sideIdx = exitSideCounts[exitDir]++;
                     let elX, elY;
-                    if (numBranches <= 2) {
-                        if (bi === 0) {
-                            elX = cx - hw - pillW / 2 - 4;
-                            elY = cy;
-                        } else {
-                            elX = cx + hw + pillW / 2 + 4;
-                            elY = cy;
-                        }
+                    if (exitDir === 'left') {
+                        elX = cx - hw - pillW / 2 - 4;
+                        elY = cy - sideIdx * (pillH + 4);
+                    } else if (exitDir === 'right') {
+                        elX = cx + hw + pillW / 2 + 4;
+                        elY = cy - sideIdx * (pillH + 4);
+                    } else if (exitDir === 'top') {
+                        elX = cx;
+                        elY = cy - hh - pillH / 2 - 6 - sideIdx * (pillH + 4);
                     } else {
-                        if (bi === 0) {
-                            elX = cx - hw - pillW / 2 - 4;
-                            elY = cy;
-                        } else if (bi === numBranches - 1) {
-                            elX = cx + hw + pillW / 2 + 4;
-                            elY = cy;
-                        } else {
-                            elX = cx;
-                            elY = cy - hh - 10 - (bi - 1) * (pillH + 4);
-                        }
+                        elX = cx;
+                        elY = cy + hh + pillH / 2 + 6 + sideIdx * (pillH + 4);
                     }
                     elX = Math.max(pillW / 2 + 10, Math.min(elX, totalW - pillW / 2 - 10));
                     pendingLabels.push({ x: elX, y: elY, w: pillW, h: pillH, color, text: brText });
