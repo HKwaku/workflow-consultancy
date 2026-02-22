@@ -22,12 +22,30 @@ module.exports = async function handler(req, res) {
       const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
       if (!supabaseUrl || !supabaseKey) return res.status(503).json({ error: 'Storage not configured.' });
 
-      const readResp = await fetch(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${id}&select=diagnostic_data`, { headers: getSupabaseHeaders(supabaseKey) });
-      if (!readResp.ok) return res.status(502).json({ error: 'Failed to read report.' });
-      const rows = await readResp.json();
-      if (!rows || rows.length === 0) return res.status(404).json({ error: 'Report not found.' });
+      let dd, foundInLegacy = false;
 
-      const dd = rows[0].diagnostic_data || {};
+      const readResp = await fetch(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${id}&select=diagnostic_data`, { headers: getSupabaseHeaders(supabaseKey) });
+      if (readResp.ok) {
+        const rows = await readResp.json();
+        if (rows && rows.length > 0) {
+          dd = rows[0].diagnostic_data || {};
+        }
+      }
+
+      if (!dd) {
+        const legResp = await fetch(`${supabaseUrl}/rest/v1/diagnostics?id=eq.${id}&select=*`, { headers: getSupabaseHeaders(supabaseKey) });
+        if (legResp.ok) {
+          const legRows = await legResp.json();
+          if (legRows && legRows.length > 0) {
+            const norm = normaliseLegacyRow(legRows[0]);
+            dd = norm.diagnostic_data || {};
+            foundInLegacy = true;
+          }
+        }
+      }
+
+      if (!dd) return res.status(404).json({ error: 'Report not found.' });
+
       const pi = processIndex || 0;
 
       if (!dd.rawProcesses) dd.rawProcesses = [];
@@ -46,12 +64,21 @@ module.exports = async function handler(req, res) {
         });
       }
 
-      const patchResp = await fetch(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${id}`, {
-        method: 'PATCH', headers: getSupabaseWriteHeaders(supabaseKey),
-        body: JSON.stringify({ diagnostic_data: dd, updated_at: new Date().toISOString() })
-      });
-      if (!patchResp.ok) { const t = await patchResp.text(); return res.status(502).json({ error: 'Patch failed: ' + t }); }
-      return res.status(200).json({ success: true, stepsCount: steps.length });
+      let writeResp;
+      if (foundInLegacy) {
+        const contact = dd.contact || {};
+        writeResp = await fetch(`${supabaseUrl}/rest/v1/diagnostic_reports`, {
+          method: 'POST', headers: getSupabaseWriteHeaders(supabaseKey),
+          body: JSON.stringify({ id, contact_email: contact.email || '', contact_name: contact.name || '', company: contact.company || '', lead_score: (dd.leadScore || {}).score || 0, lead_grade: (dd.leadScore || {}).grade || '', diagnostic_data: dd, created_at: new Date().toISOString() })
+        });
+      } else {
+        writeResp = await fetch(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${id}`, {
+          method: 'PATCH', headers: getSupabaseWriteHeaders(supabaseKey),
+          body: JSON.stringify({ diagnostic_data: dd, updated_at: new Date().toISOString() })
+        });
+      }
+      if (!writeResp.ok) { const t = await writeResp.text(); return res.status(502).json({ error: 'Write failed: ' + t }); }
+      return res.status(200).json({ success: true, stepsCount: steps.length, migrated: foundInLegacy });
     } catch (e) { return res.status(500).json({ error: e.message }); }
   }
 
