@@ -7492,9 +7492,12 @@
                     else if (exitDir === 'left')    { eX = cx - hw;  eY = cy; }
                     else                            { eX = cx + hw;  eY = cy; }
 
-                    // Entry point on target — side-aware
+                    // Entry point on target
                     let nX, nY;
-                    if (sameRow) {
+                    const isAdjacentSameRow = sameRow && !goesBack && Math.abs(tp.col - pos.col) <= 1
+                        && (exitDir === 'left' || exitDir === 'right');
+
+                    if (isAdjacentSameRow) {
                         const fromLeft = tp.col > pos.col;
                         if (isTargetDec) {
                             nX = fromLeft ? tp.cx - DIAMOND_W / 2 : tp.cx + DIAMOND_W / 2;
@@ -7510,11 +7513,10 @@
 
                     // Build path — strictly orthogonal (90°/180° only)
                     let pathD;
-                    const isAdjacentSameRow = sameRow && !goesBack && Math.abs(tp.col - pos.col) <= 1;
 
-                    if (isAdjacentSameRow && (exitDir === 'left' || exitDir === 'right') && Math.abs(eY - nY) < 2) {
+                    if (isAdjacentSameRow && Math.abs(eY - nY) < 2) {
                         pathD = `M ${eX} ${eY} L ${nX} ${nY}`;
-                    } else if (isAdjacentSameRow && (exitDir === 'left' || exitDir === 'right')) {
+                    } else if (isAdjacentSameRow) {
                         const midX = (eX + nX) / 2;
                         pathD = `M ${eX} ${eY} L ${midX} ${eY} L ${midX} ${nY} L ${nX} ${nY}`;
                     } else {
@@ -7574,7 +7576,7 @@
                         elY = eY + pillH / 2 + 6 + exitIdx * (pillH + 3);
                     }
                     elX = Math.max(pillW / 2 + 10, Math.min(elX, totalW - pillW / 2 - 10));
-                    pendingLabels.push({ x: elX, y: elY, w: pillW, h: pillH, color, lines: lblLines });
+                    pendingLabels.push({ x: elX, y: elY, w: pillW, h: pillH, color, lines: lblLines, exitDir });
                   } catch (branchErr) {
                     console.error('Branch render error (step ' + (i+1) + ', branch ' + bi + '):', branchErr);
                   }
@@ -7696,18 +7698,22 @@
                 );
             }
             pendingLabels.forEach(lbl => {
-                let { x, y, w, h, color, lines } = lbl;
+                let { x, y, w, h, color, lines, exitDir } = lbl;
                 if (labelsOverlap(x, y, w, h)) {
+                    const preferRight = exitDir === 'right' || exitDir === 'bottom';
                     let resolved = false;
                     for (let dx = 1; dx <= 6 && !resolved; dx++) {
                         const shift = dx * (w * 0.6);
-                        if (!labelsOverlap(x - shift, y, w, h)) { x -= shift; resolved = true; }
-                        else if (!labelsOverlap(x + shift, y, w, h)) { x += shift; resolved = true; }
+                        const firstX  = preferRight ? x + shift : x - shift;
+                        const secondX = preferRight ? x - shift : x + shift;
+                        if (!labelsOverlap(firstX, y, w, h)) { x = firstX; resolved = true; }
+                        else if (!labelsOverlap(secondX, y, w, h)) { x = secondX; resolved = true; }
                     }
                     if (!resolved) {
+                        const preferDown = exitDir === 'bottom';
                         for (let dy = 1; dy <= 3; dy++) {
-                            y += h + 4;
-                            if (!labelsOverlap(x, y, w, h)) break;
+                            const tryY = preferDown ? y + (h + 4) * dy : y - (h + 4) * dy;
+                            if (!labelsOverlap(x, tryY, w, h)) { y = tryY; break; }
                         }
                     }
                 }
