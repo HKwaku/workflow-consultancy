@@ -7,9 +7,41 @@ const { setCorsHeaders, getSupabaseHeaders, getSupabaseWriteHeaders, isValidUUID
 const { normaliseLegacyRow } = require('../lib/fetch-report');
 
 module.exports = async function handler(req, res) {
-  setCorsHeaders(res, 'GET,PATCH,OPTIONS');
+  setCorsHeaders(res, 'GET,POST,PATCH,OPTIONS');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  // ── POST ?action=migrate-legacy: bulk-copy diagnostics → diagnostic_reports ──
+  if (req.method === 'POST' && req.query.action === 'migrate-legacy') {
+    try {
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+      if (!supabaseUrl || !supabaseKey) return res.status(503).json({ error: 'Storage not configured.' });
+
+      const legResp = await fetch(`${supabaseUrl}/rest/v1/diagnostics?select=*&order=completed_at.desc&limit=500`, { headers: getSupabaseHeaders(supabaseKey) });
+      if (!legResp.ok) return res.status(502).json({ error: 'Failed to read legacy table.' });
+      const legRows = await legResp.json();
+      if (!legRows || legRows.length === 0) return res.status(200).json({ success: true, migrated: 0, skipped: 0, message: 'No legacy records found.' });
+
+      const existResp = await fetch(`${supabaseUrl}/rest/v1/diagnostic_reports?select=id`, { headers: getSupabaseHeaders(supabaseKey) });
+      const existRows = existResp.ok ? await existResp.json() : [];
+      const existIds = new Set((existRows || []).map(r => r.id));
+
+      let migrated = 0, skipped = 0, errors = [];
+      for (const row of legRows) {
+        if (existIds.has(row.id)) { skipped++; continue; }
+        try {
+          const norm = normaliseLegacyRow(row);
+          const ins = await fetch(`${supabaseUrl}/rest/v1/diagnostic_reports`, {
+            method: 'POST', headers: getSupabaseWriteHeaders(supabaseKey),
+            body: JSON.stringify({ id: norm.id, contact_email: norm.contact_email, contact_name: norm.contact_name, company: norm.company, lead_score: norm.lead_score, lead_grade: norm.lead_grade, diagnostic_data: norm.diagnostic_data, created_at: norm.created_at })
+          });
+          if (ins.ok || ins.status === 201) { migrated++; } else { errors.push({ id: row.id, err: await ins.text() }); }
+        } catch (e) { errors.push({ id: row.id, err: e.message }); }
+      }
+      return res.status(200).json({ success: true, total: legRows.length, migrated, skipped, errors: errors.length > 0 ? errors : undefined });
+    } catch (e) { return res.status(500).json({ error: e.message }); }
+  }
 
   // ── PATCH: update step data for an existing diagnostic ──────
   if (req.method === 'PATCH') {
