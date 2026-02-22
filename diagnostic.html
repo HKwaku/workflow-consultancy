@@ -5471,8 +5471,18 @@
                         totalSavings: roadmapData.annualSavings,
                         cumulative: roadmapData.cumulative
                     } : {},
-                    processes: result.processes || [],
-                    rawProcesses: completedProcesses || [],
+                    processes: (result.processes || []).map(function(p, idx) {
+                        var raw = (completedProcesses || [])[idx];
+                        if (raw && raw.steps && raw.steps.length > 0) {
+                            return Object.assign({}, p, {
+                                steps: raw.steps.map(function(s, si) {
+                                    return { number: si + 1, name: s.name || '', department: s.department || '', isDecision: !!s.isDecision, isExternal: !!s.isExternal, branches: (s.branches || []).map(function(b) { return { label: b.label, target: b.target || ('Step ' + b.targetStep) }; }) };
+                                })
+                            });
+                        }
+                        return p;
+                    }),
+                    rawProcesses: JSON.parse(JSON.stringify(completedProcesses || [])),
                     customDepartments: (typeof customDepartments !== 'undefined' ? customDepartments : []),
                     pdfBase64: null,
                     timestamp: new Date().toISOString()
@@ -8335,6 +8345,12 @@
                         const svg = buildFlowSVG(p);
                         allSvgs.push(svg);
 
+                        if (!svg) {
+                            allHtml += `<div style="text-align:center;padding:2rem 1rem;background:#f8fafb;border-radius:var(--radius-md);color:var(--text-mid);">`;
+                            allHtml += `<p style="font-size:0.95rem;margin:0 0 0.5rem;">Step data is not available for this report.</p>`;
+                            allHtml += `<p style="font-size:0.82rem;margin:0;">This diagnostic was saved before flow diagrams were stored. Re-running the diagnostic will generate the diagram.</p>`;
+                            allHtml += `</div>`;
+                        } else {
                         allHtml += `<div class="flow-mobile-hint">&#128588; Pinch to zoom · Drag to pan · Use Fullscreen for best mobile viewing</div>`;
                         allHtml += `<p class="helper-text" style="margin-bottom: 0.75rem;">Zoom: scroll wheel · Pan: click &amp; drag · Coloured badges show automation type (hover for details)</p>`;
 
@@ -8353,6 +8369,7 @@
                         allHtml += `<div id="diagramInner_${pi}" class="diagram-inner" style="transform-origin:0 0;transition:transform 0.15s ease;padding:1rem;min-width:100%;">`;
                         allHtml += svg;
                         allHtml += `</div></div></div>`;
+                        }
                     }
 
                     // Automation opportunities
@@ -8890,8 +8907,18 @@
                         totalSavings: lastRoadmapData.annualSavings,
                         cumulative: lastRoadmapData.cumulative
                     } : {},
-                    processes: result.processes || [],
-                    rawProcesses: completedProcesses || [],
+                    processes: (result.processes || []).map(function(p, idx) {
+                        var raw = (completedProcesses || [])[idx];
+                        if (raw && raw.steps && raw.steps.length > 0) {
+                            return Object.assign({}, p, {
+                                steps: raw.steps.map(function(s, si) {
+                                    return { number: si + 1, name: s.name || '', department: s.department || '', isDecision: !!s.isDecision, isExternal: !!s.isExternal, branches: (s.branches || []).map(function(b) { return { label: b.label, target: b.target || ('Step ' + b.targetStep) }; }) };
+                                })
+                            });
+                        }
+                        return p;
+                    }),
+                    rawProcesses: JSON.parse(JSON.stringify(completedProcesses || [])),
                     customDepartments: customDepartments || [],
                     pdfBase64,
                     timestamp: new Date().toISOString()
@@ -9941,8 +9968,18 @@
                         totalSavings: lastRoadmapData.annualSavings,
                         cumulative: lastRoadmapData.cumulative
                     } : {},
-                    processes: result.processes || [],
-                    rawProcesses: completedProcesses || [],
+                    processes: (result.processes || []).map(function(p, idx) {
+                        var raw = (completedProcesses || [])[idx];
+                        if (raw && raw.steps && raw.steps.length > 0) {
+                            return Object.assign({}, p, {
+                                steps: raw.steps.map(function(s, si) {
+                                    return { number: si + 1, name: s.name || '', department: s.department || '', isDecision: !!s.isDecision, isExternal: !!s.isExternal, branches: (s.branches || []).map(function(b) { return { label: b.label, target: b.target || ('Step ' + b.targetStep) }; }) };
+                                })
+                            });
+                        }
+                        return p;
+                    }),
+                    rawProcesses: JSON.parse(JSON.stringify(completedProcesses || [])),
                     customDepartments: customDepartments || [],
                     pdfBase64: null,
                     timestamp: new Date().toISOString()
