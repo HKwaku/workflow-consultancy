@@ -3635,6 +3635,7 @@
 
             const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
             document.getElementById('elapsedDays').textContent = days + ' days';
+            if (!processData.lastExample) processData.lastExample = { name: '', startDate: '', endDate: '', elapsedDays: 0 };
             processData.lastExample.elapsedDays = days;
             processData.lastExample.startDate = startVal;
             processData.lastExample.endDate = endVal;
@@ -6760,6 +6761,7 @@
                         const s = new Date(document.getElementById('startDate').value);
                         const e = new Date(document.getElementById('endDate').value);
                         if (e <= s) { valid = false; msg = 'End date must be after start date.'; }
+                        if (!processData.lastExample) processData.lastExample = { name: '', startDate: '', endDate: '', elapsedDays: 0 };
                         processData.lastExample.name = document.getElementById('exampleName').value.trim();
                     }
                     break;
