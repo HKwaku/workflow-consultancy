@@ -7404,102 +7404,143 @@
                 if (!pos) return;
                 const cx = pos.cx, cy = pos.cy;
                 const hw = DIAMOND_W / 2, hh = DIAMOND_H / 2;
-                const exitSideCounts = { left: 0, right: 0, top: 0, bottom: 0 };
 
+                // Pass 1a: detect which side the sequential arrow enters from
+                let seqEntry = null;
+                if (i > 0) {
+                    const prev = nodePos[i - 1];
+                    if (prev) {
+                        if (prev.row === pos.row) seqEntry = prev.col < pos.col ? 'left' : 'right';
+                        else seqEntry = 'top';
+                    }
+                }
+
+                // Pass 1b: gather branch data with ideal exit directions
+                const branchInfo = [];
                 s.branches.forEach((br, bi) => {
                   try {
                     const color = branchColors[bi % branchColors.length];
-                    const targetMatch = (br.target || '').match(/(\d+)/);
-                    const targetIdx = targetMatch ? parseInt(targetMatch[1]) - 1 : -1;
+                    const m = (br.target || '').match(/(\d+)/);
+                    const targetIdx = m ? parseInt(m[1]) - 1 : -1;
                     if (targetIdx < 0 || targetIdx >= allSteps.length) return;
-
                     const tp = nodePos[targetIdx];
                     if (!tp) return;
-                    const isTargetDec = allSteps[targetIdx].isDecision && (allSteps[targetIdx].branches || []).length > 0;
-                    const tHH = isTargetDec ? DIAMOND_H / 2 : 0;
                     const goesBack = targetIdx < i;
                     const sameRow = pos.row === tp.row;
 
-                    const entryX = tp.cx;
-                    const entryY = isTargetDec ? tp.cy - tHH : tp.y;
+                    let ideal;
+                    if (goesBack) {
+                        ideal = sameRow ? (tp.col < pos.col ? 'left' : 'right') : 'top';
+                    } else if (sameRow) {
+                        ideal = tp.col > pos.col ? 'right' : 'left';
+                    } else if (tp.row > pos.row) {
+                        ideal = 'bottom';
+                    } else {
+                        ideal = 'top';
+                    }
+                    branchInfo.push({ br, bi, color, targetIdx, tp, goesBack, sameRow, ideal });
+                  } catch (e) { console.error('Branch prep error (step ' + (i+1) + '):', e); }
+                });
+
+                // Pass 1c: distribute exits across vertices — avoid concentrating on one
+                const vertexCount = { top: 0, right: 0, bottom: 0, left: 0 };
+                const redistOrder = ['bottom', 'right', 'left', 'top'];
+                const sorted = [...branchInfo].sort((a, b) => {
+                    const rank = d => d.goesBack && !d.sameRow ? 0 : (!d.sameRow && d.tp.row > pos.row) ? 1 : 2;
+                    return rank(a) - rank(b);
+                });
+                const exitMap = new Map();
+                sorted.forEach(bd => {
+                    let dir = bd.ideal;
+                    if (dir === seqEntry && vertexCount[dir] === 0) {
+                        const alt = redistOrder.filter(d => d !== seqEntry && vertexCount[d] === 0);
+                        if (alt.length) dir = alt[0];
+                    }
+                    if (vertexCount[dir] > 0) {
+                        const free = redistOrder.filter(d => d !== seqEntry && vertexCount[d] === 0);
+                        if (free.length) dir = free[0];
+                    }
+                    vertexCount[dir]++;
+                    exitMap.set(bd.bi, { dir, idx: vertexCount[dir] - 1 });
+                });
+
+                // Pass 2: draw each branch with its assigned exit vertex
+                branchInfo.forEach(bd => {
+                  try {
+                    const { br, bi, color, targetIdx, tp, goesBack, sameRow } = bd;
+                    const { dir: exitDir, idx: exitIdx } = exitMap.get(bi);
+                    const isTargetDec = allSteps[targetIdx].isDecision && (allSteps[targetIdx].branches || []).length > 0;
                     const clampY = y => Math.max(y, TITLE_ZONE);
 
-                    let pathD;
-                    let ch, chOff;
-                    let exitDir = 'bottom';
+                    // Exit point from the assigned diamond vertex
+                    let eX, eY;
+                    if (exitDir === 'top')         { eX = cx;      eY = cy - hh; }
+                    else if (exitDir === 'bottom')  { eX = cx;      eY = cy + hh; }
+                    else if (exitDir === 'left')    { eX = cx - hw;  eY = cy; }
+                    else                            { eX = cx + hw;  eY = cy; }
 
-                    if (sameRow && !goesBack) {
-                        const targetIsRight = tp.col > pos.col;
-                        exitDir = targetIsRight ? 'right' : 'left';
-                        const exitX = targetIsRight ? cx + hw : cx - hw;
-                        const exitY = cy;
-                        const sideEntryX = isTargetDec
-                            ? (targetIsRight ? tp.cx - DIAMOND_W / 2 : tp.cx + DIAMOND_W / 2)
-                            : (targetIsRight ? tp.x : tp.x + NODE_W);
-                        const sideEntryY = tp.cy;
-                        if (Math.abs(tp.col - pos.col) <= 1) {
-                            pathD = `M ${exitX} ${exitY} L ${sideEntryX} ${sideEntryY}`;
+                    // Entry point on target — side-aware
+                    let nX, nY;
+                    if (sameRow) {
+                        const fromLeft = tp.col > pos.col;
+                        if (isTargetDec) {
+                            nX = fromLeft ? tp.cx - DIAMOND_W / 2 : tp.cx + DIAMOND_W / 2;
+                            nY = tp.cy;
                         } else {
-                            const gapKey = 'above_' + pos.row;
-                            ch = allocateChannel(gapKey);
-                            chOff = ch * LINE_GAP;
-                            const gapY = clampY(rowGapMidY(pos.row) - chOff);
-                            pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${entryX} ${gapY} L ${entryX} ${entryY}`;
+                            nX = fromLeft ? tp.x : tp.x + NODE_W;
+                            nY = tp.cy;
+                        }
+                    } else {
+                        nX = tp.cx;
+                        nY = isTargetDec ? tp.cy - DIAMOND_H / 2 : tp.y;
+                    }
+
+                    // Build path
+                    let pathD;
+                    if (sameRow && !goesBack && Math.abs(tp.col - pos.col) <= 1) {
+                        pathD = `M ${eX} ${eY} L ${nX} ${nY}`;
+                    } else {
+                        let gapKey, gapY;
+                        if (goesBack || sameRow) {
+                            gapKey = 'above_' + pos.row;
+                            const ch = allocateChannel(gapKey);
+                            gapY = clampY(rowGapMidY(pos.row) - ch * LINE_GAP);
+                        } else {
+                            gapKey = 'below_' + pos.row;
+                            const ch = allocateChannel(gapKey);
+                            gapY = rowGapMidY(pos.row + 1) + ch * LINE_GAP;
                         }
 
-                    } else if (goesBack) {
-                        exitDir = 'top';
-                        const gapKey = 'above_' + pos.row;
-                        ch = allocateChannel(gapKey);
-                        chOff = ch * LINE_GAP;
-                        const exitX = cx;
-                        const exitY = cy - hh;
-                        const gapY = clampY(rowGapMidY(pos.row) - chOff);
-                        pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${entryX} ${gapY} L ${entryX} ${entryY}`;
-
-                    } else if (tp.row > pos.row) {
-                        exitDir = 'bottom';
-                        const gapKey = 'below_' + pos.row;
-                        ch = allocateChannel(gapKey);
-                        chOff = ch * LINE_GAP;
-                        const exitX = cx;
-                        const exitY = cy + hh;
-                        const gapY = rowGapMidY(pos.row + 1) + chOff;
-                        pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${entryX} ${gapY} L ${entryX} ${entryY}`;
-
-                    } else {
-                        exitDir = 'top';
-                        const gapKey = 'above_' + pos.row;
-                        ch = allocateChannel(gapKey);
-                        chOff = ch * LINE_GAP;
-                        const exitX = cx;
-                        const exitY = cy - hh;
-                        const gapY = clampY(rowGapMidY(pos.row) - chOff);
-                        pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${entryX} ${gapY} L ${entryX} ${entryY}`;
+                        if (exitDir === 'top' || exitDir === 'bottom') {
+                            pathD = `M ${eX} ${eY} L ${eX} ${gapY} L ${nX} ${gapY} L ${nX} ${nY}`;
+                        } else {
+                            const armLen = 18 + exitIdx * 12;
+                            const turnX = exitDir === 'left' ? eX - armLen : eX + armLen;
+                            pathD = `M ${eX} ${eY} L ${turnX} ${eY} L ${turnX} ${gapY} L ${nX} ${gapY} L ${nX} ${nY}`;
+                        }
                     }
 
                     const dashAttr = goesBack ? 'stroke-dasharray="6,4"' : '';
                     svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" ${dashAttr} marker-end="url(#arwc${bi % 5})" opacity="0.75"/>`;
-
                     svg += `<circle r="3" fill="${color}" opacity="0.8"><animateMotion dur="${2.5 + bi * 0.5}s" repeatCount="indefinite" begin="${bi * 0.4}s" path="${pathD}"><\/animateMotion><\/circle>`;
 
+                    // Label at exit vertex
                     const brText = escSvg(br.label);
                     const pillW = brText.length * 4.8 + 14;
                     const pillH = 15;
-                    const sideIdx = exitSideCounts[exitDir]++;
                     let elX, elY;
                     if (exitDir === 'left') {
-                        elX = cx - hw - pillW / 2 - 4;
-                        elY = cy - sideIdx * (pillH + 4);
+                        elX = eX - pillW / 2 - 4;
+                        elY = eY + exitIdx * (pillH + 3);
                     } else if (exitDir === 'right') {
-                        elX = cx + hw + pillW / 2 + 4;
-                        elY = cy - sideIdx * (pillH + 4);
+                        elX = eX + pillW / 2 + 4;
+                        elY = eY + exitIdx * (pillH + 3);
                     } else if (exitDir === 'top') {
                         elX = cx;
-                        elY = cy - hh - pillH / 2 - 6 - sideIdx * (pillH + 4);
+                        elY = eY - pillH / 2 - 6 - exitIdx * (pillH + 3);
                     } else {
                         elX = cx;
-                        elY = cy + hh + pillH / 2 + 6 + sideIdx * (pillH + 4);
+                        elY = eY + pillH / 2 + 6 + exitIdx * (pillH + 3);
                     }
                     elX = Math.max(pillW / 2 + 10, Math.min(elX, totalW - pillW / 2 - 10));
                     pendingLabels.push({ x: elX, y: elY, w: pillW, h: pillH, color, text: brText });

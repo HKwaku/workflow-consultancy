@@ -152,6 +152,14 @@
         .process-tag.progress { background: #fffbeb; color: var(--amber); }
         .process-tag.review { background: #fef2f2; color: var(--red); }
         .process-tag.new { background: #eff6ff; color: #3b82f6; }
+        .status-legend { display: flex; flex-wrap: wrap; gap: 16px; padding: 14px 18px; margin-top: 8px; background: #f8fafb; border-radius: 8px; font-size: 0.74rem; color: var(--text-mid); line-height: 1.5; }
+        .status-legend-item { display: flex; align-items: baseline; gap: 6px; }
+        .status-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; position: relative; top: -1px; }
+        .status-legend-dot.green { background: var(--green); }
+        .status-legend-dot.amber { background: var(--amber); }
+        .status-legend-dot.red { background: var(--red); }
+        .status-legend-label { font-weight: 600; color: var(--text-dark); }
+        .status-legend-desc { color: var(--text-mid); }
         .process-val { font-size: 0.76rem; color: var(--text-light); font-weight: 400; white-space: nowrap; }
         .process-actions {
             display: flex; gap: 6px; align-items: center; flex-shrink: 0;
@@ -536,6 +544,11 @@
                     <div id="reportList">
                         <div class="loading-state"><div class="spinner"></div><p>Loading your reports...</p></div>
                     </div>
+                    <div class="status-legend">
+                        <span class="status-legend-item"><span class="status-legend-dot green"></span><span class="status-legend-label">Automation Ready</span><span class="status-legend-desc">— 70%+ of steps are automatable</span></span>
+                        <span class="status-legend-item"><span class="status-legend-dot amber"></span><span class="status-legend-label">Improvements Required</span><span class="status-legend-desc">— 40–69% automatable, targeted changes needed</span></span>
+                        <span class="status-legend-item"><span class="status-legend-dot red"></span><span class="status-legend-label">Requires Process Redesign</span><span class="status-legend-desc">— below 40%, significant rethink recommended</span></span>
+                    </div>
                 </div>
             </div>
 
@@ -547,7 +560,7 @@
                         <div id="statusDonut" style="margin: 0 auto 6px;"><div class="skeleton-ring"></div></div>
                         <span class="metric-lbl">Status Breakdown</span>
                     </div>
-                    <div class="metric-card skeleton"><span class="metric-val" id="metricNeedsReview"><span class="skeleton-val"></span></span><span class="metric-lbl">Needs Review</span></div>
+                    <div class="metric-card skeleton"><span class="metric-val" id="metricNeedsReview"><span class="skeleton-val"></span></span><span class="metric-lbl">Requires Redesign</span></div>
                 </div>
                 <div class="dash-card">
                     <div class="dash-card-header">
@@ -556,6 +569,11 @@
                     </div>
                     <div id="reportListFull">
                         <div class="loading-state"><div class="spinner"></div><p>Loading your reports...</p></div>
+                    </div>
+                    <div class="status-legend">
+                        <span class="status-legend-item"><span class="status-legend-dot green"></span><span class="status-legend-label">Automation Ready</span><span class="status-legend-desc">— 70%+ of steps are automatable</span></span>
+                        <span class="status-legend-item"><span class="status-legend-dot amber"></span><span class="status-legend-label">Improvements Required</span><span class="status-legend-desc">— 40–69% automatable, targeted changes needed</span></span>
+                        <span class="status-legend-item"><span class="status-legend-dot red"></span><span class="status-legend-label">Requires Process Redesign</span><span class="status-legend-desc">— below 40%, significant rethink recommended</span></span>
                     </div>
                 </div>
             </div>
@@ -917,9 +935,9 @@
 
         function getStatusInfo(r) {
             const pct = r.metrics.automationPercentage;
-            if (pct >= 70) return { dot: 'green', tag: 'optimised', tagText: 'Optimised' };
-            if (pct >= 40) return { dot: 'amber', tag: 'progress', tagText: 'In progress' };
-            return { dot: 'red', tag: 'review', tagText: 'Needs review' };
+            if (pct >= 70) return { dot: 'green', tag: 'optimised', tagText: 'Automation Ready' };
+            if (pct >= 40) return { dot: 'amber', tag: 'progress', tagText: 'Improvements Required' };
+            return { dot: 'red', tag: 'review', tagText: 'Requires Process Redesign' };
         }
 
         async function loadReports(email) {
@@ -1417,9 +1435,9 @@
             const r = 30, cx = 44, cy = 44, sw = 10;
             const circ = 2 * Math.PI * r;
             const slices = [
-                { val: optimised, color: '#16a34a', label: 'Optimised' },
-                { val: progress, color: '#d97706', label: 'In Progress' },
-                { val: review, color: '#dc2626', label: 'Needs Review' }
+                { val: optimised, color: '#16a34a', label: 'Automation Ready' },
+                { val: progress, color: '#d97706', label: 'Improvements Required' },
+                { val: review, color: '#dc2626', label: 'Requires Redesign' }
             ].filter(function(s) { return s.val > 0; });
             let svg = '<svg width="88" height="88" viewBox="0 0 88 88">';
             let cumulative = 0;
