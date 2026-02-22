@@ -2,15 +2,24 @@
   "name": "workflow-consultancy",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "serve .",
-    "start": "serve . -l 3000"
-  },
-  "devDependencies": {
-    "serve": "^14.2.5",
-    "vercel": "^39.0.0"
+    "dev": "vite",
+    "build": "node scripts/copy-marketing.js && vite build",
+    "preview": "vite preview",
+    "serve": "vite preview --port 3000"
   },
   "dependencies": {
-    "jspdf": "^4.1.0"
+    "@supabase/supabase-js": "^2.45.0",
+    "jspdf": "^4.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.1.0",
+    "vercel": "^39.0.0"
   }
 }
+

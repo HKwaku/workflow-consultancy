@@ -1,0 +1,11 @@
+/* App-level overrides and extensions of base.css */
+body {
+  line-height: 1.65;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--dark, #0c1b2e);
+}
