@@ -5343,13 +5343,20 @@
             let totalCost = 0;
             let html = '<h3 style="margin-bottom: 1rem;">You\'ve analysed:</h3>';
 
-            completedProcesses.forEach((p, i) => {
-                totalCost += p.costs.totalAnnualCost;
+            (completedProcesses || []).forEach((p, i) => {
+                if (!p) return;
+                const costs = p.costs || {};
+                const annualCost = costs.totalAnnualCost ?? p.annualCost ?? 0;
+                const teamSize = costs.teamSize ?? p.teamSize ?? 1;
+                const elapsedDays = p.lastExample?.elapsedDays ?? p.elapsedDays ?? 0;
+                const annualInstances = p.frequency?.annual ?? p.annualInstances ?? 12;
+
+                totalCost += annualCost;
                 const editBtn = ` <button onclick="editProcess(${i})" style="float:right;padding:4px 14px;background:transparent;color:var(--accent);border:1.5px solid var(--accent);border-radius:100px;font-size:0.78rem;font-weight:500;cursor:pointer;font-family:inherit;">Edit</button>`;
                 html += `<div class="calculated">
-                    <div class="calculated-label">Process #${i + 1}: ${p.processName}${editBtn}</div>
-                    <div class="calculated-value" style="font-size: 1.3rem;">${formatCurrency(p.costs.totalAnnualCost)}/year</div>
-                    <div class="calculated-formula">${p.lastExample.elapsedDays} day cycle &middot; ${p.frequency.annual} instances/year &middot; ${p.costs.teamSize} people</div>
+                    <div class="calculated-label">Process #${i + 1}: ${p.processName || 'Process'}${editBtn}</div>
+                    <div class="calculated-value" style="font-size: 1.3rem;">${formatCurrency(annualCost)}/year</div>
+                    <div class="calculated-formula">${elapsedDays} day cycle &middot; ${annualInstances} instances/year &middot; ${teamSize} people</div>
                 </div>`;
             });
 
@@ -6235,6 +6242,7 @@
         }
 
         function calculateProcessQuality(p) {
+            if (!p) return { score: 0, grade: 'LOW', flags: [] };
             let score = 100;
             const flags = [];
             const lastEx = p.lastExample || {};
