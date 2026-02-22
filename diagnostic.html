@@ -7444,7 +7444,12 @@
 
                 // Pass 1c: distribute exits across vertices — avoid concentrating on one
                 const vertexCount = { top: 0, right: 0, bottom: 0, left: 0 };
-                const redistOrder = ['bottom', 'right', 'left', 'top'];
+                function compatFallbacks(bd) {
+                    if (bd.goesBack && !bd.sameRow) return ['top', 'left', 'right'];
+                    if (bd.goesBack && bd.sameRow) return ['left', 'right', 'top'];
+                    if (!bd.sameRow && bd.tp.row > pos.row) return ['bottom', 'right', 'left'];
+                    return ['right', 'left', 'bottom', 'top'];
+                }
                 const sorted = [...branchInfo].sort((a, b) => {
                     const rank = d => d.goesBack && !d.sameRow ? 0 : (!d.sameRow && d.tp.row > pos.row) ? 1 : 2;
                     return rank(a) - rank(b);
@@ -7452,12 +7457,13 @@
                 const exitMap = new Map();
                 sorted.forEach(bd => {
                     let dir = bd.ideal;
+                    const fb = compatFallbacks(bd);
                     if (dir === seqEntry && vertexCount[dir] === 0) {
-                        const alt = redistOrder.filter(d => d !== seqEntry && vertexCount[d] === 0);
+                        const alt = fb.filter(d => d !== seqEntry && vertexCount[d] === 0);
                         if (alt.length) dir = alt[0];
                     }
                     if (vertexCount[dir] > 0) {
-                        const free = redistOrder.filter(d => d !== seqEntry && vertexCount[d] === 0);
+                        const free = fb.filter(d => d !== seqEntry && vertexCount[d] === 0);
                         if (free.length) dir = free[0];
                     }
                     vertexCount[dir]++;
@@ -7524,10 +7530,23 @@
                     svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" ${dashAttr} marker-end="url(#arwc${bi % 5})" opacity="0.75"/>`;
                     svg += `<circle r="3" fill="${color}" opacity="0.8"><animateMotion dur="${2.5 + bi * 0.5}s" repeatCount="indefinite" begin="${bi * 0.4}s" path="${pathD}"><\/animateMotion><\/circle>`;
 
-                    // Label at exit vertex
-                    const brText = escSvg(br.label);
-                    const pillW = brText.length * 4.8 + 14;
-                    const pillH = 15;
+                    // Label at exit vertex — cap width, wrap long text
+                    const MAX_LBL = 18;
+                    const rawLabel = br.label || '';
+                    let lblLines;
+                    if (rawLabel.length > MAX_LBL) {
+                        const words = rawLabel.split(/\s+/); let cur = '';
+                        lblLines = [];
+                        words.forEach(w => { const t = cur ? cur + ' ' + w : w; if (t.length > MAX_LBL && cur) { lblLines.push(escSvg(cur)); cur = w; } else { cur = t; } });
+                        if (cur) lblLines.push(escSvg(cur));
+                        lblLines = lblLines.slice(0, 2);
+                        if (rawLabel.length > lblLines.join(' ').length + 3) { let last = lblLines[lblLines.length - 1]; if (last.length > 3) lblLines[lblLines.length - 1] = last.slice(0, -3) + '...'; }
+                    } else {
+                        lblLines = [escSvg(rawLabel)];
+                    }
+                    const longestLbl = Math.max(...lblLines.map(l => l.length));
+                    const pillW = Math.min(longestLbl * 4.5 + 14, 110);
+                    const pillH = lblLines.length > 1 ? 24 : 15;
                     let elX, elY;
                     if (exitDir === 'left') {
                         elX = eX - pillW / 2 - 4;
@@ -7543,7 +7562,7 @@
                         elY = eY + pillH / 2 + 6 + exitIdx * (pillH + 3);
                     }
                     elX = Math.max(pillW / 2 + 10, Math.min(elX, totalW - pillW / 2 - 10));
-                    pendingLabels.push({ x: elX, y: elY, w: pillW, h: pillH, color, text: brText });
+                    pendingLabels.push({ x: elX, y: elY, w: pillW, h: pillH, color, lines: lblLines });
                   } catch (branchErr) {
                     console.error('Branch render error (step ' + (i+1) + ', branch ' + bi + '):', branchErr);
                   }
@@ -7665,16 +7684,14 @@
                 );
             }
             pendingLabels.forEach(lbl => {
-                let { x, y, w, h, color, text } = lbl;
+                let { x, y, w, h, color, lines } = lbl;
                 if (labelsOverlap(x, y, w, h)) {
-                    // Try horizontal nudge first (left then right)
                     let resolved = false;
                     for (let dx = 1; dx <= 6 && !resolved; dx++) {
                         const shift = dx * (w * 0.6);
                         if (!labelsOverlap(x - shift, y, w, h)) { x -= shift; resolved = true; }
                         else if (!labelsOverlap(x + shift, y, w, h)) { x += shift; resolved = true; }
                     }
-                    // Fall back to vertical nudge (max 3 steps)
                     if (!resolved) {
                         for (let dy = 1; dy <= 3; dy++) {
                             y += h + 4;
@@ -7685,7 +7702,15 @@
                 x = Math.max(w / 2 + 4, Math.min(x, totalW - w / 2 - 4));
                 placedLabels.push({ x, y, w, h });
                 svg += `<rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="${h / 2}" fill="#fff" stroke="${color}" stroke-width="0.8" opacity="0.97"/>`;
-                svg += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="7" fill="${color}" font-weight="600">${text}</text>`;
+                if (!lines || lines.length <= 1) {
+                    svg += `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="7" fill="${color}" font-weight="600">${(lines && lines[0]) || ''}</text>`;
+                } else {
+                    const lH = 8;
+                    const sY = y - (lines.length - 1) * lH / 2 + 3;
+                    lines.forEach((ln, li) => {
+                        svg += `<text x="${x}" y="${sY + li * lH}" text-anchor="middle" font-size="6.5" fill="${color}" font-weight="600">${ln}</text>`;
+                    });
+                }
             });
 
             // ── Legend ──
