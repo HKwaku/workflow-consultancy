@@ -3483,6 +3483,24 @@
             };
         }
 
+        function ensureProcessDataShape(p) {
+            if (!p) return createEmptyProcess();
+            const empty = createEmptyProcess();
+            const out = {};
+            Object.keys(empty).forEach(k => {
+                const ev = empty[k];
+                const pv = p[k];
+                if (ev && typeof ev === 'object' && !Array.isArray(ev)) {
+                    out[k] = Object.assign({}, ev, pv && typeof pv === 'object' ? pv : {});
+                } else if (Array.isArray(ev)) {
+                    out[k] = Array.isArray(pv) ? pv : ev;
+                } else {
+                    out[k] = (pv !== undefined && pv !== null && pv !== '') ? pv : ev;
+                }
+            });
+            return out;
+        }
+
         // ============================================================
         // NAVIGATION
         // ============================================================
