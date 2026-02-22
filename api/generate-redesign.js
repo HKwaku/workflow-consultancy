@@ -1,5 +1,4 @@
 const { setCorsHeaders, getSupabaseHeaders, isValidUUID, isValidEmail, fetchWithTimeout } = require('../lib/api-helpers');
-const { parseLegacyJSON } = require('../lib/fetch-report');
 
 module.exports = async function handler(req, res) {
   setCorsHeaders(res, 'POST,OPTIONS');
@@ -35,10 +34,6 @@ module.exports = async function handler(req, res) {
 
     const sbHeaders = getSupabaseHeaders(supabaseKey);
 
-    let report = null;
-    let d = {};
-    let sourceTable = 'diagnostic_reports';
-
     const url = `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}&contact_email=ilike.${encodeURIComponent(email.toLowerCase())}&select=id,diagnostic_data,contact_name,company`;
     const sbResp = await fetch(url, { method: 'GET', headers: sbHeaders });
 
@@ -47,37 +42,12 @@ module.exports = async function handler(req, res) {
     }
 
     const rows = await sbResp.json();
-    if (rows && rows.length > 0) {
-      report = rows[0];
-      d = report.diagnostic_data || {};
-    } else {
-      // Fallback: diagnostics table
-      const diagUrl = `${supabaseUrl}/rest/v1/diagnostics?id=eq.${reportId}&email=ilike.${encodeURIComponent(email.toLowerCase())}&select=*`;
-      const diagResp = await fetch(diagUrl, { method: 'GET', headers: sbHeaders });
-      if (!diagResp.ok) {
-        return res.status(502).json({ error: 'Failed to fetch report from storage.' });
-      }
-      const diagRows = await diagResp.json();
-      if (!diagRows || diagRows.length === 0) {
-        return res.status(404).json({ error: 'Report not found.' });
-      }
-      const dr = diagRows[0];
-      sourceTable = 'diagnostics';
-
-      const procs = parseLegacyJSON(dr.processes, 'processes');
-      const recs = parseLegacyJSON(dr.recommendations, 'recommendations');
-
-      report = { id: dr.id, contact_name: dr.name, company: dr.company, diagnostic_data: {} };
-      d = {
-        contact: { name: dr.name, email: dr.email, company: dr.company },
-        summary: { totalProcesses: dr.total_processes || 0, totalAnnualCost: dr.annual_process_cost || 0, potentialSavings: dr.potential_savings || 0, qualityScore: dr.quality_score || 0 },
-        automationScore: { percentage: dr.automation_percentage || 0, grade: dr.automation_grade || 'N/A', insight: dr.automation_insight || '' },
-        recommendations: recs,
-        processes: procs,
-        rawProcesses: [],
-        roadmap: {}
-      };
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ error: 'Report not found.' });
     }
+
+    const report = rows[0];
+    const d = report.diagnostic_data || {};
 
     if (d.redesign && !regenerate) {
       return res.status(200).json({ success: true, reportId, redesign: d.redesign, cached: true });
@@ -271,20 +241,12 @@ STRICT RULES — follow exactly:
     }
 
     try {
-      if (sourceTable === 'diagnostic_reports') {
-        const updatedData = { ...d, redesign };
-        await fetch(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}`, {
-          method: 'PATCH',
-          headers: { ...sbHeaders, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ diagnostic_data: updatedData })
-        });
-      } else {
-        await fetch(`${supabaseUrl}/rest/v1/diagnostics?id=eq.${reportId}`, {
-          method: 'PATCH',
-          headers: { ...sbHeaders, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ redesign: JSON.stringify(redesign) })
-        });
-      }
+      const updatedData = { ...d, redesign };
+      await fetch(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}`, {
+        method: 'PATCH',
+        headers: { ...sbHeaders, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ diagnostic_data: updatedData })
+      });
     } catch (cacheErr) {
       console.error('Failed to cache redesign:', cacheErr);
     }

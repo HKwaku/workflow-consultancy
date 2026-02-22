@@ -4,7 +4,6 @@
 // DELETE /api/get-dashboard           — delete a report by ID (body: { reportId, email })
 
 const { setCorsHeaders, getSupabaseHeaders, isValidEmail, isValidUUID, fetchWithTimeout } = require('../lib/api-helpers');
-const { normaliseLegacyRow } = require('../lib/fetch-report');
 
 module.exports = async function handler(req, res) {
   setCorsHeaders(res, 'GET,DELETE,OPTIONS');
@@ -35,17 +34,10 @@ module.exports = async function handler(req, res) {
     }
 
     const encodedEmail = encodeURIComponent(email.toLowerCase());
-
-    // Fetch from both tables in parallel
-    const reportsUrl = `${supabaseUrl}/rest/v1/diagnostic_reports?contact_email=ilike.${encodedEmail}&select=id,contact_email,contact_name,company,lead_score,lead_grade,diagnostic_data,created_at&order=created_at.desc`;
-    const diagUrl = `${supabaseUrl}/rest/v1/diagnostics?email=ilike.${encodedEmail}&select=id,email,name,company,total_processes,annual_process_cost,potential_savings,automation_percentage,automation_grade,automation_insight,quality_score,analysis_type,recommendations,processes,lead_score,lead_grade,completed_at&order=completed_at.desc`;
-
     const sbHeaders = getSupabaseHeaders(supabaseKey);
 
-    const [sbResp, diagResp] = await Promise.all([
-      fetchWithTimeout(reportsUrl, { method: 'GET', headers: sbHeaders }),
-      fetchWithTimeout(diagUrl, { method: 'GET', headers: sbHeaders }).catch(() => null)
-    ]);
+    const reportsUrl = `${supabaseUrl}/rest/v1/diagnostic_reports?contact_email=ilike.${encodedEmail}&select=id,contact_email,contact_name,company,lead_score,lead_grade,diagnostic_data,created_at&order=created_at.desc`;
+    const sbResp = await fetchWithTimeout(reportsUrl, { method: 'GET', headers: sbHeaders });
 
     if (!sbResp.ok) {
       const errText = await sbResp.text();
@@ -55,26 +47,13 @@ module.exports = async function handler(req, res) {
 
     const rows = await sbResp.json();
 
-    // Merge records from the diagnostics table that aren't in diagnostic_reports
-    let diagRows = [];
-    if (diagResp && diagResp.ok) {
-      try { diagRows = await diagResp.json(); } catch (e) { console.error('Failed to parse diagnostics response:', e.message); diagRows = []; }
-    }
-
-    const reportIds = new Set((rows || []).map(r => r.id));
-    const extraRows = (diagRows || [])
-      .filter(d => !reportIds.has(d.id) && d.total_processes > 0)
-      .map(normaliseLegacyRow);
-
-    const allRows = [...(rows || []), ...extraRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-    if (!allRows.length) {
+    if (!rows || rows.length === 0) {
       return res.status(404).json({
         error: 'No diagnostics found for this email address.'
       });
     }
 
-    const reports = allRows.map(row => {
+    const reports = rows.map(row => {
       const d = row.diagnostic_data || {};
       const summary = d.summary || {};
       const auto = d.automationScore || {};
@@ -186,47 +165,30 @@ async function handleDelete(req, res) {
 
     const sbHeaders = getSupabaseHeaders(supabaseKey);
     const normalEmail = email.toLowerCase();
-    let deleted = false;
 
     const checkUrl = `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}&select=id,contact_email`;
     const checkResp = await fetchWithTimeout(checkUrl, { method: 'GET', headers: sbHeaders });
 
-    if (checkResp.ok) {
-      const rows = await checkResp.json();
-      if (rows.length > 0) {
-        if (rows[0].contact_email?.toLowerCase() !== normalEmail) {
-          return res.status(403).json({ error: 'You can only delete your own reports.' });
-        }
-        const delResp = await fetchWithTimeout(
-          `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}`,
-          { method: 'DELETE', headers: { ...sbHeaders, 'Prefer': 'return=minimal' } }
-        );
-        if (delResp.ok || delResp.status === 204) deleted = true;
-      }
+    if (!checkResp.ok) {
+      return res.status(502).json({ error: 'Failed to verify report ownership.' });
     }
 
-    const legacyResp = await fetchWithTimeout(
-      `${supabaseUrl}/rest/v1/diagnostics?id=eq.${reportId}&select=id,email`,
-      { method: 'GET', headers: sbHeaders }
-    ).catch(() => null);
-
-    if (legacyResp && legacyResp.ok) {
-      const legacyRows = await legacyResp.json();
-      if (legacyRows.length > 0) {
-        if (legacyRows[0].email?.toLowerCase() !== normalEmail) {
-          if (!deleted) return res.status(403).json({ error: 'You can only delete your own reports.' });
-        } else {
-          const legacyDelResp = await fetchWithTimeout(
-            `${supabaseUrl}/rest/v1/diagnostics?id=eq.${reportId}`,
-            { method: 'DELETE', headers: { ...sbHeaders, 'Prefer': 'return=minimal' } }
-          );
-          if (legacyDelResp.ok || legacyDelResp.status === 204) deleted = true;
-        }
-      }
-    }
-
-    if (!deleted) {
+    const rows = await checkResp.json();
+    if (!rows || rows.length === 0) {
       return res.status(404).json({ error: 'Report not found or already deleted.' });
+    }
+
+    if (rows[0].contact_email?.toLowerCase() !== normalEmail) {
+      return res.status(403).json({ error: 'You can only delete your own reports.' });
+    }
+
+    const delResp = await fetchWithTimeout(
+      `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}`,
+      { method: 'DELETE', headers: { ...sbHeaders, 'Prefer': 'return=minimal' } }
+    );
+
+    if (!delResp.ok && delResp.status !== 204) {
+      return res.status(502).json({ error: 'Failed to delete report.' });
     }
 
     return res.status(200).json({ success: true, message: 'Report deleted.' });
