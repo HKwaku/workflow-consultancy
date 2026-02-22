@@ -4594,26 +4594,26 @@
                     continue;
                 }
                 hasIncoming[i + 1] = true;
-                var fp2 = positions[i], tp2 = positions[i + 1];
+                const fp2 = positions[i], tp2 = positions[i + 1];
                 if (fp2.row === tp2.row) {
-                    var goR = tp2.col > fp2.col;
-                    var sx = goR ? fp2.x + nodeW : fp2.x;
-                    var ex = goR ? tp2.x : tp2.x + nodeW;
+                    const goR = tp2.col > fp2.col;
+                    const sx = goR ? fp2.x + nodeW : fp2.x;
+                    const ex = goR ? tp2.x : tp2.x + nodeW;
                     svg += '<line x1="' + sx + '" y1="' + fp2.cy + '" x2="' + ex + '" y2="' + tp2.cy + '" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#lfArrow)"/>';
                 } else {
-                    var chY = fp2.y + nodeH + (gapBetweenRows * 0.45);
+                    const chY = fp2.y + nodeH + (gapBetweenRows * 0.45);
                     svg += '<path d="M ' + fp2.cx + ' ' + (fp2.y + nodeH) + ' L ' + fp2.cx + ' ' + chY + ' L ' + tp2.cx + ' ' + chY + ' L ' + tp2.cx + ' ' + tp2.y + '" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#lfArrow)"/>';
                 }
             }
             // Fallback arrows for orphaned nodes
             for (let j = 1; j < steps.length; j++) {
                 if (!hasIncoming[j]) {
-                    var fp3 = positions[j - 1], tp3 = positions[j];
+                    const fp3 = positions[j - 1], tp3 = positions[j];
                     if (fp3.row === tp3.row) {
-                        var goR2 = tp3.col > fp3.col;
+                        const goR2 = tp3.col > fp3.col;
                         svg += '<line x1="' + (goR2 ? fp3.x + nodeW : fp3.x) + '" y1="' + fp3.cy + '" x2="' + (goR2 ? tp3.x : tp3.x + nodeW) + '" y2="' + tp3.cy + '" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3 3" marker-end="url(#lfArrow)"/>';
                     } else {
-                        var chY2 = fp3.y + nodeH + (gapBetweenRows * 0.45);
+                        const chY2 = fp3.y + nodeH + (gapBetweenRows * 0.45);
                         svg += '<path d="M ' + fp3.cx + ' ' + (fp3.y + nodeH) + ' L ' + fp3.cx + ' ' + chY2 + ' L ' + tp3.cx + ' ' + chY2 + ' L ' + tp3.cx + ' ' + tp3.y + '" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3 3" marker-end="url(#lfArrow)"/>';
                     }
                 }
@@ -4621,10 +4621,10 @@
 
             // ── Word-wrap helper ──
             function wrapNodeText(text, maxChars) {
-                var words = text.split(/\s+/);
-                var lines = [], cur = '';
+                const words = text.split(/\s+/);
+                let lines = [], cur = '';
                 for (let w = 0; w < words.length; w++) {
-                    var test = cur ? cur + ' ' + words[w] : words[w];
+                    const test = cur ? cur + ' ' + words[w] : words[w];
                     if (test.length > maxChars && cur) { lines.push(cur); cur = words[w]; }
                     else { cur = test; }
                 }
@@ -4634,32 +4634,32 @@
 
             // ── Draw nodes (on top of arrows) ──
             steps.forEach(function(step, i) {
-                var p = positions[i];
-                var color = DEPT_COLORS[step.department] || '#94a3b8';
-                var bg = DEPT_BG[step.department] || '#f1f5f9';
-                var textColor = step.hasName ? '#1e293b' : '#94a3b8';
+                const p = positions[i];
+                const color = DEPT_COLORS[step.department] || '#94a3b8';
+                const bg = DEPT_BG[step.department] || '#f1f5f9';
+                const textColor = step.hasName ? '#1e293b' : '#94a3b8';
 
                 if (step.isDecision) {
-                    var cx = p.cx, cy = p.cy;
-                    var dx = nodeW / 2, dy = nodeH / 2;
+                    const cx = p.cx, cy = p.cy;
+                    const dx = nodeW / 2, dy = nodeH / 2;
                     svg += '<polygon points="' + cx + ',' + (cy - dy) + ' ' + (cx + dx) + ',' + cy + ' ' + cx + ',' + (cy + dy) + ' ' + (cx - dx) + ',' + cy + '" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2"/>';
                 } else {
                     svg += '<rect x="' + p.x + '" y="' + p.y + '" width="' + nodeW + '" height="' + nodeH + '" rx="8" fill="' + bg + '" stroke="' + color + '" stroke-width="1.5"/>';
                 }
 
-                var maxCharsPerLine = step.isDecision ? 16 : 20;
-                var nameLines = wrapNodeText(step.name, maxCharsPerLine);
+                const maxCharsPerLine = step.isDecision ? 16 : 20;
+                let nameLines = wrapNodeText(step.name, maxCharsPerLine);
                 if (nameLines.length > 3) nameLines = nameLines.slice(0, 3);
-                var fontSize = nameLines.length > 2 ? 9 : 11;
-                var lineH = fontSize + 2;
-                var deptFontSize = 9;
-                var totalTextH = nameLines.length * lineH + deptFontSize + 2;
-                var textStartY = p.cy - totalTextH / 2 + fontSize;
+                const fontSize = nameLines.length > 2 ? 9 : 11;
+                const lineH = fontSize + 2;
+                const deptFontSize = 9;
+                const totalTextH = nameLines.length * lineH + deptFontSize + 2;
+                const textStartY = p.cy - totalTextH / 2 + fontSize;
 
                 for (let li = 0; li < nameLines.length; li++) {
                     svg += '<text x="' + p.cx + '" y="' + (textStartY + li * lineH) + '" text-anchor="middle" fill="' + textColor + '" font-size="' + fontSize + '" font-weight="500" font-family="system-ui,sans-serif">' + escSvgText(nameLines[li]) + '</text>';
                 }
-                var deptY = textStartY + nameLines.length * lineH + 1;
+                const deptY = textStartY + nameLines.length * lineH + 1;
                 svg += '<text x="' + p.cx + '" y="' + deptY + '" text-anchor="middle" fill="' + (step.isDecision ? '#7c3aed' : color) + '" font-size="' + deptFontSize + '" font-family="system-ui,sans-serif">' + escSvgText(step.department) + '</text>';
                 svg += '<text x="' + (p.x + (step.isDecision ? nodeW / 2 - 4 : 8)) + '" y="' + (p.y + 13) + '" fill="' + (step.isDecision ? '#7c3aed' : color) + '" font-size="9" font-weight="600" font-family="system-ui,sans-serif"' + (step.isDecision ? ' text-anchor="middle"' : '') + '>' + (i + 1) + '</text>';
             });
@@ -5254,7 +5254,7 @@
                 const uid = div.dataset.stepUid;
                 const uidKey = 'u' + uid;
                 if (s.name) {
-                    var decToggle = document.getElementById(pfx + '_decisionToggle');
+                    const decToggle = document.getElementById(pfx + '_decisionToggle');
                     if (decToggle) decToggle.style.display = '';
                 }
                 if (s.isDecision) {
@@ -5366,20 +5366,20 @@
         // ============================================================
         // SUBMIT & RESULTS
         // ============================================================
-        var _submitConfirmed = false;
+        let _submitConfirmed = false;
         function confirmBeforeSubmit() {
             if (_submitConfirmed) {
                 submitDiagnostic();
                 return;
             }
-            var name = document.getElementById('contactName').value.trim();
-            var email = document.getElementById('contactEmail').value.trim();
+            const name = document.getElementById('contactName').value.trim();
+            const email = document.getElementById('contactEmail').value.trim();
             if (!name || !email) {
                 showError(18, 'Please provide your name and email.');
                 return;
             }
             _submitConfirmed = true;
-            var btn = document.getElementById('submitBtn');
+            const btn = document.getElementById('submitBtn');
             btn.textContent = 'Confirm and Generate \u2192';
             btn.style.background = 'var(--primary)';
             btn.classList.add('confirm-pulse');
@@ -5440,9 +5440,9 @@
 
         async function autoSaveReport(result, contact) {
             try {
-                var scoreData = typeof lastScoreData !== 'undefined' ? lastScoreData : null;
-                var roadmapData = typeof lastRoadmapData !== 'undefined' ? lastRoadmapData : null;
-                var payload = {
+                const scoreData = typeof lastScoreData !== 'undefined' ? lastScoreData : null;
+                const roadmapData = typeof lastRoadmapData !== 'undefined' ? lastRoadmapData : null;
+                const payload = {
                     editingReportId: editingReportId || null,
                     contact: {
                         name: contact.name || '',
@@ -5478,12 +5478,12 @@
                     pdfBase64: null,
                     timestamp: new Date().toISOString()
                 };
-                var resp = await fetch('/api/send-diagnostic-report', {
+                const resp = await fetch('/api/send-diagnostic-report', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                var data = await resp.json();
+                const data = await resp.json();
                 if (data.success && data.reportId) {
                     window._autoSavedReportId = data.reportId;
                     console.log('Report auto-saved:', data.reportId);
@@ -6763,7 +6763,7 @@
             }
 
             // Soft nudge on optional screens if no data was entered
-            var nudgeScreens = [8, 9, 10, 11, 12, 13, 15, 16, 17];
+            const nudgeScreens = [8, 9, 10, 11, 12, 13, 15, 16, 17];
             if (nudgeScreens.indexOf(screen) >= 0 && !_skipNudge[screen] && !screenHasData(screen)) {
                 showSoftNudge(screen);
                 return;
@@ -6772,7 +6772,7 @@
             goToScreen(screen + 1);
         }
 
-        var _skipNudge = {};
+        const _skipNudge = {};
 
         function screenHasData(screen) {
             switch (screen) {
@@ -6781,7 +6781,7 @@
                 case 9:
                     return !!document.getElementById('longestStep').value || !!document.querySelector('input[name="bottleneckReason"]:checked');
                 case 10:
-                    var sysNames = document.querySelectorAll('#systemsList input[type="text"]');
+                    const sysNames = document.querySelectorAll('#systemsList input[type="text"]');
                     for (let i = 0; i < sysNames.length; i++) { if (sysNames[i].value.trim()) return true; }
                     return false;
                 case 11:
@@ -6802,8 +6802,8 @@
         }
 
         function showSoftNudge(screen) {
-            var box = document.getElementById('errorBox' + screen);
-            var text = document.getElementById('errorText' + screen);
+            const box = document.getElementById('errorBox' + screen);
+            const text = document.getElementById('errorText' + screen);
             if (box && text) {
                 text.innerHTML = '<span style="display:flex;flex-direction:column;align-items:center;gap:0.5rem;text-align:center;">' +
                     '<span>Skipping this? Your analysis will be more accurate with this data.</span>' +
@@ -8272,7 +8272,7 @@
 
                 // Convert AI steps to the format buildGridSVG expects
                 const flowProcesses = procs.map(function(p) {
-                    var activeSteps = (p.steps || []).filter(function(s) { return !s.removed; });
+                    const activeSteps = (p.steps || []).filter(function(s) { return !s.removed; });
                     return {
                         processName: p.processName || 'Redesigned Process',
                         steps: activeSteps.map(function(s, i) {
