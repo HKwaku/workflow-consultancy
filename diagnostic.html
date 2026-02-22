@@ -7530,12 +7530,13 @@
                 });
 
                 // Pass 1c: distribute exits across vertices — avoid concentrating on one
+                // Preference order for redistribution: bottom, right, left, top (plan)
                 const vertexCount = { top: 0, right: 0, bottom: 0, left: 0 };
                 function compatFallbacks(bd) {
                     if (bd.goesBack && !bd.sameRow) return ['top', 'left', 'right'];
-                    if (bd.goesBack && bd.sameRow) return ['left', 'right', 'top'];
-                    if (!bd.sameRow && bd.tp.row > pos.row) return ['bottom', 'right', 'left'];
-                    return ['right', 'left', 'bottom', 'top'];
+                    if (bd.goesBack && bd.sameRow) return ['left', 'right', 'bottom', 'top'];
+                    if (!bd.sameRow && bd.tp.row > pos.row) return ['bottom', 'right', 'left', 'top'];
+                    return ['bottom', 'right', 'left', 'top'];
                 }
                 const sorted = [...branchInfo].sort((a, b) => {
                     const rank = d => d.goesBack && !d.sameRow ? 0 : (!d.sameRow && d.tp.row > pos.row) ? 1 : 2;
