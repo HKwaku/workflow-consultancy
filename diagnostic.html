@@ -4474,10 +4474,10 @@
             steps.forEach(function(step, i) {
                 if (!step.isDecision) return;
                 step.branches.forEach(function(br) {
-                    var t = resolveBranchTargetIdx(br.target, steps);
+                    const t = resolveBranchTargetIdx(br.target, steps);
                     if (t >= 0 && t < i) loopBackCount++;
-                    var srcRow = Math.floor(i / cols);
-                    var tgtRow = t >= 0 ? Math.floor(t / cols) : srcRow;
+                    const srcRow = Math.floor(i / cols);
+                    const tgtRow = t >= 0 ? Math.floor(t / cols) : srcRow;
                     if (t > i && srcRow === tgtRow && t !== i + 1) sameRowSkipCount++;
                 });
             });
@@ -4514,9 +4514,9 @@
             function gapBelowY(row) { return padY + row * rowH + nodeH + gapBetweenRows / 2; }
 
             // ── Branch paths drawn first (behind nodes) ──
-            var branchSvg = '';
-            var labelSvg = '';
-            var gapChannels = {};
+            let branchSvg = '';
+            let labelSvg = '';
+            const gapChannels = {};
             function allocCh(key) { if (!(key in gapChannels)) gapChannels[key] = 0; return gapChannels[key]++; }
 
             steps.forEach(function(step, i) {
@@ -4545,9 +4545,9 @@
                         lblY = (exitY + entryAboveY) / 2;
                     } else if (sameRow && tgtIdx === i + 1) {
                         // Immediate next on same row: direct line
-                        var goRight = tp.col > fp.col;
-                        var x1 = goRight ? fp.x + nodeW : fp.x;
-                        var x2 = goRight ? tp.x : tp.x + nodeW;
+                        const goRight = tp.col > fp.col;
+                        const x1 = goRight ? fp.x + nodeW : fp.x;
+                        const x2 = goRight ? tp.x : tp.x + nodeW;
                         pathD = 'M ' + x1 + ' ' + fp.cy + ' L ' + x2 + ' ' + tp.cy;
                         lblX = (x1 + x2) / 2;
                         lblY = fp.cy - 8;
@@ -4562,8 +4562,8 @@
                         lblY = gY - 4;
                     } else {
                         // Forward to different row: route through gap below source row
-                        var ch3 = allocCh('below_' + fp.row);
-                        var gY2 = gapBelowY(fp.row) + ch3 * LINE_GAP;
+                        const ch3 = allocCh('below_' + fp.row);
+                        const gY2 = gapBelowY(fp.row) + ch3 * LINE_GAP;
                         pathD = 'M ' + fp.cx + ' ' + (fp.y + nodeH) + ' L ' + fp.cx + ' ' + gY2 + ' L ' + tp.cx + ' ' + gY2 + ' L ' + tp.cx + ' ' + tp.y;
                         lblX = (fp.cx + tp.cx) / 2;
                         lblY = gY2 - 4;
@@ -4588,7 +4588,7 @@
             for (let i = 0; i < steps.length - 1; i++) {
                 if (steps[i].isDecision) {
                     steps[i].branches.forEach(function(br) {
-                        var t = resolveBranchTargetIdx(br.target, steps);
+                        const t = resolveBranchTargetIdx(br.target, steps);
                         if (t >= 0) hasIncoming[t] = true;
                     });
                     continue;
@@ -8283,7 +8283,7 @@
                                 isDecision: s.isDecision || false,
                                 isExternal: s.isExternal || false,
                                 branches: (s.branches || []).map(function(b) {
-                                    var tgt = b.target || '';
+                                    let tgt = b.target || '';
                                     if (typeof b.targetStep === 'number') tgt = 'Step ' + b.targetStep;
                                     return { label: b.label || '', target: tgt };
                                 })
@@ -8853,8 +8853,8 @@
                     btnText.innerHTML = '&#10003; Report Saved!';
                     btn.style.background = 'linear-gradient(135deg, #16a34a, #15803d)';
                     confirmation.style.display = 'block';
-                    var confText = document.getElementById('emailConfirmText');
-                    var confDetail = document.getElementById('emailConfirmDetail');
+                    const confText = document.getElementById('emailConfirmText');
+                    const confDetail = document.getElementById('emailConfirmDetail');
                     confText.textContent = 'Your report has been saved to your portal.';
                     confDetail.innerHTML = '<a href="/portal" style="color: #6366f1; font-weight: 600;">View in Portal &rarr;</a>';
                     return;
@@ -8984,7 +8984,7 @@
         async function loadJsPDF() {
             if (window.jspdf) return;
             return new Promise(function(resolve, reject) {
-                var s = document.createElement('script');
+                const s = document.createElement('script');
                 s.src = '/assets/jspdf.umd.min.js';
                 s.onload = resolve;
                 s.onerror = function() { reject(new Error('Failed to load jsPDF')); };
@@ -10519,12 +10519,11 @@
                 }
 
                 // Build the result object that displayResults expects
-                var processes = dd.processes || [];
-                var totalCost = (dd.summary || {}).totalAnnualCost || 0;
-                var potentialSavings = (dd.summary || {}).potentialSavings || 0;
+                const processes = dd.processes || [];
+                const totalCost = (dd.summary || {}).totalAnnualCost || 0;
+                const potentialSavings = (dd.summary || {}).potentialSavings || 0;
 
-                // Enrich process entries with quality data if missing
-                var resultProcesses = processes.map(function(p) {
+                const resultProcesses = processes.map(function(p) {
                     return {
                         name: p.name || 'Process',
                         elapsedDays: p.elapsedDays || 0,
@@ -10539,7 +10538,7 @@
                     };
                 });
 
-                var result = {
+                const result = {
                     processes: resultProcesses,
                     totalCost: totalCost,
                     potentialSavings: potentialSavings,
@@ -10548,22 +10547,21 @@
                     qualityScore: dd.summary ? dd.summary.qualityScore : 0
                 };
 
-                var contact = dd.contact || {
+                const contact = dd.contact || {
                     name: report.contactName || '',
                     email: report.contactEmail || '',
                     company: report.company || ''
                 };
 
-                // Add a back-to-portal link above the results
-                var resultsContainer = document.getElementById('resultsContainer');
-                var backBar = document.createElement('div');
+                const resultsContainer = document.getElementById('resultsContainer');
+                const backBar = document.createElement('div');
                 backBar.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding:0.75rem 1rem;background:linear-gradient(135deg,rgba(61,142,166,0.08),rgba(61,142,166,0.03));border-radius:var(--radius-sm);border:1px solid rgba(61,142,166,0.15);';
                 backBar.innerHTML = '<a href="/portal" style="color:var(--accent);text-decoration:none;font-weight:500;font-size:0.9rem;">← Back to Portal</a>' +
                     '<span style="color:var(--text-mid);font-size:0.82rem;">' + (report.company || '') + ' · ' + (report.createdAt ? new Date(report.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '') + '</span>';
                 resultsContainer.insertBefore(backBar, resultsContainer.firstChild);
 
                 // Hide the email/save buttons since this is a read-only view
-                var emailSection = document.getElementById('emailReportBtn');
+                const emailSection = document.getElementById('emailReportBtn');
                 if (emailSection) emailSection.closest('.button-group').style.display = 'none';
 
                 displayResults(result, contact);
@@ -10813,17 +10811,15 @@
             const email = params.get('email');
             if (!reportId) return false;
 
-            // Email is required -- if missing, prompt user to go through portal
+            // Email is required -- if missing, show auth gate on screen19 instead of falling through to screen 0
             if (!email) {
-                const banner = document.getElementById('resumeBanner');
-                if (banner) {
-                    banner.innerHTML = '<strong>Authentication required.</strong> Please <a href="/portal" style="color: inherit; text-decoration: underline;">sign in to the portal</a> to edit a completed diagnostic.';
-                    banner.style.background = '#fef2f2';
-                    banner.style.color = '#dc2626';
-                    banner.style.borderColor = '#fecaca';
-                    banner.classList.add('show');
-                }
-                return false;
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                const screen19 = document.getElementById('screen19');
+                screen19.classList.add('active');
+                const progressBar = document.querySelector('.progress-bar');
+                if (progressBar) progressBar.style.display = 'none';
+                document.getElementById('loadingState').innerHTML = '<div style="text-align:center;padding:2rem;"><h3 style="color:var(--primary);">Sign In Required</h3><p style="color:var(--text-mid);margin:1rem 0;">You need to sign in via the portal to edit a completed diagnostic.</p><a href="/portal" style="color:var(--accent);font-weight:500;">← Sign In to Portal</a></div>';
+                return true;
             }
 
             try {
@@ -10832,16 +10828,13 @@
 
                 if (!resp.ok || !result.success) {
                     console.warn('Edit load failed:', result.error);
-                    const banner = document.getElementById('resumeBanner');
-                    if (banner) {
-                        banner.innerHTML = '<strong>Could not load diagnostic for editing.</strong> ' + (result.error || 'Unknown error.');
-                        banner.style.background = '#fef2f2';
-                        banner.style.color = '#dc2626';
-                        banner.style.borderColor = '#fecaca';
-                        banner.classList.add('show');
-                        setTimeout(() => banner.classList.remove('show'), 10000);
-                    }
-                    return false;
+                    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                    const screen19 = document.getElementById('screen19');
+                    screen19.classList.add('active');
+                    const progressBar = document.querySelector('.progress-bar');
+                    if (progressBar) progressBar.style.display = 'none';
+                    document.getElementById('loadingState').innerHTML = '<div style="text-align:center;padding:2rem;"><h3 style="color:var(--danger);">Could Not Load Diagnostic</h3><p style="color:var(--text-mid);margin:1rem 0;">' + (result.error || 'This diagnostic could not be loaded for editing.') + '</p><a href="/portal" style="color:var(--accent);font-weight:500;">← Back to Portal</a></div>';
+                    return true;
                 }
 
                 // Restore raw process data
@@ -10938,7 +10931,13 @@
 
             } catch (err) {
                 console.error('Edit mode error:', err);
-                return false;
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                const screen19 = document.getElementById('screen19');
+                screen19.classList.add('active');
+                const progressBar = document.querySelector('.progress-bar');
+                if (progressBar) progressBar.style.display = 'none';
+                document.getElementById('loadingState').innerHTML = '<div style="text-align:center;padding:2rem;"><h3 style="color:var(--danger);">Failed to Load Diagnostic</h3><p style="color:var(--text-mid);margin:1rem 0;">Unable to reach the server. Please try again.</p><a href="/portal" style="color:var(--accent);font-weight:500;">← Back to Portal</a></div>';
+                return true;
             }
         }
 
