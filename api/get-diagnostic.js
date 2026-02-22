@@ -3,13 +3,58 @@
 // Used by /report?id=xxx to retrieve stored diagnostic data + PDF
 // Also supports ?id=xxx&editable=true&email=yyy to return raw process data for editing
 
-const { setCorsHeaders, getSupabaseHeaders, isValidUUID, isValidEmail, fetchWithTimeout } = require('../lib/api-helpers');
+const { setCorsHeaders, getSupabaseHeaders, getSupabaseWriteHeaders, isValidUUID, isValidEmail, fetchWithTimeout } = require('../lib/api-helpers');
 const { normaliseLegacyRow } = require('../lib/fetch-report');
 
 module.exports = async function handler(req, res) {
-  setCorsHeaders(res, 'GET,OPTIONS');
+  setCorsHeaders(res, 'GET,PATCH,OPTIONS');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  // ── PATCH: update step data for an existing diagnostic ──────
+  if (req.method === 'PATCH') {
+    try {
+      const { id } = req.query;
+      const { steps, processIndex } = req.body || {};
+      if (!id || !isValidUUID(id)) return res.status(400).json({ error: 'Valid report ID required.' });
+      if (!steps || !Array.isArray(steps) || steps.length === 0) return res.status(400).json({ error: 'steps array is required.' });
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+      if (!supabaseUrl || !supabaseKey) return res.status(503).json({ error: 'Storage not configured.' });
+
+      const readResp = await fetch(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${id}&select=diagnostic_data`, { headers: getSupabaseHeaders(supabaseKey) });
+      if (!readResp.ok) return res.status(502).json({ error: 'Failed to read report.' });
+      const rows = await readResp.json();
+      if (!rows || rows.length === 0) return res.status(404).json({ error: 'Report not found.' });
+
+      const dd = rows[0].diagnostic_data || {};
+      const pi = processIndex || 0;
+
+      if (!dd.rawProcesses) dd.rawProcesses = [];
+      if (dd.rawProcesses.length > pi && dd.rawProcesses[pi]) {
+        dd.rawProcesses[pi].steps = steps;
+      } else {
+        const procName = (dd.processes && dd.processes[pi]) ? dd.processes[pi].name : 'Process';
+        while (dd.rawProcesses.length <= pi) dd.rawProcesses.push({ processName: procName, steps: [] });
+        dd.rawProcesses[pi].steps = steps;
+        dd.rawProcesses[pi].processName = procName;
+      }
+
+      if (dd.processes && dd.processes[pi]) {
+        dd.processes[pi].steps = steps.map(function(s, si) {
+          return { number: si + 1, name: s.name || '', department: s.department || '', isDecision: !!s.isDecision, isExternal: !!s.isExternal, branches: s.branches || [] };
+        });
+      }
+
+      const patchResp = await fetch(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${id}`, {
+        method: 'PATCH', headers: getSupabaseWriteHeaders(supabaseKey),
+        body: JSON.stringify({ diagnostic_data: dd, updated_at: new Date().toISOString() })
+      });
+      if (!patchResp.ok) { const t = await patchResp.text(); return res.status(502).json({ error: 'Patch failed: ' + t }); }
+      return res.status(200).json({ success: true, stepsCount: steps.length });
+    } catch (e) { return res.status(500).json({ error: e.message }); }
+  }
+
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
