@@ -7330,10 +7330,17 @@
                     const x1 = goRight
                         ? (fromIsDec ? fp.cx + DIAMOND_W / 2 : fp.x + NODE_W)
                         : (fromIsDec ? fp.cx - DIAMOND_W / 2 : fp.x);
+                    const y1 = fp.cy;
                     const x2 = goRight
                         ? (toIsDec ? tp.cx - DIAMOND_W / 2 : tp.x)
                         : (toIsDec ? tp.cx + DIAMOND_W / 2 : tp.x + NODE_W);
-                    pathD = `M ${x1} ${fp.cy} L ${x2} ${tp.cy}`;
+                    const y2 = tp.cy;
+                    if (Math.abs(y1 - y2) < 2) {
+                        pathD = `M ${x1} ${y1} L ${x2} ${y2}`;
+                    } else {
+                        const midX = (x1 + x2) / 2;
+                        pathD = `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`;
+                    }
                 } else {
                     const x1 = fp.cx;
                     const y1 = fromIsDec ? fp.cy + DIAMOND_H / 2 : fp.y + NODE_H;
@@ -7501,10 +7508,15 @@
                         nY = isTargetDec ? tp.cy - DIAMOND_H / 2 : tp.y;
                     }
 
-                    // Build path
+                    // Build path — strictly orthogonal (90°/180° only)
                     let pathD;
-                    if (sameRow && !goesBack && Math.abs(tp.col - pos.col) <= 1) {
+                    const isAdjacentSameRow = sameRow && !goesBack && Math.abs(tp.col - pos.col) <= 1;
+
+                    if (isAdjacentSameRow && (exitDir === 'left' || exitDir === 'right') && Math.abs(eY - nY) < 2) {
                         pathD = `M ${eX} ${eY} L ${nX} ${nY}`;
+                    } else if (isAdjacentSameRow && (exitDir === 'left' || exitDir === 'right')) {
+                        const midX = (eX + nX) / 2;
+                        pathD = `M ${eX} ${eY} L ${midX} ${eY} L ${midX} ${nY} L ${nX} ${nY}`;
                     } else {
                         let gapKey, gapY;
                         if (goesBack || sameRow) {
