@@ -3510,7 +3510,7 @@
                 if (screenNum === 11) updateProcessRefs();
                 if (screenNum === 12) updateProcessRefs();
                 if (screenNum === 13) updateProcessRefs();
-                if (screenNum === 14) updateProcessRefs();
+                if (screenNum === 14) { updateProcessRefs(); populateScreen14(); }
                 if (screenNum === 15) populateScreen15();
                 if (screenNum === 16) populateScreen16();
                 if (screenNum === 17) populateScreen17();
@@ -4974,6 +4974,7 @@
         };
 
         function updateAnnualInstances() {
+            if (!processData.frequency) processData.frequency = { type: '', annual: 0, inFlight: 0, progressing: 0, stuck: 0, waiting: 0 };
             const freq = getRadioValue('frequency');
             const annual = FREQUENCY_MAP[freq] || 0;
             processData.frequency.type = freq;
@@ -4981,11 +4982,20 @@
             document.getElementById('annualInstances').textContent = annual + ' per year';
         }
 
+        function populateScreen14() {
+            if (!processData.frequency) processData.frequency = { type: '', annual: 0, inFlight: 0, progressing: 0, stuck: 0, waiting: 0 };
+            const annual = processData.frequency.annual || 0;
+            const el = document.getElementById('annualInstances');
+            if (el) el.textContent = annual > 0 ? annual + ' per year' : '\u2014';
+        }
+
         // ============================================================
         // SCREEN 15: COST CALCULATION
         // ============================================================
         function populateScreen15() {
             updateProcessRefs();
+            if (!processData.userTime) processData.userTime = { meetings: 0, emails: 0, execution: 0, waiting: 0, total: 0 };
+            if (!processData.frequency) processData.frequency = { type: '', annual: 0, inFlight: 0, progressing: 0, stuck: 0, waiting: 0 };
             const t = processData.userTime;
             document.getElementById('costBreakdownValue').innerHTML =
                 `Meetings: ~${t.meetings}h &middot; Emails: ~${t.emails}h &middot; Execution: ~${t.execution}h &middot; Waiting: ~${t.waiting}h<br><strong>Total: ~${t.total} hours</strong>`;
@@ -4993,9 +5003,12 @@
         }
 
         function calculateCosts() {
+            if (!processData.userTime) processData.userTime = { meetings: 0, emails: 0, execution: 0, waiting: 0, total: 0 };
+            if (!processData.frequency) processData.frequency = { type: '', annual: 0, inFlight: 0, progressing: 0, stuck: 0, waiting: 0 };
+            if (!processData.costs) processData.costs = { hourlyRate: 50, instanceCost: 0, annualUserCost: 0, totalAnnualCost: 0, teamSize: 1 };
             const rate = parseFloat(document.getElementById('hourlyRate').value) || 50;
-            const totalHours = processData.userTime.total;
-            const annual = processData.frequency.annual;
+            const totalHours = processData.userTime.total || 0;
+            const annual = processData.frequency.annual || 12;
 
             const instanceCost = totalHours * rate;
             const involvement = 0.75;
@@ -5018,18 +5031,21 @@
         // ============================================================
         function populateScreen16() {
             updateProcessRefs();
+            if (!processData.lastExample) processData.lastExample = { name: '', startDate: '', endDate: '', elapsedDays: 0 };
+            if (!processData.costs) processData.costs = { hourlyRate: 50, instanceCost: 0, annualUserCost: 0, totalAnnualCost: 0, teamSize: 1 };
             calculateTeamCost();
 
-            const days = processData.lastExample.elapsedDays;
+            const days = processData.lastExample.elapsedDays || 0;
             document.getElementById('currentAvg').textContent = days + ' days';
             document.getElementById('halfTime').textContent = Math.round(days / 2) + ' days';
         }
 
         function calculateTeamCost() {
-            const teamSize = parseInt(document.getElementById('teamPeopleCount').value) || 1;
+            if (!processData.costs) processData.costs = { hourlyRate: 50, instanceCost: 0, annualUserCost: 0, totalAnnualCost: 0, teamSize: 1 };
+            const teamSize = parseInt(document.getElementById('teamPeopleCount')?.value) || 1;
             processData.costs.teamSize = teamSize;
 
-            const totalAnnual = processData.costs.annualUserCost * teamSize;
+            const totalAnnual = (processData.costs.annualUserCost || 0) * teamSize;
             processData.costs.totalAnnualCost = totalAnnual;
 
             document.getElementById('totalAnnualCost').textContent = formatCurrency(totalAnnual);
@@ -5055,10 +5071,13 @@
         // ============================================================
         function populateScreen17() {
             updateProcessRefs();
+            if (!processData.lastExample) processData.lastExample = { name: '', startDate: '', endDate: '', elapsedDays: 0 };
+            if (!processData.costs) processData.costs = { hourlyRate: 50, instanceCost: 0, annualUserCost: 0, totalAnnualCost: 0, teamSize: 1 };
+            if (!processData.frequency) processData.frequency = { type: '', annual: 0, inFlight: 0, progressing: 0, stuck: 0, waiting: 0 };
             const summary = document.getElementById('prioritySummary');
-            const days = processData.lastExample.elapsedDays;
-            const cost = processData.costs.totalAnnualCost;
-            const annual = processData.frequency.annual;
+            const days = processData.lastExample.elapsedDays || 0;
+            const cost = processData.costs.totalAnnualCost || 0;
+            const annual = processData.frequency.annual || 12;
 
             summary.innerHTML = `
                 <div class="metric-grid">
@@ -5196,6 +5215,39 @@
                 const dd = document.getElementById('delayDetails');
                 if (dd) dd.value = processData.delayDetails;
             }
+
+            // Restore screen 14 (frequency)
+            const freq = processData.frequency || {};
+            if (freq.type) {
+                const r = document.querySelector('input[name="frequency"][value="' + freq.type + '"]');
+                if (r) { r.checked = true; r.closest('.radio-option')?.classList.add('selected'); }
+            }
+            const inFlightEl = document.getElementById('inFlight');
+            const progressingEl = document.getElementById('progressing');
+            const stuckEl = document.getElementById('stuck');
+            const waitingEl = document.getElementById('waitingFor');
+            if (inFlightEl && freq.inFlight) inFlightEl.value = freq.inFlight;
+            if (progressingEl && freq.progressing) progressingEl.value = freq.progressing;
+            if (stuckEl && freq.stuck) stuckEl.value = freq.stuck;
+            if (waitingEl && freq.waiting) waitingEl.value = freq.waiting;
+
+            // Restore screen 15 (cost)
+            const costs = processData.costs || {};
+            const hourlyEl = document.getElementById('hourlyRate');
+            if (hourlyEl && costs.hourlyRate) hourlyEl.value = costs.hourlyRate;
+
+            // Restore screen 16 (team cost)
+            const teamEl = document.getElementById('teamPeopleCount');
+            if (teamEl && costs.teamSize) teamEl.value = costs.teamSize;
+
+            // Restore screen 17 (priority)
+            const pri = processData.priority || {};
+            if (pri.level) {
+                const r = document.querySelector('input[name="priority"][value="' + pri.level + '"]');
+                if (r) { r.checked = true; r.closest('.radio-option')?.classList.add('selected'); }
+            }
+            const priReasonEl = document.getElementById('priorityReason');
+            if (priReasonEl && pri.reason) priReasonEl.value = pri.reason;
 
             goToScreen(1);
 
@@ -6287,6 +6339,16 @@
         // DATA COLLECTION
         // ============================================================
         function collectAllProcessData() {
+            if (!processData.definition) processData.definition = { startsWhen: '', completesWhen: '', complexity: '', departments: [] };
+            if (!processData.lastExample) processData.lastExample = { name: '', startDate: '', endDate: '', elapsedDays: 0 };
+            if (!processData.frequency) processData.frequency = { type: '', annual: 0, inFlight: 0, progressing: 0, stuck: 0, waiting: 0 };
+            if (!processData.costs) processData.costs = { hourlyRate: 50, instanceCost: 0, annualUserCost: 0, totalAnnualCost: 0, teamSize: 1 };
+            if (!processData.savings) processData.savings = {};
+            if (!processData.bottleneck) processData.bottleneck = {};
+            if (!processData.knowledge) processData.knowledge = {};
+            if (!processData.newHire) processData.newHire = {};
+            if (!processData.priority) processData.priority = {};
+
             // Screen 2
             processData.processName = document.getElementById('processNameInput')?.value?.trim() || processData.processName;
 
@@ -11020,8 +11082,8 @@
 
                 // If there are completed processes, load them for editing
                 if (completedProcesses.length > 0) {
-                    // Set the current processData to the last completed one
-                    processData = completedProcesses[completedProcesses.length - 1];
+                    completedProcesses = completedProcesses.map(p => ensureProcessDataShape(p));
+                    processData = ensureProcessDataShape(completedProcesses[completedProcesses.length - 1]);
 
                     // Restore custom departments from stored data or infer from steps
                     const storedCustomDepts = reportData.customDepartments || [];
