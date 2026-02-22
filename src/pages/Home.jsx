@@ -11,7 +11,7 @@ export default function Home() {
         Evidence-based process diagnostics and client portal.
       </p>
       <p style={{ marginBottom: 24, fontSize: '0.88rem' }}>
-        <a href="/landing.html" style={{ color: 'var(--accent)' }}>View full marketing site</a>
+        <a href="/" style={{ color: 'var(--accent)' }}>View full marketing site</a>
       </p>
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
         <Link
