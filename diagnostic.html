@@ -5505,15 +5505,17 @@
         function buildLocalResults(processes, contact) {
             let totalCost = 0;
             const processResults = processes.map(p => {
-                totalCost += p.costs.totalAnnualCost;
+                const costs = p.costs || {};
+                const annualCost = costs.totalAnnualCost ?? p.annualCost ?? 0;
+                totalCost += annualCost;
                 const quality = calculateProcessQuality(p);
                 return {
-                    name: p.processName,
-                    elapsedDays: p.lastExample.elapsedDays,
-                    annualCost: p.costs.totalAnnualCost,
-                    annualInstances: p.frequency.annual,
-                    teamSize: p.costs.teamSize,
-                    stepsCount: p.steps.length,
+                    name: p.processName || 'Process',
+                    elapsedDays: p.lastExample?.elapsedDays ?? p.elapsedDays ?? 0,
+                    annualCost,
+                    annualInstances: p.frequency?.annual ?? p.annualInstances ?? 12,
+                    teamSize: costs.teamSize ?? p.teamSize ?? 1,
+                    stepsCount: (p.steps || []).length,
                     quality,
                     bottleneck: p.bottleneck || {},
                     priority: p.priority || {}
@@ -6235,27 +6237,33 @@
         function calculateProcessQuality(p) {
             let score = 100;
             const flags = [];
+            const lastEx = p.lastExample || {};
+            const userTime = p.userTime || {};
+            const steps = p.steps || [];
+            const costs = p.costs || {};
+            const handoffs = p.handoffs || [];
+            const systems = p.systems || [];
 
             // Date recency
-            if (p.lastExample.startDate) {
-                const age = (new Date() - new Date(p.lastExample.startDate)) / (1000 * 60 * 60 * 24);
+            if (lastEx.startDate) {
+                const age = (new Date() - new Date(lastEx.startDate)) / (1000 * 60 * 60 * 24);
                 if (age > 60) { score -= 10; flags.push('Example over 60 days old'); }
             } else { score -= 15; }
 
             // Round numbers
-            if (p.userTime.total % 5 === 0 && p.userTime.total > 0) {
+            if (userTime.total % 5 === 0 && userTime.total > 0) {
                 score -= 5; flags.push('Round numbers suggest estimation');
             }
 
             // Detail level
-            if (p.steps.length < 5) { score -= 10; flags.push('Limited step detail'); }
-            if (p.steps.length >= 8) { score += 5; }
+            if (steps.length < 5) { score -= 10; flags.push('Limited step detail'); }
+            if (steps.length >= 8) { score += 5; }
 
             // Bonuses
-            if (p.lastExample.startDate && p.lastExample.endDate) score += 10;
-            if (p.costs.totalAnnualCost > 0) score += 5;
-            if (p.handoffs.length > 0) score += 5;
-            if (p.systems.length > 0) score += 5;
+            if (lastEx.startDate && lastEx.endDate) score += 10;
+            if ((costs.totalAnnualCost ?? p.annualCost ?? 0) > 0) score += 5;
+            if (handoffs.length > 0) score += 5;
+            if (systems.length > 0) score += 5;
 
             score = Math.max(0, Math.min(100, score));
 
