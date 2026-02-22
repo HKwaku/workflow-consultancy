@@ -4131,7 +4131,6 @@
             const banner = document.createElement('div');
             banner.style.cssText = 'padding:0.6rem 1rem;background:linear-gradient(135deg,rgba(22,163,74,0.08),rgba(22,163,74,0.03));border:1px solid rgba(22,163,74,0.2);border-radius:var(--radius-sm);margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;font-size:0.85rem;';
             banner.innerHTML = '<span style="color:#16a34a;font-weight:500;">&#10003; ' + steps.length + ' steps imported — review and adjust below</span><button onclick="this.parentElement.remove();const z=document.getElementById(\'stepImportZone\');z.style.maxHeight=\'\';z.style.overflow=\'\';z.style.padding=\'\';z.style.border=\'\';z.style.marginBottom=\'\';" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:0.82rem;font-family:inherit;">Import again</button>';
-            const list = document.getElementById('stepsList');
             list.parentElement.insertBefore(banner, list);
         }
 
