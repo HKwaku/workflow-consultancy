@@ -190,24 +190,27 @@
         .empty-state a:hover { text-decoration: underline; }
         .empty-state-icon { width: 56px; height: 56px; border-radius: 16px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; color: var(--text-light); }
 
-        /* Spinner (portal uses 36px variant) */
-        .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s cubic-bezier(0.45,0.05,0.55,0.95) infinite; margin: 0 auto 12px; }
+        /* Spinner & loading states */
+        .spinner { width: 36px; height: 36px; border: 3px solid #e2e8f0; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s cubic-bezier(0.45,0.05,0.55,0.95) infinite; margin: 0 auto 12px; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-state { text-align: center; padding: 48px 20px; }
+        .loading-state p { color: var(--text-light); font-size: 0.84rem; margin-top: 6px; }
         .retry-btn { margin-top: 14px; padding: 8px 22px; background: var(--accent); color: white; border: none; border-radius: 6px; font-family: inherit; font-size: 0.82rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
         .retry-btn:hover { background: #2d7a8f; transform: translateY(-1px); }
         .fade-in { animation: fadeIn 0.35s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
         /* Skeleton shimmer for loading states */
-        .skeleton { position: relative; overflow: hidden; background: #e8ecf0; border-radius: var(--radius-sm); }
+        .skeleton { position: relative; overflow: hidden; }
         .skeleton::after {
             content: ''; position: absolute; inset: 0;
             background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.5) 50%, transparent 100%);
-            animation: shimmer 1.5s ease-in-out infinite;
+            animation: shimmer 1.5s ease-in-out infinite; z-index: 1;
         }
         @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
-        .skeleton .metric-val, .skeleton .metric-lbl { color: transparent !important; }
-        .skeleton-val { display: inline-block; width: 56px; height: 28px; background: #e8ecf0; border-radius: 6px; margin-bottom: 4px; }
-        .skeleton-ring { width: 88px; height: 88px; border-radius: 50%; background: #e8ecf0; margin: 0 auto 6px; }
+        .metric-card.skeleton { background: #f1f5f9; }
+        .metric-card.skeleton .metric-val, .metric-card.skeleton .metric-lbl { color: transparent !important; }
+        .skeleton-val { display: inline-block; width: 56px; height: 28px; background: #e2e8f0; border-radius: 6px; margin-bottom: 4px; }
+        .skeleton-ring { width: 88px; height: 88px; border-radius: 50%; background: #e2e8f0; margin: 0 auto 6px; }
 
         /* Refreshing overlay for tab content */
         .refreshing-overlay { position: relative; min-height: 60px; }
@@ -878,11 +881,19 @@
             currentUser = null;
             cachedReports = null;
             trendsLoaded = false;
-            document.getElementById('authCard').style.display = '';
-            document.getElementById('portalContent').style.display = 'none';
-            document.getElementById('headerNav').style.display = 'none';
-            btn.textContent = 'Sign Out';
-            btn.disabled = false;
+            const portalEl = document.getElementById('portalContent');
+            portalEl.style.transition = 'opacity 0.3s ease';
+            portalEl.style.opacity = '0';
+            setTimeout(function() {
+                portalEl.style.display = 'none';
+                portalEl.style.opacity = '';
+                portalEl.style.transition = '';
+                document.getElementById('authCard').style.display = '';
+                document.getElementById('headerNav').style.display = 'none';
+                btn.textContent = 'Sign Out';
+                btn.disabled = false;
+                switchTab('overview');
+            }, 350);
         }
 
         function onAuthenticated(user) {
@@ -901,7 +912,7 @@
 
         function clearSkeletons() {
             document.querySelectorAll('.metric-card.skeleton').forEach(function(el) { el.classList.remove('skeleton'); });
-            document.querySelectorAll('.skeleton-val').forEach(function(el) { el.remove(); });
+            document.querySelectorAll('.skeleton-val, .skeleton-ring').forEach(function(el) { el.remove(); });
         }
 
         function getStatusInfo(r) {

@@ -1,0 +1,374 @@
+<!-- Screens 2–10: insert after screen 1 -->
+
+<div class="screen" id="screen2">
+    <div class="screen-card">
+        <h2 class="screen-title">Name Your Process</h2>
+        <p class="screen-subtitle">You selected: <span id="selectedProcessType2"></span></p>
+        <div class="form-group">
+            <label for="processNameInput">What do YOU call this process?</label>
+            <input type="text" id="processNameInput" placeholder="e.g., New customer setup">
+            <p class="helper-text">Examples: "New customer setup", "Client onboarding", "Quote-to-cash", "Employee offboarding"</p>
+        </div>
+        <div id="errorBox2" class="error-box">
+            <div class="error-text" id="errorText2"></div>
+        </div>
+        <div class="button-group">
+            <button type="button" class="button button-secondary" onclick="goToScreen(1)">← Back</button>
+            <button type="button" class="button button-primary" onclick="validateAndContinue(2)">Continue →</button>
+        </div>
+    </div>
+</div>
+
+<div class="screen" id="screen3">
+    <div class="screen-card">
+        <h2 class="screen-title">Define Process Boundaries</h2>
+        <p class="screen-subtitle">For <span class="process-ref" id="processRef3">your process</span>, when does it start and end?</p>
+        <div class="form-group">
+            <label for="processStarts">This process STARTS when:</label>
+            <input type="text" id="processStarts" placeholder="e.g., Contract is signed">
+        </div>
+        <div class="form-group">
+            <label for="processCompletes">This process is COMPLETE when:</label>
+            <input type="text" id="processCompletes" placeholder="e.g., Customer has full access">
+        </div>
+        <div class="form-group">
+            <label>Between start and finish, approximately how many steps?</label>
+            <div class="radio-group" role="radiogroup" aria-label="Process complexity">
+                <label class="radio-option"><input type="radio" name="complexity" value="2-5"> 2–5 (Simple)</label>
+                <label class="radio-option"><input type="radio" name="complexity" value="6-10"> 6–10 (Moderate)</label>
+                <label class="radio-option"><input type="radio" name="complexity" value="11-20"> 11–20 (Complex)</label>
+                <label class="radio-option"><input type="radio" name="complexity" value="20+"> 20+ (Very complex)</label>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Departments involved</label>
+            <div class="checkbox-group">
+                <label class="checkbox-option"><input type="checkbox" name="departments" value="Sales"> Sales</label>
+                <label class="checkbox-option"><input type="checkbox" name="departments" value="Operations"> Operations</label>
+                <label class="checkbox-option"><input type="checkbox" name="departments" value="Finance"> Finance</label>
+                <label class="checkbox-option"><input type="checkbox" name="departments" value="IT"> IT</label>
+                <label class="checkbox-option"><input type="checkbox" name="departments" value="Customer Success"> Customer Success</label>
+                <label class="checkbox-option"><input type="checkbox" name="departments" value="Product"> Product</label>
+                <label class="checkbox-option"><input type="checkbox" name="departments" value="Leadership"> Leadership</label>
+                <label class="checkbox-option"><input type="checkbox" name="departments" value="HR"> HR</label>
+                <label class="checkbox-option"><input type="checkbox" name="departments" value="Other"> Other</label>
+            </div>
+        </div>
+        <div id="errorBox3" class="error-box">
+            <div class="error-text" id="errorText3"></div>
+        </div>
+        <div class="button-group">
+            <button type="button" class="button button-secondary" onclick="goToScreen(2)">← Back</button>
+            <button type="button" class="button button-primary" onclick="validateAndContinue(3)">Continue →</button>
+        </div>
+    </div>
+</div>
+
+<div class="screen" id="screen4">
+    <div class="screen-card">
+        <h2 class="screen-title">Last Real Example</h2>
+        <p class="screen-subtitle">Think of the LAST TIME you completed <span class="process-ref" id="processRef4">your process</span>. This must be something that actually finished.</p>
+        <div class="form-group">
+            <label for="exampleName">What was it?</label>
+            <input type="text" id="exampleName" placeholder="e.g., Onboarded Acme Corporation">
+        </div>
+        <div class="input-group">
+            <div class="form-group">
+                <label for="startDate">When did it START?</label>
+                <input type="date" id="startDate" onchange="calculateElapsed()">
+            </div>
+            <div class="form-group">
+                <label for="endDate">When was it officially COMPLETE?</label>
+                <input type="date" id="endDate" onchange="calculateElapsed()">
+            </div>
+        </div>
+        <div class="calculated">
+            <span class="calculated-label">Elapsed time:</span>
+            <span class="calculated-value" id="elapsedDays">— days</span>
+        </div>
+        <div id="errorBox4" class="error-box">
+            <div class="error-text" id="errorText4"></div>
+        </div>
+        <div class="button-group">
+            <button type="button" class="button button-secondary" onclick="goToScreen(3)">← Back</button>
+            <button type="button" class="button button-primary" onclick="validateAndContinue(4)">Continue →</button>
+        </div>
+    </div>
+</div>
+
+<div class="screen" id="screen5">
+    <div class="screen-card">
+        <h2 class="screen-title">Your Time Investment</h2>
+        <p class="screen-subtitle">For this specific instance of <span class="process-ref" id="processRef5">your process</span>:</p>
+        <p id="exampleSummary" class="helper-text"><!-- Populated with example name and dates --></p>
+        <div class="input-group">
+            <div class="form-group">
+                <label for="timeMeetings">Time in MEETINGS about this:</label>
+                <input type="number" id="timeMeetings" placeholder="hours" min="0" step="0.5" oninput="calculateTimeTotal()">
+                <p class="helper-text">Kickoff calls, status updates, alignment</p>
+            </div>
+            <div class="form-group">
+                <label for="timeEmails">Time writing/reading EMAILS:</label>
+                <input type="number" id="timeEmails" placeholder="hours" min="0" step="0.5" oninput="calculateTimeTotal()">
+                <p class="helper-text">Coordination, questions, updates</p>
+            </div>
+        </div>
+        <div class="input-group">
+            <div class="form-group">
+                <label for="timeExecution">Time on ACTUAL EXECUTION:</label>
+                <input type="number" id="timeExecution" placeholder="hours" min="0" step="0.5" oninput="calculateTimeTotal()">
+                <p class="helper-text">Configuring, creating, data entry</p>
+            </div>
+            <div class="form-group">
+                <label for="timeWaiting">Time WAITING for others:</label>
+                <input type="number" id="timeWaiting" placeholder="hours" min="0" step="0.5" oninput="calculateTimeTotal()">
+                <p class="helper-text">Approvals, responses, dependencies</p>
+            </div>
+        </div>
+        <div class="calculated">
+            <span class="calculated-label">Your total time:</span>
+            <span class="calculated-value" id="timeTotal">— hours over — days</span>
+        </div>
+        <div class="calculated">
+            <span class="calculated-label">Your effective rate:</span>
+            <span class="calculated-value" id="effectiveRate">— hours per day</span>
+        </div>
+        <div class="form-group">
+            <label>Does this feel accurate?</label>
+            <div class="radio-group" role="radiogroup" aria-label="Time accuracy">
+                <label class="radio-option"><input type="radio" name="timeAccuracy" value="yes"> Yes, about right</label>
+                <label class="radio-option"><input type="radio" name="timeAccuracy" value="too-high"> Too high</label>
+                <label class="radio-option"><input type="radio" name="timeAccuracy" value="too-low"> Too low</label>
+                <label class="radio-option"><input type="radio" name="timeAccuracy" value="unsure"> Not sure</label>
+            </div>
+        </div>
+        <div id="errorBox5" class="error-box">
+            <div class="error-text" id="errorText5"></div>
+        </div>
+        <div class="button-group">
+            <button type="button" class="button button-secondary" onclick="goToScreen(4)">← Back</button>
+            <button type="button" class="button button-primary" onclick="validateAndContinue(5)">Continue →</button>
+        </div>
+    </div>
+</div>
+
+<div class="screen" id="screen6">
+    <div class="screen-card">
+        <h2 class="screen-title">Performance Assessment</h2>
+        <p class="screen-subtitle">Compared to a typical <span class="process-ref" id="processRef6">your process</span>, this instance was:</p>
+        <div class="form-group">
+            <div class="radio-group" role="radiogroup" aria-label="Performance">
+                <label class="radio-option"><input type="radio" name="performance" value="much-faster"> Much faster than usual</label>
+                <label class="radio-option"><input type="radio" name="performance" value="typical"> About typical</label>
+                <label class="radio-option"><input type="radio" name="performance" value="slower"> Slower than usual</label>
+                <label class="radio-option"><input type="radio" name="performance" value="way-longer"> Way longer than normal</label>
+            </div>
+        </div>
+        <div id="issuesSection" class="form-group" style="display: none;">
+            <label>What specifically went wrong?</label>
+            <div class="checkbox-group">
+                <label class="checkbox-option"><input type="checkbox" name="issues" value="approval-delay"> Waited for approval longer than expected</label>
+                <label class="checkbox-option"><input type="checkbox" name="issues" value="slow-response"> Customer/stakeholder slow to respond</label>
+                <label class="checkbox-option"><input type="checkbox" name="issues" value="missing-info"> Information was missing/unclear</label>
+                <label class="checkbox-option"><input type="checkbox" name="issues" value="wrong-person"> Wrong person assigned initially</label>
+                <label class="checkbox-option"><input type="checkbox" name="issues" value="system-issues"> System issues or downtime</label>
+                <label class="checkbox-option"><input type="checkbox" name="issues" value="unavailable"> Someone was unavailable</label>
+                <label class="checkbox-option"><input type="checkbox" name="issues" value="escalation"> Required unexpected escalation</label>
+                <label class="checkbox-option"><input type="checkbox" name="issues" value="external"> External dependency delayed us</label>
+                <label class="checkbox-option"><input type="checkbox" name="issues" value="rework"> Work done wrong, needed rework</label>
+                <label class="checkbox-option"><input type="checkbox" name="issues" value="unclear-process"> Process was unclear</label>
+            </div>
+            <div class="form-group">
+                <label for="biggestDelay">The biggest delay was:</label>
+                <select id="biggestDelay">
+                    <option value="">Select one...</option>
+                    <!-- Populated from checked issues via JS -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="delayDetails">Tell us what happened:</label>
+                <textarea id="delayDetails" maxlength="200" placeholder="e.g., Finance approval took 8 days..." rows="3"></textarea>
+            </div>
+        </div>
+        <div id="errorBox6" class="error-box">
+            <div class="error-text" id="errorText6"></div>
+        </div>
+        <div class="button-group">
+            <button type="button" class="button button-secondary" onclick="goToScreen(5)">← Back</button>
+            <button type="button" class="button button-primary" onclick="validateAndContinue(6)">Continue →</button>
+        </div>
+    </div>
+</div>
+
+<div class="screen" id="screen7">
+    <div class="screen-card">
+        <h2 class="screen-title">Step Breakdown</h2>
+        <p class="screen-subtitle">Let's break down <span class="process-ref" id="processRef7">your process</span> into major steps.</p>
+        <p class="helper-text">For the instance you described (<span id="exampleNameRef7"></span>):</p>
+        <div class="dynamic-list" id="stepsList">
+            <div class="list-item" data-step-index="0">
+                <span class="list-item-number">1.</span>
+                <div class="list-item-content">
+                    <input type="text" id="step_0_name" placeholder="Step name" aria-label="Step 1 name">
+                    <select id="step_0_dept" aria-label="Step 1 department">
+                        <option value="">Department...</option>
+                        <option value="Sales">Sales</option>
+                        <option value="Operations">Operations</option>
+                        <option value="Finance">Finance</option>
+                        <option value="IT">IT</option>
+                        <option value="Customer Success">Customer Success</option>
+                        <option value="Product">Product</option>
+                        <option value="Leadership">Leadership</option>
+                        <option value="HR">HR</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <button type="button" class="remove-item" onclick="removeStep(0)" aria-label="Remove step">×</button>
+            </div>
+            <div class="list-item" data-step-index="1">
+                <span class="list-item-number">2.</span>
+                <div class="list-item-content">
+                    <input type="text" id="step_1_name" placeholder="Step name" aria-label="Step 2 name">
+                    <select id="step_1_dept" aria-label="Step 2 department">
+                        <option value="">Department...</option>
+                        <option value="Sales">Sales</option>
+                        <option value="Operations">Operations</option>
+                        <option value="Finance">Finance</option>
+                        <option value="IT">IT</option>
+                        <option value="Customer Success">Customer Success</option>
+                        <option value="Product">Product</option>
+                        <option value="Leadership">Leadership</option>
+                        <option value="HR">HR</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <button type="button" class="remove-item" onclick="removeStep(1)" aria-label="Remove step">×</button>
+            </div>
+            <div class="list-item" data-step-index="2">
+                <span class="list-item-number">3.</span>
+                <div class="list-item-content">
+                    <input type="text" id="step_2_name" placeholder="Step name" aria-label="Step 3 name">
+                    <select id="step_2_dept" aria-label="Step 3 department">
+                        <option value="">Department...</option>
+                        <option value="Sales">Sales</option>
+                        <option value="Operations">Operations</option>
+                        <option value="Finance">Finance</option>
+                        <option value="IT">IT</option>
+                        <option value="Customer Success">Customer Success</option>
+                        <option value="Product">Product</option>
+                        <option value="Leadership">Leadership</option>
+                        <option value="HR">HR</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <button type="button" class="remove-item" onclick="removeStep(2)" aria-label="Remove step">×</button>
+            </div>
+        </div>
+        <button type="button" class="add-item" onclick="addStep()">+ Add Step</button>
+        <p class="helper-text">Minimum 3 steps. Maximum 15.</p>
+        <div id="errorBox7" class="error-box">
+            <div class="error-text" id="errorText7"></div>
+        </div>
+        <div class="button-group">
+            <button type="button" class="button button-secondary" onclick="goToScreen(6)">← Back</button>
+            <button type="button" class="button button-primary" onclick="validateAndContinue(7)">Continue →</button>
+        </div>
+    </div>
+</div>
+
+<div class="screen" id="screen8">
+    <div class="screen-card">
+        <h2 class="screen-title">Handoff Analysis</h2>
+        <p class="screen-subtitle">Let's look at handoffs between steps</p>
+        <div id="handoffContainer"><!-- Populated dynamically via JS: one block per consecutive step pair --></div>
+        <p class="helper-text">Handoff delays are often the biggest source of waste.</p>
+        <div id="errorBox8" class="error-box">
+            <div class="error-text" id="errorText8"></div>
+        </div>
+        <div class="button-group">
+            <button type="button" class="button button-secondary" onclick="goToScreen(7)">← Back</button>
+            <button type="button" class="button button-primary" onclick="validateAndContinue(8)">Continue →</button>
+        </div>
+    </div>
+</div>
+
+<div class="screen" id="screen9">
+    <div class="screen-card">
+        <h2 class="screen-title">Bottleneck Identification</h2>
+        <p class="screen-subtitle">Where did time get stuck?</p>
+        <div id="bottleneckSummary"><!-- Populated via JS: summary of steps with handoff delays --></div>
+        <div class="form-group">
+            <label for="longestStep">Which step took the LONGEST to complete?</label>
+            <select id="longestStep">
+                <option value="">Select step...</option>
+                <!-- Populated from steps via JS -->
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Why did this step take so long?</label>
+            <div class="radio-group" role="radiogroup" aria-label="Bottleneck reason">
+                <label class="radio-option"><input type="radio" name="bottleneckReason" value="busy"> Person busy with other priorities</label>
+                <label class="radio-option"><input type="radio" name="bottleneckReason" value="no-info"> Needed info that wasn't available</label>
+                <label class="radio-option"><input type="radio" name="bottleneckReason" value="approvals"> Required multiple approvals</label>
+                <label class="radio-option"><input type="radio" name="bottleneckReason" value="complex"> Work was complex/difficult</label>
+                <label class="radio-option"><input type="radio" name="bottleneckReason" value="external"> Waiting for external party</label>
+                <label class="radio-option"><input type="radio" name="bottleneckReason" value="system"> System was slow/broken</label>
+                <label class="radio-option"><input type="radio" name="bottleneckReason" value="unclear"> Unclear what to do</label>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="biggestBottleneck">If you could eliminate ONE bottleneck, which would have the biggest impact?</label>
+            <select id="biggestBottleneck">
+                <option value="">Select one...</option>
+                <!-- Populated from all steps + handoffs via JS -->
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="bottleneckWhy">Why this one?</label>
+            <textarea id="bottleneckWhy" maxlength="200" rows="3"></textarea>
+        </div>
+        <div id="errorBox9" class="error-box">
+            <div class="error-text" id="errorText9"></div>
+        </div>
+        <div class="button-group">
+            <button type="button" class="button button-secondary" onclick="goToScreen(8)">← Back</button>
+            <button type="button" class="button button-primary" onclick="validateAndContinue(9)">Continue →</button>
+        </div>
+    </div>
+</div>
+
+<div class="screen" id="screen10">
+    <div class="screen-card">
+        <h2 class="screen-title">Systems &amp; Tools</h2>
+        <p class="screen-subtitle">Which systems did you use for <span class="process-ref" id="processRef10">your process</span>?</p>
+        <p class="helper-text">Think of the <span id="exampleNameRef10"></span> instance. Every system you touched.</p>
+        <div class="dynamic-list" id="systemsList">
+            <div class="list-item" data-system-index="0">
+                <span class="list-item-number">1.</span>
+                <div class="list-item-content">
+                    <input type="text" id="system_0_name" placeholder="e.g., Salesforce, Gmail, NetSuite..." aria-label="System name">
+                    <input type="text" id="system_0_purpose" placeholder="e.g., Check deal status" aria-label="Purpose">
+                    <div class="checkbox-group">
+                        <label class="checkbox-option"><input type="checkbox" id="system_0_read" name="system_0_actions" value="read"> Read data only</label>
+                        <label class="checkbox-option"><input type="checkbox" id="system_0_copyOut" name="system_0_actions" value="copy-out"> Copy data OUT</label>
+                        <label class="checkbox-option"><input type="checkbox" id="system_0_copyIn" name="system_0_actions" value="copy-in"> Copy data IN</label>
+                        <label class="checkbox-option"><input type="checkbox" id="system_0_reconcile" name="system_0_actions" value="reconcile"> Manual reconciliation needed</label>
+                    </div>
+                </div>
+                <button type="button" class="remove-item" onclick="removeSystem(0)" aria-label="Remove system">×</button>
+            </div>
+        </div>
+        <button type="button" class="add-item" onclick="addSystem()">+ Add System</button>
+        <div class="calculated">
+            <span class="calculated-label">Summary:</span>
+            <span class="calculated-value" id="systemsSummary">Systems used: 0 | Systems with manual copy: 0 | Systems with reconciliation: 0</span>
+        </div>
+        <div id="errorBox10" class="error-box">
+            <div class="error-text" id="errorText10"></div>
+        </div>
+        <div class="button-group">
+            <button type="button" class="button button-secondary" onclick="goToScreen(9)">← Back</button>
+            <button type="button" class="button button-primary" onclick="validateAndContinue(10)">Continue →</button>
+        </div>
+    </div>
+</div>

@@ -76,6 +76,7 @@
         <div class="card" id="lookupCard">
             <div class="state">
                 <h2 style="margin-bottom: 16px;">Enter your email to view your processes</h2>
+                <div id="monitorError" style="display:none;background:#fef2f2;color:var(--red);padding:10px 16px;border-radius:var(--radius-sm);font-size:0.88rem;margin-bottom:14px;max-width:480px;margin-left:auto;margin-right:auto;"></div>
                 <form class="lookup-form" onsubmit="event.preventDefault(); loadMonitor();">
                     <input type="email" id="monitorEmail" placeholder="your@email.com" required>
                     <button type="submit">Load</button>
@@ -122,6 +123,13 @@
         let currentEmail = '';
         function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+        function showMonitorError(msg) {
+            const el = document.getElementById('monitorError');
+            el.textContent = msg;
+            el.style.display = '';
+            setTimeout(function() { el.style.display = 'none'; }, 8000);
+        }
+
         function formatDate(d) { return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); }
         function formatTime(d) { return new Date(d).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
 
@@ -132,13 +140,14 @@
             try {
                 const resp = await fetch('/api/process-instances?email=' + encodeURIComponent(currentEmail));
                 const data = await resp.json();
-                if (!resp.ok) { alert(data.error || 'Failed'); return; }
+                if (!resp.ok) { showMonitorError(data.error || 'Failed to load monitor data.'); return; }
 
+                document.getElementById('monitorError').style.display = 'none';
                 renderMonitor(data);
                 document.getElementById('lookupCard').style.display = 'none';
                 document.getElementById('monitorContent').style.display = '';
                 history.replaceState(null, '', '/monitor?email=' + encodeURIComponent(currentEmail));
-            } catch (err) { console.error(err); alert('Connection error.'); }
+            } catch (err) { console.error(err); showMonitorError('Connection error. Please check your network and try again.'); }
         }
 
         function renderMonitor(data) {

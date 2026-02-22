@@ -4,6 +4,7 @@
 // Also supports ?id=xxx&editable=true&email=yyy to return raw process data for editing
 
 const { setCorsHeaders, getSupabaseHeaders, isValidUUID, isValidEmail, fetchWithTimeout } = require('../lib/api-helpers');
+const { normaliseLegacyRow } = require('../lib/fetch-report');
 
 module.exports = async function handler(req, res) {
   setCorsHeaders(res, 'GET,OPTIONS');
@@ -110,53 +111,20 @@ module.exports = async function handler(req, res) {
         if (diagResp.ok) {
           const diagRows = await diagResp.json();
           if (diagRows && diagRows.length > 0) {
-            const d = diagRows[0];
-            let procs = [];
-            let recs = [];
-            try { procs = typeof d.processes === 'string' ? JSON.parse(d.processes) : (d.processes || []); } catch (e) { console.error('Failed to parse processes:', e.message); }
-            try { recs = typeof d.recommendations === 'string' ? JSON.parse(d.recommendations) : (d.recommendations || []); } catch (e) { console.error('Failed to parse recommendations:', e.message); }
-            let factors = [];
-            try { factors = typeof d.lead_score_factors === 'string' ? JSON.parse(d.lead_score_factors) : (d.lead_score_factors || []); } catch (e) { console.error('Failed to parse lead_score_factors:', e.message); }
-
+            const normalised = normaliseLegacyRow(diagRows[0]);
             return res.status(200).json({
               success: true,
               source: 'diagnostics',
               report: {
-                id: d.id,
-                contactEmail: d.email,
-                contactName: d.name || '',
-                company: d.company || '',
-                leadScore: d.lead_score || 0,
-                leadGrade: d.lead_grade || '',
-                diagnosticData: {
-                  contact: { name: d.name, email: d.email, company: d.company, title: d.title, phone: d.phone, industry: d.industry, teamSize: d.team_size },
-                  summary: {
-                    totalProcesses: d.total_processes || 0,
-                    totalAnnualCost: d.annual_process_cost || 0,
-                    potentialSavings: d.potential_savings || 0,
-                    analysisType: d.analysis_type || 'rule-based',
-                    qualityScore: d.quality_score || 0
-                  },
-                  automationScore: {
-                    percentage: d.automation_percentage || 0,
-                    grade: d.automation_grade || 'N/A',
-                    insight: d.automation_insight || ''
-                  },
-                  recommendations: recs,
-                  processes: procs,
-                  roadmap: (d.quick_wins || d.agent_items || d.human_loop_items || d.multi_agent_items) ? {
-                    phases: {
-                      quick: { items: new Array(d.quick_wins || 0) },
-                      agent: { items: new Array(d.agent_items || 0) },
-                      human: { items: new Array(d.human_loop_items || 0) },
-                      multi: { items: new Array(d.multi_agent_items || 0) }
-                    },
-                    totalSavings: d.roadmap_total_savings || 0
-                  } : null,
-                  leadScore: { score: d.lead_score || 0, grade: d.lead_grade || '', factors }
-                },
+                id: normalised.id,
+                contactEmail: normalised.contact_email,
+                contactName: normalised.contact_name,
+                company: normalised.company,
+                leadScore: normalised.lead_score,
+                leadGrade: normalised.lead_grade,
+                diagnosticData: normalised.diagnostic_data,
                 pdfBase64: null,
-                createdAt: d.completed_at || d.created_at
+                createdAt: normalised.created_at
               }
             });
           }

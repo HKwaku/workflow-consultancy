@@ -966,13 +966,13 @@
         function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
         function showBanner(msg, type) {
-            var existing = document.getElementById('inlineBanner');
+            const existing = document.getElementById('inlineBanner');
             if (existing) existing.remove();
-            var div = document.createElement('div');
+            const div = document.createElement('div');
             div.id = 'inlineBanner';
-            var bg = type === 'error' ? '#fef2f2' : '#fffbeb';
-            var border = type === 'error' ? '#fca5a5' : '#fcd34d';
-            var color = type === 'error' ? '#991b1b' : '#92400e';
+            const bg = type === 'error' ? '#fef2f2' : '#fffbeb';
+            const border = type === 'error' ? '#fca5a5' : '#fcd34d';
+            const color = type === 'error' ? '#991b1b' : '#92400e';
             div.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:10001;padding:12px 24px;border-radius:8px;background:' + bg + ';border:1px solid ' + border + ';color:' + color + ';font-size:0.88rem;max-width:500px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.1);';
             div.textContent = msg;
             document.body.appendChild(div);
@@ -1468,7 +1468,7 @@
                 document.getElementById('inFlightCount').value = draft.inFlightCount || '';
                 currentSectionIndex = draft.currentSectionIndex || 0;
                 section3StepIndex = draft.section3StepIndex || 0;
-            } catch (e) {}
+            } catch (e) { console.warn('Failed to load draft:', e.message); }
         }
 
         document.getElementById('btnStartSurvey').addEventListener('click', function() {
@@ -1506,7 +1506,7 @@
             }).then(function(res) {
                 document.getElementById('loadingOverlay').classList.remove('visible');
                 if (!res.ok) throw new Error('Submit failed');
-                try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+                try { localStorage.removeItem(STORAGE_KEY); } catch (e) { console.warn('localStorage cleanup failed:', e.message); }
                 const totalW = payload.workflows.length;
                 let totalSteps = 0, totalHandoffs = 0;
                 payload.workflows.forEach(w => {
@@ -1551,7 +1551,7 @@
                         document.getElementById('btnResumeSurvey').style.display = '';
                     }
                 }
-            } catch (e) {}
+            } catch (e) { console.warn('Failed to check draft:', e.message); }
         }
 
         document.getElementById('btnResumeSurvey').addEventListener('click', function() {

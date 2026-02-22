@@ -3425,13 +3425,13 @@
         function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
         function showBanner(msg, type) {
-            var existing = document.getElementById('inlineBanner');
+            const existing = document.getElementById('inlineBanner');
             if (existing) existing.remove();
-            var div = document.createElement('div');
+            const div = document.createElement('div');
             div.id = 'inlineBanner';
-            var bg = type === 'error' ? '#fef2f2' : type === 'success' ? '#f0fdf4' : '#fffbeb';
-            var border = type === 'error' ? '#fca5a5' : type === 'success' ? '#86efac' : '#fcd34d';
-            var color = type === 'error' ? '#991b1b' : type === 'success' ? '#166534' : '#92400e';
+            const bg = type === 'error' ? '#fef2f2' : type === 'success' ? '#f0fdf4' : '#fffbeb';
+            const border = type === 'error' ? '#fca5a5' : type === 'success' ? '#86efac' : '#fcd34d';
+            const color = type === 'error' ? '#991b1b' : type === 'success' ? '#166534' : '#92400e';
             div.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:10001;padding:12px 24px;border-radius:8px;background:' + bg + ';border:1px solid ' + border + ';color:' + color + ';font-size:0.88rem;max-width:500px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.1);animation:fadeIn 0.3s;';
             div.textContent = msg;
             document.body.appendChild(div);
@@ -3552,9 +3552,9 @@
             // Update phase dots
             const phaseDots = document.getElementById('phaseDots');
             if (phaseDots) {
-                var phases = ['Define', 'Measure', 'Map', 'Assess', 'Quantify'];
-                var currentPhase = screenPhases[currentScreen] || '';
-                var currentPhaseIdx = phases.indexOf(currentPhase);
+                const phases = ['Define', 'Measure', 'Map', 'Assess', 'Quantify'];
+                const currentPhase = screenPhases[currentScreen] || '';
+                const currentPhaseIdx = phases.indexOf(currentPhase);
                 phaseDots.querySelectorAll('.phase-dot').forEach(function(dot, idx) {
                     dot.classList.toggle('phase-dot-active', idx === currentPhaseIdx);
                     dot.classList.toggle('phase-dot-done', idx < currentPhaseIdx);
@@ -3947,8 +3947,8 @@
 
         // ── Step Import (upload image / paste text) ──
         function toggleImportZone() {
-            var zone = document.getElementById('stepImportZone');
-            var btn = document.getElementById('importToggleBtn');
+            const zone = document.getElementById('stepImportZone');
+            const btn = document.getElementById('importToggleBtn');
             if (zone.style.display === 'none') {
                 zone.style.display = '';
                 btn.style.display = 'none';
@@ -3968,9 +3968,9 @@
         // Drag-and-drop
         (function() {
             document.addEventListener('DOMContentLoaded', function() {
-                var zone = document.getElementById('stepImportZone');
+                const zone = document.getElementById('stepImportZone');
                 if (!zone) return;
-                var drop = document.getElementById('importDropArea');
+                const drop = document.getElementById('importDropArea');
                 if (!drop) return;
                 ['dragenter', 'dragover'].forEach(function(ev) {
                     drop.addEventListener(ev, function(e) { e.preventDefault(); zone.classList.add('drag-over'); });
@@ -3979,7 +3979,7 @@
                     drop.addEventListener(ev, function(e) { e.preventDefault(); zone.classList.remove('drag-over'); });
                 });
                 drop.addEventListener('drop', function(e) {
-                    var files = e.dataTransfer.files;
+                    const files = e.dataTransfer.files;
                     if (files.length > 0) processImportFile(files[0]);
                 });
             });
@@ -3990,7 +3990,7 @@
         }
 
         function processImportFile(file) {
-            var allowed = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf'];
+            const allowed = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf'];
             if (allowed.indexOf(file.type) === -1) {
                 showBanner('Unsupported file type. Please upload an image (PNG, JPG, GIF, WebP) or PDF.', 'error');
                 return;
@@ -4000,12 +4000,12 @@
                 return;
             }
 
-            var preview = document.getElementById('importFilePreview');
-            var reader = new FileReader();
+            const preview = document.getElementById('importFilePreview');
+            const reader = new FileReader();
             reader.onload = function(e) {
-                var base64Full = e.target.result;
-                var base64Data = base64Full.split(',')[1];
-                var mediaType = file.type;
+                const base64Full = e.target.result;
+                const base64Data = base64Full.split(',')[1];
+                const mediaType = file.type;
 
                 if (file.type.startsWith('image/')) {
                     preview.innerHTML = '<img src="' + base64Full + '" style="max-height:120px;max-width:100%;border-radius:8px;margin:0.5rem 0;" alt="Preview"><p style="font-size:0.82rem;color:var(--text-mid);">' + esc(file.name) + '</p>';
@@ -4021,18 +4021,18 @@
         }
 
         function handleImportPaste() {
-            var text = document.getElementById('importPasteText').value.trim();
+            const text = document.getElementById('importPasteText').value.trim();
             if (!text) { showBanner('Please paste your steps first.', 'error'); return; }
             sendExtractRequest({ text: text });
         }
 
         function sendExtractRequest(payload) {
-            var status = document.getElementById('importStatus');
-            var statusText = document.getElementById('importStatusText');
+            const status = document.getElementById('importStatus');
+            const statusText = document.getElementById('importStatusText');
             status.style.display = 'flex';
             statusText.textContent = payload.imageBase64 ? 'Analysing your process map...' : 'Extracting steps from text...';
 
-            var body = { mode: 'extract-steps' };
+            const body = { mode: 'extract-steps' };
             if (payload.imageBase64) {
                 body.imageBase64 = payload.imageBase64;
                 body.imageMediaType = payload.imageMediaType;
@@ -4054,7 +4054,7 @@
                     return;
                 }
                 if (data.processName) {
-                    var nameInput = document.getElementById('processName');
+                    const nameInput = document.getElementById('processName');
                     if (nameInput && !nameInput.value.trim()) nameInput.value = data.processName;
                 }
                 populateStepsFromImport(data.steps);
@@ -4073,25 +4073,25 @@
         }
 
         function populateStepsFromImport(steps) {
-            var list = document.getElementById('stepsList');
+            const list = document.getElementById('stepsList');
             list.innerHTML = '';
             stepCount = 0;
             _stepUid = 0;
 
             steps.forEach(function(s) {
-                var div = addStep();
-                var pfx = getStepPrefix(div);
+                const div = addStep();
+                const pfx = getStepPrefix(div);
 
-                var nameEl = document.getElementById(pfx + '_name');
+                const nameEl = document.getElementById(pfx + '_name');
                 if (nameEl) nameEl.value = s.name || '';
 
-                var deptEl = document.getElementById(pfx + '_dept');
+                const deptEl = document.getElementById(pfx + '_dept');
                 if (deptEl && s.department) {
-                    var opts = Array.from(deptEl.options).map(function(o) { return o.value; });
+                    const opts = Array.from(deptEl.options).map(function(o) { return o.value; });
                     if (opts.indexOf(s.department) >= 0) {
                         deptEl.value = s.department;
                     } else if (s.department.includes('External')) {
-                        var extOpt = opts.find(function(o) { return o.startsWith('External'); });
+                        const extOpt = opts.find(function(o) { return o.startsWith('External'); });
                         if (extOpt) deptEl.value = extOpt;
                         else deptEl.value = 'Other';
                     } else {
@@ -4100,19 +4100,19 @@
                 }
 
                 if (s.isExternal) {
-                    var extRadio = document.querySelector('input[name="' + pfx + '_ext"][value="external"]');
+                    const extRadio = document.querySelector('input[name="' + pfx + '_ext"][value="external"]');
                     if (extRadio) { extRadio.checked = true; extRadio.dispatchEvent(new Event('change')); }
                 }
 
                 if (s.isDecision && s.branches && s.branches.length > 0) {
-                    var uid = div.dataset.stepUid;
-                    var uidKey = 'u' + uid;
-                    var cb = document.getElementById(pfx + '_decision');
+                    const uid = div.dataset.stepUid;
+                    const uidKey = 'u' + uid;
+                    const cb = document.getElementById(pfx + '_decision');
                     if (cb) { cb.checked = true; toggleDecisionBranches(uidKey); }
                     s.branches.forEach(function(br, bi) {
                         if (bi >= 2) addBranch(uidKey);
-                        var lbl = document.getElementById(pfx + '_branch_' + bi + '_label');
-                        var tgt = document.getElementById(pfx + '_branch_' + bi + '_target');
+                        const lbl = document.getElementById(pfx + '_branch_' + bi + '_label');
+                        const tgt = document.getElementById(pfx + '_branch_' + bi + '_target');
                         if (lbl) lbl.value = br.label || '';
                         if (tgt) tgt.value = br.target || '';
                     });
@@ -4120,7 +4120,7 @@
             });
 
             // Collapse the import zone to show the populated steps
-            var zone = document.getElementById('stepImportZone');
+            const zone = document.getElementById('stepImportZone');
             zone.style.maxHeight = '0';
             zone.style.overflow = 'hidden';
             zone.style.padding = '0';
@@ -4128,10 +4128,10 @@
             zone.style.marginBottom = '0';
 
             // Add a small banner showing import was successful
-            var banner = document.createElement('div');
+            const banner = document.createElement('div');
             banner.style.cssText = 'padding:0.6rem 1rem;background:linear-gradient(135deg,rgba(22,163,74,0.08),rgba(22,163,74,0.03));border:1px solid rgba(22,163,74,0.2);border-radius:var(--radius-sm);margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;font-size:0.85rem;';
-            banner.innerHTML = '<span style="color:#16a34a;font-weight:500;">&#10003; ' + steps.length + ' steps imported — review and adjust below</span><button onclick="this.parentElement.remove();var z=document.getElementById(\'stepImportZone\');z.style.maxHeight=\'\';z.style.overflow=\'\';z.style.padding=\'\';z.style.border=\'\';z.style.marginBottom=\'\';" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:0.82rem;font-family:inherit;">Import again</button>';
-            var list = document.getElementById('stepsList');
+            banner.innerHTML = '<span style="color:#16a34a;font-weight:500;">&#10003; ' + steps.length + ' steps imported — review and adjust below</span><button onclick="this.parentElement.remove();const z=document.getElementById(\'stepImportZone\');z.style.maxHeight=\'\';z.style.overflow=\'\';z.style.padding=\'\';z.style.border=\'\';z.style.marginBottom=\'\';" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:0.82rem;font-family:inherit;">Import again</button>';
+            const list = document.getElementById('stepsList');
             list.parentElement.insertBefore(banner, list);
         }
 
@@ -4245,7 +4245,7 @@
             if (nameInput) {
                 nameInput.addEventListener('input', scheduleLiveFlowUpdate);
                 nameInput.addEventListener('input', function() {
-                    var toggle = document.getElementById('step_u' + uid + '_decisionToggle');
+                    const toggle = document.getElementById('step_u' + uid + '_decisionToggle');
                     if (toggle) toggle.style.display = this.value.trim() ? '' : 'none';
                 });
             }
@@ -4404,14 +4404,14 @@
                 const decisionCb = document.getElementById(pfx + '_decision');
                 const isDecision = decisionCb ? decisionCb.checked : false;
 
-                var branches = [];
+                let branches = [];
                 if (isDecision) {
-                    var branchList = document.getElementById(pfx + '_branchList');
+                    const branchList = document.getElementById(pfx + '_branchList');
                     if (branchList) {
                         branchList.querySelectorAll('.branch-row').forEach(function(row) {
-                            var inputs = row.querySelectorAll('input[type="text"]');
-                            var label = inputs[0] ? inputs[0].value.trim() : '';
-                            var target = inputs[1] ? inputs[1].value.trim() : '';
+                            const inputs = row.querySelectorAll('input[type="text"]');
+                            const label = inputs[0] ? inputs[0].value.trim() : '';
+                            const target = inputs[1] ? inputs[1].value.trim() : '';
                             if (label || target) branches.push({ label: label, target: target });
                         });
                     }
@@ -4430,20 +4430,20 @@
 
         function resolveBranchTargetIdx(target, steps) {
             if (!target) return -1;
-            var m = target.match(/(\d+)/);
+            const m = target.match(/(\d+)/);
             if (m) {
-                var idx = parseInt(m[1]) - 1;
+                const idx = parseInt(m[1]) - 1;
                 if (idx >= 0 && idx < steps.length) return idx;
             }
-            var lower = target.toLowerCase();
-            for (var i = 0; i < steps.length; i++) {
+            const lower = target.toLowerCase();
+            for (let i = 0; i < steps.length; i++) {
                 if (steps[i].name.toLowerCase().indexOf(lower) >= 0) return i;
             }
             return -1;
         }
 
         function buildLiveFlowSVG(steps) {
-            var DEPT_COLORS = {
+            const DEPT_COLORS = {
                 'Sales': '#3b82f6', 'Operations': '#f59e0b', 'Finance': '#22c55e',
                 'IT': '#6366f1', 'Customer Success': '#ec4899', 'Product': '#a855f7',
                 'Leadership': '#ca8a04', 'HR': '#ea580c', 'Procurement': '#0284c7',
@@ -4452,7 +4452,7 @@
                 'Quality': '#0277bd', 'Facilities': '#795548', 'Executive Board': '#ca8a04',
                 'Other': '#94a3b8'
             };
-            var DEPT_BG = {
+            const DEPT_BG = {
                 'Sales': '#dbeafe', 'Operations': '#fef3c7', 'Finance': '#dcfce7',
                 'IT': '#e0e7ff', 'Customer Success': '#fce7f3', 'Product': '#f3e8ff',
                 'Leadership': '#fef9c3', 'HR': '#ffedd5', 'Procurement': '#e0f2fe',
@@ -4461,17 +4461,16 @@
                 'Quality': '#e1f5fe', 'Facilities': '#efebe9', 'Executive Board': '#fef9c3',
                 'Other': '#f1f5f9'
             };
-            var BRANCH_COLORS = ['#7c3aed', '#2563eb', '#059669', '#d97706', '#dc2626'];
+            const BRANCH_COLORS = ['#7c3aed', '#2563eb', '#059669', '#d97706', '#dc2626'];
 
-            var nodeW = 160, nodeH = 52, gapX = 48, padY = 30;
-            var LINE_GAP = 18;
-            var cols = Math.min(steps.length, 5);
-            var numRows = Math.ceil(steps.length / cols);
-            var colW = nodeW + gapX;
+            const nodeW = 160, nodeH = 52, gapX = 48, padY = 30;
+            const LINE_GAP = 18;
+            const cols = Math.min(steps.length, 5);
+            const numRows = Math.ceil(steps.length / cols);
+            const colW = nodeW + gapX;
 
-            // Pre-count loop-back + same-row-skip channels for margin sizing
-            var loopBackCount = 0;
-            var sameRowSkipCount = 0;
+            let loopBackCount = 0;
+            let sameRowSkipCount = 0;
             steps.forEach(function(step, i) {
                 if (!step.isDecision) return;
                 step.branches.forEach(function(br) {
@@ -4482,27 +4481,27 @@
                     if (t > i && srcRow === tgtRow && t !== i + 1) sameRowSkipCount++;
                 });
             });
-            var totalChannels = Math.max(loopBackCount, sameRowSkipCount, 0);
-            var padX = Math.max(30, totalChannels * LINE_GAP + 24);
+            const totalChannels = Math.max(loopBackCount, sameRowSkipCount, 0);
+            const padX = Math.max(30, totalChannels * LINE_GAP + 24);
 
-            var hasDecisions = steps.some(function(s) { return s.isDecision; });
-            var gapBetweenRows = Math.max(hasDecisions ? 60 : 40, totalChannels * LINE_GAP + 24);
-            var rowH = nodeH + gapBetweenRows;
-            var svgW = cols * colW - gapX + padX + 30;
-            var svgH = numRows * rowH - gapBetweenRows + padY * 2 + 10;
+            const hasDecisions = steps.some(function(s) { return s.isDecision; });
+            const gapBetweenRows = Math.max(hasDecisions ? 60 : 40, totalChannels * LINE_GAP + 24);
+            const rowH = nodeH + gapBetweenRows;
+            const svgW = cols * colW - gapX + padX + 30;
+            const svgH = numRows * rowH - gapBetweenRows + padY * 2 + 10;
 
             // ── Serpentine layout (matches final renderer) ──
-            var positions = [];
+            const positions = [];
             steps.forEach(function(step, i) {
-                var row = Math.floor(i / cols);
-                var col = i % cols;
+                const row = Math.floor(i / cols);
+                let col = i % cols;
                 if (row % 2 === 1) col = cols - 1 - col;
-                var x = padX + col * colW;
-                var y = padY + row * rowH;
+                const x = padX + col * colW;
+                const y = padY + row * rowH;
                 positions.push({ x: x, y: y, cx: x + nodeW / 2, cy: y + nodeH / 2, row: row, col: col });
             });
 
-            var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + svgW + '" height="' + svgH + '" viewBox="0 0 ' + svgW + ' ' + svgH + '" style="max-width:100%;height:auto;">';
+            let svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + svgW + '" height="' + svgH + '" viewBox="0 0 ' + svgW + ' ' + svgH + '" style="max-width:100%;height:auto;">';
             svg += '<defs>';
             svg += '<marker id="lfArrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/></marker>';
             BRANCH_COLORS.forEach(function(c, ci) {
@@ -4522,25 +4521,25 @@
 
             steps.forEach(function(step, i) {
                 if (!step.isDecision) return;
-                var fp = positions[i];
+                const fp = positions[i];
                 step.branches.forEach(function(br, bi) {
-                    var tgtIdx = resolveBranchTargetIdx(br.target, steps);
+                    let tgtIdx = resolveBranchTargetIdx(br.target, steps);
                     if (tgtIdx < 0 || tgtIdx >= steps.length) tgtIdx = Math.min(i + 1, steps.length - 1);
-                    var tp = positions[tgtIdx];
-                    var color = BRANCH_COLORS[bi % BRANCH_COLORS.length];
-                    var marker = 'url(#lfBrArw' + (bi % BRANCH_COLORS.length) + ')';
-                    var isLoop = tgtIdx < i;
-                    var sameRow = fp.row === tp.row;
-                    var pathD;
-                    var lblX, lblY;
+                    const tp = positions[tgtIdx];
+                    const color = BRANCH_COLORS[bi % BRANCH_COLORS.length];
+                    const marker = 'url(#lfBrArw' + (bi % BRANCH_COLORS.length) + ')';
+                    const isLoop = tgtIdx < i;
+                    const sameRow = fp.row === tp.row;
+                    let pathD;
+                    let lblX, lblY;
 
                     if (isLoop) {
                         // Loop-back: exit left from diamond, route through left margin, enter target from above
-                        var ch = allocCh('loop');
-                        var marginX = padX - 8 - ch * LINE_GAP;
-                        var exitX = fp.cx - nodeW / 2;
-                        var exitY = fp.cy;
-                        var entryAboveY = tp.y - 8;
+                        const ch = allocCh('loop');
+                        const marginX = padX - 8 - ch * LINE_GAP;
+                        const exitX = fp.cx - nodeW / 2;
+                        const exitY = fp.cy;
+                        const entryAboveY = tp.y - 8;
                         pathD = 'M ' + exitX + ' ' + exitY + ' L ' + marginX + ' ' + exitY + ' L ' + marginX + ' ' + entryAboveY + ' L ' + tp.cx + ' ' + entryAboveY + ' L ' + tp.cx + ' ' + tp.y;
                         lblX = marginX + 4;
                         lblY = (exitY + entryAboveY) / 2;
@@ -4554,10 +4553,10 @@
                         lblY = fp.cy - 8;
                     } else if (sameRow) {
                         // Same-row skip: route through gap above row
-                        var ch2 = allocCh('above_' + fp.row);
-                        var gY = Math.max(4, gapAboveY(fp.row) - ch2 * LINE_GAP);
-                        var goRight2 = tp.col > fp.col;
-                        var exitX2 = goRight2 ? fp.cx + nodeW / 2 : fp.cx - nodeW / 2;
+                        const ch2 = allocCh('above_' + fp.row);
+                        const gY = Math.max(4, gapAboveY(fp.row) - ch2 * LINE_GAP);
+                        const goRight2 = tp.col > fp.col;
+                        const exitX2 = goRight2 ? fp.cx + nodeW / 2 : fp.cx - nodeW / 2;
                         pathD = 'M ' + exitX2 + ' ' + fp.cy + ' L ' + exitX2 + ' ' + gY + ' L ' + tp.cx + ' ' + gY + ' L ' + tp.cx + ' ' + tp.y;
                         lblX = (exitX2 + tp.cx) / 2;
                         lblY = gY - 4;
@@ -4570,11 +4569,11 @@
                         lblY = gY2 - 4;
                     }
 
-                    var dashAttr = isLoop ? ' stroke-dasharray="5 3"' : '';
+                    const dashAttr = isLoop ? ' stroke-dasharray="5 3"' : '';
                     branchSvg += '<path d="' + pathD + '" fill="none" stroke="' + color + '" stroke-width="1.8"' + dashAttr + ' marker-end="' + marker + '" opacity="0.8"/>';
 
                     if (br.label) {
-                        var pw = br.label.length * 5.2 + 10;
+                        const pw = br.label.length * 5.2 + 10;
                         labelSvg += '<rect x="' + (lblX - pw / 2) + '" y="' + (lblY - 6) + '" width="' + pw + '" height="13" rx="3" fill="white" fill-opacity="0.94" stroke="' + color + '" stroke-width="0.5"/>';
                         labelSvg += '<text x="' + lblX + '" y="' + (lblY + 4) + '" text-anchor="middle" fill="' + color + '" font-size="8" font-weight="600" font-family="system-ui,sans-serif">' + escSvgText(br.label) + '</text>';
                     }
@@ -4585,8 +4584,8 @@
 
             // ── Sequential arrows (skip FROM decision nodes) ──
             // Also track which nodes have incoming, so orphaned nodes get a fallback arrow
-            var hasIncoming = {};
-            for (var i = 0; i < steps.length - 1; i++) {
+            const hasIncoming = {};
+            for (let i = 0; i < steps.length - 1; i++) {
                 if (steps[i].isDecision) {
                     steps[i].branches.forEach(function(br) {
                         var t = resolveBranchTargetIdx(br.target, steps);
@@ -4607,7 +4606,7 @@
                 }
             }
             // Fallback arrows for orphaned nodes
-            for (var j = 1; j < steps.length; j++) {
+            for (let j = 1; j < steps.length; j++) {
                 if (!hasIncoming[j]) {
                     var fp3 = positions[j - 1], tp3 = positions[j];
                     if (fp3.row === tp3.row) {
@@ -4624,7 +4623,7 @@
             function wrapNodeText(text, maxChars) {
                 var words = text.split(/\s+/);
                 var lines = [], cur = '';
-                for (var w = 0; w < words.length; w++) {
+                for (let w = 0; w < words.length; w++) {
                     var test = cur ? cur + ' ' + words[w] : words[w];
                     if (test.length > maxChars && cur) { lines.push(cur); cur = words[w]; }
                     else { cur = test; }
@@ -4657,7 +4656,7 @@
                 var totalTextH = nameLines.length * lineH + deptFontSize + 2;
                 var textStartY = p.cy - totalTextH / 2 + fontSize;
 
-                for (var li = 0; li < nameLines.length; li++) {
+                for (let li = 0; li < nameLines.length; li++) {
                     svg += '<text x="' + p.cx + '" y="' + (textStartY + li * lineH) + '" text-anchor="middle" fill="' + textColor + '" font-size="' + fontSize + '" font-weight="500" font-family="system-ui,sans-serif">' + escSvgText(nameLines[li]) + '</text>';
                 }
                 var deptY = textStartY + nameLines.length * lineH + 1;
@@ -6783,7 +6782,7 @@
                     return !!document.getElementById('longestStep').value || !!document.querySelector('input[name="bottleneckReason"]:checked');
                 case 10:
                     var sysNames = document.querySelectorAll('#systemsList input[type="text"]');
-                    for (var i = 0; i < sysNames.length; i++) { if (sysNames[i].value.trim()) return true; }
+                    for (let i = 0; i < sysNames.length; i++) { if (sysNames[i].value.trim()) return true; }
                     return false;
                 case 11:
                     return parseInt(document.getElementById('approvalCount').value || '0') > 0;
@@ -7216,7 +7215,7 @@
             // ── Grid layout: serpentine rows ──
             const DIAMOND_W = 170;
             const DIAMOND_H = 110;
-            const LINE_GAP = 32;
+            const LINE_GAP = 16;
             const colW = NODE_W + NODE_GAP_X;
             const hasDecisions = allSteps.some(s => s.isDecision && s.branches.length > 0);
             const numRows = Math.ceil(allSteps.length / COLS);
@@ -7233,7 +7232,7 @@
                     if (tgtIdx < 0 || tgtIdx >= allSteps.length) return;
                     const tgtRow = Math.floor(tgtIdx / COLS);
                     if (tgtIdx < i) {
-                        const gapKey = 'above_' + srcRow;
+                        const gapKey = 'above_' + tgtRow;
                         gapLineCount[gapKey] = (gapLineCount[gapKey] || 0) + 1;
                     } else if (tgtRow > srcRow) {
                         const gapKey = 'below_' + srcRow;
@@ -7245,12 +7244,11 @@
                 });
             });
             const maxLinesInAnyGap = Math.max(1, ...Object.values(gapLineCount), 0);
-            const minGapForLines = maxLinesInAnyGap * LINE_GAP + 2 * LINE_GAP;
+            const minGapForLines = maxLinesInAnyGap * LINE_GAP + 40;
             const baseRowH = NODE_H + NODE_GAP_Y + (hasDecisions ? 40 : 20);
             const rowH = Math.max(baseRowH, NODE_H + minGapForLines);
 
-            // Ensure left margin has room for loop-back routing channels
-            PAD_L = Math.max(80, maxLinesInAnyGap * LINE_GAP + 40);
+            // Keep standard left margin (routing now goes through inter-row gaps, not margins)
 
             const nodePos = [];
 
@@ -7263,8 +7261,8 @@
                 nodePos[i] = { x: nx, y: ny, cx: nx + NODE_W / 2, cy: ny + NODE_H / 2, row, col };
             });
 
-            // SVG dimensions — include space for right-margin routing channels
-            const contentW = PAD_L + COLS * colW + maxLinesInAnyGap * LINE_GAP + 60;
+            // SVG dimensions
+            const contentW = PAD_L + COLS * colW + 60;
             const contentH = PAD_T + numRows * rowH + 60;
             const totalW = Math.max(contentW, 700);
             const totalH = contentH;
@@ -7390,7 +7388,6 @@
                 return gapChannels[gapKey]++;
             }
             const pendingLabels = [];
-            const RIGHT_MARGIN_BASE = PAD_L + COLS * colW + 30;
 
             allSteps.forEach((s, i) => {
                 if (!s.isDecision || !s.branches || s.branches.length === 0) return;
@@ -7417,64 +7414,56 @@
                     const clampY = y => Math.max(y, TITLE_ZONE);
 
                     let pathD;
-                    let chOff;
-                    let ch;
-                    let labelSegX1, labelSegX2, labelSegY;
+                    let ch, chOff;
 
-                    if (goesBack) {
-                        // LOOP-BACK: route through LEFT margin, enter target from ABOVE
-                        const gapKey = 'above_' + tp.row;
-                        ch = allocateChannel(gapKey);
-                        chOff = ch * LINE_GAP;
-                        const exitX = cx - hw;
-                        const exitY = cy;
-                        const marginX = Math.max(8, PAD_L - 30 - ch * LINE_GAP);
-                        const tgtGapY = clampY(rowGapMidY(tp.row) - chOff);
-                        pathD = `M ${exitX} ${exitY} L ${marginX} ${exitY} L ${marginX} ${tgtGapY} L ${entryX} ${tgtGapY} L ${entryX} ${entryY}`;
-                        labelSegX1 = marginX; labelSegX2 = entryX; labelSegY = tgtGapY;
-
-                    } else if (sameRow) {
-                        // Same-row forward branch: exit towards the target
-                        const gapKey = 'above_' + pos.row;
-                        ch = allocateChannel(gapKey);
-                        chOff = ch * LINE_GAP;
+                    if (sameRow && !goesBack) {
+                        // SAME-ROW FORWARD: Exit LEFT or RIGHT side directly toward target
                         const targetIsRight = tp.col > pos.col;
                         const exitX = targetIsRight ? cx + hw : cx - hw;
                         const exitY = cy;
-                        const gapY = clampY(rowGapMidY(pos.row) - chOff);
-                        pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${entryX} ${gapY} L ${entryX} ${entryY}`;
-                        labelSegX1 = Math.min(exitX, entryX); labelSegX2 = Math.max(exitX, entryX); labelSegY = gapY;
-
-                    } else if (tp.row > pos.row) {
-                        // FORWARD to later row
-                        const gapKey = 'below_' + pos.row;
-                        ch = allocateChannel(gapKey);
-                        chOff = ch * LINE_GAP;
-                        const exitX = cx;
-                        const exitY = cy + hh;
-                        const gapY = rowGapMidY(pos.row + 1) + chOff;
-                        if (tp.row === pos.row + 1) {
-                            pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${entryX} ${gapY} L ${entryX} ${entryY}`;
-                            labelSegX1 = Math.min(exitX, entryX); labelSegX2 = Math.max(exitX, entryX); labelSegY = gapY;
+                        const sideEntryX = isTargetDec
+                            ? (targetIsRight ? tp.cx - DIAMOND_W / 2 : tp.cx + DIAMOND_W / 2)
+                            : (targetIsRight ? tp.x : tp.x + NODE_W);
+                        const sideEntryY = tp.cy;
+                        if (Math.abs(tp.col - pos.col) <= 1) {
+                            pathD = `M ${exitX} ${exitY} L ${sideEntryX} ${sideEntryY}`;
                         } else {
-                            const marginX = RIGHT_MARGIN_BASE + ch * LINE_GAP;
-                            const targetGapY = clampY(rowGapMidY(tp.row) - chOff);
-                            pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${marginX} ${gapY} L ${marginX} ${targetGapY} L ${entryX} ${targetGapY} L ${entryX} ${entryY}`;
-                            labelSegX1 = Math.min(exitX, marginX); labelSegX2 = Math.max(exitX, marginX); labelSegY = gapY;
+                            const gapKey = 'above_' + pos.row;
+                            ch = allocateChannel(gapKey);
+                            chOff = ch * LINE_GAP;
+                            const gapY = clampY(rowGapMidY(pos.row) - chOff);
+                            pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${entryX} ${gapY} L ${entryX} ${entryY}`;
                         }
 
-                    } else {
-                        // Forward to earlier row (rare): enter target from ABOVE
+                    } else if (goesBack) {
+                        // LOOP-BACK: Exit TOP of diamond, route through inter-row gap
                         const gapKey = 'above_' + pos.row;
                         ch = allocateChannel(gapKey);
                         chOff = ch * LINE_GAP;
                         const exitX = cx;
                         const exitY = cy - hh;
                         const gapY = clampY(rowGapMidY(pos.row) - chOff);
-                        const marginX = RIGHT_MARGIN_BASE + ch * LINE_GAP;
-                        const targetGapY = clampY(rowGapMidY(tp.row) - chOff);
-                        pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${marginX} ${gapY} L ${marginX} ${targetGapY} L ${entryX} ${targetGapY} L ${entryX} ${entryY}`;
-                        labelSegX1 = Math.min(exitX, marginX); labelSegX2 = Math.max(exitX, marginX); labelSegY = gapY;
+                        pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${entryX} ${gapY} L ${entryX} ${entryY}`;
+
+                    } else if (tp.row > pos.row) {
+                        // FORWARD CROSS-ROW: Exit BOTTOM, route through inter-row gap
+                        const gapKey = 'below_' + pos.row;
+                        ch = allocateChannel(gapKey);
+                        chOff = ch * LINE_GAP;
+                        const exitX = cx;
+                        const exitY = cy + hh;
+                        const gapY = rowGapMidY(pos.row + 1) + chOff;
+                        pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${entryX} ${gapY} L ${entryX} ${entryY}`;
+
+                    } else {
+                        // Forward to earlier row (rare): Exit TOP, route through gap
+                        const gapKey = 'above_' + pos.row;
+                        ch = allocateChannel(gapKey);
+                        chOff = ch * LINE_GAP;
+                        const exitX = cx;
+                        const exitY = cy - hh;
+                        const gapY = clampY(rowGapMidY(pos.row) - chOff);
+                        pathD = `M ${exitX} ${exitY} L ${exitX} ${gapY} L ${entryX} ${gapY} L ${entryX} ${entryY}`;
                     }
 
                     // Draw line
@@ -7484,15 +7473,32 @@
                     // Animated particle
                     svg += `<circle r="3" fill="${color}" opacity="0.8"><animateMotion dur="${2.5 + bi * 0.5}s" repeatCount="indefinite" begin="${bi * 0.4}s" path="${pathD}"><\/animateMotion><\/circle>`;
 
-                    // Collect label: position between source & target, clamped to the actual line segment
+                    // Position label at LEFT or RIGHT tip of diamond
                     const brText = escSvg(br.label);
                     const pillW = brText.length * 4.8 + 14;
                     const pillH = 15;
-                    const idealX = (cx + entryX) / 2;
-                    const segMin = Math.min(labelSegX1, labelSegX2);
-                    const segMax = Math.max(labelSegX1, labelSegX2);
-                    let elX = Math.max(segMin + pillW / 2, Math.min(idealX, segMax - pillW / 2));
-                    let elY = labelSegY;
+                    const numBranches = s.branches.length;
+                    let elX, elY;
+                    if (numBranches <= 2) {
+                        if (bi === 0) {
+                            elX = cx - hw - pillW / 2 - 4;
+                            elY = cy;
+                        } else {
+                            elX = cx + hw + pillW / 2 + 4;
+                            elY = cy;
+                        }
+                    } else {
+                        if (bi === 0) {
+                            elX = cx - hw - pillW / 2 - 4;
+                            elY = cy;
+                        } else if (bi === numBranches - 1) {
+                            elX = cx + hw + pillW / 2 + 4;
+                            elY = cy;
+                        } else {
+                            elX = cx;
+                            elY = cy - hh - 10 - (bi - 1) * (pillH + 4);
+                        }
+                    }
                     elX = Math.max(pillW / 2 + 10, Math.min(elX, totalW - pillW / 2 - 10));
                     pendingLabels.push({ x: elX, y: elY, w: pillW, h: pillH, color, text: brText });
                 });
@@ -9513,20 +9519,39 @@
                     const data = JSON.parse(saved);
                     const age = (new Date() - new Date(data.timestamp)) / (1000 * 60 * 60);
                     if (age < 24 && data.currentScreen > 0) {
-                        if (confirm('You have saved progress from ' + formatDate(data.timestamp) + '. Continue where you left off?')) {
-                            processData = data.processData || createEmptyProcess();
-                            completedProcesses = data.completedProcesses || [];
-                            if (data.customDepartments) customDepartments = data.customDepartments;
-                            if (data.stepCount) stepCount = data.stepCount;
-                            if (data.editingReportId) editingReportId = data.editingReportId;
-                            restoreRadioSelections(processData);
-                            goToScreen(data.currentScreen);
-                            return true;
-                        }
+                        showResumeBanner(data);
+                        return true;
                     }
                 }
-            } catch (e) { /* ignore */ }
+            } catch (e) { console.warn('Failed to load progress:', e.message); }
             return false;
+        }
+
+        function showResumeBanner(data) {
+            const existing = document.getElementById('resumeBanner');
+            if (existing) existing.remove();
+            const banner = document.createElement('div');
+            banner.id = 'resumeBanner';
+            banner.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:10001;padding:16px 24px;border-radius:10px;background:#fffbeb;border:1px solid #fcd34d;color:#92400e;font-size:0.9rem;max-width:520px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.12);animation:fadeIn 0.3s;';
+            banner.innerHTML = '<p style="margin:0 0 12px;">You have saved progress from <strong>' + esc(formatDate(data.timestamp)) + '</strong>.</p>' +
+                '<div style="display:flex;gap:10px;justify-content:center;">' +
+                '<button id="resumeYes" style="padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-family:inherit;font-weight:500;cursor:pointer;">Continue</button>' +
+                '<button id="resumeNo" style="padding:8px 20px;background:transparent;color:#92400e;border:1px solid #fcd34d;border-radius:6px;font-family:inherit;font-weight:500;cursor:pointer;">Start fresh</button></div>';
+            document.body.appendChild(banner);
+
+            document.getElementById('resumeYes').addEventListener('click', function() {
+                banner.remove();
+                processData = data.processData || createEmptyProcess();
+                completedProcesses = data.completedProcesses || [];
+                if (data.customDepartments) customDepartments = data.customDepartments;
+                if (data.stepCount) stepCount = data.stepCount;
+                if (data.editingReportId) editingReportId = data.editingReportId;
+                restoreRadioSelections(processData);
+                goToScreen(data.currentScreen);
+            });
+            document.getElementById('resumeNo').addEventListener('click', function() {
+                banner.remove();
+            });
         }
 
         function restoreRadioSelections(pd) {
@@ -9945,7 +9970,7 @@
         function loadComplexitySample() {
             const allSamples = getSampleProcesses();
             const complex = allSamples.find(p => p.processName.includes('CapEx'));
-            if (!complex) { alert('Complexity-10 sample not found'); return; }
+            if (!complex) { showBanner('Complexity-10 sample not found', 'error'); return; }
 
             completedProcesses = [complex];
 
@@ -10223,7 +10248,7 @@
             });
             console.log('\nFull JSON (copy from below):');
             console.log(JSON.stringify(data, null, 2));
-            alert('Team sample data logged to browser console (F12). Copy the JSON from there to test with /api/team endpoints.');
+            showBanner('Team sample data logged to browser console (F12). Copy the JSON to test /api/team endpoints.', 'success');
         }
 
         // Returns sample team response data (4 different perspectives on Enterprise CapEx Procurement)

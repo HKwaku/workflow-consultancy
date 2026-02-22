@@ -412,7 +412,7 @@ Rules:
     } catch (e) {
       const jsonMatch = rawText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        try { parsed = JSON.parse(jsonMatch[0]); } catch (e2) {}
+        try { parsed = JSON.parse(jsonMatch[0]); } catch (e2) { console.warn('Fallback JSON parse failed:', e2.message); }
       }
       if (!parsed) {
         console.error('Failed to parse AI extract-steps response, preview:', rawText.substring(0, 300));

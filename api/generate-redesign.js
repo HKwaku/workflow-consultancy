@@ -1,4 +1,5 @@
 const { setCorsHeaders, getSupabaseHeaders, isValidUUID, isValidEmail, fetchWithTimeout } = require('../lib/api-helpers');
+const { parseLegacyJSON } = require('../lib/fetch-report');
 
 module.exports = async function handler(req, res) {
   setCorsHeaders(res, 'POST,OPTIONS');
@@ -63,10 +64,8 @@ module.exports = async function handler(req, res) {
       const dr = diagRows[0];
       sourceTable = 'diagnostics';
 
-      let procs = [];
-      try { procs = typeof dr.processes === 'string' ? JSON.parse(dr.processes) : (dr.processes || []); } catch (e) { console.error('Failed to parse processes:', e.message); }
-      let recs = [];
-      try { recs = typeof dr.recommendations === 'string' ? JSON.parse(dr.recommendations) : (dr.recommendations || []); } catch (e) { console.error('Failed to parse recommendations:', e.message); }
+      const procs = parseLegacyJSON(dr.processes, 'processes');
+      const recs = parseLegacyJSON(dr.recommendations, 'recommendations');
 
       report = { id: dr.id, contact_name: dr.name, company: dr.company, diagnostic_data: {} };
       d = {

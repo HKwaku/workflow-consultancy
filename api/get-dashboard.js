@@ -4,6 +4,7 @@
 // DELETE /api/get-dashboard           — delete a report by ID (body: { reportId, email })
 
 const { setCorsHeaders, getSupabaseHeaders, isValidEmail, isValidUUID, fetchWithTimeout } = require('../lib/api-helpers');
+const { normaliseLegacyRow } = require('../lib/fetch-report');
 
 module.exports = async function handler(req, res) {
   setCorsHeaders(res, 'GET,DELETE,OPTIONS');
@@ -61,39 +62,9 @@ module.exports = async function handler(req, res) {
     }
 
     const reportIds = new Set((rows || []).map(r => r.id));
-    const extraRows = (diagRows || []).filter(d => !reportIds.has(d.id) && d.total_processes > 0).map(d => {
-      let procs = [];
-      let recs = [];
-      try { procs = typeof d.processes === 'string' ? JSON.parse(d.processes) : (d.processes || []); } catch (e) { console.error('Failed to parse processes:', e.message); }
-      try { recs = typeof d.recommendations === 'string' ? JSON.parse(d.recommendations) : (d.recommendations || []); } catch (e) { console.error('Failed to parse recommendations:', e.message); }
-      return {
-        id: d.id,
-        contact_email: d.email,
-        contact_name: d.name || '',
-        company: d.company || '',
-        lead_score: d.lead_score || 0,
-        lead_grade: d.lead_grade || '',
-        diagnostic_data: {
-          contact: { name: d.name, email: d.email, company: d.company },
-          summary: {
-            totalProcesses: d.total_processes || 0,
-            totalAnnualCost: d.annual_process_cost || 0,
-            potentialSavings: d.potential_savings || 0,
-            analysisType: d.analysis_type || 'rule-based',
-            qualityScore: d.quality_score || 0
-          },
-          automationScore: {
-            percentage: d.automation_percentage || 0,
-            grade: d.automation_grade || 'N/A',
-            insight: d.automation_insight || ''
-          },
-          recommendations: recs,
-          processes: procs,
-          roadmap: null
-        },
-        created_at: d.completed_at || d.created_at
-      };
-    });
+    const extraRows = (diagRows || [])
+      .filter(d => !reportIds.has(d.id) && d.total_processes > 0)
+      .map(normaliseLegacyRow);
 
     const allRows = [...(rows || []), ...extraRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 

@@ -1,6 +1,6 @@
 # Diagnostics Flow — Capabilities Document
 
-> **Last updated:** 2026-02-21
+> **Last updated:** 2026-02-22
 > This document describes every screen, feature, and capability of the diagnostic tool in `diagnostic.html`. It should be updated whenever changes are made to the diagnostics flow.
 
 ---
@@ -128,7 +128,7 @@ The most feature-rich screen. Users build the process step-by-step.
 - Updates on every step name, department, decision toggle, branch edit, reorder, add, or remove.
 - Uses serpentine grid layout matching the final report renderer.
 - Decision nodes rendered as diamonds with colour-coded branch arrows.
-- Loop-backs route through the left margin; forward-skips route through inter-row gaps.
+- All branch routes go through inter-row gaps (not margins); labels at diamond tips.
 - Text wraps within nodes (up to 3 lines) to prevent overflow.
 - Branch labels rendered as pills on their path.
 
@@ -280,12 +280,12 @@ Screens without hard validation requirements (8, 9, 10, 11, 12, 13, 15, 16, 17) 
 - Real-time SVG rendering as users add/edit steps.
 - Serpentine grid layout (odd rows reverse direction).
 - Department-coloured nodes; diamond shapes for decisions.
-- Branch arrow routing:
-  - **Same-row immediate next**: Direct horizontal line.
-  - **Same-row skip**: Routes through gap above the row.
-  - **Forward to different row**: Routes through gap below source row.
-  - **Loop-back**: Routes through left margin with allocated channels.
-- Branch labels as coloured pills on paths.
+- Branch arrow routing (all routes use inter-row gaps, not margins):
+  - **Same-row adjacent**: Direct horizontal line from diamond side to target side.
+  - **Same-row non-adjacent**: Routes through gap above the row.
+  - **Forward cross-row**: Exits BOTTOM of diamond, routes through gap below source row.
+  - **Loop-back**: Exits TOP of diamond, routes through gap above source row.
+- Branch labels positioned at LEFT/RIGHT tips of diamond (like YES/NO).
 - Text wraps within nodes (max 3 lines, auto font-size reduction).
 - Orphan node detection with dashed fallback arrows.
 
@@ -333,8 +333,10 @@ Screens without hard validation requirements (8, 9, 10, 11, 12, 13, 15, 16, 17) 
 - Branch routing contract:
   - `LINE_GAP` (32px) between parallel routing lines.
   - Global channel allocator per inter-row gap.
-  - Loop-backs route through left margin.
-  - Forward routes use right margin for multi-row skips.
+  - Loop-backs exit TOP of diamond, route through gap above source row.
+  - Forward cross-row routes exit BOTTOM, route through gap below source row.
+  - Same-row adjacent branches use direct horizontal lines; non-adjacent route through gap above.
+  - Labels positioned at LEFT/RIGHT tips of diamond (2 branches) or LEFT/RIGHT/above (3+).
   - Labels rendered after all paths and nodes (always in front).
   - Label collision avoidance.
 
