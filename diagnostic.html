@@ -9675,7 +9675,7 @@
 
             document.getElementById('resumeYes').addEventListener('click', function() {
                 banner.remove();
-                processData = data.processData || createEmptyProcess();
+                processData = ensureProcessDataShape(data.processData) || createEmptyProcess();
                 completedProcesses = data.completedProcesses || [];
                 if (data.customDepartments) customDepartments = data.customDepartments;
                 if (data.stepCount) stepCount = data.stepCount;
@@ -11104,7 +11104,7 @@
                 if (!data) return false;
 
                 // Restore state
-                processData = data.processData || createEmptyProcess();
+                processData = ensureProcessDataShape(data.processData) || createEmptyProcess();
                 completedProcesses = data.completedProcesses || [];
                 cloudProgressId = result.progress.id;
 
