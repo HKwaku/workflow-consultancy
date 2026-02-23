@@ -56,13 +56,13 @@ export default function Portal() {
   if (!user) {
     return (
       <>
-        <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 28px', background: 'linear-gradient(135deg, var(--primary), #243f5c)', color: 'white' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <a href="/" style={{ color: 'white', textDecoration: 'none', fontFamily: "'Cormorant Garamond', serif", fontSize: '1.3rem', fontWeight: 700 }}>Workflow<span style={{ color: 'var(--gold)' }}>.</span></a>
-            <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.15)' }} />
-            <span style={{ fontSize: '0.85rem', opacity: 0.7 }}>Client Portal</span>
+        <header className="dashboard-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <a href="/" className="header-logo">Workflow<span style={{ color: 'var(--gold)' }}>.</span></a>
+            <div className="header-divider" />
+            <span className="header-title">Dashboard</span>
           </div>
-        </div>
+        </header>
         <div className="portal-wrap" style={{ maxWidth: 960, margin: '0 auto', padding: '48px 24px' }}>
           <PortalAuth supabase={supabase} onAuthenticated={setUser} />
         </div>
@@ -73,11 +73,11 @@ export default function Portal() {
   if (user.needsPasswordUpdate) {
     return (
       <>
-        <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 28px', background: 'linear-gradient(135deg, var(--primary), #243f5c)', color: 'white' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <a href="/" style={{ color: 'white', textDecoration: 'none', fontFamily: "'Cormorant Garamond', serif", fontSize: '1.3rem', fontWeight: 700 }}>Workflow<span style={{ color: 'var(--gold)' }}>.</span></a>
+        <header className="dashboard-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <a href="/" className="header-logo">Workflow<span style={{ color: 'var(--gold)' }}>.</span></a>
           </div>
-        </div>
+        </header>
         <div className="portal-wrap" style={{ maxWidth: 400, margin: '48px auto', padding: 24 }}>
           <PortalAuth supabase={supabase} onAuthenticated={setUser} mode="updatePassword" />
         </div>
@@ -85,9 +85,5 @@ export default function Portal() {
     );
   }
 
-  return (
-    <div className="portal-wrap">
-      <PortalDashboard user={user} onSignOut={handleSignOut} />
-    </div>
-  );
+  return <PortalDashboard user={user} onSignOut={handleSignOut} />;
 }
