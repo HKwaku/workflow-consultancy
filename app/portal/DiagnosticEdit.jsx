@@ -80,15 +80,18 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
     let cancelled = false;
     (async () => {
       try {
-        const resp = await fetch(`/api/get-diagnostic?id=${encodeURIComponent(reportId)}`);
+        const url = email
+          ? `/api/get-diagnostic?id=${encodeURIComponent(reportId)}&editable=true&email=${encodeURIComponent(email)}`
+          : `/api/get-diagnostic?id=${encodeURIComponent(reportId)}`;
+        const resp = await fetch(url);
         const data = await resp.json();
         if (cancelled) return;
         if (!resp.ok || !data.success) { setError(data.error || 'Failed to load report.'); setLoading(false); return; }
 
         const r = data.report;
         const dd = r.diagnosticData || {};
-        const c = dd.contact || {};
-        const raw = dd.rawProcesses || [];
+        const c = dd.contact || r.contact || {};
+        const raw = r.rawProcesses || dd.rawProcesses || [];
         const procs = dd.processes || [];
 
         setReport(r);
@@ -123,14 +126,24 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
     const costs = rp.costs || {};
     const know = rp.knowledge || {};
     const hire = rp.newHire || {};
-    const steps = (rp.steps || []).map((s, si) => ({
-      _key: si,
-      name: s.name || '',
-      department: s.department || '',
-      isDecision: !!s.isDecision,
-      isExternal: !!s.isExternal,
-      branches: s.branches || [],
-    }));
+    const steps = (rp.steps || []).map((s, si) => {
+      const rawBranches = (s.branches || []).map((b, bi) => ({
+        _key: b._key ?? `b${si}-${bi}`,
+        label: b.label || '',
+        target: b.target || b.targetStep || '',
+      }));
+      const branches = s.isDecision && rawBranches.length === 0
+        ? [{ _key: `b${si}-0`, label: '', target: '' }, { _key: `b${si}-1`, label: '', target: '' }]
+        : rawBranches;
+      return {
+        _key: si,
+        name: s.name || '',
+        department: s.department || '',
+        isDecision: !!s.isDecision,
+        isExternal: !!s.isExternal,
+        branches,
+      };
+    });
 
     const handoffs = (rp.handoffs || []).map((h, hi) => ({
       _key: hi,
@@ -199,10 +212,18 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
     proc.processType = p.type || '';
     proc.elapsedDays = p.elapsedDays || 0;
     proc.teamSize = p.teamSize || 1;
-    proc.steps = (p.steps || []).map((s, si) => ({
-      _key: si, name: s.name || '', department: s.department || '',
-      isDecision: !!s.isDecision, isExternal: !!s.isExternal, branches: [],
-    }));
+    proc.steps = (p.steps || []).map((s, si) => {
+      const branches = s.isDecision
+        ? (s.branches || []).map((b, bi) => ({ _key: `b${si}-${bi}`, label: b.label || '', target: b.target || b.targetStep || '' }))
+        : [];
+      const defaultBranches = s.isDecision && branches.length === 0
+        ? [{ _key: `b${si}-0`, label: '', target: '' }, { _key: `b${si}-1`, label: '', target: '' }]
+        : branches;
+      return {
+        _key: si, name: s.name || '', department: s.department || '',
+        isDecision: !!s.isDecision, isExternal: !!s.isExternal, branches: defaultBranches,
+      };
+    });
     proc.stepHandoffs = proc.steps.map((_, si) =>
       si < proc.steps.length - 1
         ? { _key: si, fromStep: '', toStep: '', method: '', methodOther: '', clarity: 'no' }
@@ -244,7 +265,50 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
   const updateStep = (si, field, val) => {
     setProcesses(prev => prev.map((p, i) => {
       if (i !== activeProcessIdx) return p;
-      const newSteps = p.steps.map((s, j) => j === si ? { ...s, [field]: val } : s);
+      const newSteps = p.steps.map((s, j) => {
+        if (j !== si) return s;
+        const updated = { ...s, [field]: val };
+        if (field === 'isDecision' && val && (!s.branches || s.branches.length === 0)) {
+          updated.branches = [{ _key: Date.now(), label: '', target: '' }, { _key: Date.now() + 1, label: '', target: '' }];
+        }
+        return updated;
+      });
+      return { ...p, steps: newSteps };
+    }));
+  };
+
+  const updateBranch = (si, bi, field, val) => {
+    setProcesses(prev => prev.map((p, i) => {
+      if (i !== activeProcessIdx) return p;
+      const newSteps = p.steps.map((s, j) => {
+        if (j !== si || !s.branches) return s;
+        const newBranches = s.branches.map((b, k) => k === bi ? { ...b, [field]: val } : b);
+        return { ...s, branches: newBranches };
+      });
+      return { ...p, steps: newSteps };
+    }));
+  };
+
+  const addBranch = (si) => {
+    setProcesses(prev => prev.map((p, i) => {
+      if (i !== activeProcessIdx) return p;
+      const newSteps = p.steps.map((s, j) => {
+        if (j !== si) return s;
+        const branches = s.branches || [];
+        return { ...s, branches: [...branches, { _key: Date.now(), label: '', target: '' }] };
+      });
+      return { ...p, steps: newSteps };
+    }));
+  };
+
+  const removeBranch = (si, bi) => {
+    setProcesses(prev => prev.map((p, i) => {
+      if (i !== activeProcessIdx) return p;
+      const newSteps = p.steps.map((s, j) => {
+        if (j !== si || !s.branches) return s;
+        const newBranches = s.branches.filter((_, k) => k !== bi);
+        return { ...s, branches: newBranches };
+      });
       return { ...p, steps: newSteps };
     }));
   };
@@ -259,10 +323,15 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
     }));
   };
 
-  const addStep = () => {
+  const addStep = (asDecision = false) => {
     setProcesses(prev => prev.map((p, i) => {
       if (i !== activeProcessIdx) return p;
-      const newSteps = [...p.steps, { _key: Date.now(), name: '', department: '', isDecision: false, isExternal: false, branches: [] }];
+      const newStep = {
+        _key: Date.now(), name: '', department: '', isExternal: false,
+        isDecision: !!asDecision,
+        branches: asDecision ? [{ _key: Date.now(), label: '', target: '' }, { _key: Date.now() + 1, label: '', target: '' }] : [],
+      };
+      const newSteps = [...p.steps, newStep];
       const newH = [...(p.stepHandoffs || [])];
       if (p.steps.length > 0) {
         newH.push({ _key: Date.now(), fromStep: p.steps[p.steps.length - 1]?.name || '', toStep: '', method: '', methodOther: '', clarity: 'no' });
@@ -293,11 +362,16 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
     }));
   };
 
-  const insertStepAt = (idx) => {
+  const insertStepAt = (idx, asDecision = false) => {
     setProcesses(prev => prev.map((p, i) => {
       if (i !== activeProcessIdx) return p;
+      const newStep = {
+        _key: Date.now(), name: '', department: '', isExternal: false,
+        isDecision: !!asDecision,
+        branches: asDecision ? [{ _key: Date.now(), label: '', target: '' }, { _key: Date.now() + 1, label: '', target: '' }] : [],
+      };
       const newSteps = [...p.steps];
-      newSteps.splice(idx, 0, { _key: Date.now(), name: '', department: '', isDecision: false, isExternal: false, branches: [] });
+      newSteps.splice(idx, 0, newStep);
       const newH = [...(p.stepHandoffs || [])];
       newH.splice(idx, 0, { _key: Date.now(), method: '', clarity: 'no' });
       return { ...p, steps: newSteps, stepHandoffs: newH };
@@ -378,7 +452,20 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
         issues: p.issues,
         biggestDelay: p.biggestDelay,
         delayDetails: p.delayDetails,
-        steps: p.steps.map((s, si) => ({ number: si + 1, name: s.name, department: s.department, isDecision: s.isDecision, isExternal: s.isExternal, branches: s.branches || [] })),
+        steps: p.steps.map((s, si) => {
+          const rawBranches = (s.branches || []).map(b => ({ label: (b.label || '').trim(), target: (b.target || '').trim() }));
+          const filledBranches = rawBranches.filter(b => b.label || b.target);
+          // Preserve isDecision from user intent; keep placeholder branches when marked as decision so structure survives reload
+          const branches = s.isDecision && filledBranches.length === 0
+            ? (rawBranches.length > 0 ? rawBranches : [{ label: '', target: '' }, { label: '', target: '' }])
+            : filledBranches;
+          return {
+            number: si + 1, name: s.name, department: s.department,
+            isDecision: !!s.isDecision,
+            isExternal: s.isExternal,
+            branches,
+          };
+        }),
         handoffs: (p.stepHandoffs || []).filter(Boolean).map((h, hi) => ({
           from: { name: p.steps[hi]?.name || '', department: p.steps[hi]?.department || '' },
           to: { name: p.steps[hi + 1]?.name || '', department: p.steps[hi + 1]?.department || '' },
@@ -398,7 +485,11 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
         name: p.processName, type: p.processType, elapsedDays: p.elapsedDays,
         annualCost: 0, teamSize: p.teamSize,
         stepsCount: p.steps.length,
-        steps: p.steps.map((s, si) => ({ number: si + 1, name: s.name, department: s.department, isDecision: s.isDecision, isExternal: s.isExternal })),
+        steps: p.steps.map((s, si) => ({
+          number: si + 1, name: s.name, department: s.department,
+          isDecision: s.isDecision, isExternal: s.isExternal,
+          branches: (s.branches || []).map(b => ({ label: b.label || '', target: b.target || '' })),
+        })),
       }));
 
       const updates = {
@@ -642,7 +733,7 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
                         </div>
                         <div className="edit-step-bottom-row">
                           <label className="edit-step-check">
-                            <input type="checkbox" checked={step.isDecision} onChange={e => updateStep(si, 'isDecision', e.target.checked)} /> Decision point
+                            <input type="checkbox" checked={step.isDecision} onChange={e => updateStep(si, 'isDecision', e.target.checked)} /> Decision / routing point
                           </label>
                           <label className="edit-step-check">
                             <input type="checkbox" checked={step.isExternal} onChange={e => updateStep(si, 'isExternal', e.target.checked)} /> External party
@@ -650,6 +741,20 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
                           {step.isDecision && <span className="edit-step-badge decision">Decision</span>}
                           {step.isExternal && <span className="edit-step-badge external">External</span>}
                         </div>
+                        {step.isDecision && (
+                          <div className="edit-step-branches">
+                            <div className="edit-step-branches-label">Define the possible routes from this step:</div>
+                            {(step.branches || []).map((br, bi) => (
+                              <div key={br._key ?? bi} className="edit-branch-row">
+                                <span className="edit-branch-icon">&#10132;</span>
+                                <input type="text" value={br.label || ''} onChange={e => updateBranch(si, bi, 'label', e.target.value)} placeholder="Route label, e.g. Approved" className="edit-branch-input" />
+                                <input type="text" value={br.target || ''} onChange={e => updateBranch(si, bi, 'target', e.target.value)} placeholder="Goes to... e.g. Step 5" className="edit-branch-input edit-branch-target" />
+                                <button type="button" className="edit-branch-remove" onClick={() => removeBranch(si, bi)} title="Remove route">&times;</button>
+                              </div>
+                            ))}
+                            <button type="button" className="edit-add-branch-btn" onClick={() => addBranch(si)}>+ Add another route</button>
+                          </div>
+                        )}
                       </div>
 
                       <div className="edit-step-actions">
@@ -681,7 +786,10 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
                 ))}
               </div>
 
-              <button type="button" className="edit-add-btn" onClick={addStep}>+ Add Step</button>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <button type="button" className="edit-add-btn" onClick={() => addStep(false)}>+ Add Step</button>
+                <button type="button" className="edit-add-btn edit-add-decision-btn" onClick={() => addStep(true)} title="Add a step with decision/routing branches">+ Add Decision Step</button>
+              </div>
             </div>
           </div>
         )}

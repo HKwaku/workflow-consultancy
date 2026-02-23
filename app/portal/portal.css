@@ -809,6 +809,39 @@ body:has(.dashboard-header) {
 .edit-step-badge.decision { background: var(--purple); color: white; }
 .edit-step-badge.external { background: var(--amber); color: white; }
 
+/* Decision branches (routing) */
+.edit-step-branches {
+  margin-top: 0.75rem; padding: 0.75rem; background: rgba(124,58,237,0.06);
+  border: 1px solid rgba(124,58,237,0.2); border-radius: var(--radius-sm);
+}
+.edit-step-branches-label {
+  font-size: 0.78rem; font-weight: 600; color: #7c3aed; margin-bottom: 0.5rem;
+}
+.edit-branch-row {
+  display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;
+}
+.edit-branch-icon { color: #7c3aed; font-size: 0.9rem; }
+.edit-branch-input {
+  flex: 1; min-width: 0; padding: 0.4rem 0.6rem; font-size: 0.85rem;
+  border: 1px solid rgba(124,58,237,0.25); border-radius: 6px;
+  font-family: inherit; background: white;
+}
+.edit-branch-input:focus { border-color: #7c3aed; outline: none; }
+.edit-branch-target { max-width: 180px; }
+.edit-branch-remove {
+  width: 24px; height: 24px; border-radius: 6px; border: none;
+  background: transparent; color: var(--text-light); cursor: pointer;
+  font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.edit-branch-remove:hover { background: #fef2f2; color: var(--red); }
+.edit-add-branch-btn {
+  margin-top: 0.5rem; padding: 0.4rem 0.75rem; font-size: 0.8rem;
+  background: transparent; color: #7c3aed; border: 1px dashed rgba(124,58,237,0.4);
+  border-radius: 6px; cursor: pointer; font-family: inherit;
+}
+.edit-add-branch-btn:hover { background: rgba(124,58,237,0.08); }
+
 /* Step action buttons */
 .edit-step-actions {
   display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; margin-top: 0.2rem;
@@ -895,6 +928,10 @@ body:has(.dashboard-header) {
   margin-top: 0.75rem; width: 100%; text-align: center;
 }
 .edit-add-btn:hover { background: rgba(61,142,166,0.12); border-color: var(--accent); }
+.edit-add-decision-btn {
+  color: #7c3aed; border-color: rgba(124,58,237,0.4); background: rgba(124,58,237,0.04);
+}
+.edit-add-decision-btn:hover { background: rgba(124,58,237,0.1); border-color: #7c3aed; }
 
 /* Banners */
 .edit-banner {
@@ -940,6 +977,8 @@ body:has(.dashboard-header) {
   .edit-handoff-row { padding-left: 28px; }
   .edit-handoff-fields { flex-direction: column; }
   .edit-stage-card { padding: 1.5rem 1.25rem; }
+  .edit-branch-row { flex-wrap: wrap; }
+  .edit-branch-target { max-width: none; }
 }
 
 @media (max-width: 520px) {
