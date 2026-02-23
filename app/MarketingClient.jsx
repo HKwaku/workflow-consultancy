@@ -539,8 +539,6 @@ export default function MarketingClient() {
             <h4>Services</h4>
             <ul>
               <li><a href="#services" onClick={scrollTo('services')}>Diagnostic</a></li>
-              <li><a href="#services" onClick={scrollTo('services')}>Strategy</a></li>
-              <li><a href="#services" onClick={scrollTo('services')}>Implementation</a></li>
               <li><Link href="/portal">Client Login</Link></li>
             </ul>
           </div>

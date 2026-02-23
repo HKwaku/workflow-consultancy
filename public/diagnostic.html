@@ -541,146 +541,184 @@
             font-weight: 500;
         }
         .welcome-path-summary {
-            margin: 1rem 0 0;
+            margin: 1.25rem 0 0;
             font-size: 0.8rem;
             color: var(--text-light);
             text-align: center;
             line-height: 1.5;
         }
 
-        /* Welcome flow diagram */
+        /* Welcome flow diagram - redesigned */
         .welcome-flow {
             margin: 1.5rem 0;
-            padding: 1.5rem;
-            background: var(--bg-alt);
-            border-radius: var(--radius-md);
+            padding: 1.75rem;
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: var(--radius-lg);
+            border: 1px solid rgba(226,232,240,0.8);
+        }
+        .welcome-flow-intro {
+            text-align: center;
+            color: var(--text-mid);
+            font-size: 0.9rem;
+            margin-bottom: 1.25rem;
+            line-height: 1.5;
         }
         .welcome-flow-diagram {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 0;
-        }
-        .wf-node {
-            background: #fff;
-            border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
-            padding: 0.75rem 1.25rem;
-            text-align: center;
-            font-size: 0.88rem;
-            color: var(--text-primary);
-            position: relative;
-            max-width: 260px;
-            width: 100%;
-            line-height: 1.4;
-        }
-        .wf-node strong { display: block; }
-        .wf-node-icon { font-size: 1.3rem; margin-bottom: 0.25rem; }
-        .wf-node-detail { display: block; font-size: 0.78rem; color: var(--text-mid); margin-top: 0.15rem; }
-        .wf-node-start {
-            background: var(--primary);
-            color: #fff;
-            border-color: var(--primary);
-            font-weight: 600;
-            border-radius: 100px;
-            padding: 0.6rem 1.5rem;
-            max-width: 200px;
-        }
-        .wf-node-action {
-            border-color: var(--accent);
-            border-width: 2px;
-            transition: box-shadow 0.15s, transform 0.15s;
-        }
-        .wf-node-action:hover {
-            box-shadow: 0 3px 12px rgba(56,163,165,0.15);
-            transform: translateY(-1px);
-        }
-        .wf-node-team { border-color: #7c3aed; }
-        .wf-node-team:hover { box-shadow: 0 3px 12px rgba(124,58,237,0.15); }
-        .wf-node-decision {
-            background: #fffbeb;
-            border-color: #f59e0b;
-            border-width: 2px;
-            border-radius: var(--radius-sm);
-            font-size: 0.84rem;
-            font-weight: 500;
-        }
-        .wf-node-handover {
-            border-color: var(--accent);
-            border-style: dashed;
-            font-size: 0.84rem;
-        }
-        .wf-node-result {
-            background: linear-gradient(135deg, rgba(56,163,165,0.06), rgba(56,163,165,0.02));
-            border-color: var(--accent);
-            font-weight: 500;
-        }
-        .wf-node-team-result {
-            background: linear-gradient(135deg, rgba(124,58,237,0.06), rgba(124,58,237,0.02));
-            border-color: #7c3aed;
-        }
-        .wf-connector {
-            width: 2px;
-            height: 20px;
-            background: var(--border);
-            margin: 0 auto;
-        }
-        .wf-branch {
-            display: flex;
-            gap: 1.5rem;
-            justify-content: center;
-            width: 100%;
-        }
-        .wf-branch-inner {
-            margin-top: 0.5rem;
+            align-items: stretch;
             gap: 1rem;
         }
-        .wf-path {
+        .wf-choose-label {
+            text-align: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--text-light);
+            margin-bottom: 0.25rem;
+        }
+        .wf-paths {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            align-items: start;
+        }
+        .wf-path-card {
+            background: #fff;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+        .wf-path-card:hover {
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+        }
+        .wf-path-individual .wf-path-header:hover,
+        .wf-path-individual .wf-path-header:focus { background: rgba(61,142,166,0.06); outline: none; }
+        .wf-path-team .wf-path-header:hover,
+        .wf-path-team .wf-path-header:focus { background: rgba(124,58,237,0.06); outline: none; }
+        .wf-path-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .wf-path-individual .wf-path-header { border-left: 4px solid var(--accent); }
+        .wf-path-team .wf-path-header { border-left: 4px solid #7c3aed; }
+        .wf-path-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+        .wf-path-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin: 0 0 0.15rem 0;
+        }
+        .wf-path-meta {
+            font-size: 0.78rem;
+            color: var(--text-mid);
+        }
+        .wf-path-flow {
+            padding: 1rem 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .wf-phase-pill {
+            font-size: 0.78rem;
+            color: var(--text-mid);
+            background: var(--bg-alt);
+            padding: 0.5rem 0.85rem;
+            border-radius: 100px;
+            text-align: center;
+        }
+        .wf-flow-arrow {
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid var(--border);
+            margin: 0 auto;
+        }
+        .wf-decision-box {
+            background: #fffbeb;
+            border: 1px solid rgba(245,158,11,0.4);
+            border-radius: var(--radius-sm);
+            padding: 0.65rem 0.9rem;
+        }
+        .wf-decision-q {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--primary);
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        .wf-decision-branches {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .wf-decision-opt {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.78rem;
+            color: var(--text-mid);
+        }
+        .wf-opt-label {
+            font-weight: 700;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.15rem 0.5rem;
+            background: rgba(255,255,255,0.9);
+            border-radius: 4px;
+            color: var(--amber);
+        }
+        .wf-note-box {
+            font-size: 0.78rem;
+            color: var(--text-mid);
+            padding: 0.5rem 0.75rem;
+            background: rgba(124,58,237,0.04);
+            border-radius: var(--radius-sm);
+            border: 1px dashed rgba(124,58,237,0.3);
+        }
+        .wf-outcome {
             display: flex;
             flex-direction: column;
             align-items: center;
-            flex: 1;
-            max-width: 280px;
-            gap: 0;
+            text-align: center;
+            padding: 1rem;
+            border-radius: var(--radius-sm);
         }
-        .wf-path-yes, .wf-path-no { max-width: 200px; }
-        .wf-branch-label {
-            font-size: 0.72rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+        .wf-outcome-individual {
+            background: linear-gradient(135deg, rgba(61,142,166,0.08), rgba(61,142,166,0.02));
+            border: 1px solid rgba(61,142,166,0.35);
+        }
+        .wf-outcome-team {
+            background: linear-gradient(135deg, rgba(124,58,237,0.08), rgba(124,58,237,0.02));
+            border: 1px solid rgba(124,58,237,0.35);
+        }
+        .wf-outcome-icon { font-size: 1.4rem; margin-bottom: 0.25rem; }
+        .wf-outcome-text {
+            font-weight: 600;
+            font-size: 0.92rem;
+            color: var(--primary);
+        }
+        .wf-outcome-detail {
+            font-size: 0.78rem;
             color: var(--text-mid);
-            margin-bottom: 0.35rem;
-            padding: 0.15rem 0.6rem;
-            background: var(--bg-light);
-            border-radius: 100px;
-            border: 1px solid var(--border);
+            margin-top: 0.2rem;
         }
-        .wf-steps-row {
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-            flex-wrap: wrap;
-            justify-content: center;
-            padding: 0.5rem 0;
-        }
-        .wf-mini-step {
-            font-size: 0.7rem;
-            padding: 0.2rem 0.5rem;
-            background: #fff;
-            border: 1px solid var(--border);
-            border-radius: 100px;
-            color: var(--text-mid);
-            white-space: nowrap;
-        }
-        .wf-mini-arrow { font-size: 0.65rem; color: var(--text-light); }
 
         @media (max-width: 640px) {
-            .wf-branch { flex-direction: column; align-items: center; gap: 0.75rem; }
-            .wf-branch-inner { flex-direction: column; align-items: center; }
-            .wf-path { max-width: 100%; }
-            .wf-node { max-width: 100%; }
-            .wf-steps-row { gap: 0.15rem; }
+            .wf-paths { grid-template-columns: 1fr; }
+            .wf-phase-pill { font-size: 0.72rem; }
         }
 
         .checklist {
@@ -2564,88 +2602,70 @@
                     </ul>
                 </div>
 
-                <!-- Path Selection - Flow Diagram -->
+                <!-- Path Selection - Flow Diagram (redesigned) -->
                 <div class="welcome-flow">
-                    <h3 style="margin-bottom: 0.4rem; color: var(--primary); text-align: center; font-size: 1rem;">Choose your path</h3>
-                    <p style="text-align: center; color: var(--text-mid); font-size: 0.84rem; margin-bottom: 1rem;">Both paths produce AI-powered reports. Pick the one that fits your situation.</p>
+                    <p class="welcome-flow-intro">Both paths produce AI-powered reports. Pick the one that fits your situation.</p>
 
                     <div class="welcome-flow-diagram">
-                        <!-- Start node -->
-                        <div class="wf-node wf-node-start">Choose Your Path</div>
-                        <div class="wf-connector"></div>
+                        <div class="wf-choose-label">Choose your path</div>
 
-                        <!-- Branch split -->
-                        <div class="wf-branch">
+                        <!-- Two paths side by side -->
+                        <div class="wf-paths">
                             <!-- Individual path -->
-                            <div class="wf-path">
-                                <div class="wf-node wf-node-action" onclick="goToScreen(1)" style="cursor:pointer;">
-                                    <div class="wf-node-icon">&#128100;</div>
-                                    <strong>Individual Diagnostic</strong>
-                                    <span class="wf-node-detail">12-15 min per process</span>
+                            <div class="wf-path-card wf-path-individual">
+                                <div class="wf-path-header" onclick="goToScreen(1)" onkeydown="if(event.key==='Enter')goToScreen(1)" role="button" tabindex="0" style="cursor:pointer;">
+                                    <span class="wf-path-icon">&#128100;</span>
+                                    <div>
+                                        <h4 class="wf-path-title">Individual Diagnostic</h4>
+                                        <span class="wf-path-meta">12–15 min per process</span>
+                                    </div>
                                 </div>
-                                <div class="wf-connector"></div>
-                                <div class="wf-steps-row">
-                                    <span class="wf-mini-step">Define</span>
-                                    <span class="wf-mini-arrow">&rarr;</span>
-                                    <span class="wf-mini-step">Measure</span>
-                                    <span class="wf-mini-arrow">&rarr;</span>
-                                    <span class="wf-mini-step">Map Steps &amp; Handoffs</span>
-                                    <span class="wf-mini-arrow">&rarr;</span>
-                                    <span class="wf-mini-step">Assess</span>
-                                    <span class="wf-mini-arrow">&rarr;</span>
-                                    <span class="wf-mini-step">Quantify</span>
-                                </div>
-                                <div class="wf-connector"></div>
-                                <div class="wf-node wf-node-decision">
-                                    <div class="wf-node-icon">&#9670;</div>
-                                    Don't know all the steps?
-                                </div>
-                                <div class="wf-branch wf-branch-inner">
-                                    <div class="wf-path wf-path-yes">
-                                        <span class="wf-branch-label">Yes</span>
-                                        <div class="wf-node wf-node-handover">
-                                            <div class="wf-node-icon">&#128101;</div>
-                                            Hand over to colleague
-                                            <span class="wf-node-detail">They continue where you left off</span>
+                                <div class="wf-path-flow">
+                                    <div class="wf-phase-pill">Define → Measure → Map → Assess → Quantify</div>
+                                    <div class="wf-flow-arrow"></div>
+                                    <div class="wf-decision-box">
+                                        <span class="wf-decision-q">Don't know all the steps?</span>
+                                        <div class="wf-decision-branches">
+                                            <div class="wf-decision-opt">
+                                                <span class="wf-opt-label">Yes</span>
+                                                <span class="wf-opt-text">Hand over to colleague — they continue where you left off</span>
+                                            </div>
+                                            <div class="wf-decision-opt">
+                                                <span class="wf-opt-label">No</span>
+                                                <span class="wf-opt-text">Continue to report</span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="wf-path wf-path-no">
-                                        <span class="wf-branch-label">No</span>
-                                        <div class="wf-node wf-node-result">
-                                            <div class="wf-node-icon">&#128202;</div>
-                                            AI-Powered Report
-                                            <span class="wf-node-detail">Cost analysis, recommendations, roadmap</span>
-                                        </div>
+                                    <div class="wf-flow-arrow"></div>
+                                    <div class="wf-outcome wf-outcome-individual">
+                                        <span class="wf-outcome-icon">&#128202;</span>
+                                        <span class="wf-outcome-text">AI-Powered Report</span>
+                                        <span class="wf-outcome-detail">Cost analysis, recommendations, roadmap</span>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Team path -->
-                            <div class="wf-path">
-                                <div class="wf-node wf-node-action wf-node-team" onclick="openTeamSetup()" style="cursor:pointer;">
-                                    <div class="wf-node-icon">&#128101;</div>
-                                    <strong>Team Diagnostic</strong>
-                                    <span class="wf-node-detail">Understand perception gaps</span>
+                            <div class="wf-path-card wf-path-team">
+                                <div class="wf-path-header" onclick="openTeamSetup()" onkeydown="if(event.key==='Enter')openTeamSetup()" role="button" tabindex="0" style="cursor:pointer;">
+                                    <span class="wf-path-icon">&#128101;</span>
+                                    <div>
+                                        <h4 class="wf-path-title">Team Diagnostic</h4>
+                                        <span class="wf-path-meta">Understand perception gaps</span>
+                                    </div>
                                 </div>
-                                <div class="wf-connector"></div>
-                                <div class="wf-steps-row">
-                                    <span class="wf-mini-step">Create session</span>
-                                    <span class="wf-mini-arrow">&rarr;</span>
-                                    <span class="wf-mini-step">Share code</span>
-                                    <span class="wf-mini-arrow">&rarr;</span>
-                                    <span class="wf-mini-step">Each member completes</span>
-                                </div>
-                                <div class="wf-connector"></div>
-                                <div class="wf-node wf-node-handover" style="border-color: #7c3aed; font-size: 0.82rem;">
-                                    <div class="wf-node-icon">&#128101;</div>
-                                    Members can hand over steps to colleagues
-                                    <span class="wf-node-detail">Collaborative step mapping within each response</span>
-                                </div>
-                                <div class="wf-connector"></div>
-                                <div class="wf-node wf-node-result wf-node-team-result">
-                                    <div class="wf-node-icon">&#128202;</div>
-                                    Perception Gap Analysis
-                                    <span class="wf-node-detail">Where does your team see things differently?</span>
+                                <div class="wf-path-flow">
+                                    <div class="wf-phase-pill">Create session → Share code → Each member completes</div>
+                                    <div class="wf-flow-arrow"></div>
+                                    <div class="wf-note-box">
+                                        <span class="wf-note-text">Members can hand over steps to colleagues during mapping</span>
+                                    </div>
+                                    <div class="wf-flow-arrow"></div>
+                                    <div class="wf-outcome wf-outcome-team">
+                                        <span class="wf-outcome-icon">&#128202;</span>
+                                        <span class="wf-outcome-text">Perception Gap Analysis</span>
+                                        <span class="wf-outcome-detail">Where does your team see things differently?</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
