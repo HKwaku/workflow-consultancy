@@ -23,7 +23,7 @@ export async function POST(request) {
         const reportPayload = { id: reportId, contact_email: contact.email || '', contact_name: contact.name || '', company: contact.company || '', lead_score: leadScore.score, lead_grade: leadScore.grade, diagnostic_data: { contact, summary, recommendations, automationScore, roadmap, processes, rawProcesses: rawProcesses || null, customDepartments: customDepartments || [], leadScore }, created_at: timestamp || new Date().toISOString() };
         let sbResp;
         if (isUpdate) {
-          const updatePayload = { ...reportPayload }; delete updatePayload.id; updatePayload.updated_at = new Date().toISOString();
+          const updatePayload = { ...reportPayload }; delete updatePayload.id;
           sbResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}`, { method: 'PATCH', headers: getSupabaseWriteHeaders(supabaseKey), body: JSON.stringify(updatePayload) });
         } else {
           sbResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports`, { method: 'POST', headers: getSupabaseWriteHeaders(supabaseKey), body: JSON.stringify(reportPayload) });

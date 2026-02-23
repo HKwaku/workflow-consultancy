@@ -75,7 +75,6 @@ export async function PUT(request) {
     const patchBody = {
       ...topLevelPatch,
       diagnostic_data: dd,
-      updated_at: new Date().toISOString()
     };
 
     const writeUrl = `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}`;

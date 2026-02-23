@@ -120,7 +120,7 @@ export async function PATCH(request) {
 
     const writeResp = await fetch(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${id}`, {
       method: 'PATCH', headers: getSupabaseWriteHeaders(supabaseKey),
-      body: JSON.stringify({ diagnostic_data: dd, updated_at: new Date().toISOString() })
+      body: JSON.stringify({ diagnostic_data: dd })
     });
     if (!writeResp.ok) { const t = await writeResp.text(); return NextResponse.json({ error: 'Write failed: ' + t }, { status: 502 }); }
     return NextResponse.json({ success: true, stepsCount: steps.length });
