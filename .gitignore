@@ -1,34 +1,28 @@
-# Dependencies
+# dependencies
 node_modules/
 
-# Vercel
-.vercel
+# next.js
+.next/
+out/
 
-# OS Files
-.DS_Store
-Thumbs.db
+# production
+build/
+dist/
 
-# Editor
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-*.swp
-*.swo
-*~
-
-# Logs
-*.log
-npm-debug.log*
-
-# Temporary files
-*.tmp
-.cache/
-
-# Environment variables
+# env files
 .env
 .env.local
-.env.*.local
+.env.local.example
+.env.production.local
+.env.development.local
 
-.vercel
+# misc
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts
+
+# vercel
+.vercel/
+
+# old vite remnants
+next-app/

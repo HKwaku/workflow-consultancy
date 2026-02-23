@@ -413,10 +413,13 @@ Screens without hard validation requirements (8, 9, 10, 11, 12, 13, 15, 16, 17) 
 - Branch routing contract:
   - `LINE_GAP` (32px) between parallel routing lines.
   - Global channel allocator per inter-row gap.
-  - Loop-backs exit TOP of diamond, route through gap above source row.
-  - Forward cross-row routes exit BOTTOM, route through gap below source row.
-  - Same-row adjacent branches use direct horizontal lines; non-adjacent route through gap above.
-  - Labels positioned at LEFT/RIGHT tips of diamond (2 branches) or LEFT/RIGHT/above (3+).
+  - **Smart vertex assignment**: branches distributed across all 4 diamond vertices (top, right, bottom, left) to avoid label pile-up.
+  - Pass 1: detect sequential entry side, compute ideal exit per branch, resolve conflicts with preference order (bottom, right, left, top).
+  - Pass 2: route and draw — exit from assigned vertex; entry on target from facing side (same-row left/right, cross-row top).
+  - Loop-backs prefer TOP; forward cross-row prefer BOTTOM; same-row prefer LEFT/RIGHT.
+  - Same-row adjacent branches use direct horizontal lines; non-adjacent route through gap.
+  - LEFT/RIGHT exit to gap: horizontal arm from vertex → vertical turn to gap → horizontal in gap → vertical to target.
+  - Labels positioned at actual exit vertex with stacking for shared vertices (left/right: pill beside vertex; top/bottom: pill above/below).
   - Labels rendered after all paths and nodes (always in front).
   - Label collision avoidance.
 
