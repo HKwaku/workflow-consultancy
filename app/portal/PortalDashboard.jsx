@@ -10,7 +10,7 @@ function getStatusInfo(r) {
   return { dot: 'red', tag: 'review', tagText: 'Requires Process Redesign' };
 }
 
-export default function PortalDashboard({ user, onSignOut }) {
+export default function PortalDashboard({ user, onSignOut, onEditReport }) {
   const [tab, setTab] = useState('overview');
   const [reports, setReports] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -75,7 +75,7 @@ export default function PortalDashboard({ user, onSignOut }) {
   const renderReportRow = (r) => {
     const date = new Date(r.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
     const procs = (r.processes || []).map(p => p.name).join(', ') || 'Process Diagnostic';
-    const editUrl = '/diagnostic?edit=' + r.id + '&email=' + encodeURIComponent(email);
+    const handleEdit = () => onEditReport?.(r.id);
     const s = getStatusInfo(r);
     const showConfirm = confirmDeleteId === r.id;
     const isDeleting = deletingId === r.id;
@@ -89,7 +89,7 @@ export default function PortalDashboard({ user, onSignOut }) {
         <span className={'process-tag ' + s.tag}>{s.tagText}</span>
         <div className="process-actions">
           <Link href={'/report?id=' + r.id} className="process-btn process-btn-view">View</Link>
-          <Link href={editUrl} className="process-btn process-btn-edit">Edit</Link>
+          <button type="button" onClick={handleEdit} className="process-btn process-btn-edit">Edit</button>
           <button type="button" className="process-btn process-btn-delete" onClick={() => handleDeleteClick(r.id)} disabled={isDeleting}>
             {isDeleting ? 'Deleting...' : 'Delete'}
           </button>
@@ -125,7 +125,7 @@ export default function PortalDashboard({ user, onSignOut }) {
     <>
       <header className="dashboard-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <Link href="/" className="header-logo">Workflow<span style={{ color: 'var(--gold)' }}>.</span></Link>
+          <Link href="/" className="header-logo">Sharpin<span style={{ color: 'var(--gold)' }}>.</span></Link>
           <div className="header-divider" />
           <span className="header-title">Dashboard</span>
         </div>
@@ -221,7 +221,7 @@ export default function PortalDashboard({ user, onSignOut }) {
       </div>
 
       <footer style={{ padding: '32px 24px', fontSize: '0.76rem', borderTop: '1px solid #e8ecf1', textAlign: 'center', color: 'var(--text-light)' }}>
-        <Link href="/" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Workflow Partners</Link> &middot; Technology-agnostic workflow optimisation
+        <Link href="/" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Sharpin</Link> &middot; Technology-agnostic process optimisation
       </footer>
     </>
   );

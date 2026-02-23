@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { getSupabaseClient } from '@/lib/supabase';
 import PortalAuth from './PortalAuth';
 import PortalDashboard from './PortalDashboard';
+import DiagnosticEdit from './DiagnosticEdit';
 import './portal.css';
 
 export default function PortalPage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [supabase, setSupabase] = useState(null);
+  const [editingReportId, setEditingReportId] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -60,7 +62,7 @@ export default function PortalPage() {
       <>
         <header className="dashboard-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <Link href="/" className="header-logo">Workflow<span style={{ color: 'var(--gold)' }}>.</span></Link>
+            <Link href="/" className="header-logo">Sharpin<span style={{ color: 'var(--gold)' }}>.</span></Link>
             <div className="header-divider" />
             <span className="header-title">Dashboard</span>
           </div>
@@ -77,7 +79,7 @@ export default function PortalPage() {
       <>
         <header className="dashboard-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <Link href="/" className="header-logo">Workflow<span style={{ color: 'var(--gold)' }}>.</span></Link>
+            <Link href="/" className="header-logo">Sharpin<span style={{ color: 'var(--gold)' }}>.</span></Link>
           </div>
         </header>
         <div className="portal-wrap" style={{ maxWidth: 400, margin: '48px auto', padding: 24 }}>
@@ -87,5 +89,15 @@ export default function PortalPage() {
     );
   }
 
-  return <PortalDashboard user={user} onSignOut={handleSignOut} />;
+  if (editingReportId) {
+    return (
+      <DiagnosticEdit
+        reportId={editingReportId}
+        email={user.email}
+        onBack={() => setEditingReportId(null)}
+      />
+    );
+  }
+
+  return <PortalDashboard user={user} onSignOut={handleSignOut} onEditReport={setEditingReportId} />;
 }

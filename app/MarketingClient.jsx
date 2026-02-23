@@ -169,7 +169,7 @@ export default function MarketingClient() {
       <nav ref={navRef} className="mkt-nav">
         <div className="nav-inner">
           <Link href="/" className="logo" onClick={closeMenu}>
-            Workflow<span className="logo-accent">.</span>
+            Sharpin<span className="logo-accent">.</span>
           </Link>
           <button
             className={`nav-toggle${menuOpen ? ' open' : ''}`}
@@ -315,12 +315,12 @@ export default function MarketingClient() {
 
             {/* The Right Way */}
             <div className="comp-panel new scroll-reveal">
-              <div className="comp-panel-label">The Workflow Way</div>
+              <div className="comp-panel-label">The Sharpin Way</div>
               <h3>Process-First Strategy</h3>
               <div className="mockup">
                 <div className="mockup-bar">
                   <div className="mockup-dot r" /><div className="mockup-dot y" /><div className="mockup-dot g" />
-                  <div className="mockup-bar-title">Workflow Diagnostic Dashboard</div>
+                  <div className="mockup-bar-title">Sharpin Diagnostic Dashboard</div>
                 </div>
                 <div className="mockup-body">
                   <div className="dash-tabs">
@@ -532,8 +532,8 @@ export default function MarketingClient() {
       <footer className="mkt-footer">
         <div className="footer-content">
           <div>
-            <div className="footer-brand">Workflow Partners</div>
-            <p className="footer-tagline">Technology-agnostic workflow optimization. We fix broken processes and apply the right technology so your team delivers more without growing proportionally.</p>
+            <div className="footer-brand">Sharpin</div>
+            <p className="footer-tagline">Technology-agnostic process optimization. We fix broken processes and apply the right technology so your team delivers more without growing proportionally.</p>
           </div>
           <div>
             <h4>Services</h4>
@@ -560,7 +560,7 @@ export default function MarketingClient() {
           </div>
         </div>
         <div className="footer-bottom">
-          <p>&copy; {new Date().getFullYear()} Workflow Partners. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Sharpin. All rights reserved.</p>
         </div>
       </footer>
     </div>

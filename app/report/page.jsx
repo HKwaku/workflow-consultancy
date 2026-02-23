@@ -198,7 +198,7 @@ function ReportContent() {
       )}
 
       <p style={{ padding: '30px 20px', textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-mid)' }}>
-        Workflow Partners &middot; <Link href="/">Home</Link> &middot; <Link href="/diagnostic">New Diagnostic</Link>
+        Sharpin &middot; <Link href="/">Home</Link> &middot; <Link href="/diagnostic">New Diagnostic</Link>
       </p>
     </div>
   );
