@@ -1,4 +1,4 @@
-# Diagnostics Flow — Capabilities Document
+# Diagnostics Flow - Capabilities Document
 
 > **Last updated:** 2026-02-22
 > This document describes every screen, feature, and capability of the diagnostic tool in `diagnostic.html`. It should be updated whenever changes are made to the diagnostics flow.
@@ -124,39 +124,39 @@ Users can loop back to add more processes (from screen17) before viewing final r
 
 ## Screen-by-Screen Breakdown
 
-### Screen 0 — Welcome
+### Screen 0 - Welcome
 - Landing page with a readiness checklist.
 - Two entry points: **Start Diagnostic** (standard) or **Start a Team Diagnostic** (collaborative).
 - Option to resume a saved draft or load a report by ID.
 
-### Screen Team — Team Diagnostic Setup
+### Screen Team - Team Diagnostic Setup
 - Full-page setup (not a modal) matching the standard screen layout.
 - Select a process from a grid of templates or enter a custom one.
 - Enter company name, creator name, and email.
-- **Create session** via `/api/team?action=create` — returns a team code and shareable join link.
+- **Create session** via `/api/team?action=create` - returns a team code and shareable join link.
 - **Join session** by entering a team code.
 
-### Screen 1 — Process Selection
+### Screen 1 - Process Selection
 - Grid of 9 pre-defined process templates (e.g., Invoice Processing, Employee Onboarding).
 - Option to type a custom process name.
 - Single-select; highlights chosen card.
 
-### Screen 2 — Name Your Process
+### Screen 2 - Name Your Process
 - Free-text input to name the specific instance of the process.
 - Pre-filled from the template chosen in screen 1 (editable).
 
-### Screen 3 — Define Process Boundaries
+### Screen 3 - Define Process Boundaries
 - **Starts when**: Free text describing what triggers the process.
 - **Completes when**: Free text describing what constitutes completion.
 - **Complexity**: Radio group with 4 levels (Straightforward → Complex multi-path).
 - **Departments involved**: Checkbox grid of 8 standard departments + custom entry.
 
-### Screen 4 — Last Real Example
+### Screen 4 - Last Real Example
 - Name of the last real instance of this process.
 - Start date, end date (date pickers).
 - Calculated elapsed days displayed automatically.
 
-### Screen 5 — Your Time Investment
+### Screen 5 - Your Time Investment
 Structured inputs replacing vague "how many hours" questions:
 - **Meetings**: Radio (None / 1–2 / 3–5 / 6+) → mapped to hour values.
 - **Emails & messages**: Radio (None / 1–5 / 6–15 / 16+) → mapped to hour values.
@@ -165,13 +165,13 @@ Structured inputs replacing vague "how many hours" questions:
 - **Rework level**: Radio (None / Minor / Moderate / Major).
 - Total hours auto-calculated from selections.
 
-### Screen 6 — Performance Assessment
+### Screen 6 - Performance Assessment
 - **Typical timing**: Radio (Faster than target / On target / Slower / Much slower).
 - **Issues encountered**: Checkbox list of 11 common issues (unclear handoffs, waiting for approvals, manual data entry, etc.) + free-text "Other".
 - **Biggest delay**: Dropdown auto-populated from checked issues.
 - **Delay details**: Free text for specifics.
 
-### Screen 7 — Step Breakdown
+### Screen 7 - Step Breakdown
 The most feature-rich screen. Users build the process step-by-step.
 
 **Contextual guidance:**
@@ -216,38 +216,38 @@ The most feature-rich screen. Users build the process step-by-step.
 - A progress bar visible from screen 7 onward.
 - Score based on recency, detail, handoff clarity, system coverage, etc.
 
-### Screen 8 — Handoff Analysis
+### Screen 8 - Handoff Analysis
 For each transition between consecutive steps:
 - **Method**: Radio group (Email, Chat, In-person, System notification, Shared document, Phone, Other).
 - **Clarity**: Radio group (Clear first time / Sometimes unclear / Often unclear with rework / Major breakdowns).
 
-### Screen 9 — Bottleneck Identification
+### Screen 9 - Bottleneck Identification
 - **Longest step**: Dropdown populated from step list.
 - **Why it takes longest**: Radio (Waiting for someone, Manual data work, Approval delays, System limitations, Knowledge gaps, Coordination overhead, Compliance requirements, Other).
 - **Biggest bottleneck**: Dropdown of all steps.
 
-### Screen 10 — Systems & Tools
+### Screen 10 - Systems & Tools
 Dynamic list of systems used in the process:
 - System name.
 - Purpose description.
 - Action checkboxes: Read, Copy out, Copy in, Reconcile.
 
-### Screen 11 — Approvals & Decisions
+### Screen 11 - Approvals & Decisions
 - **Number of approvals** (0–10 selector).
 - Per approval: Name, approver, number of rounds, assessment (rubber stamp → substantial review).
 
-### Screen 12 — Knowledge & Documentation
+### Screen 12 - Knowledge & Documentation
 - Where someone looks first for help (radio: documented procedure, ask colleague, figure it out, check system).
 - Who they ask (radio: specific person, anyone in team, manager, external).
 - Impact if that person is on vacation (radio: no impact → process stops).
 - Time to get an answer (radio: minutes to days+).
 
-### Screen 13 — New Hire Reality
+### Screen 13 - New Hire Reality
 - How new hires learn (checkbox: shadow, written guide, trial & error, formal training, video, mentor, self-service, other).
 - Time to competence (radio: days to 6+ months).
 - What they struggle with most (free text).
 
-### Screen 14 — Frequency & Volume
+### Screen 14 - Frequency & Volume
 - **Frequency**: Radio (Multiple times daily → Quarterly or less).
 - **Annual instances**: Auto-calculated from frequency, editable.
 - **Currently in-flight**: Number input.
@@ -255,19 +255,19 @@ Dynamic list of systems used in the process:
 - **Stuck / delayed**: Number input.
 - **Waiting for external**: Number input.
 
-### Screen 15 — Cost Calculation
+### Screen 15 - Cost Calculation
 - **Hourly rate** (£/$/€): Number input.
 - Auto-calculated per-instance cost (hours × rate).
 - Auto-calculated annual cost (instances × per-instance cost).
 
-### Screen 16 — Team Cost & Savings
+### Screen 16 - Team Cost & Savings
 - **Team size** working on this process.
 - **Total annual team cost** (calculated).
 - **"50% faster" savings** projection.
 - **Expected impact** (radio: 10% → 50%+ time savings).
 - **What would you do with saved time?** (checkboxes: more throughput, quality, new initiatives, reduce overtime, training, customer focus, other).
 
-### Screen 17 — Priority Assessment
+### Screen 17 - Priority Assessment
 - **Priority level** (radio: Critical → Low).
 - **Why this priority** (free text).
 - **Analyse another process?** (radio: Yes / No). If "Yes", loops back to screen 1 for the next process.
@@ -277,21 +277,21 @@ Dynamic list of systems used in the process:
 - For each pair of processes, user selects: A blocks B / B blocks A / Shared resource bottleneck / No dependency.
 - Produces a dependency graph in the report.
 
-### Screen 18 — Contact Details
+### Screen 18 - Contact Details
 - Name, email, company, job title.
 - Industry (select: Technology, Financial Services, Healthcare, Manufacturing, Retail, Professional Services, Government, Education, Other).
 - Team size (radio: 1–5 → 200+).
 - **Two-step submit confirmation**: First click changes button to "Confirm and Generate" with a pulsing highlight; second click submits. Auto-resets after 5 seconds if the user doesn't confirm.
 
-### Screen 19 — Results & Report
+### Screen 19 - Results & Report
 Final analysis output with multiple sections:
 
 - **Process summary cards** for each assessed process.
 - **AI or rule-based recommendations** (collapsible sections).
-- **Automation Readiness Score** — percentage gauge built from step classifications.
-- **Flowchart diagrams** — Grid and Swimlane views, togglable.
-- **90-Day Improvement Roadmap** — phased action plan.
-- **ROI Projection Calculator** — interactive sliders.
+- **Automation Readiness Score** - percentage gauge built from step classifications.
+- **Flowchart diagrams** - Grid and Swimlane views, togglable.
+- **90-Day Improvement Roadmap** - phased action plan.
+- **ROI Projection Calculator** - interactive sliders.
 - **Process Dependency Graph** (if multiple processes).
 - **Edit buttons** on each section to go back and modify data.
 
@@ -301,7 +301,7 @@ Final analysis output with multiple sections:
 
 ### Progress Bar & Phase Labels
 - A gradient progress bar at the top of every screen shows completion percentage.
-- Text reads "Step X of 18 — Phase: Screen Name" (e.g., "Step 5 of 18 — Measure: Time Investment").
+- Text reads "Step X of 18 - Phase: Screen Name" (e.g., "Step 5 of 18 - Measure: Time Investment").
 - Below the bar, five phase dots provide a mental map of the journey:
   - **Define** (screens 1–3): Process selection and boundaries.
   - **Measure** (screens 4–6): Real example, time, and performance data.
@@ -319,7 +319,7 @@ Every screen includes a "why this matters" helper line connecting the question t
 - Screen 11: "Approval bottlenecks are one of the top causes of process delays."
 - Screen 12: "How people find answers reveals whether your process relies on documentation or on specific people."
 - Screen 13: "How fast new hires ramp up reveals how well the process is documented and transferable."
-- Screen 14: "Volume drives the business case — even small per-instance savings compound dramatically."
+- Screen 14: "Volume drives the business case - even small per-instance savings compound dramatically."
 - Screen 15: "Putting a real number on process cost makes the case for improvement tangible."
 - Screen 16: "Your time is just part of the picture. The full team cost reveals the true organisational impact."
 - Screen 17: "Your assessment helps us focus recommendations on what matters most to you right now."
@@ -354,7 +354,7 @@ Screens without hard validation requirements (8, 9, 10, 11, 12, 13, 15, 16, 17) 
 - Any step can be toggled as a decision point.
 - Two default branch rows (expandable to any number).
 - Branch targets resolve by step number or partial name match.
-- Decision nodes suppress sequential arrows — branch arrows handle outgoing connections.
+- Decision nodes suppress sequential arrows - branch arrows handle outgoing connections.
 
 ### Live Flow Preview (Screen 7)
 - Real-time SVG rendering as users add/edit steps.
@@ -415,7 +415,7 @@ Screens without hard validation requirements (8, 9, 10, 11, 12, 13, 15, 16, 17) 
   - Global channel allocator per inter-row gap.
   - **Smart vertex assignment**: branches distributed across all 4 diamond vertices (top, right, bottom, left) to avoid label pile-up.
   - Pass 1: detect sequential entry side, compute ideal exit per branch, resolve conflicts with preference order (bottom, right, left, top).
-  - Pass 2: route and draw — exit from assigned vertex; entry on target from facing side (same-row left/right, cross-row top).
+  - Pass 2: route and draw - exit from assigned vertex; entry on target from facing side (same-row left/right, cross-row top).
   - Loop-backs prefer TOP; forward cross-row prefer BOTTOM; same-row prefer LEFT/RIGHT.
   - Same-row adjacent branches use direct horizontal lines; non-adjacent route through gap.
   - LEFT/RIGHT exit to gap: horizontal arm from vertex → vertical turn to gap → horizontal in gap → vertical to target.

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseHeaders, isValidUUID, isValidEmail, fetchWithTimeout } from '@/lib/api-helpers';
+import { getSupabaseHeaders, isValidUUID, isValidEmail, fetchWithTimeout, stripEmDashes, requireSupabase } from '@/lib/api-helpers';
 
 export async function POST(request) {
   try {
@@ -9,10 +9,10 @@ export async function POST(request) {
     if (!isValidUUID(reportId)) return NextResponse.json({ error: 'Invalid report ID format.' }, { status: 400 });
     if (!isValidEmail(email)) return NextResponse.json({ error: 'Invalid email format.' }, { status: 400 });
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+    const sbConfig = requireSupabase();
+    if (!sbConfig) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+    const { url: supabaseUrl, key: supabaseKey } = sbConfig;
     const anthropicKey = process.env.ANTHROPIC_API_KEY;
-    if (!supabaseUrl || !supabaseKey) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
     if (!anthropicKey) return NextResponse.json({ error: 'AI service not configured.' }, { status: 503 });
 
     const { regenerate } = body || {};
@@ -59,7 +59,7 @@ export async function POST(request) {
       const lastBrace = cleaned.lastIndexOf('}');
       if (firstBrace !== -1 && lastBrace > firstBrace) cleaned = cleaned.substring(firstBrace, lastBrace + 1);
       cleaned = cleaned.replace(/,\s*([}\]])/g, '$1');
-      redesign = JSON.parse(cleaned);
+      redesign = stripEmDashes(JSON.parse(cleaned));
     } catch (parseErr) {
       console.error('Failed to parse AI response:', parseErr.message);
       return NextResponse.json({ error: 'AI response was not valid JSON.' }, { status: 502 });

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseHeaders, getSupabaseWriteHeaders, isValidUUID } from '@/lib/api-helpers';
+import { getSupabaseHeaders, getSupabaseWriteHeaders, isValidUUID, requireSupabase } from '@/lib/api-helpers';
 
 export async function GET(request) {
   try {
@@ -11,9 +11,9 @@ export async function GET(request) {
     if (!id) return NextResponse.json({ error: 'Report ID is required. Use ?id=xxx' }, { status: 400 });
     if (!isValidUUID(id)) return NextResponse.json({ error: 'Invalid report ID format.' }, { status: 400 });
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-    if (!supabaseUrl || !supabaseKey) return NextResponse.json({ error: 'Report storage not configured.' }, { status: 503 });
+    const sbConfig = requireSupabase();
+    if (!sbConfig) return NextResponse.json({ error: 'Report storage not configured.' }, { status: 503 });
+    const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
     if (editable === 'true') {
       if (!email) return NextResponse.json({ error: 'Email is required for ownership verification.' }, { status: 400 });
@@ -90,9 +90,9 @@ export async function PATCH(request) {
     if (!id || !isValidUUID(id)) return NextResponse.json({ error: 'Valid report ID required.' }, { status: 400 });
     if (!steps || !Array.isArray(steps) || steps.length === 0) return NextResponse.json({ error: 'steps array is required.' }, { status: 400 });
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-    if (!supabaseUrl || !supabaseKey) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+    const sbConfig = requireSupabase();
+    if (!sbConfig) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+    const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
     const readResp = await fetch(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${id}&select=diagnostic_data`, { headers: getSupabaseHeaders(supabaseKey) });
     if (!readResp.ok) return NextResponse.json({ error: 'Failed to read report.' }, { status: 502 });

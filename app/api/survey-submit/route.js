@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fetchWithTimeout } from '@/lib/api-helpers';
+import { fetchWithTimeout, stripEmDashes } from '@/lib/api-helpers';
 
 export async function POST(request) {
   try {
@@ -58,5 +58,5 @@ async function generateAIAnalysis(workflows, metrics, diagnostic) {
   const data = await response.json();
   let text = data.content[0].text;
   text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-  return JSON.parse(text);
+  return stripEmDashes(JSON.parse(text));
 }

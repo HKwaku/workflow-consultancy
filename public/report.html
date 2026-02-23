@@ -237,11 +237,11 @@
                 <div id="stateReport" style="display:none;">
                     <div class="report-header">
                         <div class="meta">
-                            <strong id="reportCompany">—</strong>
-                            <span id="reportContact">—</span>
+                            <strong id="reportCompany">--</strong>
+                            <span id="reportContact">--</span>
                         </div>
                         <div class="meta" style="text-align: right;">
-                            <span id="reportDate">—</span>
+                            <span id="reportDate">--</span>
                         </div>
                     </div>
 
@@ -288,9 +288,9 @@
                     <!-- Portal link -->
                     <div id="dashboardLink" class="download-section" style="display: none; margin-top: 16px; background: linear-gradient(135deg, #faf5ff, #eff6ff);">
                         <h3>Track Your Progress Over Time</h3>
-                        <p>Run another diagnostic in the future and compare results side-by-side in your portal.</p>
+                        <p>Run another diagnostic in the future and compare results side-by-side in your client login.</p>
                         <a id="dashboardBtn" href="/portal" class="btn btn-accent" style="text-decoration: none;">
-                            View in Dashboard
+                            View in Client Login
                         </a>
                     </div>
                 </div>
@@ -352,7 +352,7 @@
 
             // Header
             document.getElementById('reportCompany').textContent = report.company || c.company || 'Your Company';
-            document.getElementById('reportContact').textContent = `${report.contactName || c.name || ''} — ${report.contactEmail || c.email || ''}`;
+            document.getElementById('reportContact').textContent = `${report.contactName || c.name || ''} | ${report.contactEmail || c.email || ''}`;
             document.getElementById('reportDate').textContent = formatDate(report.createdAt);
 
             // Metrics

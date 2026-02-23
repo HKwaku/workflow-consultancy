@@ -105,7 +105,7 @@
 .section-title strong { font-weight: 700; }
 .section-desc { font-size: 1.02rem; color: var(--text-light); line-height: 1.85; font-weight: 300; }
 
-/* ===== Sound Familiar — Sliding pair carousel ===== */
+/* ===== Sound Familiar - Sliding pair carousel ===== */
 .mkt .signals-section {
   padding: 7rem 2.5rem 6rem;
   background: #f5f0eb;
@@ -120,7 +120,7 @@
   min-height: 300px;
 }
 
-/* Pair wrapper — holds 2 cards side by side */
+/* Pair wrapper - holds 2 cards side by side */
 .signal-pair {
   display: grid; grid-template-columns: 1fr 1fr; gap: 1.75rem;
   position: absolute; inset: 0; width: 100%;
@@ -138,7 +138,7 @@
   pointer-events: none;
 }
 
-/* Card — white, clean, soft shadow */
+/* Card - white, clean, soft shadow */
 .signal-card {
   background: white;
   border-radius: 20px;
@@ -268,7 +268,7 @@
 .ai-chat-bubble.bot .bubble-tag { color: rgba(255,255,255,0.3); }
 .ai-warn-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; margin-top: 4px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.15); border-radius: 8px; font-size: 0.65rem; color: #f87171; }
 
-/* ===== Approach — Interactive Flowchart ===== */
+/* ===== Approach - Interactive Flowchart ===== */
 .approach-section { background: #f5f0eb; }
 
 @keyframes flowDash { to { stroke-dashoffset: -24; } }
@@ -340,7 +340,7 @@
 .flow-node.green .flow-node-tag { background: rgba(22,163,74,0.08); color: #16a34a; }
 
 /* Connectors */
-/* Connectors — desktop defaults */
+/* Connectors - desktop defaults */
 .flow-node-connector { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .flow-node-connector .conn-v { display: none; }
 .flow-node-connector .conn-h-vert { display: none; }
@@ -363,7 +363,7 @@
 .flow-return-line { order: 8; }
 .flow-return-label-mobile { order: 9; display: none; }
 
-/* Return line — desktop */
+/* Return line - desktop */
 .flow-return-line {
   width: 100%; flex-basis: 100%; position: relative;
   padding: 0.5rem 0 0;

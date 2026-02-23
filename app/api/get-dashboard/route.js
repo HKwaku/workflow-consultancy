@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { isValidEmail, isValidReportId } from '@/lib/api-helpers';
+import { isValidEmail, isValidReportId, requireSupabase } from '@/lib/api-helpers';
 import { createClient } from '@supabase/supabase-js';
 
 export async function GET(request) {
@@ -8,9 +8,9 @@ export async function GET(request) {
     if (!email) return NextResponse.json({ error: 'Email is required. Use ?email=xxx' }, { status: 400 });
     if (!isValidEmail(email)) return NextResponse.json({ error: 'Invalid email format.' }, { status: 400 });
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-    if (!supabaseUrl || !supabaseKey) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+    const sbConfig = requireSupabase();
+    if (!sbConfig) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+    const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     const emailLower = email.toLowerCase().trim();
@@ -71,7 +71,7 @@ export async function GET(request) {
     return NextResponse.json({ success: true, email: emailLower, totalReports: reports.length, reports, deltas });
   } catch (err) {
     console.error('Get dashboard error:', err);
-    return NextResponse.json({ error: 'Failed to retrieve dashboard data.' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to retrieve reports.' }, { status: 500 });
   }
 }
 
@@ -83,9 +83,9 @@ export async function DELETE(request) {
     if (!isValidReportId(reportId)) return NextResponse.json({ error: 'Invalid report ID format.' }, { status: 400 });
     if (!isValidEmail(email)) return NextResponse.json({ error: 'Invalid email format.' }, { status: 400 });
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-    if (!supabaseUrl || !supabaseKey) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+    const sbConfig = requireSupabase();
+    if (!sbConfig) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+    const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     const normalEmail = email.toLowerCase();

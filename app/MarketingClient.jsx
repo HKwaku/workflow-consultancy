@@ -15,7 +15,7 @@ const signals = [
   {
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l3 3" /><circle cx="12" cy="12" r="10" /></svg>,
     headline: 'Processes that take days when they should take hours',
-    detail: 'Approvals stall, handoffs multiply, and no-one can explain why a simple request takes two weeks. The cost compounds silently — in overtime, missed deadlines, and frustrated clients.',
+    detail: 'Approvals stall, handoffs multiply, and no-one can explain why a simple request takes two weeks. The cost compounds silently: overtime, missed deadlines, and frustrated clients.',
   },
   {
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /><path d="M16 13H8M16 17H8M10 9H8" /></svg>,
@@ -30,7 +30,7 @@ const signals = [
   {
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></svg>,
     headline: 'Growing headcount but not growing output',
-    detail: 'You keep hiring, but throughput barely shifts. The bottleneck isn\'t people — it\'s the process underneath them.',
+    detail: 'You keep hiring, but throughput barely shifts. The bottleneck isn\'t people. It\'s the process underneath them.',
   },
   {
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>,
@@ -40,7 +40,7 @@ const signals = [
   {
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></svg>,
     headline: 'Decisions made by email chain instead of data',
-    detail: 'Information is scattered across inboxes and chat threads. By the time it\'s gathered, the moment — and the margin — has passed.',
+    detail: 'Information is scattered across inboxes and chat threads. By the time it\'s gathered, the moment, and the margin, has passed.',
   },
 ];
 
@@ -86,7 +86,7 @@ function SignalsCarousel({ scrollTo }) {
         <div className="section-header scroll-reveal">
           <div className="section-label">Sound familiar?</div>
           <h2 className="section-title">The Problems That Quietly Drain <strong>Your Profitability</strong></h2>
-          <p className="section-desc">These operational symptoms cost more than most leaders realise. If any resonate, the good news is they&apos;re measurable &mdash; and fixable.</p>
+          <p className="section-desc">These operational symptoms cost more than most leaders realise. If any resonate, the good news is they&apos;re measurable, and fixable.</p>
         </div>
 
         <div className="signals-carousel">
@@ -182,7 +182,7 @@ export default function MarketingClient() {
             <li><a href="#diagnostic" onClick={scrollTo('diagnostic')}>Diagnostic</a></li>
             <li><a href="#services" onClick={scrollTo('services')}>Services</a></li>
             <li><a href="#approach" onClick={scrollTo('approach')}>Approach</a></li>
-            <li><Link href="/portal" onClick={closeMenu}>Portal</Link></li>
+            <li><Link href="/portal" onClick={closeMenu}>Client Login</Link></li>
             <li><a href="#contact" className="cta-nav" onClick={scrollTo('contact')}>Get Started</a></li>
           </ul>
         </div>
@@ -217,7 +217,7 @@ export default function MarketingClient() {
 
       </section>
 
-      {/* Sound Familiar — Sliding carousel */}
+      {/* Sound Familiar - Sliding carousel */}
       <SignalsCarousel scrollTo={scrollTo} />
 
 
@@ -320,7 +320,7 @@ export default function MarketingClient() {
               <div className="mockup">
                 <div className="mockup-bar">
                   <div className="mockup-dot r" /><div className="mockup-dot y" /><div className="mockup-dot g" />
-                  <div className="mockup-bar-title">Sharpin Diagnostic Dashboard</div>
+                  <div className="mockup-bar-title">Sharpin Client Login</div>
                 </div>
                 <div className="mockup-body">
                   <div className="dash-tabs">
@@ -435,7 +435,7 @@ export default function MarketingClient() {
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" /><circle cx="12" cy="12" r="4" /></svg>
               </div>
               <h4>Compound</h4>
-              <p>Implement, track real impact &mdash; every fix fuels the next</p>
+              <p>Implement, track real impact. Every fix fuels the next</p>
               <span className="flow-node-tag">Compounding Gains</span>
             </div>
 
@@ -493,8 +493,8 @@ export default function MarketingClient() {
           <div className="services-grid">
             {[
               { num: '1', title: 'Diagnose', time: '2\u20136 weeks', features: ['Map current-state workflows and measure cycle times', 'Data architecture and technology stack review', 'Identify bottlenecks, friction points, and quick wins'], deliverable: 'Diagnostic report with prioritised recommendations and baseline metrics' },
-              { num: '2', title: 'Design', time: '4\u20138 weeks', features: ['Transformation roadmap with milestones', 'Technology selection \u2014 best fit, no vendor bias', 'Change management and business case development'], deliverable: 'Implementation-ready roadmap with process architectures and success metrics' },
-              { num: '3', title: 'Deploy & Scale', time: 'Ongoing', features: ['Implementation oversight with embedded advisory', 'Vendor negotiation and integration support', 'Quarterly reviews and continuous improvement'], deliverable: '3\u201312 month engagements \u2014 first deployment to organisation-wide rollout' },
+              { num: '2', title: 'Design', time: '4\u20138 weeks', features: ['Transformation roadmap with milestones', 'Technology selection: best fit, no vendor bias', 'Change management and business case development'], deliverable: 'Implementation-ready roadmap with process architectures and success metrics' },
+              { num: '3', title: 'Deploy & Scale', time: 'Ongoing', features: ['Implementation oversight with embedded advisory', 'Vendor negotiation and integration support', 'Quarterly reviews and continuous improvement'], deliverable: '3\u201312 month engagements, from first deployment to organisation-wide rollout' },
             ].map((s) => (
               <div key={s.num} className="service-card scroll-reveal">
                 <div className="service-card-head">
@@ -541,7 +541,7 @@ export default function MarketingClient() {
               <li><a href="#services" onClick={scrollTo('services')}>Diagnostic</a></li>
               <li><a href="#services" onClick={scrollTo('services')}>Strategy</a></li>
               <li><a href="#services" onClick={scrollTo('services')}>Implementation</a></li>
-              <li><Link href="/portal">Portal</Link></li>
+              <li><Link href="/portal">Client Login</Link></li>
             </ul>
           </div>
           <div>

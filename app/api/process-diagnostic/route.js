@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fetchWithTimeout } from '@/lib/api-helpers';
+import { fetchWithTimeout, stripEmDashes } from '@/lib/api-helpers';
 import { generateMermaidCode } from '@/lib/mermaid-helper';
 
 export async function POST(request) {
@@ -50,7 +50,7 @@ async function getAIRecommendations(processes, contact) {
   if (!response.ok) throw new Error('Claude API error: ' + response.status);
   const data = await response.json();
   const content = data.content?.[0]?.text || '[]';
-  try { return JSON.parse(content); } catch { return [{ process: 'Overall', type: 'general', text: content.substring(0, 500) }]; }
+  try { return stripEmDashes(JSON.parse(content)); } catch { return [{ process: 'Overall', type: 'general', text: content.substring(0, 500).replace(/\u2014/g, '-') }]; }
 }
 
 function generateRuleBasedRecommendations(processes) {

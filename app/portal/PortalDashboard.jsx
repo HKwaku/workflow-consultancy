@@ -16,6 +16,7 @@ export default function PortalDashboard({ user, onSignOut, onEditReport }) {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [redesigningId, setRedesigningId] = useState(null);
 
   const email = user?.email || '';
 
@@ -48,6 +49,42 @@ export default function PortalDashboard({ user, onSignOut, onEditReport }) {
 
   const handleDeleteClick = (reportId) => {
     setConfirmDeleteId(confirmDeleteId === reportId ? null : reportId);
+  };
+
+  const handleRedesign = async (reportId) => {
+    setRedesigningId(reportId);
+    try {
+      const resp = await fetch('/api/generate-redesign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, reportId })
+      });
+      const data = await resp.json();
+      if (resp.ok && data.success && data.redesign?.optimisedProcesses) {
+        const procs = data.redesign.optimisedProcesses.map((p) => ({
+          processName: p.processName || p.name || 'Redesigned Process',
+          steps: (p.steps || []).map((s, i) => ({
+            number: i + 1,
+            name: s.name || s.stepName || `Step ${i + 1}`,
+            department: s.department || 'Operations',
+            isDecision: s.isDecision || false,
+            isExternal: s.isExternal || false,
+            branches: s.branches || [],
+            removed: s.removed
+          }))
+        }));
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.setItem('redesignProcesses', JSON.stringify(procs));
+        }
+        window.location.href = '/diagnostic?render-redesign';
+      } else {
+        alert(data.error || 'Failed to generate redesign.');
+      }
+    } catch {
+      alert('Failed to generate redesign. Please try again.');
+    } finally {
+      setRedesigningId(null);
+    }
   };
 
   const handleDeleteConfirm = async (reportId) => {
@@ -84,11 +121,14 @@ export default function PortalDashboard({ user, onSignOut, onEditReport }) {
         <span className={'process-dot ' + s.dot} />
         <div className="process-name">
           <strong>{procs}</strong>
-          <span className="process-val"> &mdash; {date}</span>
+          <span className="process-val"> | {date}</span>
         </div>
         <span className={'process-tag ' + s.tag}>{s.tagText}</span>
         <div className="process-actions">
-          <Link href={'/report?id=' + r.id} className="process-btn process-btn-view">View</Link>
+          <Link href={'/diagnostic?view=' + r.id} className="process-btn process-btn-view">View</Link>
+          <button type="button" onClick={() => handleRedesign(r.id)} className="process-btn process-btn-redesign" disabled={redesigningId === r.id}>
+            {redesigningId === r.id ? 'Generating...' : 'Redesign'}
+          </button>
           <button type="button" onClick={handleEdit} className="process-btn process-btn-edit">Edit</button>
           <button type="button" className="process-btn process-btn-delete" onClick={() => handleDeleteClick(r.id)} disabled={isDeleting}>
             {isDeleting ? 'Deleting...' : 'Delete'}
@@ -113,9 +153,9 @@ export default function PortalDashboard({ user, onSignOut, onEditReport }) {
 
   const statusLegend = (
     <div className="status-legend">
-      <span className="status-legend-item"><span className="status-legend-dot green" /><span className="status-legend-label">Automation Ready</span><span className="status-legend-desc">&mdash; 70%+ automatable</span></span>
-      <span className="status-legend-item"><span className="status-legend-dot amber" /><span className="status-legend-label">Improvements Required</span><span className="status-legend-desc">&mdash; 40&ndash;69% automatable</span></span>
-      <span className="status-legend-item"><span className="status-legend-dot red" /><span className="status-legend-label">Requires Process Redesign</span><span className="status-legend-desc">&mdash; below 40%</span></span>
+      <span className="status-legend-item"><span className="status-legend-dot green" /><span className="status-legend-label">Automation Ready</span><span className="status-legend-desc">- 70%+ automatable</span></span>
+      <span className="status-legend-item"><span className="status-legend-dot amber" /><span className="status-legend-label">Improvements Required</span><span className="status-legend-desc">- 40&ndash;69% automatable</span></span>
+      <span className="status-legend-item"><span className="status-legend-dot red" /><span className="status-legend-label">Requires Process Redesign</span><span className="status-legend-desc">- below 40%</span></span>
     </div>
   );
 
@@ -127,7 +167,7 @@ export default function PortalDashboard({ user, onSignOut, onEditReport }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <Link href="/" className="header-logo">Sharpin<span style={{ color: 'var(--gold)' }}>.</span></Link>
           <div className="header-divider" />
-          <span className="header-title">Dashboard</span>
+          <span className="header-title">Client Login</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span className="header-email">{email}</span>
@@ -148,17 +188,17 @@ export default function PortalDashboard({ user, onSignOut, onEditReport }) {
           <div className="fade-in">
             <div className="metrics-row">
               <div className="metric-card">
-                <span className="metric-val">{loading ? '\u2014' : totalProcs}</span>
+                <span className="metric-val">{loading ? '--' : totalProcs}</span>
                 <span className="metric-lbl">Process Analyses</span>
               </div>
               <div className="metric-card">
                 <span className="metric-val" style={{ color: loading ? undefined : autoColor }}>
-                  {loading ? '\u2014' : avgAuto + '%'}
+                  {loading ? '--' : avgAuto + '%'}
                 </span>
                 <span className="metric-lbl">Automation Readiness</span>
               </div>
               <div className="metric-card">
-                <span className="metric-val">{loading ? '\u2014' : reportList.length}</span>
+                <span className="metric-val">{loading ? '--' : reportList.length}</span>
                 <span className="metric-lbl">Reports</span>
               </div>
             </div>

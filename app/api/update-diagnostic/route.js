@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { isValidUUID, isValidEmail, getSupabaseHeaders, getSupabaseWriteHeaders } from '@/lib/api-helpers';
+import { isValidUUID, isValidEmail, getSupabaseHeaders, getSupabaseWriteHeaders, requireSupabase } from '@/lib/api-helpers';
 
 export async function PUT(request) {
   try {
@@ -13,10 +13,10 @@ export async function PUT(request) {
     if (!updates || typeof updates !== 'object')
       return NextResponse.json({ error: 'Updates object required.' }, { status: 400 });
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-    if (!supabaseUrl || !supabaseKey)
+    const sbConfig = requireSupabase();
+    if (!sbConfig)
       return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+    const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
     const readUrl = `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}&select=id,contact_email,diagnostic_data`;
     const readResp = await fetch(readUrl, { headers: getSupabaseHeaders(supabaseKey) });

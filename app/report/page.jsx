@@ -69,14 +69,14 @@ function ReportContent() {
     <div style={{ padding: 48, textAlign: 'center' }}>
       <p style={{ color: 'var(--red)' }}>{error}</p>
       <Link href="/diagnostic" style={{ color: 'var(--accent)', marginTop: 16, display: 'inline-block' }}>Start a New Diagnostic</Link><br />
-      <Link href="/portal" style={{ color: 'var(--accent)', marginTop: 8, display: 'inline-block' }}>&larr; Back to Portal</Link>
+      <Link href="/portal" style={{ color: 'var(--accent)', marginTop: 8, display: 'inline-block' }}>&larr; Back to Client Login</Link>
     </div>
   );
 
   if (deleted) return (
     <div style={{ padding: 48, textAlign: 'center' }}>
       <p style={{ color: 'var(--green)', fontWeight: 600, marginBottom: 16 }}>Report deleted successfully.</p>
-      <Link href="/portal" style={{ color: 'var(--accent)', marginTop: 8, display: 'inline-block' }}>&larr; Back to Portal</Link><br />
+      <Link href="/portal" style={{ color: 'var(--accent)', marginTop: 8, display: 'inline-block' }}>&larr; Back to Client Login</Link><br />
       <Link href="/diagnostic" style={{ color: 'var(--accent)', marginTop: 8, display: 'inline-block' }}>Start a New Diagnostic</Link>
     </div>
   );
@@ -95,13 +95,13 @@ function ReportContent() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32, flexWrap: 'wrap', gap: 16 }}>
             <div style={{ fontSize: '0.88rem', color: 'var(--text-light)' }}>
               <strong style={{ display: 'block', fontSize: '1.15rem', color: 'var(--text)', marginBottom: 2 }}>{report.company || c.company || 'Your Company'}</strong>
-              <span>{report.contactName || c.name || ''} &mdash; {report.contactEmail || c.email || ''}</span>
+              <span>{report.contactName || c.name || ''} | {report.contactEmail || c.email || ''}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               <span style={{ fontSize: '0.88rem', color: 'var(--text-light)' }}>{formatDate(report.createdAt)}</span>
               {contactEmail && (
                 <>
-                  <Link href={`/diagnostic?edit=${id}&email=${encodeURIComponent(contactEmail)}`} style={{ padding: '8px 16px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 600, textDecoration: 'none', background: 'transparent', color: 'var(--accent)', border: '1.5px solid var(--border)' }}>Edit</Link>
+                  <Link href={`/portal?edit=${id}`} style={{ padding: '8px 16px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 600, textDecoration: 'none', background: 'transparent', color: 'var(--accent)', border: '1.5px solid var(--border)' }}>Edit</Link>
                   <button onClick={() => setDeleteConfirm(true)} style={{ padding: '8px 16px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 600, border: '1.5px solid var(--border)', background: 'transparent', color: 'var(--text-light)', cursor: 'pointer' }}>Delete</button>
                 </>
               )}
@@ -175,8 +175,8 @@ function ReportContent() {
           {contactEmail && (
             <div style={{ background: 'linear-gradient(135deg, #faf5ff, #eff6ff)', borderRadius: 12, padding: 32, textAlign: 'center', marginTop: 16 }}>
               <h3 style={{ fontSize: '1.1rem', marginBottom: 8, color: 'var(--text)' }}>Track Your Progress Over Time</h3>
-              <p style={{ fontSize: '0.9rem', color: 'var(--text-mid)', marginBottom: 20 }}>Run another diagnostic in the future and compare results side-by-side in your portal.</p>
-              <Link href="/portal" style={{ display: 'inline-block', padding: '14px 36px', borderRadius: 8, fontWeight: 600, fontSize: '1rem', textDecoration: 'none', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: 'white' }}>View in Portal</Link>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-mid)', marginBottom: 20 }}>Run another diagnostic in the future and compare results side-by-side in your client login.</p>
+              <Link href="/portal" style={{ display: 'inline-block', padding: '14px 36px', borderRadius: 8, fontWeight: 600, fontSize: '1rem', textDecoration: 'none', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: 'white' }}>View in Client Login</Link>
             </div>
           )}
         </div>

@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { requireSupabase, getSupabaseHeaders, getSupabaseWriteHeaders } from '@/lib/api-helpers';
 
 export async function POST(request) {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-  if (!supabaseUrl || !supabaseKey) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+  const sbConfig = requireSupabase();
+  if (!sbConfig) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+  const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
   try {
     const { reportId, email, processName, instanceName, status, notes } = await request.json();
@@ -21,7 +22,7 @@ export async function POST(request) {
 
     const sbResp = await fetch(`${supabaseUrl}/rest/v1/process_instances`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Prefer': 'return=minimal' },
+      headers: getSupabaseWriteHeaders(supabaseKey),
       body: JSON.stringify(payload)
     });
 
@@ -34,9 +35,9 @@ export async function POST(request) {
 }
 
 export async function GET(request) {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-  if (!supabaseUrl || !supabaseKey) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+  const sbConfig = requireSupabase();
+  if (!sbConfig) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+  const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
   try {
     const sp = request.nextUrl.searchParams;
@@ -57,7 +58,7 @@ export async function GET(request) {
 
     const sbResp = await fetch(url, {
       method: 'GET',
-      headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Accept': 'application/json' }
+      headers: getSupabaseHeaders(supabaseKey)
     });
 
     if (!sbResp.ok) return NextResponse.json({ error: 'Failed to fetch instances.' }, { status: 502 });

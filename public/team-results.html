@@ -163,7 +163,7 @@
             <a href="/" class="header-back">&larr; Home</a>
         </div>
         <h1>Team Diagnostic Comparison</h1>
-        <p>See how your team's perspectives align — and where they diverge</p>
+        <p>See how your team's perspectives align, and where they diverge</p>
     </div>
 
     <div class="container">
@@ -257,7 +257,7 @@
 
 
         // ═══════════════════════════════════════════════════════════
-        // SAMPLE TEAM DATA — 4 respondents, complexity 10
+        // SAMPLE TEAM DATA - 4 respondents, complexity 10
         // ═══════════════════════════════════════════════════════════
         function getTeamSampleResponses() {
             const base = {
@@ -374,7 +374,7 @@
                         { name: 'Review counter-proposals', dept: 'Legal', mins: 120, isDecision: true, branches: [{ label: 'Accept', target: 'Step 9' }, { label: 'Counter again', target: 'Step 4' }, { label: 'Reject vendor', target: 'Step 10' }] },
                         { name: 'Final legal sign-off', dept: 'Legal', mins: 30 },
                         { name: 'Archive executed contract', dept: 'Legal', mins: 15 },
-                        { name: 'Notify procurement — vendor rejected', dept: 'Procurement', mins: 15 }
+                        { name: 'Notify procurement - vendor rejected', dept: 'Procurement', mins: 15 }
                     ]
                 }
             ];
@@ -489,7 +489,7 @@
                         ? 'No Responses Yet'
                         : '1 Response So Far';
                     document.getElementById('waitingMsg').textContent = data.responseCount === 0
-                        ? `Share the join link: /diagnostic?team=${code} — results appear after 2+ responses.`
+                        ? `Share the join link: /diagnostic?team=${code} - results appear after 2+ responses.`
                         : `${data.responses[0].name} has responded. Waiting for more perspectives before comparison.`;
                     document.getElementById('waitingCode').textContent = code;
                     showState('waiting');
@@ -646,7 +646,7 @@
             // 1. Consensus score (always open)
             const csColor = a.consensusScore >= 70 ? 'var(--green)' : a.consensusScore >= 40 ? 'var(--amber)' : 'var(--red)';
             const csLabel = a.consensusScore >= 70 ? 'Strong Alignment' : a.consensusScore >= 40 ? 'Partial Alignment' : 'Significant Disagreement';
-            html += sec(`Team Consensus: ${a.consensusScore}% — ${csLabel}`, `
+            html += sec(`Team Consensus: ${a.consensusScore}% - ${csLabel}`, `
                 <div class="consensus-bar">
                     <div class="consensus-track"><div class="consensus-fill" style="width: ${a.consensusScore}%; background: ${csColor};"></div></div>
                     <div class="consensus-label"><span>Disagreement</span><span>Full alignment</span></div>
@@ -737,7 +737,7 @@
                 tableHtml += `<tr><td style="font-weight:500;">${row.label}</td>`;
                 responses.forEach(r => {
                     const val = r.metrics[row.key];
-                    const display = val ? val + row.suffix : '—';
+                    const display = val ? val + row.suffix : '--';
                     tableHtml += `<td>${esc(display)}</td>`;
                 });
                 tableHtml += '</tr>';
@@ -749,7 +749,7 @@
             html += `<div class="cta-section">
                 <h3>Turn These Insights Into Action</h3>
                 <p>Perception gaps are the #1 signal of process improvement opportunity. Let's discuss what your team's results reveal.</p>
-                <a href="mailto:hopektettey@gmail.com?subject=Team Diagnostic Discussion — ${encodeURIComponent(team.processName)}" class="cta-button">Book a Call</a>
+                <a href="mailto:hopektettey@gmail.com?subject=Team Diagnostic Discussion - ${encodeURIComponent(team.processName)}" class="cta-button">Book a Call</a>
                 <a href="/diagnostic" class="cta-button secondary">Run Full Diagnostic</a>
             </div>`;
 

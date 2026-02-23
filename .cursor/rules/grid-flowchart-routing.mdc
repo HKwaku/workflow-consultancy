@@ -10,7 +10,7 @@ These rules MUST be followed when generating or modifying the `buildGridSVG()` f
 
 ## Parallel Line Spacing
 
-- `LINE_GAP = 32` — every pair of parallel routing lines must have exactly 32px between them.
+- `LINE_GAP = 32` - every pair of parallel routing lines must have exactly 32px between them.
 - A **global channel allocator** assigns a unique channel index per inter-row gap across ALL decisions (not per-decision).
 - All routing offsets use `channel * LINE_GAP`.
 - `rowH` is set dynamically: `max(baseRowH, NODE_H + maxLinesInAnyGap * LINE_GAP + 2 * LINE_GAP)` to guarantee 32px clearance from node edges.
@@ -24,12 +24,12 @@ These rules MUST be followed when generating or modifying the `buildGridSVG()` f
 
 - **Loop-backs** route their vertical segment through the LEFT margin (`PAD_L - 30 - ch * LINE_GAP`), outside all node columns.
 - **Same-row forward**, **multi-row forward**, and **rare** routes use the RIGHT margin (`RIGHT_MARGIN_BASE + ch * LINE_GAP`), outside all node columns.
-- **Next-row forward** (target is exactly one row below) uses a simple L-route through the inter-row gap — no margin routing needed.
+- **Next-row forward** (target is exactly one row below) uses a simple L-route through the inter-row gap - no margin routing needed.
 - Vertical segments must NEVER pass through intermediate row node areas.
 
 ## Entry Direction
 
-- All branch lines must enter target nodes from ABOVE — use the gap above the target row (`rowGapMidY(tp.row) - chOff`), never the gap below (`rowGapMidY(tp.row + 1)`).
+- All branch lines must enter target nodes from ABOVE - use the gap above the target row (`rowGapMidY(tp.row) - chOff`), never the gap below (`rowGapMidY(tp.row + 1)`).
 
 ## Dynamic Margins
 

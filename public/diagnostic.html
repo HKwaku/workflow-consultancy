@@ -332,7 +332,7 @@
             background: var(--accent-dark, #2d7a90);
         }
 
-        /* (team-process-chip styles removed &mdash; team uses .process-card now) */
+        /* (team-process-chip styles removed - team uses .process-card now) */
 
         .save-modal-success {
             display: none;
@@ -515,6 +515,172 @@
         .welcome-icon {
             font-size: 4rem;
             margin-bottom: 1rem;
+        }
+
+        .welcome-how-it-works {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: var(--radius-md);
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+        .welcome-outcomes li { margin-bottom: 0.35rem; }
+        .welcome-outcomes li:last-child { margin-bottom: 0; }
+        .welcome-what-you-get {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .welcome-get-item {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.6rem;
+            background: rgba(255,255,255,0.8);
+            border-radius: 100px;
+            color: var(--primary);
+            font-weight: 500;
+        }
+        .welcome-path-summary {
+            margin: 1rem 0 0;
+            font-size: 0.8rem;
+            color: var(--text-light);
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        /* Welcome flow diagram */
+        .welcome-flow {
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-alt);
+            border-radius: var(--radius-md);
+        }
+        .welcome-flow-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+        .wf-node {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.75rem 1.25rem;
+            text-align: center;
+            font-size: 0.88rem;
+            color: var(--text-primary);
+            position: relative;
+            max-width: 260px;
+            width: 100%;
+            line-height: 1.4;
+        }
+        .wf-node strong { display: block; }
+        .wf-node-icon { font-size: 1.3rem; margin-bottom: 0.25rem; }
+        .wf-node-detail { display: block; font-size: 0.78rem; color: var(--text-mid); margin-top: 0.15rem; }
+        .wf-node-start {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+            font-weight: 600;
+            border-radius: 100px;
+            padding: 0.6rem 1.5rem;
+            max-width: 200px;
+        }
+        .wf-node-action {
+            border-color: var(--accent);
+            border-width: 2px;
+            transition: box-shadow 0.15s, transform 0.15s;
+        }
+        .wf-node-action:hover {
+            box-shadow: 0 3px 12px rgba(56,163,165,0.15);
+            transform: translateY(-1px);
+        }
+        .wf-node-team { border-color: #7c3aed; }
+        .wf-node-team:hover { box-shadow: 0 3px 12px rgba(124,58,237,0.15); }
+        .wf-node-decision {
+            background: #fffbeb;
+            border-color: #f59e0b;
+            border-width: 2px;
+            border-radius: var(--radius-sm);
+            font-size: 0.84rem;
+            font-weight: 500;
+        }
+        .wf-node-handover {
+            border-color: var(--accent);
+            border-style: dashed;
+            font-size: 0.84rem;
+        }
+        .wf-node-result {
+            background: linear-gradient(135deg, rgba(56,163,165,0.06), rgba(56,163,165,0.02));
+            border-color: var(--accent);
+            font-weight: 500;
+        }
+        .wf-node-team-result {
+            background: linear-gradient(135deg, rgba(124,58,237,0.06), rgba(124,58,237,0.02));
+            border-color: #7c3aed;
+        }
+        .wf-connector {
+            width: 2px;
+            height: 20px;
+            background: var(--border);
+            margin: 0 auto;
+        }
+        .wf-branch {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            width: 100%;
+        }
+        .wf-branch-inner {
+            margin-top: 0.5rem;
+            gap: 1rem;
+        }
+        .wf-path {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            max-width: 280px;
+            gap: 0;
+        }
+        .wf-path-yes, .wf-path-no { max-width: 200px; }
+        .wf-branch-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-mid);
+            margin-bottom: 0.35rem;
+            padding: 0.15rem 0.6rem;
+            background: var(--bg-light);
+            border-radius: 100px;
+            border: 1px solid var(--border);
+        }
+        .wf-steps-row {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 0.5rem 0;
+        }
+        .wf-mini-step {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            color: var(--text-mid);
+            white-space: nowrap;
+        }
+        .wf-mini-arrow { font-size: 0.65rem; color: var(--text-light); }
+
+        @media (max-width: 640px) {
+            .wf-branch { flex-direction: column; align-items: center; gap: 0.75rem; }
+            .wf-branch-inner { flex-direction: column; align-items: center; }
+            .wf-path { max-width: 100%; }
+            .wf-node { max-width: 100%; }
+            .wf-steps-row { gap: 0.15rem; }
         }
 
         .checklist {
@@ -795,39 +961,69 @@
         .dynamic-list {
             display: flex;
             flex-direction: column;
-            gap: 1rem;
-            margin: 1rem 0;
+            gap: 0.4rem;
+            margin: 0.5rem 0;
+        }
+        .dynamic-list-steps {
+            gap: 0.3rem;
+            margin: 0.35rem 0 0.5rem;
+        }
+        .steps-list-wrap {
+            margin-bottom: 0.4rem;
+        }
+        .add-step-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 0.25rem;
+        }
+        .step-limit-hint {
+            font-size: 0.72rem;
+            color: var(--text-light);
         }
 
         .list-item {
             display: flex;
-            gap: 0.75rem;
+            gap: 0.45rem;
             align-items: flex-start;
             background: var(--bg-alt);
-            padding: 1rem;
+            padding: 0.45rem 0.6rem;
             border-radius: var(--radius-md);
+            border: 1px solid transparent;
+            transition: border-color 0.15s;
+        }
+        #stepsList .list-item {
+            padding: 0.4rem 0.55rem;
+            gap: 0.4rem;
+        }
+        .list-item:focus-within {
+            border-color: var(--accent-light, rgba(56,163,165,0.3));
         }
 
         .list-item-number {
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 32px;
-            height: 32px;
+            width: 24px;
+            height: 24px;
+            min-width: 24px;
             background: var(--accent);
             color: white;
             border-radius: 50%;
             font-weight: 600;
             flex-shrink: 0;
-            margin-top: 0.5rem;
-            font-size: 0.85rem;
+            margin-top: 0.25rem;
+            font-size: 0.75rem;
         }
 
         .list-item-content {
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 0.28rem;
+        }
+        #stepsList .list-item-content {
+            gap: 0.25rem;
         }
 
         .list-item-content input,
@@ -837,11 +1033,13 @@
 
         .step-dept-row {
             display: flex;
-            gap: 0.5rem;
+            gap: 0.4rem;
             align-items: center;
         }
         .step-dept-row select {
             flex: 1;
+            padding: 0.35rem 0.5rem;
+            font-size: 0.85rem;
         }
         .step-dept-row .int-ext-toggle {
             display: flex;
@@ -851,8 +1049,8 @@
             flex-shrink: 0;
         }
         .int-ext-toggle label {
-            padding: 0.45rem 0.7rem;
-            font-size: 0.78rem;
+            padding: 0.35rem 0.55rem;
+            font-size: 0.76rem;
             font-weight: 500;
             cursor: pointer;
             border: none;
@@ -884,9 +1082,9 @@
         .step-decision-toggle {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            margin-top: 0.5rem;
-            font-size: 0.82rem;
+            gap: 0.4rem;
+            margin-top: 0.35rem;
+            font-size: 0.8rem;
             color: var(--text-mid);
         }
 
@@ -1045,17 +1243,22 @@
 
         /* -- Live Flow Preview -- */
         .live-flow-preview {
-            margin: 1.5rem 0;
-            border: 1px solid var(--border);
+            margin: 0 0 0.6rem;
+            border: 1px solid var(--accent-light, rgba(56,163,165,0.3));
             border-radius: var(--radius-md);
             overflow: hidden;
+            background: #fcfcfd;
+            position: sticky;
+            top: 64px;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
         .live-flow-toggle {
             display: flex;
             align-items: center;
             gap: 0.5rem;
             width: 100%;
-            padding: 0.75rem 1rem;
+            padding: 0.6rem 1rem;
             background: var(--bg-soft, #f8fafb);
             border: none;
             cursor: pointer;
@@ -1067,11 +1270,66 @@
         }
         .live-flow-toggle:hover { background: #eef2f5; }
         .live-flow-toggle svg { opacity: 0.6; }
+        .step-count-badge {
+            margin-left: auto;
+            font-size: 0.72rem;
+            font-weight: 600;
+            background: var(--accent);
+            color: #fff;
+            padding: 0.15rem 0.55rem;
+            border-radius: 100px;
+        }
         #liveFlowContainer {
             border-top: 1px solid var(--border);
             background: #fcfcfd;
+            max-height: 200px;
+            overflow-y: auto;
         }
-        #liveFlowSvg { min-height: 60px; }
+        #liveFlowSvg { min-height: 40px; }
+
+        .step-jump-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0;
+            margin-bottom: 0.4rem;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            flex-shrink: 0;
+        }
+        .step-jump-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .step-jump-chips {
+            display: flex;
+            gap: 0.3rem;
+            flex-wrap: nowrap;
+        }
+        .step-jump-chip {
+            padding: 0.2rem 0.55rem;
+            font-size: 0.72rem;
+            font-weight: 500;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.15s;
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .step-jump-chip:hover {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
 
         /* -- Drag handle for step reordering -- */
         .step-drag-handle {
@@ -1083,7 +1341,7 @@
             opacity: 0.25;
             transition: opacity 0.2s;
             flex-shrink: 0;
-            margin-top: 0.5rem;
+            margin-top: 0.35rem;
             color: var(--text-light);
             user-select: none;
             -webkit-user-select: none;
@@ -1523,7 +1781,7 @@
             color: var(--accent);
         }
 
-        /* Handoff block */
+        /* Handoff block (legacy standalone) */
         .handoff-block {
             background: var(--bg-alt);
             border-radius: var(--radius-md);
@@ -1543,6 +1801,44 @@
             color: var(--accent);
             font-weight: 700;
         }
+
+        /* Inline handoff (inside step) */
+        .step-handoff-inline {
+            margin-top: 0.35rem;
+            border-top: 1px dashed var(--border);
+            padding-top: 0.35rem;
+        }
+        .step-handoff-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+            color: var(--accent);
+            font-weight: 600;
+            background: none;
+            border: none;
+            padding: 0.2rem 0;
+        }
+        .step-handoff-toggle svg { width: 14px; height: 14px; flex-shrink: 0; }
+        .step-handoff-toggle .chevron { transition: transform 0.2s; }
+        .step-handoff-toggle.open .chevron { transform: rotate(90deg); }
+        .step-handoff-body {
+            display: none;
+            margin-top: 0.35rem;
+            padding: 0.45rem 0.55rem;
+            background: var(--bg-alt);
+            border-radius: var(--radius-sm);
+            border-left: 3px solid var(--accent-light);
+        }
+        .step-handoff-body.open { display: block; }
+        .step-handoff-body .form-group { margin-bottom: 0.75rem; }
+        .step-handoff-body .form-group:last-child { margin-bottom: 0; }
+        .step-handoff-body label { font-size: 0.82rem; color: var(--text-mid); font-weight: 500; margin-bottom: 0.35rem; display: block; }
+        .step-handoff-body .radio-group { display: flex; flex-direction: column; gap: 0.25rem; }
+        .step-handoff-body .radio-option { font-size: 0.82rem; padding: 0.3rem 0; }
+        .step-handoff-answered { color: var(--green); }
+        .step-handoff-pending { color: var(--text-light); }
 
         /* Approval entry */
         .approval-entry {
@@ -1782,12 +2078,12 @@
         .screen7-tip {
             background: #f0f9ff;
             border: 1px solid #bae6fd;
-            border-radius: var(--radius-md);
-            padding: 0.65rem 1rem;
+            border-radius: var(--radius-sm);
+            padding: 0.5rem 0.85rem;
             font-size: 0.85rem;
-            color: #0369a1;
-            margin-bottom: 1rem;
-            line-height: 1.45;
+            color: var(--text-mid);
+            margin-bottom: 0.6rem;
+            line-height: 1.4;
         }
         .import-toggle-btn {
             display: flex;
@@ -2219,10 +2515,10 @@
 
         <!-- Edit mode banner (shown when editing a completed diagnostic) -->
         <div class="edit-banner" id="editBanner">
-            <strong>Edit Mode</strong> &mdash; You're editing a previously completed diagnostic.
+            <strong>Edit Mode</strong>. You're editing a previously completed diagnostic.
             <div class="edit-banner-actions">
                 <button onclick="editGoToProcess(0)">Review Processes</button>
-                <button onclick="goToScreen(18)">Jump to Submit</button>
+                <button onclick="goToScreen(17)">Jump to Submit</button>
             </div>
         </div>
 
@@ -2230,8 +2526,8 @@
         <div class="auth-gate" id="authGate">
             <div class="auth-gate-card">
                 <h3>Sign In Required</h3>
-                <p>You need to be signed in to your dashboard account to edit a completed diagnostic.</p>
-                <a class="auth-gate-btn" id="authGateLink" href="/portal">Sign In to Dashboard</a>
+                <p>You need to be signed in to your client login account to edit a completed diagnostic.</p>
+                <a class="auth-gate-btn" id="authGateLink" href="/portal">Client Login</a>
             </div>
         </div>
 
@@ -2249,33 +2545,126 @@
                 <div class="welcome-hero">
                     <div class="welcome-icon">&#127919;</div>
                     <h1 class="screen-title">Process Diagnostic</h1>
-                    <p class="screen-subtitle">Evidence-based workflow analysis. 12-15 minutes per process.</p>
+                    <p class="screen-subtitle">Evidence-based workflow analysis that reveals where time and money are leaking from your processes.</p>
                 </div>
 
+                <!-- How Diagnostics Work -->
+                <div class="welcome-how-it-works">
+                    <h3 style="margin: 0 0 0.6rem; color: var(--primary); font-size: 1rem;">How diagnostics work</h3>
+                    <p style="margin: 0 0 0.5rem; font-size: 0.9rem; color: var(--text-mid); line-height: 1.55;">Map a real process step-by-step using a recent example (12-15 min). Our AI analyses it and produces a report with:</p>
+                    <div class="welcome-what-you-get">
+                        <span class="welcome-get-item">Cost breakdown</span>
+                        <span class="welcome-get-item">Automation readiness</span>
+                        <span class="welcome-get-item">90-day roadmap</span>
+                    </div>
+                    <p style="margin: 0.75rem 0 0.35rem; font-size: 0.84rem; color: var(--text); font-weight: 600;">Two paths:</p>
+                    <ul class="welcome-outcomes" style="margin: 0; padding-left: 1.2rem; font-size: 0.85rem; color: var(--text-mid); line-height: 1.6;">
+                        <li><strong>Individual:</strong> You map the process. Don't know all the steps? Hand over to a colleague who can add the missing ones.</li>
+                        <li><strong>Team:</strong> Multiple people map the same process independently. Compare perspectives to uncover perception gaps.</li>
+                    </ul>
+                </div>
+
+                <!-- Path Selection - Flow Diagram -->
+                <div class="welcome-flow">
+                    <h3 style="margin-bottom: 0.4rem; color: var(--primary); text-align: center; font-size: 1rem;">Choose your path</h3>
+                    <p style="text-align: center; color: var(--text-mid); font-size: 0.84rem; margin-bottom: 1rem;">Both paths produce AI-powered reports. Pick the one that fits your situation.</p>
+
+                    <div class="welcome-flow-diagram">
+                        <!-- Start node -->
+                        <div class="wf-node wf-node-start">Choose Your Path</div>
+                        <div class="wf-connector"></div>
+
+                        <!-- Branch split -->
+                        <div class="wf-branch">
+                            <!-- Individual path -->
+                            <div class="wf-path">
+                                <div class="wf-node wf-node-action" onclick="goToScreen(1)" style="cursor:pointer;">
+                                    <div class="wf-node-icon">&#128100;</div>
+                                    <strong>Individual Diagnostic</strong>
+                                    <span class="wf-node-detail">12-15 min per process</span>
+                                </div>
+                                <div class="wf-connector"></div>
+                                <div class="wf-steps-row">
+                                    <span class="wf-mini-step">Define</span>
+                                    <span class="wf-mini-arrow">&rarr;</span>
+                                    <span class="wf-mini-step">Measure</span>
+                                    <span class="wf-mini-arrow">&rarr;</span>
+                                    <span class="wf-mini-step">Map Steps &amp; Handoffs</span>
+                                    <span class="wf-mini-arrow">&rarr;</span>
+                                    <span class="wf-mini-step">Assess</span>
+                                    <span class="wf-mini-arrow">&rarr;</span>
+                                    <span class="wf-mini-step">Quantify</span>
+                                </div>
+                                <div class="wf-connector"></div>
+                                <div class="wf-node wf-node-decision">
+                                    <div class="wf-node-icon">&#9670;</div>
+                                    Don't know all the steps?
+                                </div>
+                                <div class="wf-branch wf-branch-inner">
+                                    <div class="wf-path wf-path-yes">
+                                        <span class="wf-branch-label">Yes</span>
+                                        <div class="wf-node wf-node-handover">
+                                            <div class="wf-node-icon">&#128101;</div>
+                                            Hand over to colleague
+                                            <span class="wf-node-detail">They continue where you left off</span>
+                                        </div>
+                                    </div>
+                                    <div class="wf-path wf-path-no">
+                                        <span class="wf-branch-label">No</span>
+                                        <div class="wf-node wf-node-result">
+                                            <div class="wf-node-icon">&#128202;</div>
+                                            AI-Powered Report
+                                            <span class="wf-node-detail">Cost analysis, recommendations, roadmap</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Team path -->
+                            <div class="wf-path">
+                                <div class="wf-node wf-node-action wf-node-team" onclick="openTeamSetup()" style="cursor:pointer;">
+                                    <div class="wf-node-icon">&#128101;</div>
+                                    <strong>Team Diagnostic</strong>
+                                    <span class="wf-node-detail">Understand perception gaps</span>
+                                </div>
+                                <div class="wf-connector"></div>
+                                <div class="wf-steps-row">
+                                    <span class="wf-mini-step">Create session</span>
+                                    <span class="wf-mini-arrow">&rarr;</span>
+                                    <span class="wf-mini-step">Share code</span>
+                                    <span class="wf-mini-arrow">&rarr;</span>
+                                    <span class="wf-mini-step">Each member completes</span>
+                                </div>
+                                <div class="wf-connector"></div>
+                                <div class="wf-node wf-node-handover" style="border-color: #7c3aed; font-size: 0.82rem;">
+                                    <div class="wf-node-icon">&#128101;</div>
+                                    Members can hand over steps to colleagues
+                                    <span class="wf-node-detail">Collaborative step mapping within each response</span>
+                                </div>
+                                <div class="wf-connector"></div>
+                                <div class="wf-node wf-node-result wf-node-team-result">
+                                    <div class="wf-node-icon">&#128202;</div>
+                                    Perception Gap Analysis
+                                    <span class="wf-node-detail">Where does your team see things differently?</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="welcome-path-summary">Individual: one person maps the process; hand over to a colleague if you don't know all the steps. Team: multiple people map the same process to reveal perception gaps.</p>
+                </div>
+
+                <!-- Checklist -->
                 <div class="checklist">
-                    <h3 style="margin-bottom: 1rem; color: var(--primary);">You'll need:</h3>
+                    <h3 style="margin-bottom: 0.75rem; color: var(--primary); font-size: 0.95rem;">You'll need:</h3>
                     <div class="checklist-item"><span class="checklist-icon">&#10003;</span><span>Your calendar from last week</span></div>
                     <div class="checklist-item"><span class="checklist-icon">&#10003;</span><span>Access to your email</span></div>
                     <div class="checklist-item"><span class="checklist-icon">&#10003;</span><span>A recent example to reference</span></div>
                     <div class="checklist-item"><span class="checklist-icon">&#10003;</span><span>Honesty about what's actually happening</span></div>
                 </div>
 
-                <p style="text-align: center; color: var(--text-mid); margin-bottom: 2rem;">
-                    We'll analyse 1-3 of your most critical processes.<br>
-                    The more specific you are, the better we can help.
-                </p>
-
-                <div class="button-group" style="border-top: none; padding-top: 0;">
-                    <button class="button button-primary" onclick="goToScreen(1)">Start Diagnostic &rarr;</button>
-                </div>
-
-                <div style="text-align: center; margin-top: 1rem;">
-                    <button class="button button-secondary" onclick="openTeamSetup()" style="font-size: 0.88rem; padding: 0.6rem 1.5rem; border-radius: 100px;">
-                        &#128101; Start a Team Diagnostic
-                    </button>
-                    <p style="font-size: 0.78rem; color: var(--text-light); margin-top: 0.5rem;">
-                        Get multiple perspectives on the same process from different team members.
-                    </p>
+                <div class="button-group" style="border-top: none; padding-top: 0; gap: 0.75rem;">
+                    <button class="button button-primary" onclick="goToScreen(1)" style="flex: 1;">&#128100; Start Individual Diagnostic &rarr;</button>
+                    <button class="button button-secondary" onclick="openTeamSetup()" style="flex: 1; border-radius: 100px;">&#128101; Start Team Diagnostic</button>
                 </div>
 
                 <!-- DEV: Skip to results with sample data -->
@@ -2513,9 +2902,9 @@
                 <div class="form-group">
                     <label>How many different people or roles need to be involved?</label>
                     <div class="radio-group">
-                        <label class="radio-option"><input type="radio" name="complexity" value="1-2"> 1&mdash;2 people (Mostly self-contained)</label>
-                        <label class="radio-option"><input type="radio" name="complexity" value="3-5"> 3&mdash;5 people (Cross-functional)</label>
-                        <label class="radio-option"><input type="radio" name="complexity" value="6-10"> 6&mdash;10 people (Multiple teams)</label>
+                        <label class="radio-option"><input type="radio" name="complexity" value="1-2"> 1-2 people (Mostly self-contained)</label>
+                        <label class="radio-option"><input type="radio" name="complexity" value="3-5"> 3-5 people (Cross-functional)</label>
+                        <label class="radio-option"><input type="radio" name="complexity" value="6-10"> 6-10 people (Multiple teams)</label>
                         <label class="radio-option"><input type="radio" name="complexity" value="10+"> 10+ people (Organisation-wide)</label>
                     </div>
                 </div>
@@ -2573,7 +2962,7 @@
 
                 <div class="calculated">
                     <div class="calculated-label">Elapsed time:</div>
-                    <div class="calculated-value" id="elapsedDays">&mdash;</div>
+                    <div class="calculated-value" id="elapsedDays">--</div>
                 </div>
 
                 <div id="dateWarning" class="warning-box" style="display: none;">
@@ -2602,21 +2991,21 @@
                     <p class="helper-text" style="margin-bottom:0.5rem;">Kickoffs, status updates, alignment calls, reviews, approvals.</p>
                     <div class="radio-group">
                         <label class="radio-option"><input type="radio" name="meetingCount" value="0" onchange="recalcTimeFromRanges()"> None</label>
-                        <label class="radio-option"><input type="radio" name="meetingCount" value="1-2" onchange="recalcTimeFromRanges()"> 1&mdash;2 meetings</label>
-                        <label class="radio-option"><input type="radio" name="meetingCount" value="3-5" onchange="recalcTimeFromRanges()"> 3&mdash;5 meetings</label>
-                        <label class="radio-option"><input type="radio" name="meetingCount" value="6-10" onchange="recalcTimeFromRanges()"> 6&mdash;10 meetings</label>
+                        <label class="radio-option"><input type="radio" name="meetingCount" value="1-2" onchange="recalcTimeFromRanges()"> 1-2 meetings</label>
+                        <label class="radio-option"><input type="radio" name="meetingCount" value="3-5" onchange="recalcTimeFromRanges()"> 3-5 meetings</label>
+                        <label class="radio-option"><input type="radio" name="meetingCount" value="6-10" onchange="recalcTimeFromRanges()"> 6-10 meetings</label>
                         <label class="radio-option"><input type="radio" name="meetingCount" value="10+" onchange="recalcTimeFromRanges()"> 10+ meetings</label>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label>How many emails or messages did you send/receive for this process?</label>
-                    <p class="helper-text" style="margin-bottom:0.5rem;">Coordination, questions, follow-ups, status chasing &mdash; across email, Slack, Teams, etc.</p>
+                    <p class="helper-text" style="margin-bottom:0.5rem;">Coordination, questions, follow-ups, status chasing across email, Slack, Teams, etc.</p>
                     <div class="radio-group">
                         <label class="radio-option"><input type="radio" name="emailCount" value="0" onchange="recalcTimeFromRanges()"> None</label>
-                        <label class="radio-option"><input type="radio" name="emailCount" value="1-5" onchange="recalcTimeFromRanges()"> 1&mdash;5 messages</label>
-                        <label class="radio-option"><input type="radio" name="emailCount" value="6-15" onchange="recalcTimeFromRanges()"> 6&mdash;15 messages</label>
-                        <label class="radio-option"><input type="radio" name="emailCount" value="16-30" onchange="recalcTimeFromRanges()"> 16&mdash;30 messages</label>
+                        <label class="radio-option"><input type="radio" name="emailCount" value="1-5" onchange="recalcTimeFromRanges()"> 1-5 messages</label>
+                        <label class="radio-option"><input type="radio" name="emailCount" value="6-15" onchange="recalcTimeFromRanges()"> 6-15 messages</label>
+                        <label class="radio-option"><input type="radio" name="emailCount" value="16-30" onchange="recalcTimeFromRanges()"> 16-30 messages</label>
                         <label class="radio-option"><input type="radio" name="emailCount" value="30+" onchange="recalcTimeFromRanges()"> 30+ messages</label>
                     </div>
                 </div>
@@ -2625,10 +3014,10 @@
                     <label>How much hands-on execution work was involved?</label>
                     <p class="helper-text" style="margin-bottom:0.5rem;">Configuring systems, creating documents, data entry, building deliverables.</p>
                     <div class="radio-group">
-                        <label class="radio-option"><input type="radio" name="executionLevel" value="minimal" onchange="recalcTimeFromRanges()"> Minimal &mdash; mostly coordination, little hands-on work</label>
-                        <label class="radio-option"><input type="radio" name="executionLevel" value="moderate" onchange="recalcTimeFromRanges()"> Moderate &mdash; a few hours of focused work</label>
-                        <label class="radio-option"><input type="radio" name="executionLevel" value="substantial" onchange="recalcTimeFromRanges()"> Substantial &mdash; a day or more of focused work</label>
-                        <label class="radio-option"><input type="radio" name="executionLevel" value="heavy" onchange="recalcTimeFromRanges()"> Heavy &mdash; multiple days of focused work</label>
+                        <label class="radio-option"><input type="radio" name="executionLevel" value="minimal" onchange="recalcTimeFromRanges()"> Minimal: mostly coordination, little hands-on work</label>
+                        <label class="radio-option"><input type="radio" name="executionLevel" value="moderate" onchange="recalcTimeFromRanges()"> Moderate: a few hours of focused work</label>
+                        <label class="radio-option"><input type="radio" name="executionLevel" value="substantial" onchange="recalcTimeFromRanges()"> Substantial: a day or more of focused work</label>
+                        <label class="radio-option"><input type="radio" name="executionLevel" value="heavy" onchange="recalcTimeFromRanges()"> Heavy: multiple days of focused work</label>
                     </div>
                 </div>
 
@@ -2636,11 +3025,11 @@
                     <label>How much time was lost waiting for other people?</label>
                     <p class="helper-text" style="margin-bottom:0.5rem;">Waiting for approvals, responses, handoffs, external parties.</p>
                     <div class="radio-group">
-                        <label class="radio-option"><input type="radio" name="waitingPortion" value="almost-none" onchange="recalcTimeFromRanges()"> Almost none &mdash; I drove it end to end</label>
-                        <label class="radio-option"><input type="radio" name="waitingPortion" value="quarter" onchange="recalcTimeFromRanges()"> Some delays &mdash; a few hours lost waiting</label>
-                        <label class="radio-option"><input type="radio" name="waitingPortion" value="half" onchange="recalcTimeFromRanges()"> Significant &mdash; days spent waiting in total</label>
-                        <label class="radio-option"><input type="radio" name="waitingPortion" value="most" onchange="recalcTimeFromRanges()"> Most of it &mdash; more time chasing than doing</label>
-                        <label class="radio-option"><input type="radio" name="waitingPortion" value="almost-all" onchange="recalcTimeFromRanges()"> Blocked &mdash; stuck for days at a time</label>
+                        <label class="radio-option"><input type="radio" name="waitingPortion" value="almost-none" onchange="recalcTimeFromRanges()"> Almost none: I drove it end to end</label>
+                        <label class="radio-option"><input type="radio" name="waitingPortion" value="quarter" onchange="recalcTimeFromRanges()"> Some delays: a few hours lost waiting</label>
+                        <label class="radio-option"><input type="radio" name="waitingPortion" value="half" onchange="recalcTimeFromRanges()"> Significant: days spent waiting in total</label>
+                        <label class="radio-option"><input type="radio" name="waitingPortion" value="most" onchange="recalcTimeFromRanges()"> Most of it: more time chasing than doing</label>
+                        <label class="radio-option"><input type="radio" name="waitingPortion" value="almost-all" onchange="recalcTimeFromRanges()"> Blocked: stuck for days at a time</label>
                     </div>
                 </div>
 
@@ -2648,15 +3037,15 @@
                     <label>Was any rework or corrections required?</label>
                     <div class="radio-group">
                         <label class="radio-option"><input type="radio" name="reworkLevel" value="none" onchange="recalcTimeFromRanges()"> No rework needed</label>
-                        <label class="radio-option"><input type="radio" name="reworkLevel" value="minor" onchange="recalcTimeFromRanges()"> Minor &mdash; a few small corrections</label>
-                        <label class="radio-option"><input type="radio" name="reworkLevel" value="moderate" onchange="recalcTimeFromRanges()"> Moderate &mdash; had to redo a portion of the work</label>
-                        <label class="radio-option"><input type="radio" name="reworkLevel" value="major" onchange="recalcTimeFromRanges()"> Major &mdash; significant rework required</label>
+                        <label class="radio-option"><input type="radio" name="reworkLevel" value="minor" onchange="recalcTimeFromRanges()"> Minor: a few small corrections</label>
+                        <label class="radio-option"><input type="radio" name="reworkLevel" value="moderate" onchange="recalcTimeFromRanges()"> Moderate: had to redo a portion of the work</label>
+                        <label class="radio-option"><input type="radio" name="reworkLevel" value="major" onchange="recalcTimeFromRanges()"> Major: significant rework required</label>
                     </div>
                 </div>
 
                 <div class="calculated" id="timeEstimateBox" style="display:none;">
                     <div class="calculated-label">Estimated time breakdown:</div>
-                    <div class="calculated-value" id="timeTotal" style="font-size:1.1rem;">&mdash;</div>
+                    <div class="calculated-value" id="timeTotal" style="font-size:1.1rem;">--</div>
                 </div>
 
                 <div id="insightCard5" style="display: none;"></div>
@@ -2724,14 +3113,13 @@
             </div>
         </div>
 
-        <!-- ========== SCREEN 7: STEP BREAKDOWN ========== -->
+        <!-- ========== SCREEN 7: STEPS & HANDOFFS ========== -->
         <div class="screen" id="screen7">
             <div class="screen-card">
-                <h2 class="screen-title">Step Breakdown</h2>
-                <p class="screen-subtitle">Let's break down "<span class="process-ref" id="processRef7">your process</span>" into major steps.</p>
-                <p class="helper-text" style="margin-bottom: 0.75rem;">For the instance: <span id="exampleNameRef7" class="process-ref"></span></p>
+                <h2 class="screen-title">Steps &amp; Handoffs</h2>
+                <p class="screen-subtitle">Map "<span class="process-ref" id="processRef7">your process</span>" step by step. <span style="font-size:0.85em; color:var(--text-mid);">Instance: <span id="exampleNameRef7" class="process-ref"></span></span></p>
                 <div class="screen7-tip" id="screen7Tip">
-                    <strong>Tip:</strong> Start by listing the major steps in order. You can add details, decisions, and branches later.
+                    List steps in order. Expand "Handoff to next step" on each step to describe how work passes on.
                 </div>
 
                 <!-- Import zone: collapsed by default -->
@@ -2754,7 +3142,7 @@
                         <div id="importFilePreview" style="display:none; text-align:center;"></div>
                     </div>
                     <div class="step-import-body" id="importBodyPaste" style="display:none;">
-                        <textarea class="step-import-textarea" id="importPasteText" placeholder="Paste your steps here, e.g.:&#10;1. Receive order from customer&#10;2. Verify inventory availability&#10;3. Process payment&#10;4. Pick and pack items&#10;5. Ship to customer&#10;&#10;Or paste any format &mdash; AI will extract the steps."></textarea>
+                        <textarea class="step-import-textarea" id="importPasteText" placeholder="Paste your steps here, e.g.:&#10;1. Receive order from customer&#10;2. Verify inventory availability&#10;3. Process payment&#10;4. Pick and pack items&#10;5. Ship to customer&#10;&#10;Or paste any format - AI will extract the steps."></textarea>
                         <div class="step-import-actions">
                             <button class="step-import-btn step-import-btn-primary" onclick="handleImportPaste()" id="importPasteBtn">Extract Steps</button>
                         </div>
@@ -2772,24 +3160,29 @@
                     <div class="handover-note" id="handoverBannerNote" style="display:none;"></div>
                 </div>
 
-                <p class="helper-text" style="margin-bottom:0.75rem; color: var(--text-mid); font-size: 0.82rem;">
-                    <svg style="width:14px;height:14px;vertical-align:-2px;margin-right:2px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M12 16v-4"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg>
-                    Drag steps to reorder. Don't know every step? Add what you know and hand over to a colleague.
-                </p>
-
-                <div class="dynamic-list" id="stepsList"></div>
-
-                <button type="button" class="add-item" onclick="addStep()" id="addStepBtn">+ Add Step</button>
-                <p class="helper-text">Minimum 3 steps. Maximum 50.</p>
-
-                <!-- Live Flow Preview -->
+                <!-- Live Flow Preview (shown at top for visibility) -->
                 <div id="liveFlowPreview" class="live-flow-preview">
                     <button type="button" class="live-flow-toggle" id="liveFlowToggle" onclick="toggleLiveFlow()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-                        <span id="liveFlowToggleText">Show Live Flow Preview</span>
+                        <span id="liveFlowToggleText">Hide Flow Preview</span>
+                        <span id="stepCountBadge" class="step-count-badge">0 steps</span>
                     </button>
-                    <div id="liveFlowContainer" style="display: none;">
-                        <div id="liveFlowSvg" style="overflow-x: auto; padding: 1rem 0;"></div>
+                    <div id="liveFlowContainer">
+                        <div id="liveFlowSvg" style="overflow-x: auto; padding: 0.75rem 0;"></div>
+                    </div>
+                </div>
+
+                <!-- Step jump bar for long processes -->
+                <div id="stepJumpBar" class="step-jump-bar" style="display:none;">
+                    <span class="step-jump-label">Jump to:</span>
+                    <div id="stepJumpChips" class="step-jump-chips"></div>
+                </div>
+
+                <div class="steps-list-wrap">
+                    <div class="dynamic-list dynamic-list-steps" id="stepsList"></div>
+                    <div class="add-step-row">
+                        <button type="button" class="add-item" onclick="addStep()" id="addStepBtn">+ Add Step</button>
+                        <span class="step-limit-hint">3-50 steps</span>
                     </div>
                 </div>
 
@@ -2810,37 +3203,15 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
                             Hand over to colleague
                         </button>
-                        <span class="handover-btn-hint">Don't know all the steps? Send to a colleague to continue.</span>
+                        <span class="handover-btn-hint">Stuck? Send to a colleague to add missing steps.</span>
                     </span>
                     <button class="button button-primary" onclick="validateAndContinue(7)">Continue &rarr;</button>
                 </div>
             </div>
         </div>
 
-        <!-- ========== SCREEN 8: HANDOFF ANALYSIS ========== -->
+        <!-- ========== SCREEN 8: BOTTLENECK IDENTIFICATION ========== -->
         <div class="screen" id="screen8">
-            <div class="screen-card">
-                <h2 class="screen-title">Handoff Analysis</h2>
-                <p class="screen-subtitle">Let's look at what happens between steps.</p>
-                <p class="helper-text" style="margin-bottom: 1rem;">A "handoff" is any point where work passes from one person or team to another. Poor handoffs cause delays, rework, and lost information.</p>
-
-                <div id="handoffContainer"></div>
-
-                <p class="helper-text" style="margin-top: 1rem;">Handoff delays are often the biggest source of waste in any process.</p>
-
-                <div id="insightCard8" style="display: none;"></div>
-
-                <div id="errorBox8" class="error-box"><div class="error-text" id="errorText8"></div></div>
-
-                <div class="button-group">
-                    <button class="button button-secondary" onclick="goToScreen(7)">&larr; Back</button>
-                    <button class="button button-primary" onclick="validateAndContinue(8)">Continue &rarr;</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ========== SCREEN 9: BOTTLENECK IDENTIFICATION ========== -->
-        <div class="screen" id="screen9">
             <div class="screen-card">
                 <h2 class="screen-title">Bottleneck Identification</h2>
                 <p class="screen-subtitle">Where did time get stuck?</p>
@@ -2878,24 +3249,24 @@
                     <textarea id="bottleneckWhy" maxlength="200" rows="3" placeholder="e.g., Customer Success didn't know account was ready. No automated notification."></textarea>
                 </div>
 
-                <div id="insightCard9" style="display: none;"></div>
+                <div id="insightCard8" style="display: none;"></div>
 
-                <div id="errorBox9" class="error-box"><div class="error-text" id="errorText9"></div></div>
+                <div id="errorBox8" class="error-box"><div class="error-text" id="errorText8"></div></div>
 
                 <div class="button-group">
-                    <button class="button button-secondary" onclick="goToScreen(8)">&larr; Back</button>
-                    <button class="button button-primary" onclick="validateAndContinue(9)">Continue &rarr;</button>
+                    <button class="button button-secondary" onclick="goToScreen(7)">&larr; Back</button>
+                    <button class="button button-primary" onclick="validateAndContinue(8)">Continue &rarr;</button>
                 </div>
             </div>
         </div>
 
-        <!-- ========== SCREEN 10: SYSTEMS & TOOLS ========== -->
-        <div class="screen" id="screen10">
+        <!-- ========== SCREEN 9: SYSTEMS & TOOLS ========== -->
+        <div class="screen" id="screen9">
             <div class="screen-card">
                 <h2 class="screen-title">Systems &amp; Tools</h2>
-                <p class="screen-subtitle">Which systems did you use for "<span class="process-ref" id="processRef10">your process</span>"?</p>
+                <p class="screen-subtitle">Which systems did you use for "<span class="process-ref" id="processRef9">your process</span>"?</p>
                 <p class="helper-text" style="margin-bottom: 1rem;">Knowing which systems are involved helps identify integration and automation opportunities.</p>
-                <p class="helper-text" style="margin-bottom: 1.5rem;">Think of the <span id="exampleNameRef10" class="process-ref"></span> instance. Every system you touched &mdash; e.g., CRM, ERP, email, spreadsheets, project management tools.</p>
+                <p class="helper-text" style="margin-bottom: 1.5rem;">Think of the <span id="exampleNameRef9" class="process-ref"></span> instance. Every system you touched, e.g., CRM, ERP, email, spreadsheets, project management tools.</p>
 
                 <div class="dynamic-list" id="systemsList"></div>
 
@@ -2906,21 +3277,21 @@
                     <div class="calculated-value" id="systemsSummary" style="font-size: 1.1rem;">Systems used: 0</div>
                 </div>
 
-                <div id="errorBox10" class="error-box"><div class="error-text" id="errorText10"></div></div>
+                <div id="errorBox9" class="error-box"><div class="error-text" id="errorText9"></div></div>
 
                 <div class="button-group">
-                    <button class="button button-secondary" onclick="goToScreen(9)">&larr; Back</button>
-                    <button class="button button-primary" onclick="validateAndContinue(10)">Continue &rarr;</button>
+                    <button class="button button-secondary" onclick="goToScreen(8)">&larr; Back</button>
+                    <button class="button button-primary" onclick="validateAndContinue(9)">Continue &rarr;</button>
                 </div>
             </div>
         </div>
 
-        <!-- ========== SCREEN 11: APPROVALS & DECISIONS ========== -->
-        <div class="screen" id="screen11">
+        <!-- ========== SCREEN 10: APPROVALS & DECISIONS ========== -->
+        <div class="screen" id="screen10">
             <div class="screen-card">
                 <h2 class="screen-title">Approvals &amp; Decisions</h2>
-                <p class="screen-subtitle">In "<span class="process-ref" id="processRef11">your process</span>", how many approval points exist?</p>
-                <p class="helper-text" style="margin-bottom: 0.5rem;">Approval bottlenecks are one of the top causes of process delays &mdash; even a single slow approval can stall everything.</p>
+                <p class="screen-subtitle">In "<span class="process-ref" id="processRef10">your process</span>", how many approval points exist?</p>
+                <p class="helper-text" style="margin-bottom: 0.5rem;">Approval bottlenecks are one of the top causes of process delays. Even a single slow approval can stall everything.</p>
                 <p class="helper-text" style="margin-bottom: 1.5rem;">Approval points = decisions where someone must explicitly approve before work continues. E.g., manager sign-off, budget approval, compliance review.</p>
 
                 <div class="form-group">
@@ -2930,21 +3301,21 @@
 
                 <div id="approvalsList"></div>
 
-                <div id="errorBox11" class="error-box"><div class="error-text" id="errorText11"></div></div>
+                <div id="errorBox10" class="error-box"><div class="error-text" id="errorText10"></div></div>
 
                 <div class="button-group">
-                    <button class="button button-secondary" onclick="goToScreen(10)">&larr; Back</button>
-                    <button class="button button-primary" onclick="validateAndContinue(11)">Continue &rarr;</button>
+                    <button class="button button-secondary" onclick="goToScreen(9)">&larr; Back</button>
+                    <button class="button button-primary" onclick="validateAndContinue(10)">Continue &rarr;</button>
                 </div>
             </div>
         </div>
 
-        <!-- ========== SCREEN 12: KNOWLEDGE & DOCUMENTATION ========== -->
-        <div class="screen" id="screen12">
+        <!-- ========== SCREEN 11: KNOWLEDGE & DOCUMENTATION ========== -->
+        <div class="screen" id="screen11">
             <div class="screen-card">
                 <h2 class="screen-title">Knowledge &amp; Documentation</h2>
-                <p class="screen-subtitle">You're doing "<span class="process-ref" id="processRef12">your process</span>" and realise:<br><em>"Wait, what's the approval threshold for this?"</em></p>
-                <p class="helper-text" style="margin-bottom: 1rem;">How people find answers reveals whether your process relies on documentation or on specific people &mdash; a key risk factor.</p>
+                <p class="screen-subtitle">You're doing "<span class="process-ref" id="processRef11">your process</span>" and realise:<br><em>"Wait, what's the approval threshold for this?"</em></p>
+                <p class="helper-text" style="margin-bottom: 1rem;">How people find answers reveals whether your process relies on documentation or on specific people, a key risk factor.</p>
 
                 <div class="form-group">
                     <label>Where do you look FIRST?</label>
@@ -2997,20 +3368,20 @@
                     </div>
                 </div>
 
-                <div id="errorBox12" class="error-box"><div class="error-text" id="errorText12"></div></div>
+                <div id="errorBox11" class="error-box"><div class="error-text" id="errorText11"></div></div>
 
                 <div class="button-group">
-                    <button class="button button-secondary" onclick="goToScreen(11)">&larr; Back</button>
-                    <button class="button button-primary" onclick="validateAndContinue(12)">Continue &rarr;</button>
+                    <button class="button button-secondary" onclick="goToScreen(10)">&larr; Back</button>
+                    <button class="button button-primary" onclick="validateAndContinue(11)">Continue &rarr;</button>
                 </div>
             </div>
         </div>
 
-        <!-- ========== SCREEN 13: NEW HIRE REALITY ========== -->
-        <div class="screen" id="screen13">
+        <!-- ========== SCREEN 12: NEW HIRE REALITY ========== -->
+        <div class="screen" id="screen12">
             <div class="screen-card">
                 <h2 class="screen-title">New Hire Reality</h2>
-                <p class="screen-subtitle">If someone new started tomorrow and needed to do "<span class="process-ref" id="processRef13">your process</span>", how would they learn it?</p>
+                <p class="screen-subtitle">If someone new started tomorrow and needed to do "<span class="process-ref" id="processRef12">your process</span>", how would they learn it?</p>
                 <p class="helper-text" style="margin-bottom: 1rem;">How fast new hires ramp up reveals how well the process is documented and transferable. Long ramp-up = fragile process.</p>
 
                 <div class="form-group">
@@ -3055,21 +3426,21 @@
                     </div>
                 </div>
 
-                <div id="errorBox13" class="error-box"><div class="error-text" id="errorText13"></div></div>
+                <div id="errorBox12" class="error-box"><div class="error-text" id="errorText12"></div></div>
 
                 <div class="button-group">
-                    <button class="button button-secondary" onclick="goToScreen(12)">&larr; Back</button>
-                    <button class="button button-primary" onclick="validateAndContinue(13)">Continue &rarr;</button>
+                    <button class="button button-secondary" onclick="goToScreen(11)">&larr; Back</button>
+                    <button class="button button-primary" onclick="validateAndContinue(12)">Continue &rarr;</button>
                 </div>
             </div>
         </div>
 
-        <!-- ========== SCREEN 14: FREQUENCY & VOLUME ========== -->
-        <div class="screen" id="screen14">
+        <!-- ========== SCREEN 13: FREQUENCY & VOLUME ========== -->
+        <div class="screen" id="screen13">
             <div class="screen-card">
                 <h2 class="screen-title">Frequency &amp; Volume</h2>
-                <p class="screen-subtitle">How often does "<span class="process-ref" id="processRef14">your process</span>" occur?</p>
-                <p class="helper-text" style="margin-bottom: 1rem;">Volume drives the business case &mdash; even small per-instance savings compound dramatically at high frequency.</p>
+                <p class="screen-subtitle">How often does "<span class="process-ref" id="processRef13">your process</span>" occur?</p>
+                <p class="helper-text" style="margin-bottom: 1rem;">Volume drives the business case. Even small per-instance savings compound dramatically at high frequency.</p>
 
                 <div class="form-group">
                     <div class="radio-group">
@@ -3085,7 +3456,7 @@
 
                 <div class="calculated">
                     <div class="calculated-label">Annual instances:</div>
-                    <div class="calculated-value" id="annualInstances">&mdash;</div>
+                    <div class="calculated-value" id="annualInstances">--</div>
                 </div>
 
                 <div class="form-group">
@@ -3109,20 +3480,20 @@
                     </div>
                 </div>
 
-                <div id="errorBox14" class="error-box"><div class="error-text" id="errorText14"></div></div>
+                <div id="errorBox13" class="error-box"><div class="error-text" id="errorText13"></div></div>
 
                 <div class="button-group">
-                    <button class="button button-secondary" onclick="goToScreen(13)">&larr; Back</button>
-                    <button class="button button-primary" onclick="validateAndContinue(14)">Continue &rarr;</button>
+                    <button class="button button-secondary" onclick="goToScreen(12)">&larr; Back</button>
+                    <button class="button button-primary" onclick="validateAndContinue(13)">Continue &rarr;</button>
                 </div>
             </div>
         </div>
 
-        <!-- ========== SCREEN 15: COST CALCULATION ========== -->
-        <div class="screen" id="screen15">
+        <!-- ========== SCREEN 14: COST CALCULATION ========== -->
+        <div class="screen" id="screen14">
             <div class="screen-card">
                 <h2 class="screen-title">Let's Calculate the Real Cost</h2>
-                <p class="screen-subtitle">The numbers behind "<span class="process-ref" id="processRef15">your process</span>"</p>
+                <p class="screen-subtitle">The numbers behind "<span class="process-ref" id="processRef14">your process</span>"</p>
                 <p class="helper-text" style="margin-bottom: 1rem;">Putting a real number on process cost makes the case for improvement tangible and prioritisable.</p>
 
                 <div class="form-group">
@@ -3138,35 +3509,35 @@
 
                 <div class="calculated">
                     <div class="calculated-label">Your personal cost (this instance):</div>
-                    <div class="calculated-value" id="instanceCost">&mdash;</div>
+                    <div class="calculated-value" id="instanceCost">--</div>
                     <div class="calculated-formula" id="instanceCostFormula"></div>
                 </div>
 
                 <div class="calculated">
                     <div class="calculated-label">This is ONE instance. Annual instances:</div>
-                    <div class="calculated-value" id="annualInstancesCost">&mdash;</div>
+                    <div class="calculated-value" id="annualInstancesCost">--</div>
                 </div>
 
                 <div class="calculated" style="background: linear-gradient(135deg, rgba(61, 142, 166, 0.15), rgba(61, 142, 166, 0.05)); border-left: 4px solid var(--primary);">
                     <div class="calculated-label" style="font-weight: 600;">YOUR annual cost:</div>
-                    <div class="calculated-value" id="annualUserCost" style="font-size: 2.2rem; color: var(--primary);">&mdash;</div>
+                    <div class="calculated-value" id="annualUserCost" style="font-size: 2.2rem; color: var(--primary);">--</div>
                     <div class="calculated-formula" id="annualUserCostFormula"></div>
                 </div>
 
-                <div id="errorBox15" class="error-box"><div class="error-text" id="errorText15"></div></div>
+                <div id="errorBox14" class="error-box"><div class="error-text" id="errorText14"></div></div>
 
                 <div class="button-group">
-                    <button class="button button-secondary" onclick="goToScreen(14)">&larr; Back</button>
-                    <button class="button button-primary" onclick="validateAndContinue(15)">Continue &rarr;</button>
+                    <button class="button button-secondary" onclick="goToScreen(13)">&larr; Back</button>
+                    <button class="button button-primary" onclick="validateAndContinue(14)">Continue &rarr;</button>
                 </div>
             </div>
         </div>
 
-        <!-- ========== SCREEN 16: TEAM COST & SAVINGS ========== -->
-        <div class="screen" id="screen16">
+        <!-- ========== SCREEN 15: TEAM COST & SAVINGS ========== -->
+        <div class="screen" id="screen15">
             <div class="screen-card">
                 <h2 class="screen-title">Team Cost &amp; Savings</h2>
-                <p class="screen-subtitle">How many OTHER people are involved in "<span class="process-ref" id="processRef16">your process</span>"?</p>
+                <p class="screen-subtitle">How many OTHER people are involved in "<span class="process-ref" id="processRef15">your process</span>"?</p>
                 <p class="helper-text" style="margin-bottom: 1rem;">Your time is just part of the picture. The full team cost reveals the true organisational impact.</p>
 
                 <div class="form-group">
@@ -3178,7 +3549,7 @@
 
                 <div class="calculated danger">
                     <div class="calculated-label" style="font-weight: 600;">TOTAL PROCESS COST:</div>
-                    <div class="calculated-value" id="totalAnnualCost" style="font-size: 2.5rem;">&mdash;</div>
+                    <div class="calculated-value" id="totalAnnualCost" style="font-size: 2.5rem;">--</div>
                     <div class="calculated-formula" id="totalAnnualCostFormula"></div>
                 </div>
 
@@ -3189,17 +3560,17 @@
                 <div class="input-group">
                     <div class="calculated">
                         <div class="calculated-label">Current average:</div>
-                        <div class="calculated-value" id="currentAvg" style="font-size: 1.4rem;">&mdash;</div>
+                        <div class="calculated-value" id="currentAvg" style="font-size: 1.4rem;">--</div>
                     </div>
                     <div class="calculated success">
                         <div class="calculated-label">50% faster:</div>
-                        <div class="calculated-value" id="halfTime" style="font-size: 1.4rem;">&mdash;</div>
+                        <div class="calculated-value" id="halfTime" style="font-size: 1.4rem;">--</div>
                     </div>
                 </div>
 
                 <div class="calculated success">
                     <div class="calculated-label" style="font-weight: 600;">Annual savings:</div>
-                    <div class="calculated-value" id="annualSavings" style="font-size: 2rem;">&mdash;</div>
+                    <div class="calculated-value" id="annualSavings" style="font-size: 2rem;">--</div>
                     <div class="calculated-formula" id="annualSavingsFormula"></div>
                 </div>
 
@@ -3228,20 +3599,20 @@
                     </div>
                 </div>
 
-                <div id="errorBox16" class="error-box"><div class="error-text" id="errorText16"></div></div>
+                <div id="errorBox15" class="error-box"><div class="error-text" id="errorText15"></div></div>
 
                 <div class="button-group">
-                    <button class="button button-secondary" onclick="goToScreen(15)">&larr; Back</button>
-                    <button class="button button-primary" onclick="validateAndContinue(16)">Continue &rarr;</button>
+                    <button class="button button-secondary" onclick="goToScreen(14)">&larr; Back</button>
+                    <button class="button button-primary" onclick="validateAndContinue(15)">Continue &rarr;</button>
                 </div>
             </div>
         </div>
 
-        <!-- ========== SCREEN 17: PRIORITY ASSESSMENT ========== -->
-        <div class="screen" id="screen17">
+        <!-- ========== SCREEN 16: PRIORITY ASSESSMENT ========== -->
+        <div class="screen" id="screen16">
             <div class="screen-card">
                 <h2 class="screen-title">Priority Assessment</h2>
-                <p class="screen-subtitle">Based on everything you've shared about "<span class="process-ref" id="processRef17">your process</span>":</p>
+                <p class="screen-subtitle">Based on everything you've shared about "<span class="process-ref" id="processRef16">your process</span>":</p>
                 <p class="helper-text" style="margin-bottom: 1rem;">Your assessment helps us focus recommendations on what matters most to you right now.</p>
 
                 <div id="prioritySummary"></div>
@@ -3273,17 +3644,17 @@
                     </div>
                 </div>
 
-                <div id="errorBox17" class="error-box"><div class="error-text" id="errorText17"></div></div>
+                <div id="errorBox16" class="error-box"><div class="error-text" id="errorText16"></div></div>
 
                 <div class="button-group">
-                    <button class="button button-secondary" onclick="goToScreen(16)">&larr; Back</button>
+                    <button class="button button-secondary" onclick="goToScreen(15)">&larr; Back</button>
                     <button class="button button-primary" onclick="handleProcessComplete()">Continue &rarr;</button>
                 </div>
             </div>
         </div>
 
-        <!-- ========== SCREEN 18: CONTACT INFO ========== -->
-        <div class="screen" id="screen18">
+        <!-- ========== SCREEN 17: CONTACT INFO ========== -->
+        <div class="screen" id="screen17">
             <div class="screen-card">
                 <h2 class="screen-title">Your Details</h2>
                 <p class="screen-subtitle">Where should we send your detailed analysis?</p>
@@ -3342,17 +3713,17 @@
                     <input type="text" id="industryOther" placeholder="Please specify your industry..." style="display: none; margin-top: 0.5rem;">
                 </div>
 
-                <div id="errorBox18" class="error-box"><div class="error-text" id="errorText18"></div></div>
+                <div id="errorBox17" class="error-box"><div class="error-text" id="errorText17"></div></div>
 
                 <div class="button-group">
-                    <button class="button button-secondary" onclick="goToScreen(17)">&larr; Back</button>
+                    <button class="button button-secondary" onclick="goToScreen(16)">&larr; Back</button>
                     <button class="button button-primary" id="submitBtn" onclick="confirmBeforeSubmit()">Generate My Analysis &rarr;</button>
                 </div>
             </div>
         </div>
 
-        <!-- ========== SCREEN 19: RESULTS ========== -->
-        <div class="screen" id="screen19">
+        <!-- ========== SCREEN 18: RESULTS ========== -->
+        <div class="screen" id="screen18">
             <div class="screen-card">
                 <div class="loading-overlay" id="loadingState">
                     <div class="spinner"></div>
@@ -3425,15 +3796,15 @@
             return s
                 .replace(/\u00C2\u00A3/g, '\u00A3')      // Â£ → £
                 .replace(/\u00C2\u00B0/g, '\u00B0')      // Â° → °
-                .replace(/\u00E2\u0080\u0094/g, '\u2014') // â€" → em dash
-                .replace(/\u00E2\u0080\u0093/g, '\u2013') // â€" → en dash
+                .replace(/\u00E2\u0080\u0094/g, '-')       // â€" → hyphen
+                .replace(/\u00E2\u0080\u0093/g, '-')       // â€" → hyphen
                 .replace(/\u00E2\u0080\u0098/g, '\u2018') // â€˜ → '
                 .replace(/\u00E2\u0080\u0099/g, '\u2019') // â€™ → '
                 .replace(/\u00E2\u0080\u009C/g, '\u201C') // â€œ → "
                 .replace(/\u00E2\u0080\u009D/g, '\u201D') // â€ → "
                 .replace(/\u00E2\u0080\u00A6/g, '\u2026') // â€¦ → …
                 .replace(/\u00C2\u00B7/g, '\u00B7')      // Â· → ·
-                .replace(/â€"/g, '\u2014').replace(/â€"/g, '\u2013')
+                .replace(/â€"/g, '-').replace(/â€"/g, '-')
                 .replace(/Â£/g, '\u00A3').replace(/Â°/g, '\u00B0').replace(/Â·/g, '\u00B7');
         }
         function fixMojibakeInObj(obj) {
@@ -3466,7 +3837,7 @@
         // GLOBAL STATE
         // ============================================================
         let currentScreen = 0;
-        const TOTAL_SCREENS = 19;
+        const TOTAL_SCREENS = 18;
         let completedProcesses = [];
         let stepCount = 0;
         let systemCount = 0;
@@ -3546,17 +3917,16 @@
                 if (screenNum === 5) { populateScreen5(); showInsightCard(5); }
                 if (screenNum === 6) updateProcessRefs();
                 if (screenNum === 7) { populateScreen7(); setTimeout(buildStepSuggestions, 200); showInsightCard(7); }
-                if (screenNum === 8) { buildHandoffBlocks(); showInsightCard(8); }
-                if (screenNum === 9) { populateScreen9(); showInsightCard(9); }
-                if (screenNum === 10) populateScreen10();
+                if (screenNum === 8) { populateScreen8(); showInsightCard(8); }
+                if (screenNum === 9) populateScreen9();
+                if (screenNum === 10) updateProcessRefs();
                 if (screenNum === 11) updateProcessRefs();
                 if (screenNum === 12) updateProcessRefs();
-                if (screenNum === 13) updateProcessRefs();
-                if (screenNum === 14) { updateProcessRefs(); populateScreen14(); }
+                if (screenNum === 13) populateScreen13();
+                if (screenNum === 14) populateScreen14();
                 if (screenNum === 15) populateScreen15();
                 if (screenNum === 16) populateScreen16();
                 if (screenNum === 17) populateScreen17();
-                if (screenNum === 18) populateScreen18();
             }
         }
 
@@ -3566,18 +3936,18 @@
 
             const screenLabels = {
                 0: 'Getting Started', 1: 'Process Selection', 2: 'Process Name', 3: 'Define Boundaries',
-                4: 'Last Example', 5: 'Time Investment', 6: 'Performance', 7: 'Step Breakdown',
-                8: 'Handoff Analysis', 9: 'Bottlenecks', 10: 'Systems & Tools', 11: 'Approvals',
-                12: 'Knowledge', 13: 'New Hire', 14: 'Frequency', 15: 'Cost Calculation',
-                16: 'Team Cost & Savings', 17: 'Priority', 18: 'Your Details', 19: 'Results'
+                4: 'Last Example', 5: 'Time Investment', 6: 'Performance', 7: 'Steps & Handoffs',
+                8: 'Bottlenecks', 9: 'Systems & Tools', 10: 'Approvals',
+                11: 'Knowledge', 12: 'New Hire', 13: 'Frequency', 14: 'Cost Calculation',
+                15: 'Team Cost & Savings', 16: 'Priority', 17: 'Your Details', 18: 'Results'
             };
 
             const screenPhases = {
                 1: 'Define', 2: 'Define', 3: 'Define',
                 4: 'Measure', 5: 'Measure', 6: 'Measure',
-                7: 'Map', 8: 'Map', 9: 'Map',
-                10: 'Assess', 11: 'Assess', 12: 'Assess', 13: 'Assess',
-                14: 'Quantify', 15: 'Quantify', 16: 'Quantify', 17: 'Quantify', 18: 'Quantify'
+                7: 'Map',
+                8: 'Assess', 9: 'Assess', 10: 'Assess', 11: 'Assess',
+                12: 'Quantify', 13: 'Quantify', 14: 'Quantify', 15: 'Quantify', 16: 'Quantify'
             };
 
             let text;
@@ -3587,7 +3957,7 @@
                 text = 'Complete!';
             } else {
                 const phase = screenPhases[currentScreen] ? screenPhases[currentScreen] + ': ' : '';
-                text = `Step ${currentScreen} of ${TOTAL_SCREENS - 1} &mdash; ${phase}${screenLabels[currentScreen] || ''}`;
+                text = `Step ${currentScreen} of ${TOTAL_SCREENS - 1} - ${phase}${screenLabels[currentScreen] || ''}`;
             }
             document.getElementById('progressText').textContent = text;
 
@@ -3652,7 +4022,7 @@
             const warning = document.getElementById('dateWarning');
 
             if (!startVal || !endVal) {
-                document.getElementById('elapsedDays').textContent = '\u2014';
+                document.getElementById('elapsedDays').textContent = '--';
                 return;
             }
 
@@ -3691,7 +4061,7 @@
             const ex = processData.lastExample;
             const summary = document.getElementById('exampleSummary');
             if (ex.name && ex.startDate && ex.endDate) {
-                summary.textContent = `${ex.name} &mdash; ${formatDate(ex.startDate)} to ${formatDate(ex.endDate)}, ${ex.elapsedDays} days`;
+                summary.textContent = `${ex.name} - ${formatDate(ex.startDate)} to ${formatDate(ex.endDate)}, ${ex.elapsedDays} days`;
             }
             // Restore saved radio selections for time investment fields
             const trs = processData.timeRangeSelections || {};
@@ -4173,7 +4543,7 @@
             // Add a small banner showing import was successful
             const banner = document.createElement('div');
             banner.style.cssText = 'padding:0.6rem 1rem;background:linear-gradient(135deg,rgba(22,163,74,0.08),rgba(22,163,74,0.03));border:1px solid rgba(22,163,74,0.2);border-radius:var(--radius-sm);margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;font-size:0.85rem;';
-            banner.innerHTML = '<span style="color:#16a34a;font-weight:500;">&#10003; ' + steps.length + ' steps imported &mdash; review and adjust below</span><button onclick="this.parentElement.remove();const z=document.getElementById(\'stepImportZone\');z.style.maxHeight=\'\';z.style.overflow=\'\';z.style.padding=\'\';z.style.border=\'\';z.style.marginBottom=\'\';" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:0.82rem;font-family:inherit;">Import again</button>';
+            banner.innerHTML = '<span style="color:#16a34a;font-weight:500;">&#10003; ' + steps.length + ' steps imported. Review and adjust below</span><button onclick="this.parentElement.remove();const z=document.getElementById(\'stepImportZone\');z.style.maxHeight=\'\';z.style.overflow=\'\';z.style.padding=\'\';z.style.border=\'\';z.style.marginBottom=\'\';" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:0.82rem;font-family:inherit;">Import again</button>';
             list.parentElement.insertBefore(banner, list);
         }
 
@@ -4233,6 +4603,38 @@
                         <button type="button" class="add-branch-btn" onclick="addBranch('u${uid}')">+ Add another route</button>
                     </div>
                     <div class="step-contributor-badge" style="display:none;" id="step_u${uid}_contributor"></div>
+                    <div class="step-handoff-inline" id="step_u${uid}_handoff" style="display:none;">
+                        <button type="button" class="step-handoff-toggle" onclick="toggleInlineHandoff('u${uid}')">
+                            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                            <span id="step_u${uid}_handoffLabel">Handoff to next step</span>
+                            <span id="step_u${uid}_handoffStatus" class="step-handoff-pending" style="margin-left:auto; font-weight:400;"></span>
+                        </button>
+                        <div class="step-handoff-body" id="step_u${uid}_handoffBody">
+                            <div class="form-group">
+                                <label>How was the next person/team notified?</label>
+                                <div class="radio-group">
+                                    <label class="radio-option"><input type="radio" name="stepHandoffMethod_u${uid}" value="email-details" onchange="updateHandoffStatus('u${uid}')"> Email with all details</label>
+                                    <label class="radio-option"><input type="radio" name="stepHandoffMethod_u${uid}" value="email-check" onchange="updateHandoffStatus('u${uid}')"> Email saying "check the system"</label>
+                                    <label class="radio-option"><input type="radio" name="stepHandoffMethod_u${uid}" value="slack" onchange="updateHandoffStatus('u${uid}')"> Slack/Teams message</label>
+                                    <label class="radio-option"><input type="radio" name="stepHandoffMethod_u${uid}" value="spreadsheet" onchange="updateHandoffStatus('u${uid}')"> Updated a shared spreadsheet</label>
+                                    <label class="radio-option"><input type="radio" name="stepHandoffMethod_u${uid}" value="in-person" onchange="updateHandoffStatus('u${uid}')"> In-person handoff</label>
+                                    <label class="radio-option"><input type="radio" name="stepHandoffMethod_u${uid}" value="verbal" onchange="updateHandoffStatus('u${uid}')"> Phone/meeting</label>
+                                    <label class="radio-option"><input type="radio" name="stepHandoffMethod_u${uid}" value="they-knew" onchange="updateHandoffStatus('u${uid}')"> They just... knew to check</label>
+                                    <label class="radio-option"><input type="radio" name="stepHandoffMethod_u${uid}" value="other" onchange="updateHandoffStatus('u${uid}'); toggleRadioOther('stepHandoffMethod_u${uid}', 'stepHandoffMethodOther_u${uid}')"> Other</label>
+                                    <input type="text" id="stepHandoffMethodOther_u${uid}" placeholder="Please describe..." style="display:none; margin-top:0.35rem; font-size:0.85rem;">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Did the next person come back asking for clarification?</label>
+                                <div class="radio-group">
+                                    <label class="radio-option"><input type="radio" name="stepHandoffClarity_u${uid}" value="no" onchange="updateHandoffStatus('u${uid}')"> No - had everything needed</label>
+                                    <label class="radio-option"><input type="radio" name="stepHandoffClarity_u${uid}" value="yes-once" onchange="updateHandoffStatus('u${uid}')"> Yes - once (minor clarification)</label>
+                                    <label class="radio-option"><input type="radio" name="stepHandoffClarity_u${uid}" value="yes-multiple" onchange="updateHandoffStatus('u${uid}')"> Yes - 2-3 back and forth</label>
+                                    <label class="radio-option"><input type="radio" name="stepHandoffClarity_u${uid}" value="yes-major" onchange="updateHandoffStatus('u${uid}')"> Yes - 4+ exchanges (major issues)</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="step-item-actions">
                     <button type="button" class="remove-item" onclick="removeStep(this)">Remove</button>
@@ -4325,6 +4727,32 @@
             scheduleLiveFlowUpdate();
         }
 
+        function toggleInlineHandoff(uid) {
+            const btn = document.querySelector('#step_' + uid + '_handoff .step-handoff-toggle');
+            const body = document.getElementById('step_' + uid + '_handoffBody');
+            if (!btn || !body) return;
+            const isOpen = body.classList.contains('open');
+            body.classList.toggle('open');
+            btn.classList.toggle('open');
+        }
+
+        function updateHandoffStatus(uid) {
+            const method = getRadioValue('stepHandoffMethod_' + uid);
+            const clarity = getRadioValue('stepHandoffClarity_' + uid);
+            const status = document.getElementById('step_' + uid + '_handoffStatus');
+            if (!status) return;
+            if (method && clarity) {
+                status.textContent = '\u2713 Answered';
+                status.className = 'step-handoff-answered';
+            } else if (method || clarity) {
+                status.textContent = '1 of 2';
+                status.className = 'step-handoff-pending';
+            } else {
+                status.textContent = '';
+                status.className = 'step-handoff-pending';
+            }
+        }
+
         const branchCounts = {};
         function addBranch(stepIdx) {
             if (!branchCounts[stepIdx]) branchCounts[stepIdx] = 2;
@@ -4373,6 +4801,19 @@
                     const removeBtn = actions.querySelector('.remove-item');
                     if (removeBtn) removeBtn.style.display = items.length <= 3 ? 'none' : '';
                 }
+                const uid = item.dataset.stepUid;
+                const handoff = document.getElementById('step_u' + uid + '_handoff');
+                if (handoff) {
+                    const isLast = (i === items.length - 1);
+                    handoff.style.display = isLast ? 'none' : '';
+                    const lbl = document.getElementById('step_u' + uid + '_handoffLabel');
+                    if (lbl && !isLast && i + 1 < items.length) {
+                        const nextUid = items[i + 1].dataset.stepUid;
+                        const nextName = document.getElementById('step_u' + nextUid + '_name');
+                        const nextText = nextName && nextName.value.trim() ? nextName.value.trim() : 'Step ' + (i + 2);
+                        lbl.textContent = 'Handoff \u2192 ' + nextText;
+                    }
+                }
             });
             stepCount = items.length;
             const atMax = stepCount >= MAX_STEPS;
@@ -4393,10 +4834,35 @@
             }
 
             scheduleLiveFlowUpdate();
+            updateStepJumpBar();
+        }
+
+        function updateStepJumpBar() {
+            const items = document.querySelectorAll('#stepsList .list-item');
+            const badge = document.getElementById('stepCountBadge');
+            if (badge) badge.textContent = items.length + ' step' + (items.length !== 1 ? 's' : '');
+
+            const bar = document.getElementById('stepJumpBar');
+            const chips = document.getElementById('stepJumpChips');
+            if (!bar || !chips) return;
+            if (items.length < 4) { bar.style.display = 'none'; return; }
+            bar.style.display = 'flex';
+            chips.innerHTML = '';
+            items.forEach(function(item, i) {
+                const uid = item.dataset.stepUid;
+                const nameEl = document.getElementById('step_u' + uid + '_name');
+                const name = nameEl && nameEl.value.trim() ? nameEl.value.trim() : 'Step ' + (i + 1);
+                const chip = document.createElement('span');
+                chip.className = 'step-jump-chip';
+                chip.textContent = (i + 1) + '. ' + name;
+                chip.title = name;
+                chip.onclick = function() { item.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
+                chips.appendChild(chip);
+            });
         }
 
         // -- Live Flow Preview ------------------------------------
-        let _liveFlowOpen = false;
+        let _liveFlowOpen = true;
         let _liveFlowTimer = null;
 
         function toggleLiveFlow() {
@@ -4405,11 +4871,11 @@
             const text = document.getElementById('liveFlowToggleText');
             if (_liveFlowOpen) {
                 container.style.display = 'block';
-                text.textContent = 'Hide Live Flow Preview';
+                text.textContent = 'Hide Flow Preview';
                 updateLiveFlow();
             } else {
                 container.style.display = 'none';
-                text.textContent = 'Show Live Flow Preview';
+                text.textContent = 'Show Flow Preview';
             }
         }
 
@@ -4777,80 +5243,29 @@
         }
 
         // ============================================================
-        // SCREEN 8: HANDOFF ANALYSIS
+        // HANDOFF COLLECTION (inline with steps)
         // ============================================================
-        function buildHandoffBlocks() {
-            processData.steps = collectSteps();
-            const container = document.getElementById('handoffContainer');
-            container.innerHTML = '';
-
-            if (processData.steps.length < 2) {
-                container.innerHTML = '<p style="color: var(--text-mid);">Need at least 2 steps to analyse handoffs.</p>';
-                return;
-            }
-
-            for (let i = 0; i < processData.steps.length - 1; i++) {
-                const from = processData.steps[i];
-                const to = processData.steps[i + 1];
-
-                const block = document.createElement('div');
-                block.className = 'handoff-block';
-                const fromBadge = from.isExternal ? '<span style="font-size:0.7rem;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:3px;margin-left:4px;">EXT</span>' : '';
-                const toBadge = to.isExternal ? '<span style="font-size:0.7rem;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:3px;margin-left:4px;">EXT</span>' : '';
-                const decBadge = from.isDecision ? '<span style="font-size:0.7rem;background:#ede9fe;color:#6d28d9;padding:1px 6px;border-radius:3px;margin-left:4px;">&#9670; DECISION</span>' : '';
-                const branchNote = from.isDecision && from.branches ? '<div style="font-size:0.8rem;color:#6d28d9;margin-top:4px;padding:4px 8px;background:#f5f3ff;border-radius:4px;">Routes: ' + from.branches.map(b => '<strong>' + b.label + '</strong>' + (b.target ? ' &#8594; ' + b.target : '')).join(' &middot; ') + '</div>' : '';
-                block.innerHTML = `
-                    <div class="handoff-header">
-                        Step ${from.number}: ${from.name} (${from.department || '?'})${fromBadge}${decBadge}
-                        <span class="handoff-arrow"> &rarr; </span>
-                        Step ${to.number}: ${to.name} (${to.department || '?'})${toBadge}
-                    </div>
-                    ${branchNote}
-                    <div class="form-group">
-                        <label>How did ${from.department || 'Step ' + from.number} notify ${to.department || 'Step ' + to.number}?</label>
-                        <div class="radio-group">
-                            <label class="radio-option"><input type="radio" name="handoffMethod_${i}" value="email-details"> Email with all details</label>
-                            <label class="radio-option"><input type="radio" name="handoffMethod_${i}" value="email-check"> Email saying "check the system"</label>
-                            <label class="radio-option"><input type="radio" name="handoffMethod_${i}" value="slack"> Slack/Teams message</label>
-                            <label class="radio-option"><input type="radio" name="handoffMethod_${i}" value="spreadsheet"> Updated a shared spreadsheet</label>
-                            <label class="radio-option"><input type="radio" name="handoffMethod_${i}" value="in-person"> In-person handoff</label>
-                            <label class="radio-option"><input type="radio" name="handoffMethod_${i}" value="verbal"> Phone/meeting</label>
-                            <label class="radio-option"><input type="radio" name="handoffMethod_${i}" value="they-knew"> They just... knew to check</label>
-                            <label class="radio-option"><input type="radio" name="handoffMethod_${i}" value="other" onchange="toggleRadioOther('handoffMethod_${i}', 'handoffMethodOther_${i}')"> Other</label>
-                            <input type="text" id="handoffMethodOther_${i}" placeholder="Please describe..." style="display: none; margin-top: 0.5rem;">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Did ${to.department || 'Step ' + to.number} come back asking for clarification?</label>
-                        <div class="radio-group">
-                            <label class="radio-option"><input type="radio" name="handoffClarity_${i}" value="no"> No - had everything needed</label>
-                            <label class="radio-option"><input type="radio" name="handoffClarity_${i}" value="yes-once"> Yes - once (minor clarification)</label>
-                            <label class="radio-option"><input type="radio" name="handoffClarity_${i}" value="yes-multiple"> Yes - 2-3 back and forth</label>
-                            <label class="radio-option"><input type="radio" name="handoffClarity_${i}" value="yes-major"> Yes - 4+ exchanges (major issues)</label>
-                        </div>
-                    </div>
-                `;
-                container.appendChild(block);
-            }
-        }
-
         function collectHandoffs() {
+            const items = document.querySelectorAll('#stepsList .list-item');
             const handoffs = [];
-            for (let i = 0; i < processData.steps.length - 1; i++) {
+            const stepsArr = processData.steps && processData.steps.length ? processData.steps : collectSteps();
+            for (let i = 0; i < items.length - 1; i++) {
+                const uid = items[i].dataset.stepUid;
                 handoffs.push({
-                    from: processData.steps[i],
-                    to: processData.steps[i + 1],
-                    method: getRadioValue('handoffMethod_' + i),
-                    clarity: getRadioValue('handoffClarity_' + i)
+                    from: stepsArr[i] || { number: i + 1, name: '', department: '' },
+                    to: stepsArr[i + 1] || { number: i + 2, name: '', department: '' },
+                    method: getRadioValue('stepHandoffMethod_u' + uid),
+                    clarity: getRadioValue('stepHandoffClarity_u' + uid)
                 });
             }
             return handoffs;
         }
 
         // ============================================================
-        // SCREEN 9: BOTTLENECK
+        // SCREEN 8: BOTTLENECK
         // ============================================================
-        function populateScreen9() {
+        function populateScreen8() {
+            processData.steps = collectSteps();
             processData.handoffs = collectHandoffs();
 
             // Populate step dropdowns
@@ -4879,11 +5294,11 @@
         }
 
         // ============================================================
-        // SCREEN 10: SYSTEMS
+        // SCREEN 9: SYSTEMS
         // ============================================================
-        function populateScreen10() {
+        function populateScreen9() {
             updateProcessRefs();
-            document.getElementById('exampleNameRef10').textContent = processData.lastExample.name || '';
+            document.getElementById('exampleNameRef9').textContent = processData.lastExample.name || '';
             if (systemCount === 0) addSystem();
         }
 
@@ -4956,7 +5371,7 @@
         }
 
         // ============================================================
-        // SCREEN 11: APPROVALS
+        // SCREEN 10: APPROVALS
         // ============================================================
         function buildApprovalEntries() {
             const count = parseInt(document.getElementById('approvalCount').value) || 0;
@@ -5000,7 +5415,7 @@
         }
 
         // ============================================================
-        // SCREEN 12: KNOWLEDGE
+        // SCREEN 11: KNOWLEDGE
         // ============================================================
         function toggleAskWho() {
             const val = getRadioValue('knowledgeFirst');
@@ -5008,7 +5423,7 @@
         }
 
         // ============================================================
-        // SCREEN 14: FREQUENCY
+        // SCREEN 13: FREQUENCY
         // ============================================================
         const FREQUENCY_MAP = {
             'multi-daily': 600, 'daily': 300, '2-3-week': 120, 'weekly': 54,
@@ -5024,17 +5439,17 @@
             document.getElementById('annualInstances').textContent = annual + ' per year';
         }
 
-        function populateScreen14() {
+        function populateScreen13() {
             if (!processData.frequency) processData.frequency = { type: '', annual: 0, inFlight: 0, progressing: 0, stuck: 0, waiting: 0 };
             const annual = processData.frequency.annual || 0;
             const el = document.getElementById('annualInstances');
-            if (el) el.textContent = annual > 0 ? annual + ' per year' : '\u2014';
+            if (el) el.textContent = annual > 0 ? annual + ' per year' : '--';
         }
 
         // ============================================================
-        // SCREEN 15: COST CALCULATION
+        // SCREEN 14: COST CALCULATION
         // ============================================================
-        function populateScreen15() {
+        function populateScreen14() {
             updateProcessRefs();
             if (!processData.userTime) processData.userTime = { meetings: 0, emails: 0, execution: 0, waiting: 0, total: 0 };
             if (!processData.frequency) processData.frequency = { type: '', annual: 0, inFlight: 0, progressing: 0, stuck: 0, waiting: 0 };
@@ -5069,9 +5484,9 @@
         }
 
         // ============================================================
-        // SCREEN 16: TEAM COST & SAVINGS
+        // SCREEN 15: TEAM COST & SAVINGS
         // ============================================================
-        function populateScreen16() {
+        function populateScreen15() {
             updateProcessRefs();
             if (!processData.lastExample) processData.lastExample = { name: '', startDate: '', endDate: '', elapsedDays: 0 };
             if (!processData.costs) processData.costs = { hourlyRate: 50, instanceCost: 0, annualUserCost: 0, totalAnnualCost: 0, teamSize: 1 };
@@ -5109,9 +5524,9 @@
         }
 
         // ============================================================
-        // SCREEN 17: PRIORITY
+        // SCREEN 16: PRIORITY
         // ============================================================
-        function populateScreen17() {
+        function populateScreen16() {
             updateProcessRefs();
             if (!processData.lastExample) processData.lastExample = { name: '', startDate: '', endDate: '', elapsedDays: 0 };
             if (!processData.costs) processData.costs = { hourlyRate: 50, instanceCost: 0, annualUserCost: 0, totalAnnualCost: 0, teamSize: 1 };
@@ -5144,16 +5559,14 @@
         }
 
         function handleProcessComplete() {
-            // Collect final data for this process
             collectAllProcessData();
 
             const another = getRadioValue('anotherProcess');
             if (!another) {
-                showError(17, 'Please select whether you want to analyse another process.');
+                showError(16, 'Please select whether you want to analyse another process.');
                 return;
             }
 
-            // Save completed process
             completedProcesses.push(JSON.parse(JSON.stringify(processData)));
 
             if (another === 'yes' && completedProcesses.length < 3) {
@@ -5168,7 +5581,7 @@
                 if (completedProcesses.length >= 2) {
                     showDependencyMapping();
                 } else {
-                    goToScreen(18);
+                    goToScreen(17);
                 }
             }
         }
@@ -5190,8 +5603,8 @@
             editingProcessIndex = index;
             processData = JSON.parse(JSON.stringify(completedProcesses[index]));
 
-            // Rebuild steps DOM from processData.steps
-            rebuildStepsFromData(processData.steps || []);
+            // Rebuild steps DOM from processData.steps + handoffs
+            rebuildStepsFromData(processData.steps || [], processData.handoffs || []);
 
             // Rebuild systems DOM from processData.systems
             rebuildSystemsFromData(processData.systems || []);
@@ -5258,7 +5671,7 @@
                 if (dd) dd.value = processData.delayDetails;
             }
 
-            // Restore screen 14 (frequency)
+            // Restore SCREEN 8 (frequency)
             const freq = processData.frequency || {};
             if (freq.type) {
                 const r = document.querySelector('input[name="frequency"][value="' + freq.type + '"]');
@@ -5273,16 +5686,16 @@
             if (stuckEl && freq.stuck) stuckEl.value = freq.stuck;
             if (waitingEl && freq.waiting) waitingEl.value = freq.waiting;
 
-            // Restore screen 15 (cost)
+            // Restore SCREEN 8 (cost)
             const costs = processData.costs || {};
             const hourlyEl = document.getElementById('hourlyRate');
             if (hourlyEl && costs.hourlyRate) hourlyEl.value = costs.hourlyRate;
 
-            // Restore screen 16 (team cost)
+            // Restore SCREEN 8 (team cost)
             const teamEl = document.getElementById('teamPeopleCount');
             if (teamEl && costs.teamSize) teamEl.value = costs.teamSize;
 
-            // Restore screen 17 (priority)
+            // Restore SCREEN 8 (priority)
             const pri = processData.priority || {};
             if (pri.level) {
                 const r = document.querySelector('input[name="priority"][value="' + pri.level + '"]');
@@ -5306,7 +5719,7 @@
             }
         }
 
-        function rebuildStepsFromData(steps) {
+        function rebuildStepsFromData(steps, handoffs) {
             const list = document.getElementById('stepsList');
             list.innerHTML = '';
             stepCount = 0;
@@ -5317,11 +5730,13 @@
                 return;
             }
 
+            const stepDivs = [];
             steps.forEach((s) => {
                 const prevContributor = _currentContributor;
                 if (s.contributor) _currentContributor = s.contributor;
                 const div = addStep();
                 _currentContributor = prevContributor;
+                stepDivs.push(div);
                 const pfx = getStepPrefix(div);
 
                 const nameEl = document.getElementById(pfx + '_name');
@@ -5368,6 +5783,23 @@
                     }
                 }
             });
+
+            // Restore inline handoff data
+            if (handoffs && handoffs.length > 0) {
+                for (let i = 0; i < Math.min(handoffs.length, stepDivs.length - 1); i++) {
+                    const uid = stepDivs[i].dataset.stepUid;
+                    const h = handoffs[i];
+                    if (h.method) {
+                        const radio = document.querySelector('input[name="stepHandoffMethod_u' + uid + '"][value="' + h.method + '"]');
+                        if (radio) radio.checked = true;
+                    }
+                    if (h.clarity) {
+                        const radio = document.querySelector('input[name="stepHandoffClarity_u' + uid + '"][value="' + h.clarity + '"]');
+                        if (radio) radio.checked = true;
+                    }
+                    if (h.method || h.clarity) updateHandoffStatus('u' + uid);
+                }
+            }
         }
 
         function rebuildSystemsFromData(systems) {
@@ -5406,11 +5838,10 @@
 
                 const another = getRadioValue('anotherProcess');
                 if (!another) {
-                    showError(17, 'Please select whether you want to analyse another process.');
+                    showError(16, 'Please select whether you want to analyse another process.');
                     return;
                 }
 
-                // Replace the process at the editing index
                 completedProcesses[editingProcessIndex] = JSON.parse(JSON.stringify(processData));
                 editingProcessIndex = -1;
 
@@ -5423,7 +5854,7 @@
                     document.getElementById('systemsList').innerHTML = '';
                     goToScreen(1);
                 } else {
-                    goToScreen(18);
+                    goToScreen(17);
                 }
             } else {
                 _origHandleProcessComplete();
@@ -5431,9 +5862,9 @@
         };
 
         // ============================================================
-        // SCREEN 18: CONTACT
+        // SCREEN 17: CONTACT
         // ============================================================
-        function populateScreen18() {
+        function populateScreen17() {
             const summary = document.getElementById('processesSummary');
             let totalCost = 0;
             let html = '<h3 style="margin-bottom: 1rem;">You\'ve analysed:</h3>';
@@ -5476,7 +5907,7 @@
             const name = document.getElementById('contactName').value.trim();
             const email = document.getElementById('contactEmail').value.trim();
             if (!name || !email) {
-                showError(18, 'Please provide your name and email.');
+                showError(8, 'Please provide your name and email.');
                 return;
             }
             _submitConfirmed = true;
@@ -5492,7 +5923,7 @@
             const name = document.getElementById('contactName').value.trim();
             const email = document.getElementById('contactEmail').value.trim();
             if (!name || !email) {
-                showError(18, 'Please provide your name and email.');
+                showError(8, 'Please provide your name and email.');
                 return;
             }
 
@@ -5510,7 +5941,7 @@
             // Submit team response if in team mode
             submitTeamResponse();
 
-            goToScreen(19);
+            goToScreen(18);
             document.getElementById('loadingState').style.display = 'block';
             document.getElementById('resultsContainer').style.display = 'none';
 
@@ -5767,7 +6198,7 @@
             const nonAuto = totalSteps - totalAutomatable;
             const nonPct = totalSteps > 0 ? Math.round((nonAuto / totalSteps) * 100) : 0;
             html += `<div class="score-bar-row">`;
-            html += `<div class="score-bar-badge" style="background:#94a3b8;">&mdash;</div>`;
+            html += `<div class="score-bar-badge" style="background:#94a3b8;">--</div>`;
             html += `<div class="score-bar-label" style="color:var(--text-mid);">Manual (no change)</div>`;
             html += `<div class="score-bar-track"><div class="score-bar-fill" style="width:${nonPct}%;background:#cbd5e1;"></div></div>`;
             html += `<div class="score-bar-pct" style="color:#94a3b8;">${nonAuto}/${totalSteps}</div>`;
@@ -5782,7 +6213,7 @@
             } else if (readinessScore >= 40) {
                 html += `<p style="margin:0;font-size:0.9rem;"><strong style="color:${scoreColor};">Moderate automation potential.</strong> ${totalAutomatable} of ${totalSteps} steps have improvement opportunities. Focus on the ${counts.simple} simple automation(s) first for quick wins, then build toward agent-assisted workflows.</p>`;
             } else {
-                html += `<p style="margin:0;font-size:0.9rem;"><strong style="color:${scoreColor};">Process optimisation recommended first.</strong> ${totalAutomatable} of ${totalSteps} steps show automation potential. Before automating, consider simplifying the process &mdash; removing unnecessary steps and standardising handoffs will increase automation readiness.</p>`;
+                html += `<p style="margin:0;font-size:0.9rem;"><strong style="color:${scoreColor};">Process optimisation recommended first.</strong> ${totalAutomatable} of ${totalSteps} steps show automation potential. Before automating, consider simplifying the process - removing unnecessary steps and standardising handoffs will increase automation readiness.</p>`;
             }
             html += `</div>`;
 
@@ -5804,10 +6235,10 @@
 
             // Classify all steps into phases
             const phases = {
-                quick:   { items: [], label: 'Quick Wins',       timeline: 'Week 1&mdash;2',    color: '#0891b2', savingsPct: 0 },
+                quick:   { items: [], label: 'Quick Wins',       timeline: 'Week 1-2',    color: '#0891b2', savingsPct: 0 },
                 agent:   { items: [], label: 'AI Agents',        timeline: 'Month 1',     color: '#7c3aed', savingsPct: 0 },
                 human:   { items: [], label: 'Agent + Human',    timeline: 'Month 2',     color: '#ea580c', savingsPct: 0 },
-                multi:   { items: [], label: 'Multi-Agent',      timeline: 'Month 2&mdash;3',   color: '#be185d', savingsPct: 0 }
+                multi:   { items: [], label: 'Multi-Agent',      timeline: 'Month 2-3',   color: '#be185d', savingsPct: 0 }
             };
 
             processes.forEach(p => {
@@ -6017,10 +6448,9 @@
 
             html += `<div class="button-group">
                 <button class="button button-secondary" onclick="goToScreen(17)">&larr; Back</button>
-                <button class="button button-primary" onclick="collectDependencies(${pairIdx}); goToScreen(18);">Continue &rarr;</button>
+                <button class="button button-primary" onclick="collectDependencies(${pairIdx}); goToScreen(17);">Continue &rarr;</button>
             </div></div>`;
 
-            // Inject into a temp container in Screen 17's area
             const screen17 = document.getElementById('screen17');
             let depDiv = document.getElementById('dependencyMapping');
             if (!depDiv) {
@@ -6198,7 +6628,7 @@
             document.getElementById('loadingState').style.display = 'none';
             document.getElementById('resultsContainer').style.display = 'block';
 
-            // Process cards &mdash; each process as a collapsible section
+            // Process cards - each process as a collapsible section
             const processResultsDiv = document.getElementById('processResults');
             let html = '';
 
@@ -6218,7 +6648,7 @@
                     </div>
                     <div class="metric-card">
                         <div class="metric-value"><span class="confidence-badge confidence-${(p.quality?.grade || 'medium').toLowerCase()}">${p.quality?.grade || 'MEDIUM'}</span></div>
-                        <div class="metric-label">Confidence (${p.quality?.score || '\u2014'}/100)</div>
+                        <div class="metric-label">Confidence (${p.quality?.score || '--'}/100)</div>
                     </div>
                 </div>`;
                 html += dsec(`${i + 1}. ${p.name}`, cardBody);
@@ -6421,13 +6851,11 @@
             processData.biggestDelay = document.getElementById('biggestDelay')?.value || '';
             processData.delayDetails = document.getElementById('delayDetails')?.value?.trim() || '';
 
-            // Screen 7
+            // Screen 7: Steps & Handoffs
             processData.steps = collectSteps();
-
-            // Screen 8
             processData.handoffs = collectHandoffs();
 
-            // Screen 9
+            // Screen 8: Bottleneck
             processData.bottleneck = {
                 longestStep: document.getElementById('longestStep')?.value || '',
                 reason: getRadioValue('bottleneckReason'),
@@ -6435,10 +6863,10 @@
                 why: document.getElementById('bottleneckWhy')?.value?.trim() || ''
             };
 
-            // Screen 10
+            // Screen 9: Systems
             processData.systems = collectSystems();
 
-            // Screen 11
+            // Screen 10: Approvals
             const approvalCount = parseInt(document.getElementById('approvalCount')?.value) || 0;
             processData.approvals = [];
             for (let i = 0; i < approvalCount; i++) {
@@ -6450,7 +6878,7 @@
                 });
             }
 
-            // Screen 12
+            // Screen 11: Knowledge
             processData.knowledge = {
                 firstLook: getRadioValue('knowledgeFirst'),
                 askWho: document.getElementById('askWho')?.value?.trim() || '',
@@ -6459,7 +6887,7 @@
                 timeToAnswer: getRadioValue('timeToAnswer')
             };
 
-            // Screen 13
+            // Screen 12: New Hire
             processData.newHire = {
                 learningMethod: getCheckedValues('learningMethod'),
                 timeToCompetence: getRadioValue('timeToCompetence'),
@@ -6467,17 +6895,17 @@
                 lastHireStruggle: document.getElementById('lastHireStruggle')?.value?.trim() || ''
             };
 
-            // Screen 14
+            // Screen 13: Frequency
             processData.frequency.inFlight = parseInt(document.getElementById('inFlight')?.value) || 0;
             processData.frequency.progressing = parseInt(document.getElementById('progressing')?.value) || 0;
             processData.frequency.stuck = parseInt(document.getElementById('stuck')?.value) || 0;
             processData.frequency.waiting = parseInt(document.getElementById('waitingFor')?.value) || 0;
 
-            // Screen 16
+            // Screen 15: Savings
             processData.savings.wouldDo = getCheckedValues('savingsUse');
             processData.savings.expectedImpact = getRadioValue('expectedImpact');
 
-            // Screen 17
+            // Screen 16: Priority
             processData.priority = {
                 level: getRadioValue('priority'),
                 reason: document.getElementById('priorityReason')?.value?.trim() || ''
@@ -6487,7 +6915,7 @@
         // ============================================================
         // VALIDATION
         // ============================================================
-        // #5 &mdash; LIVE PROCESS HEALTH SCORE
+        // #5 - LIVE PROCESS HEALTH SCORE
         // Updates a running score bar below the progress bar.
         // Score reflects data quality and process complexity signals.
         // ============================================================
@@ -6498,7 +6926,7 @@
             const gradeEl = document.getElementById('hsGrade');
 
             if (currentScreen < 1) { bar.style.display = 'none'; return; }
-            if (currentScreen >= 19) { bar.style.display = 'none'; return; }
+            if (currentScreen >= 8) { bar.style.display = 'none'; return; }
 
             bar.style.display = 'flex';
 
@@ -6538,26 +6966,26 @@
             if (steps.length >= 5) score += 5;
             if (steps.length >= 8) score += 5;
 
-            // Screen 8: handoffs (10pts)
+            // Screen 7 (cont.): handoffs (10pts)
             maxScore += 10;
             const handoffs = processData.handoffs || [];
             if (handoffs.length > 0) score += 5;
             if (handoffs.every(h => h.method)) score += 5;
 
-            // Screen 9: bottleneck (10pts)
+            // Screen 8: bottleneck (10pts)
             maxScore += 10;
             if (processData.bottleneck?.longestStep) score += 5;
             if (processData.bottleneck?.reason) score += 5;
 
-            // Screen 10: systems (5pts)
+            // Screen 9: systems (5pts)
             maxScore += 5;
             if ((processData.systems || []).length > 0) score += 5;
 
-            // Screen 11: approvals (5pts)
+            // Screen 10: approvals (5pts)
             maxScore += 5;
             if ((processData.approvals || []).length > 0 || processData.approvalCount === 0) score += 5;
 
-            // Screen 14: frequency (5pts)
+            // Screen 13: frequency (5pts)
             maxScore += 5;
             if (processData.frequency?.type) score += 5;
 
@@ -6579,7 +7007,7 @@
         }
 
         // ============================================================
-        // #6 &mdash; AI STEP SUGGESTIONS
+        // #6 - AI STEP SUGGESTIONS
         // Shows suggested missing steps based on process type.
         // ============================================================
         const STEP_SUGGESTIONS = {
@@ -6677,7 +7105,7 @@
         }
 
         // ============================================================
-        // #2 &mdash; AI INSIGHT CARDS
+        // #2 - AI INSIGHT CARDS
         // Pattern-matched insights shown after key screens.
         // ============================================================
         function showInsightCard(screenNum) {
@@ -6690,7 +7118,6 @@
                 case 5: insight = generateInsight5(); break;
                 case 7: insight = generateInsight7(); break;
                 case 8: insight = generateInsight8(); break;
-                case 9: insight = generateInsight9(); break;
             }
 
             if (!insight) { container.style.display = 'none'; return; }
@@ -6726,7 +7153,7 @@
                 parts.push(`<strong>${emailPct}%</strong> of your time was spent on email. Structured workflow tools with auto-notifications typically cut email coordination by 50-70%.`);
             }
             if (execPct < 30 && t.total > 2) {
-                parts.push(`Only <strong>${execPct}%</strong> of your time was actual execution. The rest is overhead &mdash; a strong signal that process automation could reclaim significant capacity.`);
+                parts.push(`Only <strong>${execPct}%</strong> of your time was actual execution. The rest is overhead. A strong signal that process automation could reclaim significant capacity.`);
             }
 
             if (parts.length === 0 && t.total > 5) {
@@ -6747,7 +7174,7 @@
             const intSteps = steps.filter(s => !s.isExternal);
 
             if (depts.length >= 3) {
-                parts.push(`Your process spans <strong>${depts.length} departments</strong> across ${steps.length} steps. Each department transition is a potential delay point &mdash; cross-functional processes benefit most from orchestration automation.`);
+                parts.push(`Your process spans <strong>${depts.length} departments</strong> across ${steps.length} steps. Each department transition is a potential delay point. Cross-functional processes benefit most from orchestration automation.`);
             }
 
             if (steps.length > 10) {
@@ -6757,7 +7184,7 @@
             // External party insights
             if (extSteps.length > 0) {
                 const extDepts = [...new Set(extSteps.map(s => s.department).filter(Boolean))];
-                parts.push(`<strong>${extSteps.length} of ${steps.length} steps involve external parties</strong> (${extDepts.join(', ')}). External handoffs are typically 2-5x slower than internal ones &mdash; these are prime candidates for automated tracking and SLA monitoring.`);
+                parts.push(`<strong>${extSteps.length} of ${steps.length} steps involve external parties</strong> (${extDepts.join(', ')}). External handoffs are typically 2-5x slower than internal ones. These are prime candidates for automated tracking and SLA monitoring.`);
             }
 
             // Internal-to-external transitions (high-friction points)
@@ -6777,13 +7204,13 @@
                 }
             }
             if (backAndForth > 0) {
-                parts.push(`We spotted <strong>${backAndForth} back-and-forth handoff(s)</strong> between departments &mdash; work bouncing between teams is a classic inefficiency that agents can eliminate by bridging the gap.`);
+                parts.push(`We spotted <strong>${backAndForth} back-and-forth handoff(s)</strong> between departments. Work bouncing between teams is a classic inefficiency that agents can eliminate by bridging the gap.`);
             }
 
             return parts.length > 0 ? parts.join('<br style="margin-bottom:0.3rem;">') : null;
         }
 
-        function generateInsight8() {
+        function generateHandoffInsight() {
             const handoffs = processData.handoffs || [];
             if (handoffs.length === 0) return null;
 
@@ -6796,10 +7223,10 @@
                 parts.push(`<strong>${emailHandoffs} of ${handoffs.length}</strong> handoffs use email. Email-based handoffs average <strong>3.2x longer</strong> delays than system-triggered transitions, because they depend on someone reading and acting on a message.`);
             }
             if (badHandoffs > 0) {
-                parts.push(`<strong>${badHandoffs} handoff(s)</strong> have clarity issues. Unclear handoffs are the #1 source of rework &mdash; they cause an average <strong>2-5 day delay</strong> per occurrence. Each one is a prime candidate for agent automation.`);
+                parts.push(`<strong>${badHandoffs} handoff(s)</strong> have clarity issues. Unclear handoffs are the #1 source of rework. They cause an average <strong>2-5 day delay</strong> per occurrence. Each one is a prime candidate for agent automation.`);
             }
             if (verbalHandoffs > 0) {
-                parts.push(`<strong>${verbalHandoffs} handoff(s)</strong> rely on verbal/informal communication. These are fragile &mdash; they break when people are sick, on holiday, or just busy. A simple notification automation eliminates this risk entirely.`);
+                parts.push(`<strong>${verbalHandoffs} handoff(s)</strong> rely on verbal/informal communication. These are fragile. They break when people are sick, on holiday, or just busy. A simple notification automation eliminates this risk entirely.`);
             }
             if (parts.length === 0 && handoffs.length > 3) {
                 parts.push(`With <strong>${handoffs.length} handoff points</strong>, even small delays compound. If each handoff adds just 30 minutes of waiting, that's <strong>${Math.round(handoffs.length * 0.5)} hours</strong> of dead time per instance.`);
@@ -6808,7 +7235,7 @@
             return parts.length > 0 ? parts.join('<br style="margin-bottom:0.3rem;">') : null;
         }
 
-        function generateInsight9() {
+        function generateInsight8() {
             const bn = processData.bottleneck;
             if (!bn?.longestStep) return null;
 
@@ -6819,15 +7246,15 @@
             const bnStep = steps[bnIdx];
 
             if (reason === 'busy') {
-                parts.push(`The bottleneck is caused by <strong>competing priorities</strong>. This is the most common pattern &mdash; it means the work itself isn't complex, just deprioritised. An AI agent can auto-assign, escalate, and track SLAs to prevent this.`);
+                parts.push(`The bottleneck is caused by <strong>competing priorities</strong>. This is the most common pattern. It means the work itself isn't complex, just deprioritised. An AI agent can auto-assign, escalate, and track SLAs to prevent this.`);
             } else if (reason === 'approvals') {
                 parts.push(`<strong>Multiple approvals</strong> are creating the bottleneck. Consider whether all approval levels are necessary, or if conditional auto-approval (e.g., under a threshold amount) could eliminate the delay entirely.`);
             } else if (reason === 'no-info') {
-                parts.push(`The bottleneck is <strong>missing information</strong>. An agent that pre-validates data completeness at the start of the process could catch this early &mdash; moving the problem from a blocking delay to a 2-minute fix.`);
+                parts.push(`The bottleneck is <strong>missing information</strong>. An agent that pre-validates data completeness at the start of the process could catch this early. Moving the problem from a blocking delay to a 2-minute fix.`);
             } else if (reason === 'external') {
                 parts.push(`An <strong>external dependency</strong> is causing the delay. While you can't control external parties, automated follow-up agents can chase responses at optimal intervals and escalate when SLAs are breached.`);
             } else if (reason === 'unclear') {
-                parts.push(`The bottleneck stems from <strong>process ambiguity</strong>. This is a documentation and knowledge issue &mdash; an AI agent can surface the right procedure based on context, reducing decision paralysis.`);
+                parts.push(`The bottleneck stems from <strong>process ambiguity</strong>. This is a documentation and knowledge issue. An AI agent can surface the right procedure based on context, reducing decision paralysis.`);
             }
 
             if (bnStep && parts.length > 0) {
@@ -6893,7 +7320,7 @@
             }
 
             // Soft nudge on optional screens if no data was entered
-            const nudgeScreens = [8, 9, 10, 11, 12, 13, 15, 16, 17];
+            const nudgeScreens = [8, 9, 10, 11, 12, 14, 15, 16];
             if (nudgeScreens.indexOf(screen) >= 0 && !_skipNudge[screen] && !screenHasData(screen)) {
                 showSoftNudge(screen);
                 return;
@@ -6907,24 +7334,22 @@
         function screenHasData(screen) {
             switch (screen) {
                 case 8:
-                    return !!document.querySelector('#handoffContainer input[type="radio"]:checked');
-                case 9:
                     return !!document.getElementById('longestStep').value || !!document.querySelector('input[name="bottleneckReason"]:checked');
-                case 10:
+                case 9:
                     const sysNames = document.querySelectorAll('#systemsList input[type="text"]');
                     for (let i = 0; i < sysNames.length; i++) { if (sysNames[i].value.trim()) return true; }
                     return false;
-                case 11:
+                case 10:
                     return parseInt(document.getElementById('approvalCount').value || '0') > 0;
-                case 12:
+                case 11:
                     return !!document.querySelector('input[name="knowledgeFirst"]:checked');
-                case 13:
+                case 12:
                     return !!document.querySelector('input[name="learningMethod"]:checked');
-                case 15:
+                case 14:
                     return false;
-                case 16:
+                case 15:
                     return parseInt(document.getElementById('teamPeopleCount').value || '0') > 1;
-                case 17:
+                case 16:
                     return !!document.querySelector('input[name="priority"]:checked');
                 default:
                     return true;
@@ -7074,10 +7499,10 @@
         // Returns { category, label, reason } or null.
         //
         // Categories:
-        //   'simple'      &mdash; Rule-based automation, no AI needed
-        //   'agent'       &mdash; Autonomous AI agent
-        //   'human-loop'  &mdash; Agent with human-in-the-loop oversight
-        //   'multi-agent' &mdash; Multi-agent orchestration system
+        //   'simple'      - Rule-based automation, no AI needed
+        //   'agent'       - Autonomous AI agent
+        //   'human-loop'  - Agent with human-in-the-loop oversight
+        //   'multi-agent' - Multi-agent orchestration system
         // ============================================================
         const AUTOMATION_CATEGORIES = {
             simple:     { key: 'simple',     label: 'Simple Automation',  badge: 'S',  color: '#0891b2', bg: '#ecfeff' },
@@ -7115,46 +7540,46 @@
 
             // Bad handoffs on BOTH sides = orchestration gap across teams
             if (hasBadHandoff && hadBadHandoffIn && crossesDepts) {
-                return { ...AUTOMATION_CATEGORIES.multiAgent, reason: 'Cross-department orchestration gap &mdash; needs coordinated agents with routing, escalation, and status tracking' };
+                return { ...AUTOMATION_CATEGORIES.multiAgent, reason: 'Cross-department orchestration gap. Needs coordinated agents with routing, escalation, and status tracking' };
             }
 
             // Onboarding / provisioning that spans multiple departments
             if ((name.includes('onboard') || name.includes('provision')) && crossesDepts) {
-                return { ...AUTOMATION_CATEGORIES.multiAgent, reason: 'Multi-department onboarding &mdash; needs provisioning agent, notification agent, and verification agent working in concert' };
+                return { ...AUTOMATION_CATEGORIES.multiAgent, reason: 'Multi-department onboarding. Needs provisioning agent, notification agent, and verification agent working in concert' };
             }
 
             // Complex coordination across teams
             if (name.includes('coordinate') && crossesDepts) {
-                return { ...AUTOMATION_CATEGORIES.multiAgent, reason: 'Cross-team coordination &mdash; requires orchestrator agent delegating to specialist agents per department' };
+                return { ...AUTOMATION_CATEGORIES.multiAgent, reason: 'Cross-team coordination. Requires orchestrator agent delegating to specialist agents per department' };
             }
 
             // --- AGENT + HUMAN-IN-THE-LOOP ----------------------------
             // Tasks where AI adds value but human judgment is essential
 
-            // Approvals (especially bottlenecks) &mdash; agent pre-processes, human decides
+            // Approvals (especially bottlenecks). Agent pre-processes, human decides
             if (name.includes('approv')) {
-                const extra = isBottleneckStep ? ' (bottleneck &mdash; agent can auto-route and prepare decision summary)' : '';
-                return { ...AUTOMATION_CATEGORIES.humanLoop, reason: 'Approval decision &mdash; agent prepares context, validates criteria, and routes; human makes final call' + extra };
+                const extra = isBottleneckStep ? ' (bottleneck. Agent can auto-route and prepare decision summary)' : '';
+                return { ...AUTOMATION_CATEGORIES.humanLoop, reason: 'Approval decision. Agent prepares context, validates criteria, and routes; human makes final call' + extra };
             }
 
-            // Review / QA &mdash; agent can pre-check but human signs off
+            // Review / QA - agent can pre-check but human signs off
             if (name.includes('review') || name.includes('qa') || name.includes('audit')) {
-                return { ...AUTOMATION_CATEGORIES.humanLoop, reason: 'Quality review &mdash; agent performs automated checks and flags anomalies; human confirms' };
+                return { ...AUTOMATION_CATEGORIES.humanLoop, reason: 'Quality review. Agent performs automated checks and flags anomalies; human confirms' };
             }
 
-            // Validate / verify &mdash; agent checks rules, human handles exceptions
+            // Validate / verify - agent checks rules, human handles exceptions
             if (name.includes('validate') || name.includes('verify')) {
-                return { ...AUTOMATION_CATEGORIES.humanLoop, reason: 'Validation step &mdash; agent checks against business rules; human handles edge cases and exceptions' };
+                return { ...AUTOMATION_CATEGORIES.humanLoop, reason: 'Validation step. Agent checks against business rules; human handles edge cases and exceptions' };
             }
 
-            // Escalation &mdash; agent triages, human resolves
+            // Escalation - agent triages, human resolves
             if (name.includes('escalat') || name.includes('exception') || name.includes('dispute')) {
-                return { ...AUTOMATION_CATEGORIES.humanLoop, reason: 'Exception handling &mdash; agent triages and categorises; human resolves complex cases' };
+                return { ...AUTOMATION_CATEGORIES.humanLoop, reason: 'Exception handling. Agent triages and categorises; human resolves complex cases' };
             }
 
             // Complex configuration / setup requiring judgment
             if ((name.includes('configure') || name.includes('design') || name.includes('plan')) && crossesDepts) {
-                return { ...AUTOMATION_CATEGORIES.humanLoop, reason: 'Complex setup &mdash; agent drafts configuration; human reviews and adjusts' };
+                return { ...AUTOMATION_CATEGORIES.humanLoop, reason: 'Complex setup. Agent drafts configuration; human reviews and adjusts' };
             }
 
             // --- AUTONOMOUS AI AGENT ----------------------------------
@@ -7162,75 +7587,75 @@
 
             // Data matching / reconciliation (fuzzy logic, AI-powered)
             if (name.includes('match') || name.includes('reconcil') || name.includes('compare')) {
-                return { ...AUTOMATION_CATEGORIES.agent, reason: 'Data reconciliation &mdash; agent uses fuzzy matching and context to auto-reconcile across sources' };
+                return { ...AUTOMATION_CATEGORIES.agent, reason: 'Data reconciliation. Agent uses fuzzy matching and context to auto-reconcile across sources' };
             }
 
             // Intelligent scheduling (optimisation, conflict resolution)
             if (name.includes('schedule') || name.includes('book') || name.includes('prioriti')) {
-                return { ...AUTOMATION_CATEGORIES.agent, reason: 'Intelligent scheduling &mdash; agent optimises timing, resolves conflicts, and balances workload' };
+                return { ...AUTOMATION_CATEGORIES.agent, reason: 'Intelligent scheduling. Agent optimises timing, resolves conflicts, and balances workload' };
             }
 
             // Follow-up / chasing (context-aware, adaptive)
             if (name.includes('follow up') || name.includes('chase') || name.includes('wait') || name.includes('remind')) {
-                return { ...AUTOMATION_CATEGORIES.agent, reason: 'Adaptive follow-up &mdash; agent tracks status, adjusts urgency, and escalates when thresholds hit' };
+                return { ...AUTOMATION_CATEGORIES.agent, reason: 'Adaptive follow-up. Agent tracks status, adjusts urgency, and escalates when thresholds hit' };
             }
 
             // Classification / routing / triage
             if (name.includes('classify') || name.includes('categoris') || name.includes('categoriz') || name.includes('triage') || name.includes('assess')) {
-                return { ...AUTOMATION_CATEGORIES.agent, reason: 'Intelligent classification &mdash; agent analyses content and routes to the right team/workflow' };
+                return { ...AUTOMATION_CATEGORIES.agent, reason: 'Intelligent classification. Agent analyses content and routes to the right team/workflow' };
             }
 
             // Checking with context (not just rule-based)
             if (name.includes('check') && hasCopy) {
-                return { ...AUTOMATION_CATEGORIES.agent, reason: 'Cross-system validation &mdash; agent checks data consistency across integrated systems' };
+                return { ...AUTOMATION_CATEGORIES.agent, reason: 'Cross-system validation. Agent checks data consistency across integrated systems' };
             }
 
             // Poor handoff bridge (agent manages the transition)
             if (hasBadHandoff && crossesDepts) {
-                return { ...AUTOMATION_CATEGORIES.agent, reason: 'Handoff bridge &mdash; agent manages the transition, ensures data completeness, and confirms receipt' };
+                return { ...AUTOMATION_CATEGORIES.agent, reason: 'Handoff bridge. Agent manages the transition, ensures data completeness, and confirms receipt' };
             }
 
             // Assign with context (needs some intelligence to pick the right person)
             if (name.includes('assign') || name.includes('allocat')) {
-                return { ...AUTOMATION_CATEGORIES.agent, reason: 'Smart assignment &mdash; agent evaluates workload, skills, and availability to assign optimally' };
+                return { ...AUTOMATION_CATEGORIES.agent, reason: 'Smart assignment. Agent evaluates workload, skills, and availability to assign optimally' };
             }
 
             // --- SIMPLE AUTOMATION ------------------------------------
-            // Deterministic, rule-based &mdash; no AI required
+            // Deterministic, rule-based - no AI required
 
             // Send notification / email
             if (name.includes('send') || name.includes('notify') || name.includes('email')) {
-                return { ...AUTOMATION_CATEGORIES.simple, reason: 'Notification trigger &mdash; automate with a rule: when step completes, fire templated message' };
+                return { ...AUTOMATION_CATEGORIES.simple, reason: 'Notification trigger. Automate with a rule: when step completes, fire templated message' };
             }
 
             // Data entry / copy-paste
             if (name.includes('enter') || name.includes('log') || name.includes('record') || name.includes('copy') || name.includes('input')) {
-                return { ...AUTOMATION_CATEGORIES.simple, reason: 'Data entry &mdash; automate with direct API integration between source and target systems' };
+                return { ...AUTOMATION_CATEGORIES.simple, reason: 'Data entry. Automate with direct API integration between source and target systems' };
             }
 
             // System update / transfer
             if (hasCopy && (name.includes('update') || name.includes('transfer') || name.includes('move') || name.includes('sync'))) {
-                return { ...AUTOMATION_CATEGORIES.simple, reason: 'System sync &mdash; automate with API-to-API data pipeline, no human or AI needed' };
+                return { ...AUTOMATION_CATEGORIES.simple, reason: 'System sync. Automate with API-to-API data pipeline, no human or AI needed' };
             }
 
             // Simple setup / provisioning (single department, no cross-dept)
             if ((name.includes('setup') || name.includes('provision') || name.includes('create account')) && !crossesDepts) {
-                return { ...AUTOMATION_CATEGORIES.simple, reason: 'Provisioning &mdash; automate with scripted API calls to create/configure resources' };
+                return { ...AUTOMATION_CATEGORIES.simple, reason: 'Provisioning - automate with scripted API calls to create/configure resources' };
             }
 
             // Status update / logging
             if (name.includes('status') || name.includes('stamp') || name.includes('mark as') || name.includes('close') || name.includes('archive')) {
-                return { ...AUTOMATION_CATEGORIES.simple, reason: 'Status update &mdash; automate with a trigger rule that updates the record state' };
+                return { ...AUTOMATION_CATEGORIES.simple, reason: 'Status update - automate with a trigger rule that updates the record state' };
             }
 
             // Generate / produce standard output
             if (name.includes('generate') || name.includes('produce') || name.includes('print') || name.includes('export')) {
-                return { ...AUTOMATION_CATEGORIES.simple, reason: 'Report/output generation &mdash; automate with templated generation triggered on completion' };
+                return { ...AUTOMATION_CATEGORIES.simple, reason: 'Report/output generation - automate with templated generation triggered on completion' };
             }
 
-            // Poor handoff within same department &mdash; simple routing fix
+            // Poor handoff within same department - simple routing fix
             if (hasBadHandoff && !crossesDepts) {
-                return { ...AUTOMATION_CATEGORIES.simple, reason: 'Handoff automation &mdash; automate with a queue/notification that pushes work to the next person' };
+                return { ...AUTOMATION_CATEGORIES.simple, reason: 'Handoff automation - automate with a queue/notification that pushes work to the next person' };
             }
 
             return null;
@@ -7254,7 +7679,7 @@
          * GRID FLOWCHART ROUTING CONTRACT
          * --------------------------------
          * 1. LINE_GAP (32px) between every pair of parallel routing lines.
-         * 2. Global channel allocator &mdash; unique channel per inter-row gap across ALL decisions.
+         * 2. Global channel allocator - unique channel per inter-row gap across ALL decisions.
          * 3. 32px minimum clearance between any node edge and the nearest routing line.
          * 4. Loop-backs route vertically through the LEFT margin (outside node columns).
          * 5. Forward same-row / multi-row routes use the RIGHT margin for vertical segments.
@@ -7570,7 +7995,7 @@
                   } catch (e) { console.error('Branch prep error (step ' + (i+1) + '):', e); }
                 });
 
-                // Pass 1c: distribute exits across vertices &mdash; avoid concentrating on one
+                // Pass 1c: distribute exits across vertices - avoid concentrating on one
                 // Preference order for redistribution: bottom, right, left, top (plan)
                 const vertexCount = { top: 0, right: 0, bottom: 0, left: 0 };
                 function compatFallbacks(bd) {
@@ -7633,7 +8058,7 @@
                         nY = isTargetDec ? tp.cy - DIAMOND_H / 2 : tp.y;
                     }
 
-                    // Build path &mdash; strictly orthogonal (90°/180° only)
+                    // Build path - strictly orthogonal (90°/180° only)
                     let pathD;
 
                     if (isAdjacentSameRow && Math.abs(eY - nY) < 2) {
@@ -7666,7 +8091,7 @@
                     svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" ${dashAttr} marker-end="url(#arwc${bi % 5})" opacity="0.75"/>`;
                     svg += `<circle r="3" fill="${color}" opacity="0.8"><animateMotion dur="${2.5 + bi * 0.5}s" repeatCount="indefinite" begin="${bi * 0.4}s" path="${pathD}"><\/animateMotion><\/circle>`;
 
-                    // Label at exit vertex &mdash; cap width, wrap long text
+                    // Label at exit vertex - cap width, wrap long text
                     const MAX_LBL = 18;
                     const rawLabel = br.label || '';
                     let lblLines;
@@ -7825,7 +8250,7 @@
                     const isVerticalExit = exitDir === 'top' || exitDir === 'bottom';
                     let resolved = false;
                     if (isVerticalExit) {
-                        // Line is vertical &mdash; only nudge along Y so label stays on connector
+                        // Line is vertical - only nudge along Y so label stays on connector
                         const preferDown = exitDir === 'bottom';
                         for (let dy = 1; dy <= 6 && !resolved; dy++) {
                             const tryY = preferDown ? y + (h + 4) * dy : y - (h + 4) * dy;
@@ -7838,7 +8263,7 @@
                             }
                         }
                     } else {
-                        // Line is horizontal &mdash; only nudge along X so label stays on connector
+                        // Line is horizontal - only nudge along X so label stays on connector
                         const preferRight = exitDir === 'right';
                         for (let dx = 1; dx <= 6 && !resolved; dx++) {
                             const shift = dx * (w * 0.6);
@@ -8004,7 +8429,7 @@
             const connections = [];
             connections.push({ fromType: 'start', toIdx: 0 });
             for (let i = 0; i < allSteps.length - 1; i++) {
-                // Skip sequential arrow FROM decision steps &mdash; branches define the paths
+                // Skip sequential arrow FROM decision steps - branches define the paths
                 if (allSteps[i].isDecision && allSteps[i].branches && allSteps[i].branches.length > 0) continue;
                 const hk = i + '->' + (i + 1);
                 const hd = handoffMap[hk] || { method: '', isBad: false };
@@ -8170,7 +8595,7 @@
                 });
             });
 
-            // Step nodes &mdash; with diamond decisions
+            // Step nodes - with diamond decisions
             function slWrapText(text, maxC) {
                 const words = text.split(/\s+/);
                 const lines = []; let cur = '';
@@ -8320,7 +8745,7 @@
                         const gapMidX = pos.x + NODE_W + NODE_GAP_X / 2 + chOff;
 
                         if (Math.abs(exitY - entryY) < 5 && Math.abs(exitX - entryX) < colW * 2) {
-                            // Near same lane &mdash; go down, across bottom gap, up to target
+                            // Near same lane - go down, across bottom gap, up to target
                             pathD = `M ${exitX} ${exitY} L ${exitX} ${jogY} L ${entryX} ${jogY} L ${entryX} ${entryY}`;
                         } else {
                             // Cross-lane: down to lane bottom gap, right to column gap, vertical to target lane, left to target
@@ -8339,7 +8764,7 @@
                     // Animated particle following the branch path
                     svg += `<circle r="3" fill="${color}" opacity="0.85"><animateMotion dur="${2.5 + bi * 0.5}s" repeatCount="indefinite" begin="${bi * 0.4}s" path="${pathD}"><\/animateMotion><\/circle>`;
 
-                    // Prominent exit label pill at the diamond side &mdash; full text, no truncation
+                    // Prominent exit label pill at the diamond side - full text, no truncation
                     const brText = escSvg(br.label);
                     const slPillW = brText.length * 5.2 + 18;
                     const slPillH = 18;
@@ -8469,7 +8894,7 @@
             try {
                 const raw = sessionStorage.getItem('redesignProcesses');
                 if (!raw) {
-                    document.body.innerHTML = '<div style="max-width:700px;margin:60px auto;padding:20px;font-family:Work Sans,sans-serif;text-align:center;"><h2>No redesign data found</h2><p style="color:#64748b;">Please generate a redesign from the <a href="/portal">dashboard</a> first.</p></div>';
+                    document.body.innerHTML = '<div style="max-width:700px;margin:60px auto;padding:20px;font-family:Work Sans,sans-serif;text-align:center;"><h2>No redesign data found</h2><p style="color:#64748b;">Please generate a redesign from the <a href="/portal">client login</a> first.</p></div>';
                     return;
                 }
                 const procs = JSON.parse(raw);
@@ -8485,7 +8910,7 @@
                 wrap.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:12px;">' +
                     '<div><h1 style="font-family:Cormorant Garamond,serif;font-size:1.8rem;font-weight:700;color:#1a5a6e;margin:0;">Redesigned Process Flow</h1>' +
                     '<p style="font-size:0.88rem;color:#64748b;margin-top:4px;">AI-generated optimised operating model</p></div>' +
-                    '<a href="/portal" style="padding:8px 20px;background:#1a5a6e;color:white;text-decoration:none;border-radius:8px;font-size:0.85rem;font-weight:500;">\u2190 Back to Dashboard</a></div>' +
+                    '<a href="/portal" style="padding:8px 20px;background:#1a5a6e;color:white;text-decoration:none;border-radius:8px;font-size:0.85rem;font-weight:500;">\u2190 Back to Client Login</a></div>' +
                     '<div id="flowDiagramLoading" style="display:none;"></div>' +
                     '<div id="flowDiagramError" style="display:none;"><span></span><span></span></div>' +
                     '<div id="flowDiagramsContainer"></div>';
@@ -8520,7 +8945,7 @@
                 renderFlowDiagram(flowProcesses);
             } catch (e) {
                 console.error('Failed to render redesign:', e);
-                document.body.innerHTML = '<div style="max-width:700px;margin:60px auto;padding:20px;font-family:Work Sans,sans-serif;text-align:center;"><h2>Error loading redesign</h2><p style="color:#dc2626;">' + e.message + '</p><a href="/portal">Back to Dashboard</a></div>';
+                document.body.innerHTML = '<div style="max-width:700px;margin:60px auto;padding:20px;font-family:Work Sans,sans-serif;text-align:center;"><h2>Error loading redesign</h2><p style="color:#dc2626;">' + e.message + '</p><a href="/portal">Back to Client Login</a></div>';
             }
         }
 
@@ -8553,7 +8978,7 @@
                     }).filter(Boolean);
 
                     allHtml += `<div class="result-section" style="margin-bottom: 2rem;">`;
-                    allHtml += `<h3 style="margin-bottom: 0.5rem;">${pi + 1}. ${escSvg(p.processName || 'Process')} &mdash; Flow Diagram</h3>`;
+                    allHtml += `<h3 style="margin-bottom: 0.5rem;">${pi + 1}. ${escSvg(p.processName || 'Process')} - Flow Diagram</h3>`;
 
                     if (isList) {
                         allHtml += buildListView(p, classified);
@@ -8614,7 +9039,7 @@
                             items.forEach(item => {
                                 allHtml += `<div style="display:flex;gap:0.5rem;align-items:baseline;margin-bottom:0.3rem;padding-left:1.5rem;">`;
                                 allHtml += `<span style="color:${cat.color};font-size:0.85rem;">&#x2022;</span>`;
-                                allHtml += `<span style="font-size:0.85rem;"><strong>${escSvg(item.step)}</strong> &mdash; <span style="color:var(--text-mid);">${escSvg(item.reason)}</span></span>`;
+                                allHtml += `<span style="font-size:0.85rem;"><strong>${escSvg(item.step)}</strong> - <span style="color:var(--text-mid);">${escSvg(item.reason)}</span></span>`;
                                 allHtml += `</div>`;
                             });
 
@@ -8832,7 +9257,7 @@
 
         function exportNotionMarkdown() {
             const data = getExportData();
-            let md = '# Process Diagnostic &mdash; Action Items\n\n';
+            let md = '# Process Diagnostic - Action Items\n\n';
             md += `Total annual process cost: £${(data.totalCost / 1000).toFixed(0)}K | Potential savings: £${((data.potentialSavings || 0) / 1000).toFixed(0)}K\n\n`;
             md += '## Recommendations\n\n';
             data.recommendations.forEach((r, i) => {
@@ -8984,8 +9409,8 @@
                     confirmation.style.display = 'block';
                     const confText = document.getElementById('emailConfirmText');
                     const confDetail = document.getElementById('emailConfirmDetail');
-                    confText.textContent = 'Your report has been saved to your dashboard.';
-                    confDetail.innerHTML = '<a href="/portal" style="color: #6366f1; font-weight: 600;">View in Dashboard &rarr;</a>';
+                    confText.textContent = 'Your report has been saved to your client login.';
+                    confDetail.innerHTML = '<a href="/portal" style="color: #6366f1; font-weight: 600;">View in Client Login &rarr;</a>';
                     return;
                 }
 
@@ -9377,7 +9802,7 @@
                         departments: ['IT', 'Finance', 'Procurement', 'Legal', 'Compliance', 'Leadership', 'Operations', 'Engineering', 'Quality Assurance', 'Risk', 'Data Protection', 'Facilities']
                     },
                     lastExample: {
-                        name: 'Data Centre Expansion &mdash; 40 Server Racks + Networking',
+                        name: 'Data Centre Expansion - 40 Server Racks + Networking',
                         startDate: '2025-09-15',
                         endDate: '2026-01-20',
                         elapsedDays: 127
@@ -9386,30 +9811,30 @@
                     timeAccuracy: 'somewhat-confident',
                     performance: 'this-was-worse',
                     issues: ['delays-waiting', 'too-many-steps', 'approval-bottlenecks', 'rework-errors', 'information-gaps', 'compliance-requirements'],
-                    biggestDelay: 'Multi-level approval chain &mdash; CFO + Board sign-off for CapEx over £250K takes 3-6 weeks',
+                    biggestDelay: 'Multi-level approval chain - CFO + Board sign-off for CapEx over £250K takes 3-6 weeks',
                     delayDetails: 'Board meets monthly. If you miss the submission window, the entire project slips by 4+ weeks. Meanwhile, vendor quotes expire and need renegotiation.',
                     steps: [
                         { number: 1, name: 'Business case drafted by requesting department', department: 'IT', isExternal: false },
                         { number: 2, name: 'Technical architecture review & sizing', department: 'Engineering', isExternal: false },
                         { number: 3, name: 'Security & compliance impact assessment', department: 'Compliance', isExternal: false,
                           isDecision: true, branches: [
-                            { label: 'Low risk &mdash; proceed', target: 'Step 4' },
-                            { label: 'High risk &mdash; full audit', target: 'Step 14' },
-                            { label: 'Data handling &mdash; trigger DPIA', target: 'Step 15' }
+                            { label: 'Low risk - proceed', target: 'Step 4' },
+                            { label: 'High risk - full audit', target: 'Step 14' },
+                            { label: 'Data handling - trigger DPIA', target: 'Step 15' }
                           ]
                         },
                         { number: 4, name: 'Budget validation & cost centre allocation', department: 'Finance', isExternal: false,
                           isDecision: true, branches: [
-                            { label: 'Under £50K &mdash; fast track to Step 8', target: 'Step 8' },
-                            { label: '£50K&mdash;£250K &mdash; standard route', target: 'Step 5' },
-                            { label: 'Over £250K &mdash; full governance', target: 'Step 5' }
+                            { label: 'Under £50K - fast track to Step 8', target: 'Step 8' },
+                            { label: '£50K--£250K - standard route', target: 'Step 5' },
+                            { label: 'Over £250K - full governance', target: 'Step 5' }
                           ]
                         },
                         { number: 5, name: 'Departmental head approval (IT Director)', department: 'IT', isExternal: false,
                           isDecision: true, branches: [
                             { label: 'Approved', target: 'Step 6' },
-                            { label: 'Rejected &mdash; revise business case', target: 'Step 1' },
-                            { label: 'Deferred &mdash; resubmit next quarter', target: '' }
+                            { label: 'Rejected - revise business case', target: 'Step 1' },
+                            { label: 'Deferred - resubmit next quarter', target: '' }
                           ]
                         },
                         { number: 6, name: 'Procurement creates RFP / RFQ package', department: 'Procurement', isExternal: false },
@@ -9418,8 +9843,8 @@
                         { number: 9, name: 'Technical evaluation by engineering team', department: 'Engineering', isExternal: false,
                           isDecision: true, branches: [
                             { label: 'Single vendor qualifies', target: 'Step 11' },
-                            { label: 'Multiple qualify &mdash; competitive round', target: 'Step 10' },
-                            { label: 'None qualify &mdash; re-issue RFP', target: 'Step 6' }
+                            { label: 'Multiple qualify - competitive round', target: 'Step 10' },
+                            { label: 'None qualify - re-issue RFP', target: 'Step 6' }
                           ]
                         },
                         { number: 10, name: 'Vendor reference checks, demos & site visits', department: 'External Vendor', isExternal: true },
@@ -9428,8 +9853,8 @@
                         { number: 13, name: 'External legal review (vendor T&Cs)', department: 'External Legal', isExternal: true,
                           isDecision: true, branches: [
                             { label: 'Terms accepted', target: 'Step 16' },
-                            { label: 'Unacceptable clauses &mdash; renegotiate', target: 'Step 11' },
-                            { label: 'Risk escalation &mdash; board review', target: 'Step 18' }
+                            { label: 'Unacceptable clauses - renegotiate', target: 'Step 11' },
+                            { label: 'Risk escalation - board review', target: 'Step 18' }
                           ]
                         },
                         { number: 14, name: 'Full security audit & penetration test', department: 'Risk', isExternal: false },
@@ -9437,8 +9862,8 @@
                         { number: 16, name: 'CFO approval for CapEx budget', department: 'Finance', isExternal: false,
                           isDecision: true, branches: [
                             { label: 'Approved (under £250K)', target: 'Step 19' },
-                            { label: 'Approved &mdash; but needs Board (over £250K)', target: 'Step 17' },
-                            { label: 'Rejected &mdash; reduce scope', target: 'Step 1' }
+                            { label: 'Approved - but needs Board (over £250K)', target: 'Step 17' },
+                            { label: 'Rejected - reduce scope', target: 'Step 1' }
                           ]
                         },
                         { number: 17, name: 'Investment Committee pre-review', department: 'Leadership', isExternal: false },
@@ -9493,7 +9918,7 @@
                     knowledge: {
                         documentation: 'partial',
                         singlePointOfFailure: 'yes',
-                        spofPerson: 'James (Senior Procurement Manager) &mdash; only person who knows the full end-to-end flow, vendor relationships, and which approval thresholds apply',
+                        spofPerson: 'James (Senior Procurement Manager) - only person who knows the full end-to-end flow, vendor relationships, and which approval thresholds apply',
                         workarounds: 'yes',
                         workaroundDetails: 'Teams split orders under £50K to avoid the full CapEx process. Finance calls these "shadow purchases" and estimates 15% of IT spend bypasses procurement. Some managers also route through OpEx to avoid Board threshold.'
                     },
@@ -9524,7 +9949,7 @@
                 industry: 'Manufacturing'
             };
 
-            goToScreen(19);
+            goToScreen(18);
             document.getElementById('loadingState').style.display = 'block';
             document.getElementById('resultsContainer').style.display = 'none';
 
@@ -9611,7 +10036,7 @@
                 industry: 'Manufacturing'
             };
 
-            goToScreen(19);
+            goToScreen(18);
             document.getElementById('loadingState').style.display = 'block';
             document.getElementById('resultsContainer').style.display = 'none';
 
@@ -9714,7 +10139,7 @@
 
                 if (!resp.ok) {
                     const errData = await resp.json().catch(() => ({}));
-                    const detail = errData.details ? ` &mdash; ${JSON.stringify(errData.details).substring(0, 200)}` : '';
+                    const detail = errData.details ? ` - ${JSON.stringify(errData.details).substring(0, 200)}` : '';
                     throw new Error((errData.error || `API returned ${resp.status}`) + detail);
                 }
 
@@ -9870,7 +10295,7 @@
             console.log('Company:', data.company);
             console.log('Respondents:', data.responses.length);
             data.responses.forEach((r, i) => {
-                console.log(`  ${i + 1}. ${r.respondentName} (${r.respondentDepartment}) &mdash; ${r.responseData.processData.steps.length} steps, ${r.responseData.processData.lastExample.elapsedDays} days, ${r.responseData.processData.userTime.total}h`);
+                console.log(`  ${i + 1}. ${r.respondentName} (${r.respondentDepartment}) - ${r.responseData.processData.steps.length} steps, ${r.responseData.processData.lastExample.elapsedDays} days, ${r.responseData.processData.userTime.total}h`);
                 const decisions = r.responseData.processData.steps.filter(s => s.isDecision);
                 if (decisions.length) console.log(`     Decision points: ${decisions.map(d => 'Step ' + d.number + ' (' + d.branches.length + ' routes)').join(', ')}`);
             });
@@ -9880,7 +10305,7 @@
         }
 
         // Returns sample team response data (4 different perspectives on Enterprise CapEx Procurement)
-        // Used for testing team-results.html &mdash; can be POSTed via /api/team?action=submit
+        // Used for testing team-results.html - can be POSTed via /api/team?action=submit
         function getTeamSampleResponses() {
             return {
                 processName: 'Enterprise CapEx Procurement (IT Infrastructure)',
@@ -9898,17 +10323,17 @@
                                 lastExample: { name: 'Data Centre Server Expansion', elapsedDays: 127 },
                                 performance: 'this-was-worse',
                                 issues: ['delays-waiting', 'approval-bottlenecks', 'too-many-steps', 'compliance-requirements'],
-                                biggestDelay: 'Board approval cycle &mdash; monthly meetings mean a missed deadline adds 4+ weeks',
+                                biggestDelay: 'Board approval cycle - monthly meetings mean a missed deadline adds 4+ weeks',
                                 steps: [
                                     { number: 1, name: 'Business case drafted', department: 'IT', isExternal: false },
                                     { number: 2, name: 'Technical architecture review', department: 'Engineering', isExternal: false },
-                                    { number: 3, name: 'Security & compliance review', department: 'Compliance', isExternal: false, isDecision: true, branches: [{ label: 'Low risk', target: 'Step 4' }, { label: 'High risk &mdash; full audit', target: 'Step 14' }] },
-                                    { number: 4, name: 'Budget validation', department: 'Finance', isExternal: false, isDecision: true, branches: [{ label: 'Under £50K &mdash; fast track', target: 'Step 8' }, { label: '£50K+ &mdash; full process', target: 'Step 5' }] },
-                                    { number: 5, name: 'IT Director approval', department: 'IT', isExternal: false, isDecision: true, branches: [{ label: 'Approved', target: 'Step 6' }, { label: 'Rejected &mdash; revise', target: 'Step 1' }] },
+                                    { number: 3, name: 'Security & compliance review', department: 'Compliance', isExternal: false, isDecision: true, branches: [{ label: 'Low risk', target: 'Step 4' }, { label: 'High risk - full audit', target: 'Step 14' }] },
+                                    { number: 4, name: 'Budget validation', department: 'Finance', isExternal: false, isDecision: true, branches: [{ label: 'Under £50K - fast track', target: 'Step 8' }, { label: '£50K+ - full process', target: 'Step 5' }] },
+                                    { number: 5, name: 'IT Director approval', department: 'IT', isExternal: false, isDecision: true, branches: [{ label: 'Approved', target: 'Step 6' }, { label: 'Rejected - revise', target: 'Step 1' }] },
                                     { number: 6, name: 'Create RFP package', department: 'Procurement', isExternal: false },
                                     { number: 7, name: 'Distribute RFP to vendors', department: 'External Vendor', isExternal: true },
                                     { number: 8, name: 'Evaluate vendor proposals', department: 'Procurement', isExternal: false },
-                                    { number: 9, name: 'Engineering technical scoring', department: 'Engineering', isExternal: false, isDecision: true, branches: [{ label: 'Single vendor qualifies', target: 'Step 11' }, { label: 'Multiple qualify', target: 'Step 10' }, { label: 'None qualify &mdash; re-issue RFP', target: 'Step 6' }] },
+                                    { number: 9, name: 'Engineering technical scoring', department: 'Engineering', isExternal: false, isDecision: true, branches: [{ label: 'Single vendor qualifies', target: 'Step 11' }, { label: 'Multiple qualify', target: 'Step 10' }, { label: 'None qualify - re-issue RFP', target: 'Step 6' }] },
                                     { number: 10, name: 'Vendor demos & reference checks', department: 'External Vendor', isExternal: true },
                                     { number: 11, name: 'Commercial negotiation', department: 'Procurement', isExternal: false },
                                     { number: 12, name: 'Legal contract review', department: 'Legal', isExternal: false },
@@ -9956,11 +10381,11 @@
                                 lastExample: { name: 'Server Expansion Project', elapsedDays: 98 },
                                 performance: 'typical',
                                 issues: ['delays-waiting', 'information-gaps', 'approval-bottlenecks'],
-                                biggestDelay: 'Incomplete business cases from IT &mdash; 60% need rework before Finance can validate budget',
+                                biggestDelay: 'Incomplete business cases from IT - 60% need rework before Finance can validate budget',
                                 steps: [
                                     { number: 1, name: 'Receive business case from IT', department: 'Finance', isExternal: false },
-                                    { number: 2, name: 'Validate budget & GL codes', department: 'Finance', isExternal: false, isDecision: true, branches: [{ label: 'Valid', target: 'Step 3' }, { label: 'Incomplete &mdash; return to IT', target: 'Step 1' }] },
-                                    { number: 3, name: 'Check CapEx threshold routing', department: 'Finance', isExternal: false, isDecision: true, branches: [{ label: 'Under £50K &mdash; manager approval', target: 'Step 4' }, { label: '£50K-£250K &mdash; CFO approval', target: 'Step 5' }, { label: 'Over £250K &mdash; Board required', target: 'Step 6' }] },
+                                    { number: 2, name: 'Validate budget & GL codes', department: 'Finance', isExternal: false, isDecision: true, branches: [{ label: 'Valid', target: 'Step 3' }, { label: 'Incomplete - return to IT', target: 'Step 1' }] },
+                                    { number: 3, name: 'Check CapEx threshold routing', department: 'Finance', isExternal: false, isDecision: true, branches: [{ label: 'Under £50K - manager approval', target: 'Step 4' }, { label: '£50K-£250K - CFO approval', target: 'Step 5' }, { label: 'Over £250K - Board required', target: 'Step 6' }] },
                                     { number: 4, name: 'Manager sign-off', department: 'IT', isExternal: false },
                                     { number: 5, name: 'CFO review & approval', department: 'Finance', isExternal: false },
                                     { number: 6, name: 'Board paper preparation', department: 'Finance', isExternal: false },
@@ -10006,7 +10431,7 @@
                                     { number: 4, name: 'Wait for Finance validation', department: 'Finance', isExternal: false },
                                     { number: 5, name: 'Wait for approval chain', department: 'IT', isExternal: false },
                                     { number: 6, name: 'Wait for Procurement to issue RFP', department: 'Procurement', isExternal: false },
-                                    { number: 7, name: 'Score vendor proposals (technical)', department: 'Engineering', isExternal: false, isDecision: true, branches: [{ label: 'Our preferred vendor wins', target: 'Step 8' }, { label: 'Unknown vendor &mdash; more diligence needed', target: 'Step 9' }] },
+                                    { number: 7, name: 'Score vendor proposals (technical)', department: 'Engineering', isExternal: false, isDecision: true, branches: [{ label: 'Our preferred vendor wins', target: 'Step 8' }, { label: 'Unknown vendor - more diligence needed', target: 'Step 9' }] },
                                     { number: 8, name: 'Wait for legal and compliance', department: 'Legal', isExternal: false },
                                     { number: 9, name: 'Run POC / benchmark testing', department: 'Engineering', isExternal: false },
                                     { number: 10, name: 'Wait for CFO / Board approval', department: 'Finance', isExternal: false },
@@ -10047,11 +10472,11 @@
                                 biggestDelay: 'Vendor T&Cs are non-negotiable or arrive late. We spend 2-3 weeks in redlining cycles.',
                                 steps: [
                                     { number: 1, name: 'Receive contract review request', department: 'Legal', isExternal: false },
-                                    { number: 2, name: 'Initial contract triage', department: 'Legal', isExternal: false, isDecision: true, branches: [{ label: 'Standard terms &mdash; fast track', target: 'Step 5' }, { label: 'Non-standard &mdash; full review', target: 'Step 3' }, { label: 'High value (>£500K) &mdash; partner review', target: 'Step 4' }] },
+                                    { number: 2, name: 'Initial contract triage', department: 'Legal', isExternal: false, isDecision: true, branches: [{ label: 'Standard terms - fast track', target: 'Step 5' }, { label: 'Non-standard - full review', target: 'Step 3' }, { label: 'High value (>£500K) - partner review', target: 'Step 4' }] },
                                     { number: 3, name: 'Detailed clause review & redlining', department: 'Legal', isExternal: false },
                                     { number: 4, name: 'Senior partner review', department: 'Legal', isExternal: false },
                                     { number: 5, name: 'Send redlines to vendor', department: 'External Legal', isExternal: true },
-                                    { number: 6, name: 'Vendor counter-proposals', department: 'External Legal', isExternal: true, isDecision: true, branches: [{ label: 'Accepted', target: 'Step 8' }, { label: 'Further negotiation needed', target: 'Step 3' }, { label: 'Deadlock &mdash; escalate to GC', target: 'Step 7' }] },
+                                    { number: 6, name: 'Vendor counter-proposals', department: 'External Legal', isExternal: true, isDecision: true, branches: [{ label: 'Accepted', target: 'Step 8' }, { label: 'Further negotiation needed', target: 'Step 3' }, { label: 'Deadlock - escalate to GC', target: 'Step 7' }] },
                                     { number: 7, name: 'General Counsel escalation call', department: 'Legal', isExternal: false },
                                     { number: 8, name: 'DPIA coordination (if data processing)', department: 'Compliance', isExternal: false },
                                     { number: 9, name: 'Final contract approval', department: 'Legal', isExternal: false },
@@ -10084,7 +10509,7 @@
         async function loadReportView(reportId) {
             // Hide all screens and show the results screen directly
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            const screen19 = document.getElementById('screen19');
+            const screen19 = document.getElementById('screen18');
             screen19.classList.add('active');
             document.getElementById('loadingState').style.display = 'flex';
             document.getElementById('resultsContainer').style.display = 'none';
@@ -10098,7 +10523,7 @@
                 const data = await resp.json();
 
                 if (!resp.ok || !data.success) {
-                    document.getElementById('loadingState').innerHTML = '<div style="text-align:center;padding:2rem;"><h3 style="color:var(--danger);">Report Not Found</h3><p style="color:var(--text-mid);margin:1rem 0;">' + (data.error || 'This report may have been deleted or the link is invalid.') + '</p><a href="/portal" style="color:var(--accent);font-weight:500;">&#8592; Back to Dashboard</a></div>';
+                    document.getElementById('loadingState').innerHTML = '<div style="text-align:center;padding:2rem;"><h3 style="color:var(--danger);">Report Not Found</h3><p style="color:var(--text-mid);margin:1rem 0;">' + (data.error || 'This report may have been deleted or the link is invalid.') + '</p><a href="/portal" style="color:var(--accent);font-weight:500;">&#8592; Back to Client Login</a></div>';
                     return;
                 }
 
@@ -10186,7 +10611,7 @@
                 const resultsContainer = document.getElementById('resultsContainer');
                 const backBar = document.createElement('div');
                 backBar.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding:0.75rem 1rem;background:linear-gradient(135deg,rgba(61,142,166,0.08),rgba(61,142,166,0.03));border-radius:var(--radius-sm);border:1px solid rgba(61,142,166,0.15);';
-                backBar.innerHTML = '<a href="/portal" style="color:var(--accent);text-decoration:none;font-weight:500;font-size:0.9rem;">&#8592; Back to Dashboard</a>' +
+                backBar.innerHTML = '<a href="/portal" style="color:var(--accent);text-decoration:none;font-weight:500;font-size:0.9rem;">&#8592; Back to Client Login</a>' +
                     '<span style="color:var(--text-mid);font-size:0.82rem;">' + (report.company || '') + ' &middot; ' + (report.createdAt ? new Date(report.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '') + '</span>';
                 resultsContainer.insertBefore(backBar, resultsContainer.firstChild);
 
@@ -10198,7 +10623,7 @@
 
             } catch (err) {
                 console.error('View mode error:', err);
-                document.getElementById('loadingState').innerHTML = '<div style="text-align:center;padding:2rem;"><h3 style="color:var(--danger);">Failed to Load Report</h3><p style="color:var(--text-mid);margin:1rem 0;">Unable to reach the server. Please try again.</p><a href="/portal" style="color:var(--accent);font-weight:500;">&#8592; Back to Dashboard</a></div>';
+                document.getElementById('loadingState').innerHTML = '<div style="text-align:center;padding:2rem;"><h3 style="color:var(--danger);">Failed to Load Report</h3><p style="color:var(--text-mid);margin:1rem 0;">Unable to reach the server. Please try again.</p><a href="/portal" style="color:var(--accent);font-weight:500;">&#8592; Back to Client Login</a></div>';
             }
         }
 
@@ -10229,7 +10654,7 @@
                                         <h1 style="font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:700;color:var(--primary);margin-bottom:4px;">Redesigned Process Flow</h1>
                                         <p style="color:var(--text-mid);font-size:0.9rem;">AI-generated optimised operating model</p>
                                     </div>
-                                    <a href="/portal" style="font-size:0.85rem;color:var(--accent);text-decoration:none;font-weight:500;">&#8592; Back to Dashboard</a>
+                                    <a href="/portal" style="font-size:0.85rem;color:var(--accent);text-decoration:none;font-weight:500;">&#8592; Back to Client Login</a>
                                 </div>
                                 <div id="flowDiagramsContainer"></div>
                             </div>`;
@@ -10393,7 +10818,7 @@
 
             } catch (err) {
                 console.error('Save progress error:', err);
-                btn.textContent = 'Error &mdash; try again';
+                btn.textContent = 'Error - try again';
                 btn.disabled = false;
                 if (skipBtn) skipBtn.disabled = false;
                 setTimeout(() => { btn.textContent = 'Save & Email Link'; }, 3000);
@@ -10438,11 +10863,11 @@
             // Email is required -- if missing, show auth gate on screen19 instead of falling through to screen 0
             if (!email) {
                 document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-                const screen19 = document.getElementById('screen19');
+                const screen19 = document.getElementById('screen18');
                 screen19.classList.add('active');
                 const progressBar = document.querySelector('.progress-bar');
                 if (progressBar) progressBar.style.display = 'none';
-                document.getElementById('loadingState').innerHTML = '<div style="text-align:center;padding:2rem;"><h3 style="color:var(--primary);">Sign In Required</h3><p style="color:var(--text-mid);margin:1rem 0;">You need to sign in via the dashboard to edit a completed diagnostic.</p><a href="/portal" style="color:var(--accent);font-weight:500;">&#8592; Sign In to Dashboard</a></div>';
+                document.getElementById('loadingState').innerHTML = '<div style="text-align:center;padding:2rem;"><h3 style="color:var(--primary);">Sign In Required</h3><p style="color:var(--text-mid);margin:1rem 0;">You need to sign in via the client login to edit a completed diagnostic.</p><a href="/portal" style="color:var(--accent);font-weight:500;">&#8592; Client Login</a></div>';
                 return true;
             }
 
@@ -10453,11 +10878,11 @@
                 if (!resp.ok || !result.success) {
                     console.warn('Edit load failed:', result.error);
                     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-                    const screen19 = document.getElementById('screen19');
+                    const screen19 = document.getElementById('screen18');
                     screen19.classList.add('active');
                     const progressBar = document.querySelector('.progress-bar');
                     if (progressBar) progressBar.style.display = 'none';
-                    document.getElementById('loadingState').innerHTML = '<div style="text-align:center;padding:2rem;"><h3 style="color:var(--danger);">Could Not Load Diagnostic</h3><p style="color:var(--text-mid);margin:1rem 0;">' + (result.error || 'This diagnostic could not be loaded for editing.') + '</p><a href="/portal" style="color:var(--accent);font-weight:500;">&#8592; Back to Dashboard</a></div>';
+                    document.getElementById('loadingState').innerHTML = '<div style="text-align:center;padding:2rem;"><h3 style="color:var(--danger);">Could Not Load Diagnostic</h3><p style="color:var(--text-mid);margin:1rem 0;">' + (result.error || 'This diagnostic could not be loaded for editing.') + '</p><a href="/portal" style="color:var(--accent);font-weight:500;">&#8592; Back to Client Login</a></div>';
                     return true;
                 }
 
@@ -10469,7 +10894,7 @@
                 // Restore contact info if available
                 const contact = reportData.contact || {};
 
-                // Pre-fill contact fields (screen 18)
+                // Pre-fill contact fields (SCREEN 8)
                 setTimeout(() => {
                     const nameEl = document.getElementById('contactName');
                     const emailEl = document.getElementById('contactEmail');
@@ -10531,14 +10956,14 @@
                     }
 
                     // Navigate to the contact / summary screen so user can review and re-submit
-                    goToScreen(18);
+                    goToScreen(17);
                 }
 
                 // Show edit banner
                 const banner = document.getElementById('resumeBanner');
                 if (banner) {
                     const procNames = completedProcesses.map(p => p.processName).filter(Boolean).join(', ');
-                    banner.innerHTML = '<strong>Editing mode</strong> &mdash; Loaded ' + completedProcesses.length +
+                    banner.innerHTML = '<strong>Editing mode</strong> - Loaded ' + completedProcesses.length +
                         ' process' + (completedProcesses.length !== 1 ? 'es' : '') +
                         (procNames ? ' (' + procNames.replace(/</g, '&lt;') + ')' : '') +
                         '. Make your changes and re-submit.';
@@ -10556,11 +10981,11 @@
             } catch (err) {
                 console.error('Edit mode error:', err);
                 document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-                const screen19 = document.getElementById('screen19');
+                const screen19 = document.getElementById('screen18');
                 screen19.classList.add('active');
                 const progressBar = document.querySelector('.progress-bar');
                 if (progressBar) progressBar.style.display = 'none';
-                document.getElementById('loadingState').innerHTML = '<div style="text-align:center;padding:2rem;"><h3 style="color:var(--danger);">Failed to Load Diagnostic</h3><p style="color:var(--text-mid);margin:1rem 0;">Unable to reach the server. Please try again.</p><a href="/portal" style="color:var(--accent);font-weight:500;">&#8592; Back to Dashboard</a></div>';
+                document.getElementById('loadingState').innerHTML = '<div style="text-align:center;padding:2rem;"><h3 style="color:var(--danger);">Failed to Load Diagnostic</h3><p style="color:var(--text-mid);margin:1rem 0;">Unable to reach the server. Please try again.</p><a href="/portal" style="color:var(--accent);font-weight:500;">&#8592; Back to Client Login</a></div>';
                 return true;
             }
         }
@@ -10596,14 +11021,24 @@
                     syncCustomDeptsToStepDropdowns();
                 }
 
-                // Rebuild step DOM from saved processData
+                // Rebuild step DOM from saved processData + handoffs
                 if (processData.steps && processData.steps.length > 0) {
-                    rebuildStepsFromData(processData.steps);
+                    rebuildStepsFromData(processData.steps, processData.handoffs || []);
                 }
 
                 // Rebuild systems DOM from saved processData
                 if (processData.systems && processData.systems.length > 0) {
                     rebuildSystemsFromData(processData.systems);
+                }
+
+                // Restore team mode if present
+                if (data.teamMode && data.teamMode.code) {
+                    teamMode = data.teamMode;
+                    const banner = document.getElementById('resumeBanner');
+                    if (banner) {
+                        banner.innerHTML = '<strong>Team Diagnostic Mode</strong>. Your response will be compared with your colleagues\' perspectives.';
+                        banner.classList.add('show');
+                    }
                 }
 
                 // Restore handover context if present
@@ -10751,7 +11186,7 @@
                 document.getElementById('teamSetupCreate').style.display = 'none';
                 document.getElementById('teamSetupSuccess').style.display = 'block';
                 document.getElementById('teamSuccessMsg').textContent =
-                    `Share the code below with your team. Each person visits the link and completes the diagnostic for "${processName}".`;
+                    `Share the code below with your team. Each person visits the link and completes the diagnostic for "${processName}". If you don't know all the steps, you can hand over to a colleague during step mapping.`;
                 document.getElementById('teamCodeDisplay').textContent = result.teamCode;
                 document.getElementById('teamJoinLink').value = result.joinUrl;
                 document.getElementById('teamResultsLink').href = result.resultsUrl;
@@ -10761,7 +11196,7 @@
 
             } catch (err) {
                 console.error('Create team error:', err);
-                btn.textContent = 'Error &mdash; try again';
+                btn.textContent = 'Error - try again';
                 setTimeout(() => { btn.textContent = 'Create Team Session'; btn.disabled = false; }, 3000);
             }
         }
@@ -10784,7 +11219,7 @@
             });
         }
 
-        // Check for ?team=CODE on load &mdash; enter team mode
+        // Check for ?team=CODE on load - enter team mode
         async function checkForTeamMode() {
             const params = new URLSearchParams(location.search);
             const code = params.get('team');
@@ -10795,9 +11230,9 @@
             // Show banner
             const banner = document.getElementById('resumeBanner');
             if (banner) {
-                banner.innerHTML = '<strong>Team Diagnostic Mode</strong> &mdash; Your response will be compared with your colleagues\' perspectives.';
-                banner.classList.add('show');
-            }
+                        banner.innerHTML = '<strong>Team Diagnostic Mode</strong>. Your response will be compared with your colleagues\' perspectives. Don\'t know all the steps? Use "Hand over to colleague" during step mapping.';
+                        banner.classList.add('show');
+                    }
 
             // Clean URL
             history.replaceState(null, '', location.pathname);
@@ -10851,6 +11286,15 @@
             const btn = document.getElementById('handoverSaveBtn');
             btn.disabled = false;
             btn.textContent = 'Save & Generate Link';
+            const title = form.querySelector('h3');
+            const desc = form.querySelector('p');
+            if (teamMode) {
+                title.textContent = 'Hand Over to a Team Member';
+                desc.textContent = 'Save your progress and share a link so a team member can continue mapping the steps you don\'t know. Their response will still be part of this team diagnostic.';
+            } else {
+                title.textContent = 'Hand Over to a Colleague';
+                desc.textContent = 'Save your progress and share a link so a colleague can add the steps they know about.';
+            }
             modal.classList.add('show');
         }
 
@@ -10896,6 +11340,7 @@
                         completedProcesses,
                         customDepartments,
                         stepCount: typeof stepCount !== 'undefined' ? stepCount : 0,
+                        teamMode: teamMode || null,
                         handover: {
                             from: yourName || 'A colleague',
                             note: note,
@@ -10942,7 +11387,7 @@
 
             } catch (err) {
                 console.error('Handover save error:', err);
-                btn.textContent = 'Error &mdash; try again';
+                btn.textContent = 'Error - try again';
                 btn.disabled = false;
                 setTimeout(() => { btn.textContent = 'Save & Generate Link'; }, 3000);
             }
@@ -11116,7 +11561,7 @@
                     <input type="text" class="save-modal-input" id="handoverYourName" placeholder="Your name (so they know who shared)" style="margin-bottom:0;">
                 </div>
 
-                <textarea id="handoverNote" placeholder="Optional note for your colleague, e.g. 'I've added the intake steps &mdash; please add the approval and fulfilment steps.'"></textarea>
+                <textarea id="handoverNote" placeholder="Optional note for your colleague, e.g. 'I've added the intake steps - please add the approval and fulfilment steps.'"></textarea>
 
                 <input type="email" class="save-modal-input" id="handoverColleagueEmail" placeholder="Colleague's email (optional)" style="margin-bottom:0.75rem;">
 

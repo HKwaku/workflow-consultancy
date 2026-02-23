@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 
 const PHASES = [
@@ -16,7 +16,7 @@ const DEPARTMENTS = ['Sales', 'Operations', 'Finance', 'IT', 'Customer Success',
 
 const HANDOFF_METHODS = [
   { value: 'email-details', label: 'Email with full details' },
-  { value: 'email-check', label: 'Email — just a heads up' },
+  { value: 'email-check', label: 'Email (just a heads up)' },
   { value: 'slack', label: 'Slack / Teams message' },
   { value: 'spreadsheet', label: 'Shared spreadsheet' },
   { value: 'in-person', label: 'In-person / call' },
@@ -27,9 +27,9 @@ const HANDOFF_METHODS = [
 
 const CLARITY_OPTIONS = [
   { value: 'no', label: 'No confusion' },
-  { value: 'yes-once', label: 'Yes — needed one clarification' },
-  { value: 'yes-multiple', label: 'Yes — back and forth' },
-  { value: 'yes-major', label: 'Yes — caused a major delay' },
+  { value: 'yes-once', label: 'Yes, needed one clarification' },
+  { value: 'yes-multiple', label: 'Yes, back and forth' },
+  { value: 'yes-major', label: 'Yes, caused a major delay' },
 ];
 
 const ISSUE_OPTIONS = [
@@ -69,6 +69,8 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
   const [report, setReport] = useState(null);
   const [activePhase, setActivePhase] = useState('define');
   const [activeProcessIdx, setActiveProcessIdx] = useState(0);
+  const [dragIdx, setDragIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
 
   const [processes, setProcesses] = useState([]);
   const [contact, setContact] = useState({ name: '', email: '', company: '', title: '', teamSize: '', industry: '', phone: '' });
@@ -279,6 +281,37 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
     }));
   };
 
+  const moveStep = (fromIdx, toIdx) => {
+    if (fromIdx === toIdx) return;
+    setProcesses(prev => prev.map((p, i) => {
+      if (i !== activeProcessIdx) return p;
+      const newSteps = [...p.steps];
+      const [moved] = newSteps.splice(fromIdx, 1);
+      newSteps.splice(toIdx, 0, moved);
+      const newH = newSteps.slice(0, -1).map((_, hi) => (p.stepHandoffs || [])[hi] || { _key: hi, method: '', clarity: 'no' });
+      return { ...p, steps: newSteps, stepHandoffs: newH };
+    }));
+  };
+
+  const insertStepAt = (idx) => {
+    setProcesses(prev => prev.map((p, i) => {
+      if (i !== activeProcessIdx) return p;
+      const newSteps = [...p.steps];
+      newSteps.splice(idx, 0, { _key: Date.now(), name: '', department: '', isDecision: false, isExternal: false, branches: [] });
+      const newH = [...(p.stepHandoffs || [])];
+      newH.splice(idx, 0, { _key: Date.now(), method: '', clarity: 'no' });
+      return { ...p, steps: newSteps, stepHandoffs: newH };
+    }));
+  };
+
+  const handleDragStart = (si) => { setDragIdx(si); };
+  const handleDragOver = (e, si) => { e.preventDefault(); setDragOverIdx(si); };
+  const handleDrop = (si) => { if (dragIdx !== null) moveStep(dragIdx, si); setDragIdx(null); setDragOverIdx(null); };
+  const handleDragEnd = () => { setDragIdx(null); setDragOverIdx(null); };
+
+  const moveStepUp = (si) => { if (si > 0) moveStep(si, si - 1); };
+  const moveStepDown = (si) => { if (si < (proc?.steps?.length || 0) - 1) moveStep(si, si + 1); };
+
   const addSystem = () => {
     setProcesses(prev => prev.map((p, i) => {
       if (i !== activeProcessIdx) return p;
@@ -415,7 +448,7 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
           <button type="button" className="edit-save-btn" onClick={handleSave} disabled={saving} style={{ padding: '6px 18px', fontSize: '0.78rem' }}>
             {saving ? 'Saving...' : 'Save'}
           </button>
-          <button type="button" onClick={onBack} className="header-btn">&larr; Dashboard</button>
+          <button type="button" onClick={onBack} className="header-btn">&larr; Client Login</button>
         </div>
       </header>
 
@@ -567,51 +600,86 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
           <div className="edit-stage fade-in">
             <div className="edit-stage-card">
               <h3 className="edit-stage-title">Steps &amp; Handoffs</h3>
-              <p className="edit-stage-desc">Define each step and how it hands over to the next.</p>
+              <p className="edit-stage-desc">Define each step and how it hands over to the next. Drag to reorder.</p>
 
-              {proc.steps.map((step, si) => (
-                <div key={step._key ?? si} className="edit-step-block">
-                  <div className="edit-step-main">
-                    <span className="edit-step-num">{si + 1}</span>
-                    <div className="edit-step-fields">
-                      <input type="text" value={step.name} onChange={e => updateStep(si, 'name', e.target.value)} placeholder="Step name" className="edit-step-name-input" />
-                      <select value={step.department} onChange={e => updateStep(si, 'department', e.target.value)} className="edit-step-dept-select">
-                        <option value="">Department</option>
-                        {[...DEPARTMENTS, ...(proc.departments || []).filter(d => !DEPARTMENTS.includes(d))].map(d => (
-                          <option key={d} value={d}>{d}</option>
-                        ))}
-                      </select>
-                      <div className="edit-step-toggles">
-                        <label className="edit-step-check">
-                          <input type="checkbox" checked={step.isDecision} onChange={e => updateStep(si, 'isDecision', e.target.checked)} /> Decision
-                        </label>
-                        <label className="edit-step-check">
-                          <input type="checkbox" checked={step.isExternal} onChange={e => updateStep(si, 'isExternal', e.target.checked)} /> External
-                        </label>
+              <div className="edit-step-list">
+                {proc.steps.map((step, si) => (
+                  <div key={step._key ?? si}>
+                    {/* Insert divider above */}
+                    {si > 0 && (
+                      <div className="edit-insert-divider">
+                        <button type="button" onClick={() => insertStepAt(si)} title="Insert step here">+</button>
+                      </div>
+                    )}
+
+                    <div
+                      className={`edit-step-item${dragIdx === si ? ' dragging' : ''}${dragOverIdx === si && dragIdx !== si ? ' drag-over' : ''}`}
+                      draggable
+                      onDragStart={() => handleDragStart(si)}
+                      onDragOver={(e) => handleDragOver(e, si)}
+                      onDrop={() => handleDrop(si)}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <div className="edit-step-drag-handle" title="Drag to reorder">
+                        <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor">
+                          <circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/>
+                          <circle cx="2" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/>
+                          <circle cx="2" cy="14" r="1.5"/><circle cx="8" cy="14" r="1.5"/>
+                        </svg>
+                      </div>
+
+                      <span className="edit-step-num">{si + 1}</span>
+
+                      <div className="edit-step-content">
+                        <div className="edit-step-top-row">
+                          <input type="text" value={step.name} onChange={e => updateStep(si, 'name', e.target.value)} placeholder="Step name" className="edit-step-name-input" />
+                          <select value={step.department} onChange={e => updateStep(si, 'department', e.target.value)} className="edit-step-dept-select">
+                            <option value="">Department</option>
+                            {[...DEPARTMENTS, ...(proc.departments || []).filter(d => !DEPARTMENTS.includes(d))].map(d => (
+                              <option key={d} value={d}>{d}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="edit-step-bottom-row">
+                          <label className="edit-step-check">
+                            <input type="checkbox" checked={step.isDecision} onChange={e => updateStep(si, 'isDecision', e.target.checked)} /> Decision point
+                          </label>
+                          <label className="edit-step-check">
+                            <input type="checkbox" checked={step.isExternal} onChange={e => updateStep(si, 'isExternal', e.target.checked)} /> External party
+                          </label>
+                          {step.isDecision && <span className="edit-step-badge decision">Decision</span>}
+                          {step.isExternal && <span className="edit-step-badge external">External</span>}
+                        </div>
+                      </div>
+
+                      <div className="edit-step-actions">
+                        <button type="button" className="edit-step-arrow" onClick={() => moveStepUp(si)} disabled={si === 0} title="Move up">&uarr;</button>
+                        <button type="button" className="edit-step-arrow" onClick={() => moveStepDown(si)} disabled={si === proc.steps.length - 1} title="Move down">&darr;</button>
+                        <button type="button" className="edit-step-remove" onClick={() => removeStep(si)} title="Remove step">&times;</button>
                       </div>
                     </div>
-                    <button type="button" className="edit-step-remove" onClick={() => removeStep(si)} title="Remove step">&times;</button>
+
+                    {/* Handoff connector */}
+                    {si < proc.steps.length - 1 && (
+                      <div className="edit-handoff-row">
+                        <div className="edit-handoff-connector">
+                          <span className="edit-handoff-pipe" />
+                          <span className="edit-handoff-tag">Handoff</span>
+                        </div>
+                        <div className="edit-handoff-fields">
+                          <select value={(proc.stepHandoffs || [])[si]?.method || ''} onChange={e => updateHandoff(si, 'method', e.target.value)} className="edit-handoff-select">
+                            <option value="">How is this handed over?</option>
+                            {HANDOFF_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                          </select>
+                          <select value={(proc.stepHandoffs || [])[si]?.clarity || 'no'} onChange={e => updateHandoff(si, 'clarity', e.target.value)} className="edit-handoff-select">
+                            {CLARITY_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                    )}
                   </div>
-
-                  {si < proc.steps.length - 1 && (
-                    <div className="edit-handoff-row">
-                      <div className="edit-handoff-connector">
-                        <span className="edit-handoff-line" />
-                        <span className="edit-handoff-label">Handoff to Step {si + 2}</span>
-                      </div>
-                      <div className="edit-handoff-fields">
-                        <select value={(proc.stepHandoffs || [])[si]?.method || ''} onChange={e => updateHandoff(si, 'method', e.target.value)} className="edit-handoff-select">
-                          <option value="">How is this handed over?</option>
-                          {HANDOFF_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                        </select>
-                        <select value={(proc.stepHandoffs || [])[si]?.clarity || 'no'} onChange={e => updateHandoff(si, 'clarity', e.target.value)} className="edit-handoff-select">
-                          {CLARITY_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
 
               <button type="button" className="edit-add-btn" onClick={addStep}>+ Add Step</button>
             </div>
@@ -834,7 +902,7 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
         )}
 
         <div className="edit-bottom-bar">
-          <button type="button" onClick={onBack} className="edit-cancel-btn">Back to Dashboard</button>
+          <button type="button" onClick={onBack} className="edit-cancel-btn">Back to Client Login</button>
           <button type="button" className="edit-save-btn" onClick={handleSave} disabled={saving}>
             {saving ? 'Saving...' : 'Save All Changes'}
           </button>

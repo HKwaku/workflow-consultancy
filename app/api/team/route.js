@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { getSupabaseHeaders, getSupabaseWriteHeaders, fetchWithTimeout } from '@/lib/api-helpers';
+import { getSupabaseHeaders, getSupabaseWriteHeaders, fetchWithTimeout, stripEmDashes, requireSupabase } from '@/lib/api-helpers';
 
 export async function POST(request) {
   const body = await request.json();
@@ -27,9 +27,9 @@ async function createTeam(body, request) {
     const { createdByEmail, createdByName, processName, company, description } = body;
     if (!processName) return NextResponse.json({ error: 'Process name is required.' }, { status: 400 });
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-    if (!supabaseUrl || !supabaseKey) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+    const sbConfig = requireSupabase();
+    if (!sbConfig) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+    const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
     const teamId = crypto.randomUUID();
     const teamCode = crypto.randomBytes(3).toString('hex').toUpperCase();
@@ -56,9 +56,9 @@ async function submitResponse(body) {
     if (!respondentName) return NextResponse.json({ error: 'Your name is required.' }, { status: 400 });
     if (!responseData) return NextResponse.json({ error: 'Response data is required.' }, { status: 400 });
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-    if (!supabaseUrl || !supabaseKey) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+    const sbConfig = requireSupabase();
+    if (!sbConfig) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+    const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
     const lookupUrl = `${supabaseUrl}/rest/v1/team_diagnostics?team_code=eq.${encodeURIComponent(teamCode)}&select=id,process_name,status`;
     const lookupResp = await fetchWithTimeout(lookupUrl, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
@@ -84,9 +84,9 @@ async function getResults(request) {
     const code = request.nextUrl.searchParams.get('code');
     if (!code) return NextResponse.json({ error: 'Team code is required. Use ?action=results&code=xxx' }, { status: 400 });
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-    if (!supabaseUrl || !supabaseKey) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+    const sbConfig = requireSupabase();
+    if (!sbConfig) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+    const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
     const sbHeaders = getSupabaseHeaders(supabaseKey);
     const teamResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/team_diagnostics?team_code=eq.${encodeURIComponent(code)}&select=*`, { method: 'GET', headers: sbHeaders });
@@ -165,7 +165,7 @@ async function analyzeGaps(body) {
     const claudeData = await claudeResp.json();
     const text = claudeData.content?.[0]?.text || '';
     let analysis;
-    try { analysis = JSON.parse(text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()); }
+    try { analysis = stripEmDashes(JSON.parse(text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim())); }
     catch { return NextResponse.json({ success: true, analysisType: 'rule-based', analysis: buildRuleBasedAnalysis(team, responses, aggregation) }); }
 
     return NextResponse.json({ success: true, analysisType: 'ai-enhanced', analysis });

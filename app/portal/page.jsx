@@ -1,18 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/supabase';
 import PortalAuth from './PortalAuth';
 import PortalDashboard from './PortalDashboard';
 import DiagnosticEdit from './DiagnosticEdit';
 import './portal.css';
 
-export default function PortalPage() {
+function PortalContent() {
+  const searchParams = useSearchParams();
+  const editFromUrl = searchParams.get('edit');
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [supabase, setSupabase] = useState(null);
-  const [editingReportId, setEditingReportId] = useState(null);
+  const [editingReportId, setEditingReportId] = useState(editFromUrl || null);
+
+  useEffect(() => {
+    if (editFromUrl) setEditingReportId(editFromUrl);
+  }, [editFromUrl]);
 
   useEffect(() => {
     let mounted = true;
@@ -64,7 +71,7 @@ export default function PortalPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <Link href="/" className="header-logo">Sharpin<span style={{ color: 'var(--gold)' }}>.</span></Link>
             <div className="header-divider" />
-            <span className="header-title">Dashboard</span>
+            <span className="header-title">Client Login</span>
           </div>
         </header>
         <div className="portal-wrap" style={{ maxWidth: 960, margin: '0 auto', padding: '48px 24px' }}>
@@ -100,4 +107,12 @@ export default function PortalPage() {
   }
 
   return <PortalDashboard user={user} onSignOut={handleSignOut} onEditReport={setEditingReportId} />;
+}
+
+export default function PortalPage() {
+  return (
+    <Suspense fallback={<div className="loading-state" style={{ padding: 60 }}><div className="spinner" /><p>Loading...</p></div>}>
+      <PortalContent />
+    </Suspense>
+  );
 }

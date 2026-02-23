@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fetchWithTimeout } from '@/lib/api-helpers';
+import { fetchWithTimeout, stripEmDashes } from '@/lib/api-helpers';
 
 export async function POST(request) {
   try {
@@ -64,12 +64,12 @@ Use THEIR actual numbers. Show the MATH. Be specific and concise.` }]
     const data = await response.json();
     let rawText = data.content[0].text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
     let analysis;
-    try { analysis = JSON.parse(rawText); } catch (parseErr) {
+    try { analysis = stripEmDashes(JSON.parse(rawText)); } catch (parseErr) {
       console.error('JSON parse error:', parseErr.message);
       return NextResponse.json({ error: 'AI returned an unparseable response.' }, { status: 502 });
     }
 
-    return NextResponse.json({ success: true, analysis, metrics, operatingModel, timestamp: new Date().toISOString() });
+    return NextResponse.json({ success: true, analysis: analysis, metrics, operatingModel, timestamp: new Date().toISOString() });
   } catch (error) {
     console.error('Analysis error:', error);
     return NextResponse.json({ error: 'Failed to analyze symptoms.' }, { status: 500 });
@@ -133,9 +133,9 @@ async function handleExtractSteps(body) {
     const data = await resp.json();
     let rawText = (data.content?.[0]?.text || '').replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
     let parsed;
-    try { parsed = JSON.parse(rawText); } catch (e) {
+    try { parsed = stripEmDashes(JSON.parse(rawText)); } catch (e) {
       const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) try { parsed = JSON.parse(jsonMatch[0]); } catch (e2) { /* fallthrough */ }
+      if (jsonMatch) try { parsed = stripEmDashes(JSON.parse(jsonMatch[0])); } catch (e2) { /* fallthrough */ }
       if (!parsed) return NextResponse.json({ error: 'Failed to parse AI response.' }, { status: 502 });
     }
     return NextResponse.json({ success: true, processName: parsed.processName || '', steps: (parsed.steps || []).slice(0, 50) });

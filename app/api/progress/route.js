@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { getSupabaseHeaders, isValidUUID, fetchWithTimeout } from '@/lib/api-helpers';
+import { getSupabaseHeaders, isValidUUID, fetchWithTimeout, requireSupabase } from '@/lib/api-helpers';
 
 export async function POST(request) {
   try {
@@ -11,16 +11,19 @@ export async function POST(request) {
     const payloadSize = JSON.stringify(progressData).length;
     if (payloadSize > 2 * 1024 * 1024) return NextResponse.json({ error: 'Progress data too large.' }, { status: 413 });
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-    if (!supabaseUrl || !supabaseKey) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+    const sbConfig = requireSupabase();
+    if (!sbConfig) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+    const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
     const progressId = body.progressId || crypto.randomUUID();
     const isUpdate = !!body.progressId;
 
     const proto = request.headers.get('x-forwarded-proto') || 'https';
     const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'localhost:3000';
-    const resumeUrl = `${proto}://${host}/diagnostic?resume=${progressId}`;
+    const teamCode = progressData?.teamMode?.code;
+    const resumeUrl = teamCode
+      ? `${proto}://${host}/diagnostic?resume=${progressId}&team=${teamCode}`
+      : `${proto}://${host}/diagnostic?resume=${progressId}`;
 
     const payload = {
       id: progressId, email: email || null, process_name: processName || null,
@@ -69,9 +72,9 @@ export async function GET(request) {
     if (!id) return NextResponse.json({ error: 'Progress ID is required. Use ?id=xxx' }, { status: 400 });
     if (!isValidUUID(id)) return NextResponse.json({ error: 'Invalid progress ID format.' }, { status: 400 });
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-    if (!supabaseUrl || !supabaseKey) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+    const sbConfig = requireSupabase();
+    if (!sbConfig) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+    const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
     const url = `${supabaseUrl}/rest/v1/diagnostic_progress?id=eq.${id}&select=*`;
     const sbResp = await fetchWithTimeout(url, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
@@ -95,6 +98,6 @@ export async function GET(request) {
 }
 
 function getScreenLabel(screen) {
-  const labels = { 0: 'Getting Started', 1: 'Process Selection', 2: 'Process Name', 3: 'Define Boundaries', 4: 'Last Example', 5: 'Time Investment', 6: 'Performance', 7: 'Step Breakdown', 8: 'Handoff Analysis', 9: 'Bottlenecks', 10: 'Systems & Tools', 11: 'Approvals', 12: 'Knowledge', 13: 'New Hire', 14: 'Frequency', 15: 'Cost Calculation', 16: 'Team Cost & Savings', 17: 'Priority', 18: 'Your Details', 19: 'Results' };
+  const labels = { 0: 'Getting Started', 1: 'Process Selection', 2: 'Process Name', 3: 'Define Boundaries', 4: 'Last Example', 5: 'Time Investment', 6: 'Performance', 7: 'Steps & Handoffs', 8: 'Bottlenecks', 9: 'Systems & Tools', 10: 'Approvals', 11: 'Knowledge', 12: 'New Hire', 13: 'Frequency', 14: 'Cost Calculation', 15: 'Team Cost & Savings', 16: 'Priority', 17: 'Your Details', 18: 'Results' };
   return labels[screen] || 'In Progress';
 }

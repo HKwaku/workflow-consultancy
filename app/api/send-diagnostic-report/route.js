@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { getSupabaseWriteHeaders, fetchWithTimeout } from '@/lib/api-helpers';
+import { getSupabaseWriteHeaders, fetchWithTimeout, requireSupabase } from '@/lib/api-helpers';
 
 export async function POST(request) {
   try {
@@ -14,11 +14,11 @@ export async function POST(request) {
     const reportUrl = `${proto}://${host}/report?id=${reportId}`;
     const leadScore = calculateLeadScore(contact, summary, automationScore, processes);
 
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+    const sbConfig = requireSupabase();
     let storedInSupabase = false;
 
-    if (supabaseUrl && supabaseKey) {
+    if (sbConfig) {
+      const { url: supabaseUrl, key: supabaseKey } = sbConfig;
       try {
         const reportPayload = { id: reportId, contact_email: contact.email || '', contact_name: contact.name || '', company: contact.company || '', lead_score: leadScore.score, lead_grade: leadScore.grade, diagnostic_data: { contact, summary, recommendations, automationScore, roadmap, processes, rawProcesses: rawProcesses || null, customDepartments: customDepartments || [], leadScore }, created_at: timestamp || new Date().toISOString() };
         let sbResp;
