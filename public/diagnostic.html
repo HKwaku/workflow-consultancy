@@ -1322,7 +1322,19 @@
             overflow: hidden;
             background: white;
             box-shadow: var(--shadow-sm);
+            transition: box-shadow 0.2s;
         }
+
+        /* Pinned state — sticks just below progress bar */
+        .live-flow-preview.is-pinned {
+            position: sticky;
+            top: 112px;          /* top-bar(52) + progress-bar(~60) */
+            z-index: 40;
+            border-radius: var(--radius-md);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+            margin-bottom: 1.25rem;
+        }
+
         .live-flow-toggle {
             display: flex;
             align-items: center;
@@ -1340,6 +1352,35 @@
         }
         .live-flow-toggle:hover { background: var(--bg-alt); }
         .live-flow-toggle svg { opacity: 0.5; }
+
+        .live-flow-pin-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            margin-left: 0.25rem;
+            padding: 0.2rem 0.6rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            font-family: 'Work Sans', sans-serif;
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            background: white;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+        .live-flow-pin-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .live-flow-pin-btn.is-pinned {
+            border-color: var(--accent);
+            background: var(--accent);
+            color: white;
+        }
+        .live-flow-pin-btn svg { width: 11px; height: 11px; }
+
         .step-count-badge {
             margin-left: auto;
             font-size: 0.7rem;
@@ -1353,7 +1394,7 @@
         #liveFlowContainer {
             border-top: 1px solid var(--border-light);
             background: var(--bg-alt);
-            max-height: 200px;
+            max-height: 180px;
             overflow-y: auto;
         }
         #liveFlowSvg { min-height: 40px; }
@@ -3293,13 +3334,8 @@
                     <div class="handover-note" id="handoverBannerNote" style="display:none;"></div>
                 </div>
 
-                <!-- Sticky mini-toolbar: Flow Preview + Jump to bottom -->
+                <!-- Sticky mini-toolbar: Jump to bottom + Continue -->
                 <div class="s7-toolbar" id="s7Toolbar">
-                    <button type="button" class="s7-toolbar-btn" onclick="s7ScrollToFlow()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-                        Flow preview
-                    </button>
-                    <div class="s7-toolbar-divider"></div>
                     <button type="button" class="s7-toolbar-btn" onclick="s7ScrollToBottom()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
                         Jump to bottom
@@ -3312,11 +3348,17 @@
 
                 <!-- Live Flow Preview -->
                 <div id="liveFlowPreview" class="live-flow-preview">
-                    <button type="button" class="live-flow-toggle" id="liveFlowToggle" onclick="toggleLiveFlow()">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-                        <span id="liveFlowToggleText">Hide Flow Preview</span>
-                        <span id="stepCountBadge" class="step-count-badge">0 steps</span>
-                    </button>
+                    <div style="display:flex; align-items:center; padding: 0.55rem 1rem 0.55rem 0.75rem; gap:0.4rem;">
+                        <button type="button" class="live-flow-toggle" id="liveFlowToggle" onclick="toggleLiveFlow()" style="padding:0.15rem 0.25rem; width:auto; flex:1;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                            <span id="liveFlowToggleText">Flow Preview</span>
+                            <span id="stepCountBadge" class="step-count-badge">0 steps</span>
+                        </button>
+                        <button type="button" class="live-flow-pin-btn" id="liveFlowPinBtn" onclick="toggleFlowPin()" title="Pin so it stays visible while scrolling">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>
+                            <span id="liveFlowPinText">Pin</span>
+                        </button>
+                    </div>
                     <div id="liveFlowContainer">
                         <div id="liveFlowSvg" style="overflow-x: auto; padding: 0.75rem 0;"></div>
                     </div>
@@ -4139,13 +4181,29 @@
         }
 
         // Screen 7 toolbar helpers
-        function s7ScrollToFlow() {
-            const el = document.getElementById('liveFlowPreview');
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
         function s7ScrollToBottom() {
             const el = document.getElementById('s7BottomAnchor');
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+
+        // Toggle sticky pin on flow preview
+        let _flowPinned = false;
+        function toggleFlowPin() {
+            _flowPinned = !_flowPinned;
+            const preview = document.getElementById('liveFlowPreview');
+            const btn     = document.getElementById('liveFlowPinBtn');
+            const txt     = document.getElementById('liveFlowPinText');
+            if (!preview || !btn) return;
+            preview.classList.toggle('is-pinned', _flowPinned);
+            btn.classList.toggle('is-pinned', _flowPinned);
+            if (txt) txt.textContent = _flowPinned ? 'Unpin' : 'Pin';
+            // Make sure the container is visible when pinned
+            if (_flowPinned) {
+                const container = document.getElementById('liveFlowContainer');
+                if (container) container.style.display = '';
+                const toggleText = document.getElementById('liveFlowToggleText');
+                if (toggleText) toggleText.textContent = 'Flow Preview';
+            }
         }
 
         // Phase-dot navigation: jump to first screen of a phase, only if already visited
