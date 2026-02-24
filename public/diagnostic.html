@@ -3301,7 +3301,7 @@
                 <div id="errorBox1" class="error-box"><div class="error-text" id="errorText1"></div></div>
 
                 <div class="button-group">
-                    <button class="button button-secondary" onclick="goToScreen(0)">&larr; Back</button>
+                    <button class="button button-secondary" onclick="teamMode ? openTeamSetup() : goToScreen(0)">&larr; Back</button>
                     <button class="button button-primary" onclick="validateAndContinue(1)" id="continueBtn1" disabled>Continue &rarr;</button>
                 </div>
             </div>
@@ -11820,6 +11820,7 @@
         }
 
         function closeTeamSetup() {
+            _pendingPath = 'individual'; // prevent stale team routing
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById('screen0').classList.add('active');
             currentScreen = 0;
@@ -11832,6 +11833,13 @@
 
         function startTeamDiagnosticNow() {
             // Exit team setup screen and begin the diagnostic in team mode
+            _pendingPath = 'individual'; // reset so further navigation doesn't re-trigger team setup
+            // Show persistent team mode banner
+            const banner = document.getElementById('resumeBanner');
+            if (banner && teamMode) {
+                banner.innerHTML = '<strong>Team Diagnostic Mode</strong> — ' + (teamMode.processName ? ('"' + teamMode.processName + '" · ') : '') + 'Code: <strong>' + teamMode.code + '</strong>. Your response will be compared with your colleagues\' perspectives.';
+                banner.classList.add('show');
+            }
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             goToScreen(1);
         }
