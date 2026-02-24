@@ -11322,8 +11322,9 @@
             const editLoaded = await checkForEditMode();
             if (editLoaded) return;
 
-            // Check for team mode (?team=CODE)
-            await checkForTeamMode();
+            // Check for team mode (?team=CODE) — navigates to screen 1 directly if found
+            const teamLoaded = await checkForTeamMode();
+            if (teamLoaded) return;
 
             // ?upgrade=reportId — load existing map-only report's process data and
             // start a comprehensive diagnostic pre-populated with it
@@ -11909,24 +11910,27 @@
             });
         }
 
-        // Check for ?team=CODE on load - enter team mode
+        // Check for ?team=CODE on load - go straight to screen 1 in team mode
         async function checkForTeamMode() {
             const params = new URLSearchParams(location.search);
             const code = params.get('team');
             if (!code) return false;
 
             teamMode = { code: code.toUpperCase(), processName: '' };
+            diagnosticMode = 'comprehensive';
+            _pendingPath = 'individual'; // prevent mode-select from re-routing to team setup
 
-            // Show banner
+            // Show persistent team banner
             const banner = document.getElementById('resumeBanner');
             if (banner) {
-                        banner.innerHTML = '<strong>Team Diagnostic Mode</strong>. Your response will be compared with your colleagues\' perspectives. Don\'t know all the steps? Use "Hand over to colleague" during step mapping.';
-                        banner.classList.add('show');
-                    }
+                banner.innerHTML = '<strong>Team Diagnostic Mode</strong> — Code: <strong>' + code.toUpperCase() + '</strong>. Your response will be compared with your colleagues\'. Don\'t know all the steps? Use \"Hand over to colleague\" during step mapping.';
+                banner.classList.add('show');
+            }
 
-            // Clean URL
+            // Clean URL then go straight to screen 1 — no welcome screen needed
             history.replaceState(null, '', location.pathname);
-            return false; // don't skip normal init
+            goToScreen(1);
+            return true; // skip remaining init
         }
 
         // Submit team response when diagnostic completes (hook into submitForAnalysis)
