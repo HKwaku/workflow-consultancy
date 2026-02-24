@@ -3379,7 +3379,7 @@
                 <div id="errorBox3" class="error-box"><div class="error-text" id="errorText3"></div></div>
 
                 <div class="button-group">
-                    <button class="button button-secondary" onclick="goToScreen(2)">&larr; Back</button>
+                    <button class="button button-secondary" onclick="teamMode ? goToScreen(0) : goToScreen(2)">&larr; Back</button>
                     <button class="button button-primary" onclick="validateAndContinue(3)">Continue &rarr;</button>
                 </div>
             </div>
@@ -11878,7 +11878,12 @@
                 document.getElementById('teamSuccessMsg').textContent =
                     `Share the code below with your team. Each person visits the link and completes the diagnostic for "${processName}". If you don't know all the steps, you can hand over to a colleague during step mapping.`;
                 document.getElementById('teamCodeDisplay').textContent = result.teamCode;
-                document.getElementById('teamJoinLink').value = result.joinUrl;
+                // Append mode + process to joinUrl so joiners skip screens 1-2 and get the right mode
+                const baseJoinUrl = result.joinUrl || (location.origin + '/diagnostic?team=' + result.teamCode);
+                const enrichedJoinUrl = baseJoinUrl
+                    + '&mode=' + encodeURIComponent(diagnosticMode || 'comprehensive')
+                    + '&process=' + encodeURIComponent(processName);
+                document.getElementById('teamJoinLink').value = enrichedJoinUrl;
                 document.getElementById('teamResultsLink').href = result.resultsUrl;
 
                 // Team diagnostic is always comprehensive (needs full data for comparison)
@@ -11910,26 +11915,46 @@
             });
         }
 
-        // Check for ?team=CODE on load - go straight to screen 1 in team mode
+        // Check for ?team=CODE on load - pre-fill process, respect mode, skip to screen 3
         async function checkForTeamMode() {
             const params = new URLSearchParams(location.search);
             const code = params.get('team');
             if (!code) return false;
 
-            teamMode = { code: code.toUpperCase(), processName: '' };
-            diagnosticMode = 'comprehensive';
-            _pendingPath = 'individual'; // prevent mode-select from re-routing to team setup
+            // Read mode + process from URL (set by creator when generating join link)
+            const urlMode = params.get('mode') || 'comprehensive';
+            const urlProcess = params.get('process') || '';
 
-            // Show persistent team banner
+            diagnosticMode = urlMode;
+            _pendingPath = 'individual'; // prevent mode-select re-routing to team setup
+
+            // Pre-fill processData from URL so screens 1+2 are already satisfied
+            if (urlProcess) {
+                processData.processType = 'custom';
+                processData.processName = decodeURIComponent(urlProcess);
+                // Also pre-fill the screen 2 input so it validates
+                const nameInput = document.getElementById('processNameInput');
+                if (nameInput) nameInput.value = processData.processName;
+                const btn1 = document.getElementById('continueBtn1');
+                if (btn1) btn1.disabled = false;
+            }
+
+            teamMode = { code: code.toUpperCase(), processName: processData.processName };
+
+            // Show persistent team banner with process name + mode
+            const modeLabel = diagnosticMode === 'map-only' ? 'Map Only' : 'Comprehensive';
             const banner = document.getElementById('resumeBanner');
             if (banner) {
-                banner.innerHTML = '<strong>Team Diagnostic Mode</strong> — Code: <strong>' + code.toUpperCase() + '</strong>. Your response will be compared with your colleagues\'. Don\'t know all the steps? Use \"Hand over to colleague\" during step mapping.';
+                banner.innerHTML = '<strong>Team Diagnostic — ' + modeLabel + '</strong>'
+                    + (processData.processName ? ': <em>' + processData.processName + '</em>' : '')
+                    + ' — Code: <strong>' + code.toUpperCase() + '</strong>.'
+                    + ' Map the process as YOU see it. Don't know all the steps? Use "Hand over to colleague" during step mapping.';
                 banner.classList.add('show');
             }
 
-            // Clean URL then go straight to screen 1 — no welcome screen needed
+            // Clean URL then jump straight to screen 3 (boundaries) — screens 1+2 locked by pre-fill
             history.replaceState(null, '', location.pathname);
-            goToScreen(1);
+            goToScreen(3);
             return true; // skip remaining init
         }
 
