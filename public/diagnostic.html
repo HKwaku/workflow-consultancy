@@ -509,216 +509,114 @@
         /* ===== Welcome ===== */
         .welcome-hero {
             text-align: center;
-            padding: 2rem 0;
+            padding: 2.5rem 0 2rem;
         }
 
-        .welcome-icon {
-            font-size: 4rem;
+        .welcome-eyebrow {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--accent);
             margin-bottom: 1rem;
         }
 
-        .welcome-how-it-works {
-            background: #f0f9ff;
-            border: 1px solid #bae6fd;
-            border-radius: var(--radius-md);
-            padding: 1rem 1.25rem;
-            margin-bottom: 1.25rem;
-        }
-        .welcome-outcomes li { margin-bottom: 0.35rem; }
-        .welcome-outcomes li:last-child { margin-bottom: 0; }
-        .welcome-what-you-get {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-top: 0.5rem;
-        }
-        .welcome-get-item {
-            font-size: 0.8rem;
-            padding: 0.25rem 0.6rem;
-            background: rgba(255,255,255,0.8);
-            border-radius: 100px;
-            color: var(--primary);
-            font-weight: 500;
-        }
-        .welcome-path-summary {
-            margin: 1.25rem 0 0;
-            font-size: 0.8rem;
-            color: var(--text-light);
-            text-align: center;
-            line-height: 1.5;
-        }
-
-        /* Welcome flow diagram - redesigned */
-        .welcome-flow {
-            margin: 1.5rem 0;
-            padding: 1.75rem;
-            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-            border-radius: var(--radius-lg);
-            border: 1px solid rgba(226,232,240,0.8);
-        }
-        .welcome-flow-intro {
-            text-align: center;
-            color: var(--text-mid);
-            font-size: 0.9rem;
-            margin-bottom: 1.25rem;
-            line-height: 1.5;
-        }
-        .welcome-flow-diagram {
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-            gap: 1rem;
-        }
-        .wf-choose-label {
-            text-align: center;
-            font-size: 0.8rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.12em;
-            color: var(--text-light);
-            margin-bottom: 0.25rem;
-        }
-        .wf-paths {
+        .welcome-paths {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1.25rem;
-            align-items: start;
+            gap: 1rem;
+            margin: 2rem 0;
         }
-        .wf-path-card {
-            background: #fff;
+
+        .welcome-path-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.35rem;
+            padding: 1.25rem 1.5rem;
+            background: white;
+            border: 1.5px solid var(--border);
             border-radius: var(--radius-md);
-            overflow: hidden;
-            border: 1px solid var(--border);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-            transition: box-shadow 0.2s, transform 0.2s;
+            cursor: pointer;
+            transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+            text-align: left;
+            font-family: 'Work Sans', sans-serif;
         }
-        .wf-path-card:hover {
-            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+
+        .welcome-path-btn:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-1px);
         }
-        .wf-path-individual .wf-path-header:hover,
-        .wf-path-individual .wf-path-header:focus { background: rgba(61,142,166,0.06); outline: none; }
-        .wf-path-team .wf-path-header:hover,
-        .wf-path-team .wf-path-header:focus { background: rgba(124,58,237,0.06); outline: none; }
-        .wf-path-header {
+
+        .welcome-path-btn-individual:hover { border-color: var(--accent); }
+        .welcome-path-btn-team:hover { border-color: #7c3aed; }
+
+        .welcome-path-btn-label {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .welcome-path-btn-meta {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            line-height: 1.4;
+        }
+
+        .welcome-path-btn-cta {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .welcome-path-btn-team .welcome-path-btn-cta { color: #7c3aed; }
+
+        .welcome-divider {
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            padding: 1rem 1.25rem;
-            border-bottom: 1px solid var(--border);
-        }
-        .wf-path-individual .wf-path-header { border-left: 4px solid var(--accent); }
-        .wf-path-team .wf-path-header { border-left: 4px solid #7c3aed; }
-        .wf-path-icon {
-            font-size: 1.5rem;
-            flex-shrink: 0;
-        }
-        .wf-path-title {
-            font-family: 'Cormorant Garamond', serif;
-            font-size: 1.05rem;
-            font-weight: 600;
-            color: var(--primary);
-            margin: 0 0 0.15rem 0;
-        }
-        .wf-path-meta {
+            color: var(--text-light);
             font-size: 0.78rem;
-            color: var(--text-mid);
+            margin: 0.25rem 0;
         }
-        .wf-path-flow {
-            padding: 1rem 1.25rem;
+        .welcome-divider::before,
+        .welcome-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .welcome-need {
             display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-        .wf-phase-pill {
-            font-size: 0.78rem;
-            color: var(--text-mid);
-            background: var(--bg-alt);
-            padding: 0.5rem 0.85rem;
-            border-radius: 100px;
-            text-align: center;
-        }
-        .wf-flow-arrow {
-            width: 0;
-            height: 0;
-            border-left: 6px solid transparent;
-            border-right: 6px solid transparent;
-            border-top: 8px solid var(--border);
-            margin: 0 auto;
-        }
-        .wf-decision-box {
-            background: #fffbeb;
-            border: 1px solid rgba(245,158,11,0.4);
-            border-radius: var(--radius-sm);
-            padding: 0.65rem 0.9rem;
-        }
-        .wf-decision-q {
-            font-size: 0.82rem;
-            font-weight: 600;
-            color: var(--primary);
-            display: block;
-            margin-bottom: 0.5rem;
-        }
-        .wf-decision-branches {
-            display: flex;
-            gap: 0.75rem;
+            gap: 1.5rem;
             flex-wrap: wrap;
+            justify-content: center;
+            padding: 1.25rem 0 0.5rem;
+            border-top: 1px solid var(--border-light);
+            margin-top: 1.5rem;
         }
-        .wf-decision-opt {
+
+        .welcome-need-item {
             display: flex;
             align-items: center;
             gap: 0.4rem;
-            font-size: 0.78rem;
+            font-size: 0.82rem;
             color: var(--text-mid);
         }
-        .wf-opt-label {
-            font-weight: 700;
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            padding: 0.15rem 0.5rem;
-            background: rgba(255,255,255,0.9);
-            border-radius: 4px;
-            color: var(--amber);
-        }
-        .wf-note-box {
-            font-size: 0.78rem;
-            color: var(--text-mid);
-            padding: 0.5rem 0.75rem;
-            background: rgba(124,58,237,0.04);
-            border-radius: var(--radius-sm);
-            border: 1px dashed rgba(124,58,237,0.3);
-        }
-        .wf-outcome {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            padding: 1rem;
-            border-radius: var(--radius-sm);
-        }
-        .wf-outcome-individual {
-            background: linear-gradient(135deg, rgba(61,142,166,0.08), rgba(61,142,166,0.02));
-            border: 1px solid rgba(61,142,166,0.35);
-        }
-        .wf-outcome-team {
-            background: linear-gradient(135deg, rgba(124,58,237,0.08), rgba(124,58,237,0.02));
-            border: 1px solid rgba(124,58,237,0.35);
-        }
-        .wf-outcome-icon { font-size: 1.4rem; margin-bottom: 0.25rem; }
-        .wf-outcome-text {
-            font-weight: 600;
-            font-size: 0.92rem;
-            color: var(--primary);
-        }
-        .wf-outcome-detail {
-            font-size: 0.78rem;
-            color: var(--text-mid);
-            margin-top: 0.2rem;
+
+        .welcome-need-item svg {
+            width: 14px;
+            height: 14px;
+            color: var(--success);
+            flex-shrink: 0;
         }
 
         @media (max-width: 640px) {
-            .wf-paths { grid-template-columns: 1fr; }
-            .wf-phase-pill { font-size: 0.72rem; }
+            .welcome-paths { grid-template-columns: 1fr; }
         }
 
         .checklist {
@@ -2581,110 +2479,37 @@
         <div class="screen active" id="screen0">
             <div class="screen-card">
                 <div class="welcome-hero">
-                    <div class="welcome-icon">&#127919;</div>
-                    <h1 class="screen-title">Process Diagnostic</h1>
-                    <p class="screen-subtitle">Evidence-based workflow analysis that reveals where time and money are leaking from your processes.</p>
+                    <span class="welcome-eyebrow">Process Diagnostic</span>
+                    <h1 class="screen-title">Where is time and money leaking?</h1>
+                    <p class="screen-subtitle">Map a real process in 12–15 minutes. Our AI produces a cost breakdown, automation readiness score, and 90-day roadmap.</p>
                 </div>
 
-                <!-- How Diagnostics Work -->
-                <div class="welcome-how-it-works">
-                    <h3 style="margin: 0 0 0.6rem; color: var(--primary); font-size: 1rem;">How diagnostics work</h3>
-                    <p style="margin: 0 0 0.5rem; font-size: 0.9rem; color: var(--text-mid); line-height: 1.55;">Map a real process step-by-step using a recent example (12-15 min). Our AI analyses it and produces a report with:</p>
-                    <div class="welcome-what-you-get">
-                        <span class="welcome-get-item">Cost breakdown</span>
-                        <span class="welcome-get-item">Automation readiness</span>
-                        <span class="welcome-get-item">90-day roadmap</span>
-                    </div>
-                    <p style="margin: 0.75rem 0 0.35rem; font-size: 0.84rem; color: var(--text); font-weight: 600;">Two paths:</p>
-                    <ul class="welcome-outcomes" style="margin: 0; padding-left: 1.2rem; font-size: 0.85rem; color: var(--text-mid); line-height: 1.6;">
-                        <li><strong>Individual:</strong> You map the process. Don't know all the steps? Hand over to a colleague who can add the missing ones.</li>
-                        <li><strong>Team:</strong> Multiple people map the same process independently. Compare perspectives to uncover perception gaps.</li>
-                    </ul>
+                <div class="welcome-paths">
+                    <button class="welcome-path-btn welcome-path-btn-individual" onclick="goToScreen(1)">
+                        <span class="welcome-path-btn-label">Individual</span>
+                        <span class="welcome-path-btn-meta">You map the process alone, or hand off to a colleague mid-way.</span>
+                        <span class="welcome-path-btn-cta">Start &rarr;</span>
+                    </button>
+                    <button class="welcome-path-btn welcome-path-btn-team" onclick="openTeamSetup()">
+                        <span class="welcome-path-btn-label">Team</span>
+                        <span class="welcome-path-btn-meta">Multiple people map independently to surface perception gaps.</span>
+                        <span class="welcome-path-btn-cta">Start &rarr;</span>
+                    </button>
                 </div>
 
-                <!-- Path Selection - Flow Diagram (redesigned) -->
-                <div class="welcome-flow">
-                    <p class="welcome-flow-intro">Both paths produce AI-powered reports. Pick the one that fits your situation.</p>
-
-                    <div class="welcome-flow-diagram">
-                        <div class="wf-choose-label">Choose your path</div>
-
-                        <!-- Two paths side by side -->
-                        <div class="wf-paths">
-                            <!-- Individual path -->
-                            <div class="wf-path-card wf-path-individual">
-                                <div class="wf-path-header" onclick="goToScreen(1)" onkeydown="if(event.key==='Enter')goToScreen(1)" role="button" tabindex="0" style="cursor:pointer;">
-                                    <span class="wf-path-icon">&#128100;</span>
-                                    <div>
-                                        <h4 class="wf-path-title">Individual Diagnostic</h4>
-                                        <span class="wf-path-meta">12–15 min per process</span>
-                                    </div>
-                                </div>
-                                <div class="wf-path-flow">
-                                    <div class="wf-phase-pill">Define → Measure → Map → Assess → Quantify</div>
-                                    <div class="wf-flow-arrow"></div>
-                                    <div class="wf-decision-box">
-                                        <span class="wf-decision-q">Don't know all the steps?</span>
-                                        <div class="wf-decision-branches">
-                                            <div class="wf-decision-opt">
-                                                <span class="wf-opt-label">Yes</span>
-                                                <span class="wf-opt-text">Hand over to colleague — they continue where you left off</span>
-                                            </div>
-                                            <div class="wf-decision-opt">
-                                                <span class="wf-opt-label">No</span>
-                                                <span class="wf-opt-text">Continue to report</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="wf-flow-arrow"></div>
-                                    <div class="wf-outcome wf-outcome-individual">
-                                        <span class="wf-outcome-icon">&#128202;</span>
-                                        <span class="wf-outcome-text">AI-Powered Report</span>
-                                        <span class="wf-outcome-detail">Cost analysis, recommendations, roadmap</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Team path -->
-                            <div class="wf-path-card wf-path-team">
-                                <div class="wf-path-header" onclick="openTeamSetup()" onkeydown="if(event.key==='Enter')openTeamSetup()" role="button" tabindex="0" style="cursor:pointer;">
-                                    <span class="wf-path-icon">&#128101;</span>
-                                    <div>
-                                        <h4 class="wf-path-title">Team Diagnostic</h4>
-                                        <span class="wf-path-meta">Understand perception gaps</span>
-                                    </div>
-                                </div>
-                                <div class="wf-path-flow">
-                                    <div class="wf-phase-pill">Create session → Share code → Each member completes</div>
-                                    <div class="wf-flow-arrow"></div>
-                                    <div class="wf-note-box">
-                                        <span class="wf-note-text">Members can hand over steps to colleagues during mapping</span>
-                                    </div>
-                                    <div class="wf-flow-arrow"></div>
-                                    <div class="wf-outcome wf-outcome-team">
-                                        <span class="wf-outcome-icon">&#128202;</span>
-                                        <span class="wf-outcome-text">Perception Gap Analysis</span>
-                                        <span class="wf-outcome-detail">Where does your team see things differently?</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <p class="welcome-path-summary">Individual: one person maps the process; hand over to a colleague if you don't know all the steps. Team: multiple people map the same process to reveal perception gaps.</p>
-                </div>
-
-                <!-- Checklist -->
-                <div class="checklist">
-                    <h3 style="margin-bottom: 0.75rem; color: var(--primary); font-size: 0.95rem;">You'll need:</h3>
-                    <div class="checklist-item"><span class="checklist-icon">&#10003;</span><span>Your calendar from last week</span></div>
-                    <div class="checklist-item"><span class="checklist-icon">&#10003;</span><span>Access to your email</span></div>
-                    <div class="checklist-item"><span class="checklist-icon">&#10003;</span><span>A recent example to reference</span></div>
-                    <div class="checklist-item"><span class="checklist-icon">&#10003;</span><span>Honesty about what's actually happening</span></div>
-                </div>
-
-                <div class="button-group" style="border-top: none; padding-top: 0; gap: 0.75rem;">
-                    <button class="button button-primary" onclick="goToScreen(1)" style="flex: 1;">&#128100; Start Individual Diagnostic &rarr;</button>
-                    <button class="button button-secondary" onclick="openTeamSetup()" style="flex: 1; border-radius: 100px;">&#128101; Start Team Diagnostic</button>
+                <div class="welcome-need">
+                    <span class="welcome-need-item">
+                        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 8 6 12 14 4"/></svg>
+                        Last week's calendar
+                    </span>
+                    <span class="welcome-need-item">
+                        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 8 6 12 14 4"/></svg>
+                        A recent example to reference
+                    </span>
+                    <span class="welcome-need-item">
+                        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 8 6 12 14 4"/></svg>
+                        12–15 minutes
+                    </span>
                 </div>
 
                 <!-- DEV: Skip to results with sample data -->
@@ -3793,7 +3618,7 @@
                             <button class="button button-secondary" onclick="exportJSON()" style="flex: 1; min-width: 120px; font-size: 0.85rem;">&#128196; JSON</button>
                             <button class="button button-secondary" onclick="exportBPMN()" style="flex: 1; min-width: 120px; font-size: 0.85rem;">&#9881; BPMN</button>
                         </div>
-                        <a href="mailto:hopektettey@gmail.com?subject=Process%20Diagnostic%20-%20Discovery%20Call" class="button button-secondary" style="text-align: center; text-decoration: none;">Book Discovery Call</a>
+                        <a href="/cdn-cgi/l/email-protection#294146594c425d4c5d5d4c50694e44484045074a4644165a5c4b434c4a5d14795b464a4c5a5a0c1b196d40484e47465a5d404a0c1b19040c1b196d405a4a465f4c5b500c1b196a484545" class="button button-secondary" style="text-align: center; text-decoration: none;">Book Discovery Call</a>
                         <a href="index.html" class="button button-secondary" style="text-align: center; text-decoration: none;">Back to Home</a>
                     </div>
 
@@ -3809,7 +3634,7 @@
 
     </div>
 
-    <script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
         function esc(s) { return fixMojibake(String(s || '')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
         function fixMojibake(s) {
             if (!s || typeof s !== 'string') return s || '';
@@ -11599,12 +11424,4 @@
             <div class="save-modal-link-box" id="handoverLinkBox">
                 <label>Share this link with your colleague</label>
                 <div class="save-modal-link-row">
-                    <input type="text" id="handoverLinkInput" readonly onclick="this.select()">
-                    <button onclick="copyHandoverLink()">Copy</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-</body>
-</html>
+                    <input type="text" id="handoverLinkIn
