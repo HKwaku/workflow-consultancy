@@ -720,6 +720,224 @@
             .welcome-paths { grid-template-columns: 1fr; }
         }
 
+        /* ========== MODE SELECT SCREEN ========== */
+        .mode-back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: none;
+            border: none;
+            color: var(--text-mid);
+            font-size: 0.82rem;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem 0.25rem 0.1rem;
+            margin-bottom: 1.5rem;
+            border-radius: 6px;
+            transition: color 0.15s, background 0.15s;
+        }
+        .mode-back-btn:hover { color: var(--text); background: var(--bg-alt); }
+
+        .mode-header { margin-bottom: 1.75rem; }
+        .mode-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 0.75rem;
+        }
+        .mode-eyebrow::before,
+        .mode-eyebrow::after {
+            content: '';
+            display: block;
+            width: 20px;
+            height: 1px;
+            background: var(--accent);
+            opacity: 0.5;
+        }
+        /* When team path, colour the eyebrow purple */
+        .mode-eyebrow.is-team {
+            color: #7c3aed;
+        }
+        .mode-eyebrow.is-team::before,
+        .mode-eyebrow.is-team::after {
+            background: #7c3aed;
+        }
+
+        .mode-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        @media (max-width: 600px) { .mode-cards { grid-template-columns: 1fr; } }
+
+        .mode-card {
+            position: relative;
+            border: 2px solid transparent;
+            border-radius: var(--radius-lg);
+            padding: 1.75rem 1.5rem 1.5rem;
+            cursor: pointer;
+            transition: transform 0.18s, box-shadow 0.18s;
+            overflow: hidden;
+        }
+
+        /* Decorative corner circle — mirrors welcome cards */
+        .mode-card::after {
+            content: '';
+            position: absolute;
+            top: -28px; right: -28px;
+            width: 96px; height: 96px;
+            border-radius: 50%;
+            opacity: 0.15;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .mode-card:hover::after { opacity: 0.25; transform: scale(1.1); }
+        .mode-card:hover { transform: translateY(-3px); }
+
+        /* Teal — Map Process Only */
+        .mode-card-map {
+            background: linear-gradient(135deg, #e8f5f8 0%, #d0ecf2 100%);
+            box-shadow: 0 2px 12px rgba(61,142,166,0.12), 0 1px 3px rgba(61,142,166,0.08);
+        }
+        .mode-card-map::after { background: var(--accent); }
+        .mode-card-map:hover {
+            box-shadow: 0 8px 28px rgba(61,142,166,0.22), 0 2px 8px rgba(61,142,166,0.12);
+        }
+        .mode-card-map.selected {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(61,142,166,0.18), 0 8px 28px rgba(61,142,166,0.18);
+        }
+
+        /* Violet — Comprehensive */
+        .mode-card-full {
+            background: linear-gradient(135deg, #f0ebff 0%, #e4d9fd 100%);
+            box-shadow: 0 2px 12px rgba(124,58,237,0.10), 0 1px 3px rgba(124,58,237,0.07);
+        }
+        .mode-card-full::after { background: #7c3aed; }
+        .mode-card-full:hover {
+            box-shadow: 0 8px 28px rgba(124,58,237,0.20), 0 2px 8px rgba(124,58,237,0.10);
+        }
+        .mode-card-full.selected {
+            border-color: #7c3aed;
+            box-shadow: 0 0 0 3px rgba(124,58,237,0.15), 0 8px 28px rgba(124,58,237,0.15);
+        }
+
+        .mode-card-badge {
+            display: inline-flex;
+            align-items: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            padding: 0.25rem 0.65rem;
+            border-radius: 100px;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+        .mode-card-map .mode-card-badge {
+            background: rgba(61,142,166,0.18);
+            color: #1f6d84;
+        }
+        .mode-badge-full {
+            background: rgba(124,58,237,0.14);
+            color: #5b21b6;
+        }
+
+        .mode-card-icon {
+            font-size: 1.75rem;
+            line-height: 1;
+            margin-bottom: 0.65rem;
+            position: relative;
+        }
+        .mode-card-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 0 0 0.45rem;
+            position: relative;
+            line-height: 1.1;
+        }
+        .mode-card-map .mode-card-title   { color: #1f6d84; }
+        .mode-card-full .mode-card-title  { color: #5b21b6; }
+
+        .mode-card-desc {
+            font-size: 0.82rem;
+            line-height: 1.58;
+            margin: 0 0 1rem;
+            position: relative;
+        }
+        .mode-card-map .mode-card-desc  { color: #2d8099; }
+        .mode-card-full .mode-card-desc { color: #6d28d9; }
+
+        .mode-card-steps {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem 0.65rem;
+            font-size: 0.78rem;
+            position: relative;
+        }
+        .mode-card-steps li { display: flex; align-items: center; gap: 0.3rem; }
+        .mode-step-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .mode-dot-define   { background: #3d8ea6; }
+        .mode-dot-measure  { background: #f59e0b; }
+        .mode-dot-map      { background: #10b981; }
+        .mode-dot-assess   { background: #6366f1; }
+        .mode-dot-quantify { background: #ef4444; }
+
+        .mode-card-map .mode-card-steps  { color: #2d8099; }
+        .mode-card-full .mode-card-steps { color: #6d28d9; }
+
+        .mode-step-skip { opacity: 0.4; text-decoration: line-through; }
+        .mode-skip-label {
+            display: inline-block;
+            font-size: 0.62rem;
+            padding: 0.05rem 0.3rem;
+            border-radius: 4px;
+            margin-left: 0.1rem;
+            text-decoration: none;
+            opacity: 1;
+            vertical-align: middle;
+            background: rgba(0,0,0,0.06);
+        }
+
+        .mode-card-output {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            padding-top: 0.85rem;
+            border-top: 1px solid rgba(0,0,0,0.07);
+            position: relative;
+        }
+        .mode-output-chip {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 0.22rem 0.6rem;
+            border-radius: 100px;
+        }
+        .mode-card-map .mode-output-chip {
+            background: rgba(61,142,166,0.15);
+            color: #1f6d84;
+        }
+        .mode-card-full .mode-output-chip {
+            background: rgba(124,58,237,0.12);
+            color: #5b21b6;
+        }
+        .mode-chip-gold {
+            background: rgba(245,158,11,0.15) !important;
+            color: #92400e !important;
+        }
+        /* ========== END MODE SELECT ========== */
+
         .checklist {
             background: var(--bg-alt);
             padding: 1.5rem;
@@ -2807,12 +3025,12 @@
                 </div>
 
                 <div class="welcome-paths">
-                    <button class="welcome-path-btn welcome-path-btn-individual" onclick="goToScreen(1)">
+                    <button class="welcome-path-btn welcome-path-btn-individual" onclick="showModeSelect('individual')">
                         <span class="welcome-path-btn-label">Process Map</span>
                         <span class="welcome-path-btn-meta">Map and measure a process flow. One person leads — hand off to colleagues to fill in steps they know.</span>
                         <span class="welcome-path-btn-cta">Start &rarr;</span>
                     </button>
-                    <button class="welcome-path-btn welcome-path-btn-team" onclick="openTeamSetup()">
+                    <button class="welcome-path-btn welcome-path-btn-team" onclick="showModeSelect('team')">
                         <span class="welcome-path-btn-label">Team Alignment</span>
                         <span class="welcome-path-btn-meta" style="margin-top:0.15rem; font-style:italic; color:#5b21b6; font-size:0.78rem; opacity:0.85;">Do we all see this process the same way?</span>
                         <span class="welcome-path-btn-meta" style="margin-top:0.4rem;">Each person maps the process independently. The AI compares responses to reveal where your team's understanding diverges.</span>
@@ -2850,6 +3068,57 @@
                     <button class="button" onclick="window.location.href='/team-results?sample'" style="background: #7c3aed; color: white; font-size: 0.85rem; padding: 0.6rem 1.5rem; margin-top: 0.5rem;">
                         Load Team Sample &amp; Show AI Analysis &rarr;
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== MODE SELECT (shown after choosing Individual or Team) ========== -->
+        <div class="screen" id="screenMode">
+            <div class="screen-card">
+                <button class="mode-back-btn" onclick="goToScreen(0)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="15 18 9 12 15 6"/></svg>
+                    Back
+                </button>
+                <div class="mode-header">
+                    <span class="mode-eyebrow" id="modeEyebrow">Individual Diagnostic</span>
+                    <h2 class="screen-title" style="margin:0.25rem 0 0.5rem; font-size:clamp(1.6rem,3.5vw,2.2rem); letter-spacing:-0.02em;">How deep do you want to go?</h2>
+                    <p class="screen-subtitle" id="modeSubtitle" style="margin:0;">Both options produce a flow diagram. Choose based on how much time you have.</p>
+                </div>
+                <div class="mode-cards">
+                    <div class="mode-card mode-card-map" id="modeCardMap" onclick="selectDiagMode('map-only')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')selectDiagMode('map-only')">
+                        <div class="mode-card-badge">~15 min</div>
+                        <div class="mode-card-icon">&#128395;</div>
+                        <h3 class="mode-card-title">Map Process Only</h3>
+                        <p class="mode-card-desc">Define the process boundaries and map every step. Produces a clean flow diagram.</p>
+                        <ul class="mode-card-steps">
+                            <li><span class="mode-step-dot mode-dot-define"></span>Define</li>
+                            <li class="mode-step-skip">Measure <span class="mode-skip-label">skipped</span></li>
+                            <li><span class="mode-step-dot mode-dot-map"></span>Map</li>
+                            <li class="mode-step-skip">Assess <span class="mode-skip-label">skipped</span></li>
+                            <li class="mode-step-skip">Quantify <span class="mode-skip-label">skipped</span></li>
+                        </ul>
+                        <div class="mode-card-output">
+                            <span class="mode-output-chip">&#9672; Flow diagram</span>
+                        </div>
+                    </div>
+                    <div class="mode-card mode-card-full" id="modeCardFull" onclick="selectDiagMode('comprehensive')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')selectDiagMode('comprehensive')">
+                        <div class="mode-card-badge mode-badge-full">~30 min</div>
+                        <div class="mode-card-icon">&#128202;</div>
+                        <h3 class="mode-card-title">Comprehensive Review</h3>
+                        <p class="mode-card-desc">Full diagnostic with cost analysis, automation readiness score, and 90-day roadmap.</p>
+                        <ul class="mode-card-steps">
+                            <li><span class="mode-step-dot mode-dot-define"></span>Define</li>
+                            <li><span class="mode-step-dot mode-dot-measure"></span>Measure</li>
+                            <li><span class="mode-step-dot mode-dot-map"></span>Map</li>
+                            <li><span class="mode-step-dot mode-dot-assess"></span>Assess</li>
+                            <li><span class="mode-step-dot mode-dot-quantify"></span>Quantify</li>
+                        </ul>
+                        <div class="mode-card-output">
+                            <span class="mode-output-chip">&#9672; Flow diagram</span>
+                            <span class="mode-output-chip mode-chip-gold">&#128202; Cost analysis</span>
+                            <span class="mode-output-chip mode-chip-gold">&#129302; AI recommendations</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -3394,7 +3663,7 @@
 
                 <!-- Footer actions -->
                 <div class="button-group">
-                    <button class="button button-secondary" onclick="goToScreen(6)">&larr; Back</button>
+                    <button class="button button-secondary" onclick="goToScreen(diagnosticMode==='map-only'?3:6)">&larr; Back</button>
                     <span class="handover-btn-wrapper">
                         <button type="button" class="handover-btn" onclick="openHandoverModal()">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
@@ -3913,7 +4182,7 @@
                 <div id="errorBox17" class="error-box"><div class="error-text" id="errorText17"></div></div>
 
                 <div class="button-group">
-                    <button class="button button-secondary" onclick="goToScreen(16)">&larr; Back</button>
+                    <button class="button button-secondary" onclick="goToScreen(diagnosticMode==='map-only'?7:16)">&larr; Back</button>
                     <button class="button button-primary" id="submitBtn" onclick="confirmBeforeSubmit()">Generate My Analysis &rarr;</button>
                 </div>
             </div>
@@ -4039,6 +4308,48 @@
         let stepCount = 0;
         let systemCount = 0;
 
+        // Diagnostic mode: 'comprehensive' (full 17-step flow) or 'map-only' (Define + Map only)
+        let diagnosticMode = 'comprehensive';
+        let _pendingPath = 'individual'; // 'individual' or 'team'
+
+        function showModeSelect(path) {
+            _pendingPath = path;
+            const eyebrow = document.getElementById('modeEyebrow');
+            if (eyebrow) {
+                eyebrow.textContent = path === 'team' ? 'Team Alignment' : 'Process Map';
+                eyebrow.classList.toggle('is-team', path === 'team');
+            }
+            // Update mode screen subtitle to reflect the chosen path
+            const modeSub = document.getElementById('modeSubtitle');
+            if (modeSub) {
+                modeSub.textContent = path === 'team'
+                    ? 'How thoroughly should each team member map the process?'
+                    : 'Both options produce a flow diagram. Choose based on how much time you have.';
+            }
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            const modeScreen = document.getElementById('screenMode');
+            if (modeScreen) modeScreen.classList.add('active');
+            currentScreen = -1;
+            updateProgress();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function selectDiagMode(mode) {
+            diagnosticMode = mode;
+            document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
+            const card = document.getElementById(mode === 'map-only' ? 'modeCardMap' : 'modeCardFull');
+            if (card) card.classList.add('selected');
+            // Brief delay so the selection state is visible, then navigate
+            setTimeout(function() {
+                if (_pendingPath === 'team') {
+                    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                    openTeamSetup();
+                } else {
+                    goToScreen(1);
+                }
+            }, 180);
+        }
+
         function toggleSection(header) {
             const section = header.parentElement;
             const btn = header.querySelector('.collapse-btn');
@@ -4131,8 +4442,6 @@
         }
 
         function updateProgress() {
-            const progress = (currentScreen / TOTAL_SCREENS) * 100;
-            document.getElementById('progressFill').style.width = progress + '%';
 
             const screenLabels = {
                 0: 'Getting Started', 1: 'Process Selection', 2: 'Process Name', 3: 'Define Boundaries',
@@ -4150,16 +4459,40 @@
                 12: 'Quantify', 13: 'Quantify', 14: 'Quantify', 15: 'Quantify', 16: 'Quantify'
             };
 
+            // Map-only active screens (in order): 1,2,3,7,17 → total 5 steps before results
+            const MAP_ONLY_SCREENS = [1, 2, 3, 7, 17];
+            const mapOnlyStepLabels = { 1: 'Select Process', 2: 'Name Process', 3: 'Define Boundaries', 7: 'Map Steps', 17: 'Your Details' };
+
             let text;
             if (currentScreen === 0) {
                 text = screenLabels[0];
             } else if (currentScreen === TOTAL_SCREENS) {
                 text = 'Complete!';
+            } else if (diagnosticMode === 'map-only' && currentScreen !== -1) {
+                const stepIdx = MAP_ONLY_SCREENS.indexOf(currentScreen);
+                if (stepIdx >= 0) {
+                    text = `Step ${stepIdx + 1} of ${MAP_ONLY_SCREENS.length} — ${mapOnlyStepLabels[currentScreen] || screenLabels[currentScreen] || ''}`;
+                } else {
+                    text = screenLabels[currentScreen] || '';
+                }
             } else {
                 const phase = screenPhases[currentScreen] ? screenPhases[currentScreen] + ': ' : '';
                 text = `Step ${currentScreen} of ${TOTAL_SCREENS - 1} - ${phase}${screenLabels[currentScreen] || ''}`;
             }
             document.getElementById('progressText').textContent = text;
+
+            // Progress bar fill — in map-only, base % on position in reduced set
+            const progressFill = document.getElementById('progressFill');
+            if (progressFill) {
+                let pct;
+                if (diagnosticMode === 'map-only' && currentScreen > 0 && currentScreen !== TOTAL_SCREENS) {
+                    const stepIdx = MAP_ONLY_SCREENS.indexOf(currentScreen);
+                    pct = stepIdx >= 0 ? ((stepIdx + 1) / (MAP_ONLY_SCREENS.length + 1)) * 100 : 100;
+                } else {
+                    pct = (currentScreen / TOTAL_SCREENS) * 100;
+                }
+                progressFill.style.width = Math.min(pct, 100) + '%';
+            }
 
             // Toggle step-zero badge style on progress bar
             const progressBar = document.querySelector('.progress-bar');
@@ -4167,17 +4500,21 @@
                 progressBar.classList.toggle('is-step-zero', currentScreen === 0);
             }
 
-            // Update phase dots
+            // Update phase dots — hide in map-only (not meaningful)
             const phaseDots = document.getElementById('phaseDots');
             if (phaseDots) {
-                const phases = ['Define', 'Measure', 'Map', 'Assess', 'Quantify'];
-                const currentPhase = screenPhases[currentScreen] || '';
-                const currentPhaseIdx = phases.indexOf(currentPhase);
-                phaseDots.querySelectorAll('.phase-dot').forEach(function(dot, idx) {
-                    dot.classList.toggle('phase-dot-active', idx === currentPhaseIdx);
-                    dot.classList.toggle('phase-dot-done', idx < currentPhaseIdx);
-                });
-                phaseDots.style.display = (currentScreen >= 1 && currentScreen <= 18) ? 'flex' : 'none';
+                if (diagnosticMode === 'map-only') {
+                    phaseDots.style.display = 'none';
+                } else {
+                    const phases = ['Define', 'Measure', 'Map', 'Assess', 'Quantify'];
+                    const currentPhase = screenPhases[currentScreen] || '';
+                    const currentPhaseIdx = phases.indexOf(currentPhase);
+                    phaseDots.querySelectorAll('.phase-dot').forEach(function(dot, idx) {
+                        dot.classList.toggle('phase-dot-active', idx === currentPhaseIdx);
+                        dot.classList.toggle('phase-dot-done', idx < currentPhaseIdx);
+                    });
+                    phaseDots.style.display = (currentScreen >= 1 && currentScreen <= 18) ? 'flex' : 'none';
+                }
             }
         }
 
@@ -7567,6 +7904,12 @@
             if (nudgeScreens.indexOf(screen) >= 0 && !_skipNudge[screen] && !screenHasData(screen)) {
                 showSoftNudge(screen);
                 return;
+            }
+
+            // Map-only mode: skip Measure (4-6), Assess (8-12), Quantify (13-16)
+            if (diagnosticMode === 'map-only') {
+                if (screen === 3) { goToScreen(7); return; }
+                if (screen === 7) { goToScreen(17); return; }
             }
 
             goToScreen(screen + 1);
