@@ -155,14 +155,27 @@
             font-weight: 600;
         }
         .phase-dot-done {
-            opacity: 0.7;
-            text-decoration: line-through;
+            opacity: 1;
+            color: var(--accent);
+            font-weight: 500;
+        }
+        .phase-dot-done .phase-dot-num {
+            background: var(--accent);
+            color: white;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.62rem;
+            margin-right: 0.2rem;
+            vertical-align: middle;
         }
         .phase-dot-active:hover,
         .phase-dot-done:hover {
             opacity: 1;
             background: var(--bg-alt);
-            text-decoration: none;
         }
 
         .progress-bar-row {
@@ -2548,6 +2561,137 @@
             color: var(--text-light);
             margin-top: 2px;
         }
+
+        /* ===== Screen 7 Redesign ===== */
+
+        /* Sticky mini-toolbar inside screen 7 */
+        .s7-toolbar {
+            position: sticky;
+            top: 100px;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            padding: 0.35rem 0.5rem;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+            margin-bottom: 1.25rem;
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .s7-toolbar-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.85rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 100px;
+            cursor: pointer;
+            font-family: 'Work Sans', sans-serif;
+            transition: background 0.15s, color 0.15s;
+            background: transparent;
+            color: var(--text-mid);
+            white-space: nowrap;
+        }
+        .s7-toolbar-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+        .s7-toolbar-btn:hover { background: var(--bg-alt); color: var(--text); }
+        .s7-toolbar-btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+        .s7-toolbar-btn-primary:hover { background: #2d7a8f; color: white; }
+        .s7-toolbar-divider {
+            width: 1px;
+            height: 18px;
+            background: var(--border);
+            flex-shrink: 0;
+        }
+
+        /* Step card redesign */
+        #stepsList {
+            border: none;
+            background: transparent;
+            box-shadow: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        #stepsList .list-item {
+            background: white;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 1rem 1rem 0.85rem 0.85rem;
+            gap: 0.75rem;
+            border-top: 1.5px solid var(--border);
+            border-left: 1.5px solid var(--border);
+            border-right: 1.5px solid var(--border);
+            border-bottom: 1.5px solid var(--border);
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        #stepsList .list-item:first-of-type,
+        #stepsList .list-item:last-of-type {
+            border-radius: var(--radius-md);
+        }
+
+        #stepsList .list-item:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(61,142,166,0.08);
+            background: white;
+        }
+
+        #stepsList .list-item-number {
+            width: 28px;
+            height: 28px;
+            min-width: 28px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            border: 2px solid var(--border);
+            color: var(--text-light);
+            margin-top: 0.2rem;
+        }
+
+        #stepsList .list-item:focus-within .list-item-number {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        /* Step name input — bigger and more prominent */
+        #stepsList .list-item-content > input[type="text"]:first-child {
+            font-size: 0.97rem;
+            font-weight: 500;
+            padding: 0.5rem 0.6rem;
+            border: 1.5px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            background: var(--bg-alt);
+            transition: border-color 0.15s, background 0.15s;
+        }
+        #stepsList .list-item-content > input[type="text"]:first-child:focus {
+            border-color: var(--accent);
+            background: white;
+            outline: none;
+        }
+
+        /* Dept row tighter */
+        #stepsList .step-dept-row select {
+            background: white;
+            border: 1.5px solid var(--border-light);
+        }
+
+        /* Bottom anchor for "jump to bottom" */
+        .s7-bottom-anchor {
+            height: 0;
+            visibility: hidden;
+        }
+
     </style>
 </head>
 <body>
@@ -3098,16 +3242,23 @@
         <!-- ========== SCREEN 7: STEPS & HANDOFFS ========== -->
         <div class="screen" id="screen7">
             <div class="screen-card">
-                <h2 class="screen-title">Steps &amp; Handoffs</h2>
-                <p class="screen-subtitle">Map "<span class="process-ref" id="processRef7">your process</span>" step by step. <span style="font-size:0.85em; color:var(--text-mid);">Instance: <span id="exampleNameRef7" class="process-ref"></span></span></p>
+
+                <!-- Header -->
+                <h2 class="screen-title">Map Your Process Steps</h2>
+                <p class="screen-subtitle">
+                    <strong><span class="process-ref" id="processRef7">Your process</span></strong>
+                    <span style="color:var(--text-light); font-size:0.88em; margin-left:0.4rem;">— example: <span id="exampleNameRef7" class="process-ref"></span></span>
+                </p>
+
+                <!-- Instruction strip -->
                 <div class="screen7-tip" id="screen7Tip">
-                    List steps in order. Expand "Handoff to next step" on each step to describe how work passes on.
+                    <strong>How it works:</strong> Add each step in order. For each step, name it, pick the team, and optionally describe how work is handed off to the next person.
                 </div>
 
-                <!-- Import zone: collapsed by default -->
+                <!-- Import shortcut -->
                 <button type="button" class="import-toggle-btn" id="importToggleBtn" onclick="toggleImportZone()">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    Have a process map or step list? Import it
+                    Already have a process map or step list? Import it instead
                 </button>
                 <div class="step-import-zone" id="stepImportZone" style="display:none;">
                     <div class="step-import-tabs">
@@ -3124,7 +3275,7 @@
                         <div id="importFilePreview" style="display:none; text-align:center;"></div>
                     </div>
                     <div class="step-import-body" id="importBodyPaste" style="display:none;">
-                        <textarea class="step-import-textarea" id="importPasteText" placeholder="Paste your steps here, e.g.:&#10;1. Receive order from customer&#10;2. Verify inventory availability&#10;3. Process payment&#10;4. Pick and pack items&#10;5. Ship to customer&#10;&#10;Or paste any format - AI will extract the steps."></textarea>
+                        <textarea class="step-import-textarea" id="importPasteText" placeholder="Paste your steps here, e.g.:&#10;1. Receive order from customer&#10;2. Verify inventory availability&#10;3. Process payment&#10;&#10;Or paste any format - AI will extract the steps."></textarea>
                         <div class="step-import-actions">
                             <button class="step-import-btn step-import-btn-primary" onclick="handleImportPaste()" id="importPasteBtn">Extract Steps</button>
                         </div>
@@ -3135,14 +3286,31 @@
                     </div>
                 </div>
 
-                <!-- Handover banner (shown when colleague opens a shared link) -->
+                <!-- Handover banner -->
                 <div class="handover-banner" id="handoverBanner">
                     <h4 id="handoverBannerTitle">A colleague shared this diagnostic with you</h4>
                     <p id="handoverBannerDesc">Review the steps below and add any that are missing. You can reorder steps by dragging, or insert new ones anywhere.</p>
                     <div class="handover-note" id="handoverBannerNote" style="display:none;"></div>
                 </div>
 
-                <!-- Live Flow Preview (shown at top for visibility) -->
+                <!-- Sticky mini-toolbar: Flow Preview + Jump to bottom -->
+                <div class="s7-toolbar" id="s7Toolbar">
+                    <button type="button" class="s7-toolbar-btn" onclick="s7ScrollToFlow()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                        Flow preview
+                    </button>
+                    <div class="s7-toolbar-divider"></div>
+                    <button type="button" class="s7-toolbar-btn" onclick="s7ScrollToBottom()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                        Jump to bottom
+                    </button>
+                    <div class="s7-toolbar-divider"></div>
+                    <button type="button" class="s7-toolbar-btn s7-toolbar-btn-primary" onclick="validateAndContinue(7)">
+                        Continue &rarr;
+                    </button>
+                </div>
+
+                <!-- Live Flow Preview -->
                 <div id="liveFlowPreview" class="live-flow-preview">
                     <button type="button" class="live-flow-toggle" id="liveFlowToggle" onclick="toggleLiveFlow()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
@@ -3154,38 +3322,42 @@
                     </div>
                 </div>
 
-                <!-- Step jump bar for long processes -->
+                <!-- Step jump bar -->
                 <div id="stepJumpBar" class="step-jump-bar" style="display:none;">
                     <span class="step-jump-label">Jump to:</span>
                     <div id="stepJumpChips" class="step-jump-chips"></div>
                 </div>
 
+                <!-- Steps list -->
                 <div class="steps-list-wrap">
                     <div class="dynamic-list dynamic-list-steps" id="stepsList"></div>
                     <div class="add-step-row">
-                        <button type="button" class="add-item" onclick="addStep()" id="addStepBtn">+ Add Step</button>
-                        <span class="step-limit-hint">3-50 steps</span>
+                        <button type="button" class="add-item" onclick="addStep()" id="addStepBtn">+ Add another step</button>
+                        <span class="step-limit-hint">3–50 steps</span>
                     </div>
                 </div>
 
-                <!-- AI Step Suggestions -->
+                <!-- AI suggestions -->
                 <div id="stepSuggestionsBox" class="step-suggestions" style="display: none;">
                     <div class="ss-header">Suggested steps you might be missing</div>
                     <div id="stepSuggestionsChips"></div>
                 </div>
 
                 <div id="insightCard7" style="display: none;"></div>
-
                 <div id="errorBox7" class="error-box"><div class="error-text" id="errorText7"></div></div>
 
+                <!-- Bottom anchor for "jump to bottom" -->
+                <div class="s7-bottom-anchor" id="s7BottomAnchor"></div>
+
+                <!-- Footer actions -->
                 <div class="button-group">
                     <button class="button button-secondary" onclick="goToScreen(6)">&larr; Back</button>
                     <span class="handover-btn-wrapper">
                         <button type="button" class="handover-btn" onclick="openHandoverModal()">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-                            Hand over to colleague
+                            Hand off to a colleague
                         </button>
-                        <span class="handover-btn-hint">Stuck? Send to a colleague to add missing steps.</span>
+                        <span class="handover-btn-hint">Don't know all the steps? Send to someone who does.</span>
                     </span>
                     <button class="button button-primary" onclick="validateAndContinue(7)">Continue &rarr;</button>
                 </div>
@@ -3964,6 +4136,16 @@
                 });
                 phaseDots.style.display = (currentScreen >= 1 && currentScreen <= 18) ? 'flex' : 'none';
             }
+        }
+
+        // Screen 7 toolbar helpers
+        function s7ScrollToFlow() {
+            const el = document.getElementById('liveFlowPreview');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        function s7ScrollToBottom() {
+            const el = document.getElementById('s7BottomAnchor');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'end' });
         }
 
         // Phase-dot navigation: jump to first screen of a phase, only if already visited
