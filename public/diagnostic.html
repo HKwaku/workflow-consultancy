@@ -4464,7 +4464,9 @@
             const mapOnlyStepLabels = { 1: 'Select Process', 2: 'Name Process', 3: 'Define Boundaries', 7: 'Map Steps', 17: 'Your Details' };
 
             let text;
-            if (currentScreen === 0) {
+            if (currentScreen === -1) {
+                text = '';
+            } else if (currentScreen === 0) {
                 text = screenLabels[0];
             } else if (currentScreen === TOTAL_SCREENS) {
                 text = 'Complete!';
@@ -6529,6 +6531,7 @@
                 processes: completedProcesses,
                 contact,
                 qualityScore: calculateQualityScore(),
+                diagnosticMode: diagnosticMode || 'comprehensive',
                 timestamp: new Date().toISOString()
             };
 
@@ -6556,6 +6559,7 @@
                 const roadmapData = typeof lastRoadmapData !== 'undefined' ? lastRoadmapData : null;
                 const payload = {
                     editingReportId: editingReportId || null,
+                    diagnosticMode: diagnosticMode || 'comprehensive',
                     contact: {
                         name: contact.name || '',
                         email: contact.email || '',
@@ -10137,6 +10141,7 @@
                     customDepartments: typeof customDepartments !== 'undefined' ? customDepartments : [],
                     stepCount: typeof stepCount !== 'undefined' ? stepCount : 0,
                     editingReportId: editingReportId || null,
+                    diagnosticMode: diagnosticMode || 'comprehensive',
                     timestamp: new Date().toISOString()
                 }));
             } catch (e) { /* ignore */ }
@@ -10149,6 +10154,8 @@
                     const data = JSON.parse(saved);
                     const age = (new Date() - new Date(data.timestamp)) / (1000 * 60 * 60);
                     if (age < 24 && data.currentScreen > 0) {
+                        // Restore diagnosticMode before showing resume banner
+                        if (data.diagnosticMode) diagnosticMode = data.diagnosticMode;
                         showResumeBanner(data);
                         return true;
                     }
@@ -11299,6 +11306,14 @@
             // Check for team mode (?team=CODE)
             await checkForTeamMode();
 
+            // ?upgrade=reportId — load existing map-only report's process data and
+            // start a comprehensive diagnostic pre-populated with it
+            const upgradeId = params.get('upgrade');
+            if (upgradeId) {
+                const upgradeLoaded = await checkForUpgradeMode(upgradeId, params.get('email') || '');
+                if (upgradeLoaded) return;
+            }
+
             // Check for cloud resume link (?resume=xxx)
             const cloudResumed = await checkForCloudResume();
             if (cloudResumed) return;
@@ -11362,7 +11377,8 @@
                         processData,
                         completedProcesses,
                         customDepartments,
-                        stepCount: typeof stepCount !== 'undefined' ? stepCount : 0
+                        stepCount: typeof stepCount !== 'undefined' ? stepCount : 0,
+                        diagnosticMode: diagnosticMode || 'comprehensive'
                     },
                     currentScreen,
                     processName: processData.processName || ''
@@ -11580,6 +11596,51 @@
         }
 
         // -- Resume from cloud link ---------------------------------
+        // ============================================================
+        // UPGRADE MODE: load map-only report data → start comprehensive
+        // ============================================================
+        async function checkForUpgradeMode(reportId, email) {
+            try {
+                const resp = await fetch('/api/get-diagnostic?id=' + encodeURIComponent(reportId));
+                const data = await resp.json();
+                if (!resp.ok || !data.success) return false;
+
+                const rep = data.report;
+                const d = rep.diagnosticData || {};
+
+                // Only upgrade map-only reports
+                if (d.diagnosticMode !== 'map-only') return false;
+
+                // Restore process data from the saved report
+                const rawProcs = d.rawProcesses || [];
+                if (rawProcs.length > 0) {
+                    processData = ensureProcessDataShape(rawProcs[0]);
+                } else if ((d.processes || []).length > 0) {
+                    processData = ensureProcessDataShape(d.processes[0]);
+                }
+
+                // Set mode to comprehensive so all screens show
+                diagnosticMode = 'comprehensive';
+
+                // Pre-fill the editing report ID so the completed report is updated
+                window._upgradeFromReportId = reportId;
+
+                // Show a banner explaining what's happening
+                const banner = document.createElement('div');
+                banner.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:10001;padding:14px 24px;border-radius:10px;background:#e8f5f8;border:1px solid rgba(61,142,166,0.4);color:#1f6d84;font-size:0.88rem;max-width:520px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.1);';
+                banner.innerHTML = '<strong>Process map pre-loaded.</strong> Complete the full diagnostic to unlock cost analysis and your 90-day roadmap.';
+                document.body.appendChild(banner);
+                setTimeout(() => { if (banner.parentNode) banner.remove(); }, 6000);
+
+                // Start at screen 1 (process selection already done, but let user confirm)
+                goToScreen(1);
+                return true;
+            } catch (err) {
+                console.warn('Upgrade mode failed:', err.message);
+                return false;
+            }
+        }
+
         async function checkForCloudResume() {
             const params = new URLSearchParams(location.search);
             const resumeId = params.get('resume');
@@ -11595,6 +11656,8 @@
                 }
 
                 const data = result.progress.progressData;
+                // Restore diagnostic mode
+                if (data.diagnosticMode) { diagnosticMode = data.diagnosticMode; }
                 if (!data) return false;
 
                 // Restore state
@@ -11930,6 +11993,7 @@
                         customDepartments,
                         stepCount: typeof stepCount !== 'undefined' ? stepCount : 0,
                         teamMode: teamMode || null,
+                        diagnosticMode: diagnosticMode || 'comprehensive',
                         handover: {
                             from: yourName || 'A colleague',
                             note: note,
@@ -11945,16 +12009,32 @@
                     body.progressId = cloudProgressId;
                 }
 
-                const resp = await fetch('/api/progress', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
-                });
+                let resumeUrl = null;
 
-                const result = await resp.json();
-                if (!resp.ok || !result.success) throw new Error(result.error || 'Save failed');
+                try {
+                    const resp = await fetch('/api/progress', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    });
+                    const result = await resp.json();
+                    if (resp.ok && result.success && result.resumeUrl) {
+                        resumeUrl = result.resumeUrl;
+                        cloudProgressId = result.progressId;
+                    }
+                } catch (apiErr) {
+                    console.warn('API unavailable, falling back to local link:', apiErr);
+                }
 
-                cloudProgressId = result.progressId;
+                // Fallback: encode progress into URL hash if API didn't return a link
+                if (!resumeUrl) {
+                    try {
+                        const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(body.progressData))));
+                        resumeUrl = window.location.origin + window.location.pathname + '#resume=' + encoded;
+                    } catch (encErr) {
+                        resumeUrl = window.location.href;
+                    }
+                }
 
                 const form = document.getElementById('handoverModalForm');
                 const success = document.getElementById('handoverModalSuccess');
@@ -11964,7 +12044,7 @@
                 success.style.display = 'block';
                 linkBox.classList.add('show');
 
-                document.getElementById('handoverLinkInput').value = result.resumeUrl;
+                document.getElementById('handoverLinkInput').value = resumeUrl;
 
                 if (colleagueEmail) {
                     document.getElementById('handoverSuccessMsg').textContent =
@@ -11976,7 +12056,7 @@
 
             } catch (err) {
                 console.error('Handover save error:', err);
-                btn.textContent = 'Error - try again';
+                btn.textContent = 'Error — try again';
                 btn.disabled = false;
                 setTimeout(() => { btn.textContent = 'Save & Generate Link'; }, 3000);
             }

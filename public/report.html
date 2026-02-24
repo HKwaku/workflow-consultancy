@@ -200,6 +200,39 @@
             .metrics-grid { grid-template-columns: 1fr; }
             .card-body { padding: 16px; }
         }
+
+        /* Map-only mode badge */
+        .mode-badge {
+            display: inline-block;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            padding: 3px 10px;
+            border-radius: 100px;
+            background: rgba(61,142,166,0.1);
+            color: #1f6d84;
+            border: 1px solid rgba(61,142,166,0.25);
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        /* Upgrade CTA */
+        .upgrade-section {
+            background: linear-gradient(135deg, #e8f5f8, #d0ecf2);
+            border-radius: 12px;
+            padding: 32px;
+            text-align: center;
+            margin-top: 8px;
+            border: 1px solid rgba(61,142,166,0.25);
+        }
+        .upgrade-section h3 { font-size: 1.1rem; margin-bottom: 8px; color: #1f6d84; }
+        .upgrade-section p  { font-size: 0.9rem; color: #2d8099; margin-bottom: 20px; line-height: 1.6; }
+        .upgrade-section .upgrade-note { font-size: 0.78rem; color: #2d8099; margin-top: 12px; opacity: 0.8; }
+        .btn-teal {
+            background: linear-gradient(135deg, #3d8ea6, #1f6d84);
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -209,7 +242,7 @@
             <a href="/">Sharpin<span>.</span></a>
             <a href="/" class="header-back">&larr; Home</a>
         </div>
-        <h1>Process Diagnostic Report</h1>
+        <h1 id="pageTitle">Process Diagnostic Report</h1>
         <p>Sharpin</p>
     </div>
 
@@ -245,8 +278,8 @@
                         </div>
                     </div>
 
-                    <!-- Metrics -->
-                    <div class="metrics">
+                    <!-- Metrics (comprehensive mode) -->
+                    <div class="metrics" id="metricsComprehensive">
                         <div class="metric-card">
                             <div class="metric-value blue" id="metricProcesses">0</div>
                             <div class="metric-label">Processes Analysed</div>
@@ -265,21 +298,44 @@
                         </div>
                     </div>
 
+                    <!-- Metrics (map-only mode) -->
+                    <div class="metrics" id="metricsMapOnly" style="display:none;">
+                        <div class="metric-card">
+                            <div class="metric-value blue" id="metricProcessesMap">0</div>
+                            <div class="metric-label">Processes Mapped</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value blue" id="metricSteps">0</div>
+                            <div class="metric-label">Total Steps</div>
+                        </div>
+                    </div>
+
                     <!-- Recommendations -->
                     <div id="recsSection">
                         <h3 class="section-title">Key Recommendations</h3>
                         <ul class="rec-list" id="recsList"></ul>
                     </div>
 
-                    <!-- View Full Report -->
-                    <div class="download-section">
-                        <h3>View Full Report</h3>
-                        <p>See your complete diagnostic including process breakdowns, flow diagrams, and implementation roadmap.</p>
+                    <!-- Upgrade CTA (map-only only) -->
+                    <div class="upgrade-section" id="upgradeSection" style="display:none; margin-bottom: 16px;">
+                        <div style="font-size: 1.5rem; margin-bottom: 8px;">📊</div>
+                        <h3>Want the full picture?</h3>
+                        <p>You mapped the process flow. Run the Comprehensive Review to unlock cost analysis, automation readiness scoring, and a 90-day roadmap.</p>
+                        <a id="upgradeBtn" href="/diagnostic" class="btn btn-teal" style="text-decoration: none;">
+                            Complete Full Diagnostic →
+                        </a>
+                        <p class="upgrade-note">Your process map will be pre-loaded. ~15 additional minutes.</p>
+                    </div>
+
+                    <!-- View Full Report (comprehensive only) -->
+                    <div class="download-section" id="viewFullSection">
+                        <h3 id="downloadTitle">View Full Report</h3>
+                        <p id="downloadDesc">See your complete diagnostic including process breakdowns, flow diagrams, and implementation roadmap.</p>
                         <div class="btn-group">
                             <a id="viewFullBtn" href="#" class="btn btn-primary" style="text-decoration: none;">
                                 Open Full Report
                             </a>
-                            <a href="mailto:hopektettey@gmail.com?subject=Discovery%20Call%20-%20Process%20Diagnostic" class="btn btn-accent">
+                            <a href="mailto:hopektettey@gmail.com?subject=Discovery%20Call%20-%20Process%20Diagnostic" class="btn btn-accent" style="text-decoration: none;">
                                 Book Discovery Call
                             </a>
                         </div>
@@ -301,10 +357,10 @@
 
     <div class="footer">
         <p>Sharpin &middot; <a href="/">Home</a> &middot; <a href="/diagnostic">New Diagnostic</a></p>
-        <p style="margin-top: 6px;">Questions? <a href="mailto:hopektettey@gmail.com">hopektettey@gmail.com</a></p>
+        <p style="margin-top: 6px;">Questions? <a href="/cdn-cgi/l/email-protection#e38b8c93868897869797869aa3848e828a8fcd808c8e"><span class="__cf_email__" data-cfemail="b0d8dfc0d5dbc4d5c4c4d5c9f0d7ddd1d9dc9ed3dfdd">[email&#160;protected]</span></a></p>
     </div>
 
-    <script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
         // ── Globals ─────────────────────────────────────
         let reportData = null;
 
@@ -349,29 +405,72 @@
             const auto = d.automationScore || {};
             const c = d.contact || {};
             const recs = d.recommendations || [];
+            const processes = d.processes || d.rawProcesses || [];
+            const isMapOnly = d.diagnosticMode === 'map-only';
 
-            // Header
-            document.getElementById('reportCompany').textContent = report.company || c.company || 'Your Company';
+            // Page title
+            const pageTitle = document.getElementById('pageTitle');
+            if (pageTitle) pageTitle.textContent = isMapOnly ? 'Process Map Report' : 'Process Diagnostic Report';
+
+            // Header — show mode badge for map-only
+            const companyEl = document.getElementById('reportCompany');
+            companyEl.textContent = report.company || c.company || 'Your Company';
+            if (isMapOnly) {
+                const badge = document.createElement('span');
+                badge.className = 'mode-badge';
+                badge.textContent = 'Map Only';
+                companyEl.appendChild(badge);
+            }
             document.getElementById('reportContact').textContent = `${report.contactName || c.name || ''} | ${report.contactEmail || c.email || ''}`;
             document.getElementById('reportDate').textContent = formatDate(report.createdAt);
 
-            // Metrics
-            document.getElementById('metricProcesses').textContent = s.totalProcesses || 0;
-            document.getElementById('metricCost').textContent = formatCurrency(s.totalAnnualCost || 0);
-            document.getElementById('metricSavings').textContent = formatCurrency(s.potentialSavings || 0);
-            document.getElementById('metricAuto').textContent = (auto.percentage || 0) + '%';
+            if (isMapOnly) {
+                // Show simplified map-only metrics
+                document.getElementById('metricsComprehensive').style.display = 'none';
+                document.getElementById('metricsMapOnly').style.display = '';
+                const totalSteps = processes.reduce((acc, p) => acc + ((p.steps || []).length || p.stepsCount || 0), 0);
+                document.getElementById('metricProcessesMap').textContent = s.totalProcesses || processes.length || 0;
+                document.getElementById('metricSteps').textContent = totalSteps;
 
-            // Recommendations
-            const recsList = document.getElementById('recsList');
-            if (recs.length > 0) {
-                recsList.innerHTML = recs.map(r =>
-                    `<li><span class="rec-type">${escHtml(r.type || 'general')}</span>${escHtml(r.text || '')}</li>`
-                ).join('');
-            } else {
+                // Hide recommendations (not generated for map-only)
                 document.getElementById('recsSection').style.display = 'none';
+
+                // Show upgrade CTA
+                const upgradeSection = document.getElementById('upgradeSection');
+                if (upgradeSection) {
+                    upgradeSection.style.display = '';
+                    const upgradeBtn = document.getElementById('upgradeBtn');
+                    const contactEmail = report.contactEmail || c.email || '';
+                    if (upgradeBtn && report.id) {
+                        upgradeBtn.href = '/diagnostic?upgrade=' + report.id + (contactEmail ? '&email=' + encodeURIComponent(contactEmail) : '');
+                    }
+                }
+
+                // Update "view full" section copy for map-only context
+                const dlTitle = document.getElementById('downloadTitle');
+                const dlDesc = document.getElementById('downloadDesc');
+                if (dlTitle) dlTitle.textContent = 'View Your Process Map';
+                if (dlDesc) dlDesc.textContent = 'See your process flow diagram with full step breakdown.';
+
+            } else {
+                // Comprehensive metrics
+                document.getElementById('metricProcesses').textContent = s.totalProcesses || 0;
+                document.getElementById('metricCost').textContent = formatCurrency(s.totalAnnualCost || 0);
+                document.getElementById('metricSavings').textContent = formatCurrency(s.potentialSavings || 0);
+                document.getElementById('metricAuto').textContent = (auto.percentage || 0) + '%';
+
+                // Recommendations
+                const recsList = document.getElementById('recsList');
+                if (recs.length > 0) {
+                    recsList.innerHTML = recs.map(r =>
+                        `<li><span class="rec-type">${escHtml(r.type || 'general')}</span>${escHtml(r.text || '')}</li>`
+                    ).join('');
+                } else {
+                    document.getElementById('recsSection').style.display = 'none';
+                }
             }
 
-            // Set View Full Report link (React report page shows full content)
+            // Set View Full Report link
             const viewBtn = document.getElementById('viewFullBtn');
             if (viewBtn && report.id) viewBtn.href = '/report?id=' + report.id;
 
@@ -405,15 +504,4 @@
 
         function formatDate(iso) {
             if (!iso) return '';
-            const d = new Date(iso);
-            return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-        }
-
-        function escHtml(str) {
-            const div = document.createElement('div');
-            div.textContent = str;
-            return div.innerHTML;
-        }
-    </script>
-</body>
-</html>
+   

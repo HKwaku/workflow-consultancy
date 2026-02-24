@@ -88,13 +88,31 @@ function ReportContent() {
   const recs = d.recommendations || [];
   const processes = d.processes || [];
 
+  // Detect map-only mode
+  const isMapOnly = d.diagnosticMode === 'map-only';
+
+  const modeBadge = isMapOnly ? (
+    <span style={{
+      display: 'inline-block', fontSize: '0.68rem', fontWeight: 700,
+      textTransform: 'uppercase', letterSpacing: '0.12em',
+      padding: '3px 10px', borderRadius: 100,
+      background: 'rgba(61,142,166,0.1)', color: '#1f6d84',
+      border: '1px solid rgba(61,142,166,0.25)', marginLeft: 10, verticalAlign: 'middle',
+    }}>Process Map Only</span>
+  ) : null;
+
   return (
     <div style={{ maxWidth: 720, margin: '40px auto 60px', padding: '0 20px' }}>
       <div style={{ background: 'var(--white)', borderRadius: 16, boxShadow: 'var(--shadow-lg)', overflow: 'hidden' }}>
         <div style={{ padding: 40 }}>
+
+          {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32, flexWrap: 'wrap', gap: 16 }}>
             <div style={{ fontSize: '0.88rem', color: 'var(--text-light)' }}>
-              <strong style={{ display: 'block', fontSize: '1.15rem', color: 'var(--text)', marginBottom: 2 }}>{report.company || c.company || 'Your Company'}</strong>
+              <strong style={{ display: 'block', fontSize: '1.15rem', color: 'var(--text)', marginBottom: 2 }}>
+                {report.company || c.company || 'Your Company'}
+                {modeBadge}
+              </strong>
               <span>{report.contactName || c.name || ''} | {report.contactEmail || c.email || ''}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -108,25 +126,37 @@ function ReportContent() {
             </div>
           </div>
 
+          {/* Stats — cost metrics hidden in map-only */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16, marginBottom: 32 }}>
             <div style={{ background: 'var(--bg-alt)', borderRadius: 12, padding: 20, textAlign: 'center' }}>
-              <div style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: 4, color: '#1e40af' }}>{s.totalProcesses ?? 0}</div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Processes Analysed</div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: 4, color: '#1e40af' }}>{s.totalProcesses ?? processes.length ?? 0}</div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Processes Mapped</div>
             </div>
             <div style={{ background: 'var(--bg-alt)', borderRadius: 12, padding: 20, textAlign: 'center' }}>
-              <div style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: 4, color: '#16a34a' }}>{formatCurrency(s.totalAnnualCost)}</div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Annual Process Cost</div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: 4, color: '#1e40af' }}>
+                {processes.reduce((acc, p) => acc + ((p.steps || []).length || p.stepsCount || 0), 0)}
+              </div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Steps</div>
             </div>
-            <div style={{ background: 'var(--bg-alt)', borderRadius: 12, padding: 20, textAlign: 'center' }}>
-              <div style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: 4, color: '#16a34a' }}>{formatCurrency(s.potentialSavings)}</div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Potential Savings</div>
-            </div>
-            <div style={{ background: 'var(--bg-alt)', borderRadius: 12, padding: 20, textAlign: 'center' }}>
-              <div style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: 4, color: '#7c3aed' }}>{(auto.percentage ?? 0)}%</div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Automation Ready</div>
-            </div>
+            {!isMapOnly && (
+              <>
+                <div style={{ background: 'var(--bg-alt)', borderRadius: 12, padding: 20, textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: 4, color: '#16a34a' }}>{formatCurrency(s.totalAnnualCost)}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Annual Process Cost</div>
+                </div>
+                <div style={{ background: 'var(--bg-alt)', borderRadius: 12, padding: 20, textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: 4, color: '#16a34a' }}>{formatCurrency(s.potentialSavings)}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Potential Savings</div>
+                </div>
+                <div style={{ background: 'var(--bg-alt)', borderRadius: 12, padding: 20, textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: 4, color: '#7c3aed' }}>{(auto.percentage ?? 0)}%</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Automation Ready</div>
+                </div>
+              </>
+            )}
           </div>
 
+          {/* Process breakdown */}
           {processes.length > 0 && (
             <div style={{ marginBottom: 32 }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--primary)', marginBottom: 16, paddingBottom: 8, borderBottom: '2px solid var(--border)' }}>Process Breakdown</h3>
@@ -134,7 +164,9 @@ function ReportContent() {
                 <div key={pi} style={{ marginBottom: 24, background: 'var(--bg-alt)', borderRadius: 12, padding: 20, border: '1px solid var(--border)' }}>
                   <h4 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: 12, color: 'var(--text)' }}>{proc.name || 'Process'}</h4>
                   <div style={{ fontSize: '0.82rem', color: 'var(--text-mid)', marginBottom: 12 }}>
-                    {proc.stepsCount ?? (proc.steps || []).length} steps &middot; {formatCurrency(proc.annualCost)}/yr &middot; {proc.elapsedDays ?? 0} days typical
+                    {proc.stepsCount ?? (proc.steps || []).length} steps
+                    {!isMapOnly && proc.annualCost > 0 && <> &middot; {formatCurrency(proc.annualCost)}/yr</>}
+                    {proc.elapsedDays > 0 && <> &middot; {proc.elapsedDays} days typical</>}
                   </div>
                   {(proc.steps || []).length > 0 && (
                     <ol style={{ margin: 0, paddingLeft: 20, fontSize: '0.9rem', lineHeight: 1.6 }}>
@@ -152,7 +184,8 @@ function ReportContent() {
             </div>
           )}
 
-          {recs.length > 0 && (
+          {/* Recommendations — comprehensive only */}
+          {!isMapOnly && recs.length > 0 && (
             <div style={{ marginBottom: 32 }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--primary)', marginBottom: 16, paddingBottom: 8, borderBottom: '2px solid var(--border)' }}>Key Recommendations</h3>
               <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
@@ -166,12 +199,34 @@ function ReportContent() {
             </div>
           )}
 
+          {/* Upgrade CTA — map-only reports only */}
+          {isMapOnly && (
+            <div style={{ background: 'linear-gradient(135deg, #e8f5f8, #d0ecf2)', borderRadius: 12, padding: 32, textAlign: 'center', marginBottom: 24, border: '1px solid rgba(61,142,166,0.25)' }}>
+              <div style={{ fontSize: '1.5rem', marginBottom: 8 }}>📊</div>
+              <h3 style={{ fontSize: '1.1rem', marginBottom: 8, color: '#1f6d84' }}>Want the full picture?</h3>
+              <p style={{ fontSize: '0.9rem', color: '#2d8099', marginBottom: 20, lineHeight: 1.6 }}>
+                You mapped the process flow. Run the Comprehensive Review to unlock cost analysis, automation readiness scoring, and a 90-day roadmap.
+              </p>
+              <Link
+                href={`/diagnostic?upgrade=${id}&email=${encodeURIComponent(contactEmail)}`}
+                style={{ display: 'inline-block', padding: '13px 32px', borderRadius: 8, fontWeight: 600, fontSize: '0.95rem', textDecoration: 'none', background: 'linear-gradient(135deg, #3d8ea6, #1f6d84)', color: 'white' }}
+              >
+                Complete Full Diagnostic →
+              </Link>
+              <p style={{ fontSize: '0.78rem', color: '#2d8099', marginTop: 12, opacity: 0.8 }}>Your process map will be pre-loaded. ~15 additional minutes.</p>
+            </div>
+          )}
+
+          {/* Next steps */}
           <div style={{ background: 'linear-gradient(135deg, #eff6ff, #f0fdf4)', borderRadius: 12, padding: 32, textAlign: 'center', marginTop: 8 }}>
             <h3 style={{ fontSize: '1.1rem', marginBottom: 8, color: 'var(--text)' }}>Next Steps</h3>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-mid)', marginBottom: 20 }}>Discuss your diagnostic findings and implementation roadmap with our team.</p>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-mid)', marginBottom: 20 }}>
+              Discuss your {isMapOnly ? 'process map' : 'diagnostic findings and implementation roadmap'} with our team.
+            </p>
             <a href="mailto:hopektettey@gmail.com?subject=Discovery%20Call%20-%20Process%20Diagnostic" style={{ display: 'inline-block', padding: '14px 36px', borderRadius: 8, fontWeight: 600, fontSize: '1rem', textDecoration: 'none', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: 'white' }}>Book Discovery Call</a>
           </div>
 
+          {/* Portal CTA */}
           {contactEmail && (
             <div style={{ background: 'linear-gradient(135deg, #faf5ff, #eff6ff)', borderRadius: 12, padding: 32, textAlign: 'center', marginTop: 16 }}>
               <h3 style={{ fontSize: '1.1rem', marginBottom: 8, color: 'var(--text)' }}>Track Your Progress Over Time</h3>
