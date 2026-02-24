@@ -3126,8 +3126,15 @@
         <!-- ========== TEAM DIAGNOSTIC SETUP (full page) ========== -->
         <div class="screen" id="screenTeam">
             <div class="screen-card">
-                <h2 class="screen-title">Team Diagnostic</h2>
-                <p class="screen-subtitle">Get multiple perspectives on the same process from different team members.</p>
+                <button class="mode-back-btn" onclick="closeTeamSetup()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="15 18 9 12 15 6"/></svg>
+                    Back
+                </button>
+                <div class="mode-header">
+                    <span class="mode-eyebrow is-team" id="teamModeEyebrow">Team Alignment</span>
+                    <h2 class="screen-title" style="margin:0.25rem 0 0.5rem; font-size:clamp(1.6rem,3.5vw,2.2rem); letter-spacing:-0.02em;">Set up your team session</h2>
+                    <p class="screen-subtitle" style="margin:0;">Each person maps the process independently. The AI compares responses to reveal where your team's understanding diverges.</p>
+                </div>
 
                 <div id="teamSetupCreate">
                     <div class="form-group">
@@ -3232,7 +3239,10 @@
                     </div>
 
                     <div class="button-group" style="margin-top: 2rem;">
-                        <button class="button button-secondary" onclick="closeTeamSetup()">&larr; Back to Start</button>
+                        <button class="button button-secondary" onclick="closeTeamSetup()">&larr; Back</button>
+                        <button class="button button-primary" onclick="startTeamDiagnosticNow()" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); border: none;">
+                            Start My Diagnostic &rarr;
+                        </button>
                     </div>
                 </div>
             </div>
@@ -4464,7 +4474,8 @@
             const mapOnlyStepLabels = { 1: 'Select Process', 2: 'Name Process', 3: 'Define Boundaries', 7: 'Map Steps', 17: 'Your Details' };
 
             let text;
-            if (currentScreen === -1) {
+            if (currentScreen === -1 || currentScreen === -2) {
+                // Mode select (-1) or team setup (-2): clear progress bar
                 text = '';
             } else if (currentScreen === 0) {
                 text = screenLabels[0];
@@ -4479,7 +4490,8 @@
                 }
             } else {
                 const phase = screenPhases[currentScreen] ? screenPhases[currentScreen] + ': ' : '';
-                text = `Step ${currentScreen} of ${TOTAL_SCREENS - 1} - ${phase}${screenLabels[currentScreen] || ''}`;
+                const teamPrefix = (typeof teamMode !== 'undefined' && teamMode) ? 'Team — ' : '';
+                text = `${teamPrefix}Step ${currentScreen} of ${TOTAL_SCREENS - 1} - ${phase}${screenLabels[currentScreen] || ''}`;
             }
             document.getElementById('progressText').textContent = text;
 
@@ -4499,13 +4511,13 @@
             // Toggle step-zero badge style on progress bar
             const progressBar = document.querySelector('.progress-bar');
             if (progressBar) {
-                progressBar.classList.toggle('is-step-zero', currentScreen === 0);
+                progressBar.classList.toggle('is-step-zero', currentScreen <= 0);
             }
 
-            // Update phase dots — hide in map-only (not meaningful)
+            // Update phase dots — hide in map-only, team setup, mode-select, welcome
             const phaseDots = document.getElementById('phaseDots');
             if (phaseDots) {
-                if (diagnosticMode === 'map-only') {
+                if (diagnosticMode === 'map-only' || currentScreen < 1) {
                     phaseDots.style.display = 'none';
                 } else {
                     const phases = ['Define', 'Measure', 'Map', 'Assess', 'Quantify'];
@@ -6448,6 +6460,13 @@
         // ============================================================
         function populateScreen17() {
             const summary = document.getElementById('processesSummary');
+
+            // Map-only mode: no cost data collected — hide the block entirely
+            if (diagnosticMode === 'map-only') {
+                summary.innerHTML = '';
+                return;
+            }
+
             let totalCost = 0;
             let html = '<h3 style="margin-bottom: 1rem;">You\'ve analysed:</h3>';
 
@@ -11795,17 +11814,27 @@
             document.getElementById('teamCreateBtn').disabled = true;
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById('screenTeam').classList.add('active');
+            currentScreen = -2; // sentinel: team setup screen
+            updateProgress();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function closeTeamSetup() {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById('screen0').classList.add('active');
+            currentScreen = 0;
+            updateProgress();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function openTeamModal() { openTeamSetup(); }
         function closeTeamModal() { closeTeamSetup(); }
+
+        function startTeamDiagnosticNow() {
+            // Exit team setup screen and begin the diagnostic in team mode
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            goToScreen(1);
+        }
 
         async function createTeamDiagnostic() {
             const processName = getTeamProcessName();
@@ -11843,7 +11872,8 @@
                 document.getElementById('teamJoinLink').value = result.joinUrl;
                 document.getElementById('teamResultsLink').href = result.resultsUrl;
 
-                // Also start this user in team mode
+                // Team diagnostic is always comprehensive (needs full data for comparison)
+                diagnosticMode = 'comprehensive';
                 teamMode = { code: result.teamCode, processName };
 
             } catch (err) {
