@@ -897,21 +897,23 @@
         .dynamic-list {
             display: flex;
             flex-direction: column;
-            gap: 0.4rem;
+            gap: 0.5rem;
             margin: 0.5rem 0;
         }
         .dynamic-list-steps {
-            gap: 0.3rem;
-            margin: 0.35rem 0 0.5rem;
+            gap: 0;
+            margin: 0.5rem 0 0.75rem;
         }
         .steps-list-wrap {
-            margin-bottom: 0.4rem;
+            margin-bottom: 0.5rem;
         }
         .add-step-row {
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            margin-top: 0.25rem;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border-light);
         }
         .step-limit-hint {
             font-size: 0.72rem;
@@ -920,46 +922,79 @@
 
         .list-item {
             display: flex;
-            gap: 0.45rem;
+            gap: 0.75rem;
             align-items: flex-start;
-            background: var(--bg-alt);
-            padding: 0.45rem 0.6rem;
+            background: white;
+            padding: 0.85rem 1rem;
             border-radius: var(--radius-md);
-            border: 1px solid transparent;
-            transition: border-color 0.15s;
+            border: 1px solid var(--border);
+            transition: border-color 0.15s, box-shadow 0.15s;
+            position: relative;
         }
         #stepsList .list-item {
-            padding: 0.4rem 0.55rem;
-            gap: 0.4rem;
+            padding: 0.85rem 1rem;
+            gap: 0.65rem;
+            border-radius: 0;
+            border-bottom: none;
+            border-left: none;
+            border-right: none;
+            border-top: 1px solid var(--border-light);
+            background: transparent;
+        }
+        #stepsList .list-item:first-of-type {
+            border-top: none;
+            border-radius: var(--radius-md) var(--radius-md) 0 0;
+        }
+        #stepsList .list-item:last-of-type {
+            border-radius: 0 0 var(--radius-md) var(--radius-md);
+        }
+        #stepsList {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: white;
+            box-shadow: var(--shadow-sm);
         }
         .list-item:focus-within {
-            border-color: var(--accent-light, rgba(56,163,165,0.3));
+            border-color: rgba(56,163,165,0.4);
+            box-shadow: 0 0 0 3px rgba(56,163,165,0.06);
+            z-index: 1;
+        }
+        #stepsList .list-item:focus-within {
+            border-color: transparent;
+            background: rgba(56,163,165,0.02);
+            box-shadow: none;
         }
 
         .list-item-number {
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 24px;
-            height: 24px;
-            min-width: 24px;
-            background: var(--accent);
-            color: white;
+            width: 26px;
+            height: 26px;
+            min-width: 26px;
+            background: transparent;
+            color: var(--text-light);
             border-radius: 50%;
             font-weight: 600;
             flex-shrink: 0;
-            margin-top: 0.25rem;
-            font-size: 0.75rem;
+            margin-top: 0.3rem;
+            font-size: 0.78rem;
+            border: 1.5px solid var(--border);
+        }
+        #stepsList .list-item:focus-within .list-item-number {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
         }
 
         .list-item-content {
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 0.28rem;
+            gap: 0.45rem;
         }
         #stepsList .list-item-content {
-            gap: 0.25rem;
+            gap: 0.4rem;
         }
 
         .list-item-content input,
@@ -1127,14 +1162,15 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 0;
-            margin: -0.25rem 0;
+            padding: 0 1rem;
+            margin: 0;
             position: relative;
-            height: 28px;
-            opacity: 0.35;
-            transition: opacity 0.2s;
+            height: 20px;
+            opacity: 0;
+            transition: opacity 0.15s;
         }
 
+        #stepsList:hover .insert-step-divider,
         .insert-step-divider:hover {
             opacity: 1;
         }
@@ -1143,32 +1179,32 @@
         .insert-step-divider::after {
             content: '';
             flex: 1;
-            height: 1.5px;
+            height: 1px;
             background: var(--accent);
-            opacity: 0.4;
+            opacity: 0.3;
         }
 
         .insert-step-divider:hover::before,
         .insert-step-divider:hover::after {
-            opacity: 0.7;
+            opacity: 0.6;
         }
 
         .insert-step-divider button {
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 26px;
-            height: 26px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
-            border: 1.5px solid var(--accent);
+            border: 1px solid var(--accent);
             background: white;
             color: var(--accent);
-            font-size: 1.1rem;
+            font-size: 1rem;
             line-height: 1;
             cursor: pointer;
-            margin: 0 0.5rem;
+            margin: 0 0.4rem;
             padding: 0;
-            transition: all 0.2s;
+            transition: all 0.15s;
             flex-shrink: 0;
         }
 
@@ -1179,45 +1215,43 @@
 
         /* -- Live Flow Preview -- */
         .live-flow-preview {
-            margin: 0 0 0.6rem;
-            border: 1px solid var(--accent-light, rgba(56,163,165,0.3));
+            margin: 0 0 1rem;
+            border: 1px solid var(--border);
             border-radius: var(--radius-md);
             overflow: hidden;
-            background: #fcfcfd;
-            position: sticky;
-            top: 64px;
-            z-index: 10;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            background: white;
+            box-shadow: var(--shadow-sm);
         }
         .live-flow-toggle {
             display: flex;
             align-items: center;
             gap: 0.5rem;
             width: 100%;
-            padding: 0.6rem 1rem;
-            background: var(--bg-soft, #f8fafb);
+            padding: 0.7rem 1rem;
+            background: white;
             border: none;
             cursor: pointer;
-            font-size: 0.88rem;
+            font-size: 0.85rem;
             font-weight: 500;
             color: var(--text-mid);
             font-family: inherit;
-            transition: background 0.2s;
+            transition: background 0.15s;
         }
-        .live-flow-toggle:hover { background: #eef2f5; }
-        .live-flow-toggle svg { opacity: 0.6; }
+        .live-flow-toggle:hover { background: var(--bg-alt); }
+        .live-flow-toggle svg { opacity: 0.5; }
         .step-count-badge {
             margin-left: auto;
-            font-size: 0.72rem;
+            font-size: 0.7rem;
             font-weight: 600;
-            background: var(--accent);
-            color: #fff;
-            padding: 0.15rem 0.55rem;
+            background: var(--bg-alt);
+            color: var(--text-mid);
+            border: 1px solid var(--border);
+            padding: 0.1rem 0.55rem;
             border-radius: 100px;
         }
         #liveFlowContainer {
-            border-top: 1px solid var(--border);
-            background: #fcfcfd;
+            border-top: 1px solid var(--border-light);
+            background: var(--bg-alt);
             max-height: 200px;
             overflow-y: auto;
         }
@@ -1228,17 +1262,17 @@
             align-items: center;
             gap: 0.5rem;
             padding: 0.4rem 0;
-            margin-bottom: 0.4rem;
+            margin-bottom: 0.5rem;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
             flex-shrink: 0;
         }
         .step-jump-label {
-            font-size: 0.72rem;
+            font-size: 0.7rem;
             font-weight: 600;
             color: var(--text-light);
             text-transform: uppercase;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.05em;
             white-space: nowrap;
             flex-shrink: 0;
         }
@@ -1248,10 +1282,10 @@
             flex-wrap: nowrap;
         }
         .step-jump-chip {
-            padding: 0.2rem 0.55rem;
+            padding: 0.2rem 0.6rem;
             font-size: 0.72rem;
             font-weight: 500;
-            background: var(--bg-alt);
+            background: white;
             border: 1px solid var(--border);
             border-radius: 100px;
             cursor: pointer;
@@ -1260,6 +1294,7 @@
             max-width: 120px;
             overflow: hidden;
             text-overflow: ellipsis;
+            color: var(--text-mid);
         }
         .step-jump-chip:hover {
             background: var(--accent);
@@ -1272,12 +1307,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 18px;
+            width: 16px;
             cursor: grab;
-            opacity: 0.25;
-            transition: opacity 0.2s;
+            opacity: 0;
+            transition: opacity 0.15s;
             flex-shrink: 0;
-            margin-top: 0.35rem;
+            margin-top: 0.38rem;
             color: var(--text-light);
             user-select: none;
             -webkit-user-select: none;
@@ -1285,21 +1320,21 @@
 
         .step-drag-handle:active { cursor: grabbing; }
 
-        .list-item:hover .step-drag-handle { opacity: 0.5; }
+        .list-item:hover .step-drag-handle { opacity: 0.4; }
 
         .list-item.step-dragging {
-            opacity: 0.35;
-            background: rgba(56, 163, 165, 0.04);
-            border: 2px dashed var(--accent);
+            opacity: 0.4;
+            background: rgba(56, 163, 165, 0.03);
+            border: 1.5px dashed var(--accent);
             border-radius: var(--radius-md);
         }
 
         .list-item.step-drag-over-above {
-            box-shadow: 0 -3px 0 0 var(--accent);
+            box-shadow: 0 -2px 0 0 var(--accent);
         }
 
         .list-item.step-drag-over-below {
-            box-shadow: 0 3px 0 0 var(--accent);
+            box-shadow: 0 2px 0 0 var(--accent);
         }
 
         .list-item[draggable="true"] input,
@@ -1328,11 +1363,12 @@
 
         /* -- Handover banner on Screen 7 -- */
         .handover-banner {
-            background: linear-gradient(135deg, rgba(56, 163, 165, 0.08), rgba(56, 163, 165, 0.02));
+            background: white;
             border: 1px solid rgba(56, 163, 165, 0.2);
+            border-left: 3px solid var(--accent);
             border-radius: var(--radius-md);
             padding: 1rem 1.25rem;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
             display: none;
         }
 
@@ -1340,27 +1376,28 @@
 
         .handover-banner h4 {
             font-family: 'Cormorant Garamond', serif;
-            font-size: 1.1rem;
-            margin: 0 0 0.35rem;
+            font-size: 1.05rem;
+            margin: 0 0 0.3rem;
             color: var(--text);
+            font-weight: 600;
         }
 
         .handover-banner p {
-            font-size: 0.85rem;
+            font-size: 0.83rem;
             color: var(--text-mid);
             margin: 0;
-            line-height: 1.5;
+            line-height: 1.55;
         }
 
         .handover-banner .handover-note {
-            margin-top: 0.5rem;
-            padding: 0.6rem 0.8rem;
-            background: white;
+            margin-top: 0.6rem;
+            padding: 0.55rem 0.8rem;
+            background: var(--bg-alt);
             border-radius: var(--radius-sm);
             font-style: italic;
-            font-size: 0.85rem;
+            font-size: 0.83rem;
             color: var(--text);
-            border-left: 3px solid var(--accent);
+            border-left: 2px solid var(--accent);
         }
 
         /* -- Handover button -- */
@@ -1368,36 +1405,37 @@
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
-            padding: 0.55rem 1rem;
-            font-size: 0.85rem;
-            background: linear-gradient(135deg, rgba(56, 163, 165, 0.08), rgba(56, 163, 165, 0.03));
-            border: 1.5px solid rgba(56, 163, 165, 0.25);
+            padding: 0.5rem 0.9rem;
+            font-size: 0.83rem;
+            background: white;
+            border: 1px solid var(--border);
             border-radius: var(--radius-sm);
-            color: var(--accent);
+            color: var(--text-mid);
             font-family: 'Work Sans', sans-serif;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.15s;
         }
 
         .handover-btn:hover {
-            background: var(--accent);
-            color: white;
             border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(56, 163, 165, 0.04);
         }
 
         .handover-btn svg {
-            width: 16px;
-            height: 16px;
+            width: 15px;
+            height: 15px;
+            opacity: 0.65;
         }
         .handover-btn-wrapper {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 0.25rem;
+            gap: 0.2rem;
         }
         .handover-btn-hint {
-            font-size: 0.72rem;
+            font-size: 0.7rem;
             color: var(--text-light);
             text-align: center;
             max-width: 200px;
@@ -1434,38 +1472,44 @@
         }
 
         .remove-item {
-            padding: 0.4rem 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            padding: 0;
             background: transparent;
-            color: var(--danger);
-            border: 1px solid var(--danger);
-            border-radius: var(--radius-sm);
+            color: var(--text-light);
+            border: none;
+            border-radius: 50%;
             cursor: pointer;
-            margin-top: 0.5rem;
-            font-size: 0.85rem;
-            transition: all 0.2s;
+            margin-top: 0.25rem;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.15s;
+            flex-shrink: 0;
         }
 
         .remove-item:hover {
-            background: var(--danger);
-            color: white;
+            background: #fef2f2;
+            color: var(--danger);
         }
 
         .add-item {
-            padding: 0.75rem 1.5rem;
-            background: var(--bg-alt);
-            border: 2px dashed var(--border);
+            padding: 0.6rem 1.25rem;
+            background: white;
+            border: 1px solid var(--border);
             border-radius: var(--radius-sm);
             color: var(--text-mid);
             cursor: pointer;
             font-weight: 500;
-            transition: all 0.2s;
-            width: 100%;
+            transition: all 0.15s;
             font-family: 'Work Sans', sans-serif;
-            font-size: 0.95rem;
+            font-size: 0.88rem;
         }
 
         .add-item:hover {
-            background: white;
+            background: var(--bg-alt);
             border-color: var(--accent);
             color: var(--accent);
         }
@@ -1740,41 +1784,45 @@
 
         /* Inline handoff (inside step) */
         .step-handoff-inline {
-            margin-top: 0.35rem;
-            border-top: 1px dashed var(--border);
-            padding-top: 0.35rem;
+            margin-top: 0.4rem;
+            border-top: 1px solid var(--border-light);
+            padding-top: 0.4rem;
         }
         .step-handoff-toggle {
             display: flex;
             align-items: center;
             gap: 0.35rem;
             cursor: pointer;
-            font-size: 0.8rem;
-            color: var(--accent);
-            font-weight: 600;
+            font-size: 0.79rem;
+            color: var(--text-light);
+            font-weight: 500;
             background: none;
             border: none;
-            padding: 0.2rem 0;
+            padding: 0.15rem 0;
+            font-family: inherit;
+            transition: color 0.15s;
         }
-        .step-handoff-toggle svg { width: 14px; height: 14px; flex-shrink: 0; }
+        .step-handoff-toggle:hover { color: var(--accent); }
+        .step-handoff-toggle svg { width: 13px; height: 13px; flex-shrink: 0; }
         .step-handoff-toggle .chevron { transition: transform 0.2s; }
+        .step-handoff-toggle.open { color: var(--accent); }
         .step-handoff-toggle.open .chevron { transform: rotate(90deg); }
         .step-handoff-body {
             display: none;
-            margin-top: 0.35rem;
-            padding: 0.45rem 0.55rem;
+            margin-top: 0.4rem;
+            padding: 0.65rem 0.75rem;
             background: var(--bg-alt);
             border-radius: var(--radius-sm);
-            border-left: 3px solid var(--accent-light);
+            border: 1px solid var(--border-light);
         }
         .step-handoff-body.open { display: block; }
-        .step-handoff-body .form-group { margin-bottom: 0.75rem; }
+        .step-handoff-body .form-group { margin-bottom: 0.65rem; }
         .step-handoff-body .form-group:last-child { margin-bottom: 0; }
-        .step-handoff-body label { font-size: 0.82rem; color: var(--text-mid); font-weight: 500; margin-bottom: 0.35rem; display: block; }
-        .step-handoff-body .radio-group { display: flex; flex-direction: column; gap: 0.25rem; }
-        .step-handoff-body .radio-option { font-size: 0.82rem; padding: 0.3rem 0; }
-        .step-handoff-answered { color: var(--green); }
-        .step-handoff-pending { color: var(--text-light); }
+        .step-handoff-body label { font-size: 0.8rem; color: var(--text-mid); font-weight: 500; margin-bottom: 0.35rem; display: block; }
+        .step-handoff-body .radio-group { display: flex; flex-direction: column; gap: 0.2rem; }
+        .step-handoff-body .radio-option { font-size: 0.8rem; padding: 0.25rem 0; }
+        .step-handoff-answered { color: var(--success); }
+        .step-handoff-pending { color: var(--text-light); font-size: 0.75rem; }
 
         /* Approval entry */
         .approval-entry {
@@ -2012,35 +2060,36 @@
 
         /* Screen 7 tip */
         .screen7-tip {
-            background: #f0f9ff;
-            border: 1px solid #bae6fd;
+            background: var(--bg-alt);
+            border: 1px solid var(--border-light);
             border-radius: var(--radius-sm);
-            padding: 0.5rem 0.85rem;
-            font-size: 0.85rem;
+            padding: 0.6rem 0.9rem;
+            font-size: 0.84rem;
             color: var(--text-mid);
-            margin-bottom: 0.6rem;
-            line-height: 1.4;
+            margin-bottom: 0.75rem;
+            line-height: 1.5;
         }
         .import-toggle-btn {
             display: flex;
             align-items: center;
-            gap: 0.4rem;
-            background: none;
-            border: 1px dashed var(--border);
+            gap: 0.45rem;
+            background: white;
+            border: 1px solid var(--border);
             border-radius: var(--radius-md);
-            padding: 0.6rem 1rem;
-            font-size: 0.85rem;
+            padding: 0.65rem 1rem;
+            font-size: 0.83rem;
             color: var(--text-mid);
             cursor: pointer;
             margin-bottom: 1rem;
             width: 100%;
             justify-content: center;
-            transition: all 0.2s;
+            transition: all 0.15s;
+            font-family: inherit;
         }
         .import-toggle-btn:hover {
             border-color: var(--accent);
             color: var(--accent);
-            background: rgba(61, 142, 166, 0.04);
+            background: rgba(61, 142, 166, 0.03);
         }
 
         /* Step Import Zone */
@@ -2162,40 +2211,40 @@
 
         /* Step Suggestions */
         .step-suggestions {
-            margin-top: 1rem;
-            padding: 0.75rem 1rem;
-            background: linear-gradient(135deg, rgba(8,145,178,0.06), rgba(8,145,178,0.02));
-            border: 1px solid rgba(8,145,178,0.15);
-            border-left: 4px solid #0891b2;
-            border-radius: var(--radius-sm);
-            animation: insightFadeIn 0.4s ease;
+            margin-top: 0.75rem;
+            padding: 0.85rem 1rem;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            animation: insightFadeIn 0.3s ease;
         }
         .step-suggestions .ss-header {
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             font-weight: 600;
-            color: #0891b2;
-            margin-bottom: 0.4rem;
+            color: var(--text-light);
+            margin-bottom: 0.5rem;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.06em;
         }
         .step-suggestion-chip {
             display: inline-block;
-            padding: 0.3rem 0.75rem;
-            margin: 0.2rem 0.25rem;
-            background: white;
-            border: 1px solid rgba(8,145,178,0.3);
-            border-radius: 20px;
+            padding: 0.3rem 0.8rem;
+            margin: 0.2rem 0.2rem 0.2rem 0;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 100px;
             font-size: 0.8rem;
-            color: #0891b2;
+            color: var(--text-mid);
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
         }
         .step-suggestion-chip:hover {
-            background: #0891b2;
+            background: var(--accent);
             color: white;
+            border-color: var(--accent);
         }
         .step-suggestion-chip.used {
-            opacity: 0.4;
+            opacity: 0.35;
             pointer-events: none;
             text-decoration: line-through;
         }
@@ -2486,13 +2535,13 @@
 
                 <div class="welcome-paths">
                     <button class="welcome-path-btn welcome-path-btn-individual" onclick="goToScreen(1)">
-                        <span class="welcome-path-btn-label">Individual</span>
-                        <span class="welcome-path-btn-meta">You map the process alone, or hand off to a colleague mid-way.</span>
+                        <span class="welcome-path-btn-label">Process Map</span>
+                        <span class="welcome-path-btn-meta">Map and measure a process flow. One person leads — hand off to colleagues to fill in steps they know.</span>
                         <span class="welcome-path-btn-cta">Start &rarr;</span>
                     </button>
                     <button class="welcome-path-btn welcome-path-btn-team" onclick="openTeamSetup()">
-                        <span class="welcome-path-btn-label">Team</span>
-                        <span class="welcome-path-btn-meta">Multiple people map independently to surface perception gaps.</span>
+                        <span class="welcome-path-btn-label">Perception Gap</span>
+                        <span class="welcome-path-btn-meta">Multiple people map the same process independently to reveal where understanding differs across the team.</span>
                         <span class="welcome-path-btn-cta">Start &rarr;</span>
                     </button>
                 </div>
@@ -4482,7 +4531,7 @@
                     </div>
                 </div>
                 <div class="step-item-actions">
-                    <button type="button" class="remove-item" onclick="removeStep(this)">Remove</button>
+                    <button type="button" class="remove-item" onclick="removeStep(this)" title="Remove step">&#215;</button>
                 </div>
             `;
 
