@@ -106,9 +106,28 @@
 
         .progress-text {
             margin-top: 0.5rem;
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             color: var(--text-light);
             text-align: center;
+            letter-spacing: 0.01em;
+        }
+
+        /* "Getting Started" on screen 0 — make it a proper step badge */
+        #screen0 ~ * .progress-text { /* fallback, real override below */ }
+
+        .progress-bar.is-step-zero .progress-text {
+            font-family: 'Work Sans', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            color: var(--accent);
+            margin-top: 0.6rem;
+            display: inline-block;
+            background: rgba(61,142,166,0.08);
+            border: 1px solid rgba(61,142,166,0.2);
+            padding: 0.3rem 0.9rem;
+            border-radius: 100px;
         }
         .phase-dots {
             display: flex;
@@ -138,6 +157,12 @@
         .phase-dot-done {
             opacity: 0.7;
             text-decoration: line-through;
+        }
+        .phase-dot-active:hover,
+        .phase-dot-done:hover {
+            opacity: 1;
+            background: var(--bg-alt);
+            text-decoration: none;
         }
 
         .progress-bar-row {
@@ -509,86 +534,150 @@
         /* ===== Welcome ===== */
         .welcome-hero {
             text-align: center;
-            padding: 2.5rem 0 2rem;
+            padding: 3rem 1rem 1.75rem;
         }
 
         .welcome-eyebrow {
-            display: inline-block;
-            font-size: 0.72rem;
-            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.7rem;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.12em;
+            letter-spacing: 0.18em;
             color: var(--accent);
+            margin-bottom: 1.25rem;
+        }
+
+        .welcome-eyebrow::before,
+        .welcome-eyebrow::after {
+            content: '';
+            display: block;
+            width: 24px;
+            height: 1px;
+            background: var(--accent);
+            opacity: 0.5;
+        }
+
+        .welcome-hero h1.screen-title {
+            font-size: clamp(1.9rem, 4vw, 2.6rem);
+            letter-spacing: -0.02em;
             margin-bottom: 1rem;
+            color: var(--dark);
+        }
+
+        .welcome-hero-sub {
+            font-size: 1rem;
+            color: var(--text-mid);
+            margin: 0 auto;
+            max-width: 460px;
+            line-height: 1.65;
         }
 
         .welcome-paths {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1rem;
-            margin: 2rem 0;
+            margin: 2rem 0 1.5rem;
         }
 
         .welcome-path-btn {
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            gap: 0.35rem;
-            padding: 1.25rem 1.5rem;
-            background: white;
-            border: 1.5px solid var(--border);
-            border-radius: var(--radius-md);
+            padding: 1.75rem 1.75rem 1.5rem;
+            border-radius: var(--radius-lg);
             cursor: pointer;
-            transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+            transition: box-shadow 0.22s, transform 0.18s;
             text-align: left;
             font-family: 'Work Sans', sans-serif;
+            border: none;
+            position: relative;
+            overflow: hidden;
         }
 
         .welcome-path-btn:hover {
-            box-shadow: var(--shadow-md);
-            transform: translateY(-1px);
+            transform: translateY(-3px);
         }
 
-        .welcome-path-btn-individual:hover { border-color: var(--accent); }
-        .welcome-path-btn-team:hover { border-color: #7c3aed; }
+        /* Teal card */
+        .welcome-path-btn-individual {
+            background: linear-gradient(135deg, #e8f5f8 0%, #d0ecf2 100%);
+            box-shadow: 0 2px 12px rgba(61,142,166,0.12), 0 1px 3px rgba(61,142,166,0.08);
+        }
+        .welcome-path-btn-individual:hover {
+            box-shadow: 0 8px 28px rgba(61,142,166,0.22), 0 2px 8px rgba(61,142,166,0.12);
+        }
+
+        /* Violet card */
+        .welcome-path-btn-team {
+            background: linear-gradient(135deg, #f0ebff 0%, #e4d9fd 100%);
+            box-shadow: 0 2px 12px rgba(124,58,237,0.1), 0 1px 3px rgba(124,58,237,0.07);
+        }
+        .welcome-path-btn-team:hover {
+            box-shadow: 0 8px 28px rgba(124,58,237,0.2), 0 2px 8px rgba(124,58,237,0.1);
+        }
+
+        /* Decorative corner circle */
+        .welcome-path-btn::after {
+            content: '';
+            position: absolute;
+            top: -28px;
+            right: -28px;
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            opacity: 0.18;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .welcome-path-btn:hover::after {
+            opacity: 0.28;
+            transform: scale(1.1);
+        }
+        .welcome-path-btn-individual::after { background: var(--accent); }
+        .welcome-path-btn-team::after       { background: #7c3aed; }
 
         .welcome-path-btn-label {
             font-family: 'Cormorant Garamond', serif;
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--primary);
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            line-height: 1.1;
+            position: relative;
         }
+        .welcome-path-btn-individual .welcome-path-btn-label { color: #1f6d84; }
+        .welcome-path-btn-team .welcome-path-btn-label       { color: #5b21b6; }
 
         .welcome-path-btn-meta {
-            font-size: 0.8rem;
-            color: var(--text-light);
-            line-height: 1.4;
+            font-size: 0.82rem;
+            line-height: 1.55;
+            flex: 1;
+            position: relative;
         }
+        .welcome-path-btn-individual .welcome-path-btn-meta { color: #2d8099; }
+        .welcome-path-btn-team .welcome-path-btn-meta       { color: #6d28d9; }
 
         .welcome-path-btn-cta {
-            margin-top: 0.5rem;
+            margin-top: 1.25rem;
             font-size: 0.8rem;
-            font-weight: 600;
-            color: var(--accent);
-        }
-
-        .welcome-path-btn-team .welcome-path-btn-cta { color: #7c3aed; }
-
-        .welcome-divider {
-            display: flex;
+            font-weight: 700;
+            display: inline-flex;
             align-items: center;
-            gap: 0.75rem;
-            color: var(--text-light);
-            font-size: 0.78rem;
-            margin: 0.25rem 0;
+            gap: 0.35rem;
+            padding: 0.45rem 1rem;
+            border-radius: 100px;
+            transition: gap 0.15s, padding 0.15s;
+            position: relative;
         }
-        .welcome-divider::before,
-        .welcome-divider::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: var(--border);
+        .welcome-path-btn-individual .welcome-path-btn-cta {
+            background: rgba(61,142,166,0.15);
+            color: #1f6d84;
         }
+        .welcome-path-btn-team .welcome-path-btn-cta {
+            background: rgba(124,58,237,0.12);
+            color: #5b21b6;
+        }
+        .welcome-path-btn:hover .welcome-path-btn-cta { gap: 0.6rem; }
 
         .welcome-need {
             display: flex;
@@ -597,7 +686,6 @@
             justify-content: center;
             padding: 1.25rem 0 0.5rem;
             border-top: 1px solid var(--border-light);
-            margin-top: 1.5rem;
         }
 
         .welcome-need-item {
@@ -609,8 +697,8 @@
         }
 
         .welcome-need-item svg {
-            width: 14px;
-            height: 14px;
+            width: 13px;
+            height: 13px;
             color: var(--success);
             flex-shrink: 0;
         }
@@ -2485,11 +2573,11 @@
             </div>
             <div class="progress-text" id="progressText">Getting Started</div>
             <div class="phase-dots" id="phaseDots" style="display: none;">
-                <div class="phase-dot"><span class="phase-dot-num">1</span> Define</div>
-                <div class="phase-dot"><span class="phase-dot-num">2</span> Measure</div>
-                <div class="phase-dot"><span class="phase-dot-num">3</span> Map</div>
-                <div class="phase-dot"><span class="phase-dot-num">4</span> Assess</div>
-                <div class="phase-dot"><span class="phase-dot-num">5</span> Quantify</div>
+                <div class="phase-dot" onclick="navigateToPhase('Define')" style="cursor:pointer;"><span class="phase-dot-num">1</span> Define</div>
+                <div class="phase-dot" onclick="navigateToPhase('Measure')" style="cursor:pointer;"><span class="phase-dot-num">2</span> Measure</div>
+                <div class="phase-dot" onclick="navigateToPhase('Map')" style="cursor:pointer;"><span class="phase-dot-num">3</span> Map</div>
+                <div class="phase-dot" onclick="navigateToPhase('Assess')" style="cursor:pointer;"><span class="phase-dot-num">4</span> Assess</div>
+                <div class="phase-dot" onclick="navigateToPhase('Quantify')" style="cursor:pointer;"><span class="phase-dot-num">5</span> Quantify</div>
             </div>
         </div>
 
@@ -2530,7 +2618,7 @@
                 <div class="welcome-hero">
                     <span class="welcome-eyebrow">Process Diagnostic</span>
                     <h1 class="screen-title">Where is time and money leaking?</h1>
-                    <p class="screen-subtitle">Map a real process in 12–15 minutes. Our AI produces a cost breakdown, automation readiness score, and 90-day roadmap.</p>
+                    <p class="welcome-hero-sub">Map a real process in 12–15 minutes. Our AI produces a cost breakdown, automation readiness score, and 90-day roadmap.</p>
                 </div>
 
                 <div class="welcome-paths">
@@ -3799,6 +3887,9 @@
             if (screen) {
                 screen.classList.add('active');
                 currentScreen = screenNum;
+                if (!window._maxVisitedScreen || screenNum > window._maxVisitedScreen) {
+                    window._maxVisitedScreen = screenNum;
+                }
                 updateProgress();
                 updateHealthScore();
                 saveProgress();
@@ -3855,6 +3946,12 @@
             }
             document.getElementById('progressText').textContent = text;
 
+            // Toggle step-zero badge style on progress bar
+            const progressBar = document.querySelector('.progress-bar');
+            if (progressBar) {
+                progressBar.classList.toggle('is-step-zero', currentScreen === 0);
+            }
+
             // Update phase dots
             const phaseDots = document.getElementById('phaseDots');
             if (phaseDots) {
@@ -3866,6 +3963,17 @@
                     dot.classList.toggle('phase-dot-done', idx < currentPhaseIdx);
                 });
                 phaseDots.style.display = (currentScreen >= 1 && currentScreen <= 18) ? 'flex' : 'none';
+            }
+        }
+
+        // Phase-dot navigation: jump to first screen of a phase, only if already visited
+        function navigateToPhase(phase) {
+            const phaseFirstScreen = { 'Define': 1, 'Measure': 4, 'Map': 7, 'Assess': 8, 'Quantify': 12 };
+            const target = phaseFirstScreen[phase];
+            if (target === undefined) return;
+            // Only allow navigating to phases already reached
+            if (target <= currentScreen || target <= (window._maxVisitedScreen || 0)) {
+                goToScreen(target);
             }
         }
 
@@ -10613,6 +10721,9 @@
 
             if (!loadProgress()) {
                 updateProgress();
+                // Screen 0 is active on fresh load
+                const _pb = document.querySelector('.progress-bar');
+                if (_pb) _pb.classList.add('is-step-zero');
             }
         });
 
