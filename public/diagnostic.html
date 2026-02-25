@@ -29,7 +29,7 @@
         }
 
         h1, h2, h3, h4 {
-            font-family: 'Cormorant Garamond', serif;
+            font-family: Cormorant Garamond, serif;
             font-weight: 600;
             line-height: 1.15;
             color: var(--dark);
@@ -56,7 +56,7 @@
         }
 
         .top-bar a {
-            font-family: 'Cormorant Garamond', serif;
+            font-family: Cormorant Garamond, serif;
             font-size: 1.3rem;
             font-weight: 700;
             color: var(--primary);
@@ -271,7 +271,7 @@
         }
 
         .save-modal h3 {
-            font-family: 'Cormorant Garamond', serif;
+            font-family: Cormorant Garamond, serif;
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--primary);
@@ -388,7 +388,7 @@
         }
 
         .save-modal-success h4 {
-            font-family: 'Cormorant Garamond', serif;
+            font-family: Cormorant Garamond, serif;
             font-size: 1.25rem;
             font-weight: 700;
             color: var(--primary);
@@ -485,7 +485,7 @@
         }
 
         .auth-gate-card h3 {
-            font-family: 'Cormorant Garamond', serif;
+            font-family: Cormorant Garamond, serif;
             font-size: 1.4rem;
             margin-bottom: 0.5rem;
             color: var(--primary);
@@ -651,7 +651,7 @@
         .welcome-path-btn-team::after       { background: #7c3aed; }
 
         .welcome-path-btn-label {
-            font-family: 'Cormorant Garamond', serif;
+            font-family: Cormorant Garamond, serif;
             font-size: 1.5rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
@@ -852,7 +852,7 @@
             position: relative;
         }
         .mode-card-title {
-            font-family: 'Cormorant Garamond', serif;
+            font-family: Cormorant Garamond, serif;
             font-size: 1.4rem;
             font-weight: 700;
             margin: 0 0 0.45rem;
@@ -1735,7 +1735,7 @@
         .handover-banner.show { display: block; }
 
         .handover-banner h4 {
-            font-family: 'Cormorant Garamond', serif;
+            font-family: Cormorant Garamond, serif;
             font-size: 1.05rem;
             margin: 0 0 0.3rem;
             color: var(--text);
@@ -1893,7 +1893,7 @@
             font-size: 1.8rem;
             font-weight: 700;
             color: var(--accent);
-            font-family: 'Cormorant Garamond', serif;
+            font-family: Cormorant Garamond, serif;
         }
 
         .calculated-formula {
@@ -2107,7 +2107,7 @@
             font-size: 2.2rem;
             font-weight: 700;
             color: var(--primary);
-            font-family: 'Cormorant Garamond', serif;
+            font-family: Cormorant Garamond, serif;
         }
 
         .metric-label {
@@ -2745,7 +2745,7 @@
             margin: 2rem 0;
         }
         .roi-card h3 {
-            font-family: 'Cormorant Garamond', serif;
+            font-family: Cormorant Garamond, serif;
             font-size: 1.3rem;
             font-weight: 700;
             color: var(--primary);
@@ -3780,7 +3780,7 @@
                 <div id="errorBox10" class="error-box"><div class="error-text" id="errorText10"></div></div>
 
                 <div class="button-group">
-                    <button class="button button-secondary" onclick="goToScreen(9)">&larr; Back</button>
+                    <button class="button button-secondary" onclick="goToScreen(8)">&larr; Back</button>
                     <button class="button button-primary" onclick="validateAndContinue(10)">Continue &rarr;</button>
                 </div>
             </div>
@@ -4132,8 +4132,8 @@
         <!-- ========== SCREEN 17: CONTACT INFO ========== -->
         <div class="screen" id="screen17">
             <div class="screen-card">
-                <h2 class="screen-title">Your Details</h2>
-                <p class="screen-subtitle">Where should we send your detailed analysis?</p>
+                <h2 class="screen-title" id="screen17Title">Your Details</h2>
+                <p class="screen-subtitle" id="screen17Subtitle">Where should we send your report?</p>
 
                 <div id="processesSummary"></div>
 
@@ -4239,6 +4239,23 @@
                     <!-- ROI Projection Calculator -->
                     <div id="roiCalculator" style="display: none;"></div>
 
+                    <!-- Map-only gate: view again requires portal signup -->
+                    <div id="mapOnlyGateBanner" style="display:none; background: linear-gradient(135deg, rgba(61,142,166,0.08), rgba(26,47,74,0.06)); border: 1.5px solid rgba(61,142,166,0.25); border-radius: var(--radius-md); padding: 1.5rem; text-align: center; margin-bottom: 1rem;">
+                        <div style="font-size: 1.4rem; margin-bottom: 0.5rem;">&#128274;</div>
+                        <h3 style="font-family: Cormorant Garamond, serif; color: var(--primary); margin-bottom: 0.4rem; font-size: 1.2rem;">Want to view this report again?</h3>
+                        <p style="color: var(--text-mid); font-size: 0.9rem; margin-bottom: 1rem;">Sign up for a free client portal account to save your report and access it any time.</p>
+                        <a href="/portal/signup" class="button button-primary" style="text-decoration:none; display:inline-block; margin-bottom: 0.5rem;">Create Free Account &rarr;</a>
+                        <p style="font-size: 0.78rem; color: var(--text-light); margin-top: 0.5rem;">Already have an account? <a href="/portal" style="color: var(--accent);">Sign in</a></p>
+                    </div>
+
+                    <!-- Comprehensive upgrade prompt (shown on map-only results) -->
+                    <div id="comprehensiveUpgradeBanner" style="display:none; background: linear-gradient(135deg, rgba(124,58,237,0.06), rgba(109,40,217,0.04)); border: 1.5px solid rgba(124,58,237,0.2); border-radius: var(--radius-md); padding: 1.5rem; text-align: center; margin-bottom: 1rem;">
+                        <div style="font-size: 1.4rem; margin-bottom: 0.5rem;">&#128202;</div>
+                        <h3 style="font-family: Cormorant Garamond, serif; color: #7c3aed; margin-bottom: 0.4rem; font-size: 1.2rem;">Want the full analysis?</h3>
+                        <p style="color: var(--text-mid); font-size: 0.9rem; margin-bottom: 1rem;">Sign up for a client portal account to unlock cost analysis, automation readiness score, and your 90-day roadmap.</p>
+                        <a href="/portal/signup?intent=comprehensive" class="button" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color:white; border:none; text-decoration:none; display:inline-block; margin-bottom: 0.5rem;">Unlock Full Analysis &rarr;</a>
+                    </div>
+
                     <div class="button-group" style="flex-direction: column; gap: 1rem;">
                         <button class="button button-accent" onclick="emailDiagnosticReport()" id="emailReportBtn" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); border: none;">
                             <span id="emailBtnText">&#9993; Email Report to Me</span>
@@ -4264,6 +4281,91 @@
         </div>
 
     </div>
+
+    <!-- ========== COMPREHENSIVE GATE OVERLAY ========== -->
+    <div class="gate-overlay" id="comprehensiveGateOverlay">
+        <div class="gate-card">
+            <button class="gate-close" onclick="closeComprehensiveGate()" aria-label="Close">&times;</button>
+            <div style="font-size: 2rem; margin-bottom: 0.75rem;">&#128202;</div>
+            <h2 class="gate-title">Comprehensive Analysis</h2>
+            <p class="gate-sub">Cost breakdown, automation readiness score, and 90-day roadmap — available to registered clients.</p>
+            <div class="gate-features">
+                <div class="gate-feature"><span class="gate-feature-icon">&#10003;</span> Annual cost &amp; waste calculation</div>
+                <div class="gate-feature"><span class="gate-feature-icon">&#10003;</span> Automation readiness score</div>
+                <div class="gate-feature"><span class="gate-feature-icon">&#10003;</span> 90-day transformation roadmap</div>
+                <div class="gate-feature"><span class="gate-feature-icon">&#10003;</span> Team comparison (if running team diagnostic)</div>
+                <div class="gate-feature"><span class="gate-feature-icon">&#10003;</span> Saved reports — view anytime from your portal</div>
+            </div>
+            <a href="/portal?signup=1&source=comprehensive"
+               class="button button-primary gate-cta" style="display:block; text-decoration:none; background: linear-gradient(135deg, #7c3aed, #6d28d9); border: none;">
+                Create Free Account &rarr;
+            </a>
+            <a href="/portal" class="gate-signin">Already have an account? Sign in &rarr;</a>
+            <button class="gate-back-link" onclick="closeComprehensiveGate()">
+                &larr; Go back to Map Process Only (no sign-up required)
+            </button>
+        </div>
+    </div>
+
+    <style>
+        .gate-overlay {
+            display: none;
+            position: fixed; inset: 0; z-index: 20000;
+            background: rgba(10, 20, 40, 0.7);
+            backdrop-filter: blur(4px);
+            align-items: center; justify-content: center;
+            padding: 1rem;
+        }
+        .gate-overlay.show { display: flex; }
+        .gate-card {
+            background: white;
+            border-radius: var(--radius-lg, 20px);
+            padding: 2.5rem 2rem 2rem;
+            max-width: 440px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+        }
+        .gate-close {
+            position: absolute; top: 1rem; right: 1rem;
+            background: none; border: none; font-size: 1.4rem;
+            color: var(--text-light, #94a3b8); cursor: pointer; line-height: 1;
+        }
+        .gate-close:hover { color: var(--text, #1e293b); }
+        .gate-title {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 1.7rem; color: var(--primary, #1a2f4a);
+            margin-bottom: 0.5rem;
+        }
+        .gate-sub {
+            color: var(--text-mid, #64748b); font-size: 0.92rem;
+            margin-bottom: 1.25rem; line-height: 1.55;
+        }
+        .gate-features {
+            text-align: left; margin-bottom: 1.5rem;
+            background: var(--bg-alt, #f8fafb);
+            border-radius: var(--radius-md, 14px);
+            padding: 1rem 1.25rem;
+        }
+        .gate-feature {
+            font-size: 0.88rem; padding: 0.3rem 0;
+            color: var(--text, #1e293b);
+        }
+        .gate-feature-icon { color: #16a34a; font-weight: 700; margin-right: 0.4rem; }
+        .gate-cta { margin-bottom: 0.75rem; font-size: 1rem; }
+        .gate-signin {
+            display: block; font-size: 0.85rem; color: var(--text-mid, #64748b);
+            text-decoration: none; margin-bottom: 1.25rem;
+        }
+        .gate-signin:hover { color: var(--accent, #3d8ea6); }
+        .gate-back-link {
+            display: block; background: none; border: none;
+            font-size: 0.82rem; color: var(--text-light, #94a3b8);
+            cursor: pointer; font-family: inherit; text-decoration: underline;
+        }
+        .gate-back-link:hover { color: var(--text-mid, #64748b); }
+    </style>
 
     <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
         function esc(s) { return fixMojibake(String(s || '')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -4345,6 +4447,11 @@
         }
 
         function selectDiagMode(mode) {
+            // Comprehensive review requires a portal account — show sign-up gate
+            if (mode === 'comprehensive' && _pendingPath !== 'team') {
+                showComprehensiveGate();
+                return;
+            }
             diagnosticMode = mode;
             document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
             const card = document.getElementById(mode === 'map-only' ? 'modeCardMap' : 'modeCardFull');
@@ -4358,6 +4465,16 @@
                     goToScreen(1);
                 }
             }, 180);
+        }
+
+        function showComprehensiveGate() {
+            const overlay = document.getElementById('comprehensiveGateOverlay');
+            if (overlay) overlay.classList.add('show');
+        }
+
+        function closeComprehensiveGate() {
+            const overlay = document.getElementById('comprehensiveGateOverlay');
+            if (overlay) overlay.classList.remove('show');
         }
 
         function toggleSection(header) {
@@ -4456,7 +4573,7 @@
             const screenLabels = {
                 0: 'Getting Started', 1: 'Process Selection', 2: 'Process Name', 3: 'Define Boundaries',
                 4: 'Last Example', 5: 'Time Investment', 6: 'Performance', 7: 'Steps & Handoffs',
-                8: 'Bottlenecks', 9: 'Systems & Tools', 10: 'Approvals',
+                8: 'Bottlenecks', 10: 'Approvals', // 9 removed: systems in screen 7
                 11: 'Knowledge', 12: 'New Hire', 13: 'Frequency', 14: 'Cost Calculation',
                 15: 'Team Cost & Savings', 16: 'Priority', 17: 'Your Details', 18: 'Results'
             };
@@ -5197,6 +5314,16 @@
                         <button type="button" class="add-branch-btn" onclick="addBranch('u${uid}')">+ Add another route</button>
                     </div>
                     <div class="step-contributor-badge" style="display:none;" id="step_u${uid}_contributor"></div>
+                    <div class="step-systems-row" id="step_u${uid}_systems_row" style="margin-top:0.5rem;">
+                        <button type="button" class="step-handoff-toggle" onclick="toggleStepSystems('u${uid}')" style="font-size:0.8rem; color:var(--text-mid);">
+                            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                            <span>Systems used in this step</span>
+                            <span id="step_u${uid}_systemsBadge" style="margin-left:auto; font-size:0.75rem; color:var(--accent); font-weight:500;"></span>
+                        </button>
+                        <div class="step-handoff-body" id="step_u${uid}_systemsBody">
+                            <input type="text" id="step_u${uid}_systems" placeholder="e.g., Salesforce, Gmail, spreadsheet..." style="margin-top:0.4rem; font-size:0.85rem;" oninput="updateStepSystemsBadge('u${uid}')">
+                        </div>
+                    </div>
                     <div class="step-handoff-inline" id="step_u${uid}_handoff" style="display:none;">
                         <button type="button" class="step-handoff-toggle" onclick="toggleInlineHandoff('u${uid}')">
                             <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
@@ -5285,6 +5412,8 @@
                 nameInput.addEventListener('input', function() {
                     const toggle = document.getElementById('step_u' + uid + '_decisionToggle');
                     if (toggle) toggle.style.display = this.value.trim() ? '' : 'none';
+                    const sysRow = document.getElementById('step_u' + uid + '_systems_row');
+                    if (sysRow) sysRow.style.display = this.value.trim() ? '' : 'none';
                 });
             }
             if (deptSelect) deptSelect.addEventListener('change', scheduleLiveFlowUpdate);
@@ -5830,6 +5959,10 @@
                         step.branches = branches;
                     }
                     if (item.dataset.contributor) step.contributor = item.dataset.contributor;
+                    // Collect per-step systems (integrated in screen 7)
+                    const uid = item.dataset.stepUid;
+                    const rawSystems = document.getElementById('step_u' + uid + '_systems')?.value?.trim() || '';
+                    if (rawSystems) step.systems = rawSystems.split(',').map(s => s.trim()).filter(Boolean);
                     steps.push(step);
                 }
             });
@@ -5937,20 +6070,47 @@
             systemCount = items.length;
         }
 
+        function toggleStepSystems(uid) {
+            const body = document.getElementById('step_' + uid + '_systemsBody');
+            const btn = document.querySelector('#step_' + uid + '_systems_row .step-handoff-toggle');
+            if (!body || !btn) return;
+            body.classList.toggle('open');
+            btn.classList.toggle('open');
+        }
+
+        function updateStepSystemsBadge(uid) {
+            const val = (document.getElementById('step_' + uid + '_systems')?.value || '').trim();
+            const badge = document.getElementById('step_' + uid + '_systemsBadge');
+            if (!badge) return;
+            badge.textContent = val ? '✓ ' + val.split(',').filter(s => s.trim()).length + ' system(s)' : '';
+        }
+
         function collectSystems() {
-            const items = document.querySelectorAll('#systemsList .list-item');
+            // Derive systems from per-step system entries (screen 9 is removed from flow)
+            const stepItems = document.querySelectorAll('#stepsList .list-item');
+            const seen = new Set();
             const systems = [];
-            items.forEach(item => {
+            stepItems.forEach(item => {
+                const uid = item.dataset.stepUid;
+                const raw = document.getElementById('step_u' + uid + '_systems')?.value?.trim() || '';
+                raw.split(',').forEach(s => {
+                    const name = s.trim();
+                    if (name && !seen.has(name.toLowerCase())) {
+                        seen.add(name.toLowerCase());
+                        systems.push({ name, purpose: '', actions: [], step: item.querySelector('[id$="_name"]')?.value?.trim() || '' });
+                    }
+                });
+            });
+            // Also check legacy systemsList if populated
+            const legacyItems = document.querySelectorAll('#systemsList .list-item');
+            legacyItems.forEach(item => {
                 const idx = item.dataset.systemIndex;
                 const name = document.getElementById('system_' + idx + '_name')?.value?.trim();
-                if (name) {
+                if (name && !seen.has(name.toLowerCase())) {
+                    seen.add(name.toLowerCase());
                     const actions = [];
                     document.querySelectorAll('input[name="system_' + idx + '_actions"]:checked').forEach(cb => actions.push(cb.value));
-                    systems.push({
-                        name,
-                        purpose: document.getElementById('system_' + idx + '_purpose')?.value?.trim() || '',
-                        actions
-                    });
+                    systems.push({ name, purpose: document.getElementById('system_' + idx + '_purpose')?.value?.trim() || '', actions });
                 }
             });
             return systems;
@@ -6461,11 +6621,17 @@
         function populateScreen17() {
             const summary = document.getElementById('processesSummary');
 
-            // Map-only mode: no cost data collected — hide the block entirely
+            // Mode-aware title/subtitle
+            const title = document.getElementById('screen17Title');
+            const sub = document.getElementById('screen17Subtitle');
             if (diagnosticMode === 'map-only') {
+                if (title) title.textContent = 'Almost done';
+                if (sub) sub.textContent = 'Enter your details to generate your process map report. Free — no account needed.';
                 summary.innerHTML = '';
                 return;
             }
+            if (title) title.textContent = 'Your Details';
+            if (sub) sub.textContent = 'Where should we send your detailed analysis?';
 
             let totalCost = 0;
             let html = '<h3 style="margin-bottom: 1rem;">You\'ve analysed:</h3>';
@@ -7231,46 +7397,74 @@
             document.getElementById('loadingState').style.display = 'none';
             document.getElementById('resultsContainer').style.display = 'block';
 
+            // Hide both inline gate banners — gate is handled by showMapOnlyGate below
+            const mapGate = document.getElementById('mapOnlyGateBanner');
+            const compUpgrade = document.getElementById('comprehensiveUpgradeBanner');
+            if (mapGate) mapGate.style.display = 'none';
+            if (compUpgrade) compUpgrade.style.display = 'none';
+
             // Process cards - each process as a collapsible section
             const processResultsDiv = document.getElementById('processResults');
             let html = '';
 
             (result.processes || []).forEach((p, i) => {
-                const cardBody = `<div class="metric-grid">
-                    <div class="metric-card">
-                        <div class="metric-value">${formatCurrency(p.annualCost)}</div>
-                        <div class="metric-label">Annual cost</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value">${p.elapsedDays} days</div>
-                        <div class="metric-label">Average cycle</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value">${p.stepsCount}</div>
-                        <div class="metric-label">Steps</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value"><span class="confidence-badge confidence-${(p.quality?.grade || 'medium').toLowerCase()}">${p.quality?.grade || 'MEDIUM'}</span></div>
-                        <div class="metric-label">Confidence (${p.quality?.score || '--'}/100)</div>
-                    </div>
-                </div>`;
+                let cardBody;
+                if (diagnosticMode === 'map-only') {
+                    // Map-only: show steps and departments only, no cost data
+                    const depts = (p.departments || []).join(', ') || '—';
+                    cardBody = `<div class="metric-grid">
+                        <div class="metric-card">
+                            <div class="metric-value">${p.stepsCount || '—'}</div>
+                            <div class="metric-label">Steps mapped</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">${p.handoffCount || '—'}</div>
+                            <div class="metric-label">Handoffs</div>
+                        </div>
+                        <div class="metric-card" style="grid-column: 1 / -1;">
+                            <div class="metric-label" style="margin-bottom:0.25rem;">Teams involved</div>
+                            <div style="font-size:0.95rem; color:var(--text);">${depts}</div>
+                        </div>
+                    </div>`;
+                } else {
+                    cardBody = `<div class="metric-grid">
+                        <div class="metric-card">
+                            <div class="metric-value">${formatCurrency(p.annualCost)}</div>
+                            <div class="metric-label">Annual cost</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">${p.elapsedDays} days</div>
+                            <div class="metric-label">Average cycle</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">${p.stepsCount}</div>
+                            <div class="metric-label">Steps</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value"><span class="confidence-badge confidence-${(p.quality?.grade || 'medium').toLowerCase()}">${p.quality?.grade || 'MEDIUM'}</span></div>
+                            <div class="metric-label">Confidence (${p.quality?.score || '--'}/100)</div>
+                        </div>
+                    </div>`;
+                }
                 html += dsec(`${i + 1}. ${p.name}`, cardBody);
             });
 
-            // Totals (always open)
-            html += dsec('Cost Summary', `
-                <div class="calculated" style="background: linear-gradient(135deg, rgba(61, 142, 166, 0.15), rgba(61, 142, 166, 0.05)); border-left: 4px solid var(--primary);">
-                    <div class="calculated-label" style="font-weight: 600;">Total Annual Cost:</div>
-                    <div class="calculated-value" style="font-size: 2.2rem; color: var(--primary);">${formatCurrency(result.totalCost)}</div>
-                </div>
-                <div class="calculated success">
-                    <div class="calculated-label" style="font-weight: 600;">Potential Annual Savings (50% improvement):</div>
-                    <div class="calculated-value" style="font-size: 2rem;">${formatCurrency(result.potentialSavings)}</div>
-                </div>`, true);
+            // Cost summary — only for comprehensive
+            if (diagnosticMode !== 'map-only') {
+                html += dsec('Cost Summary', `
+                    <div class="calculated" style="background: linear-gradient(135deg, rgba(61, 142, 166, 0.15), rgba(61, 142, 166, 0.05)); border-left: 4px solid var(--primary);">
+                        <div class="calculated-label" style="font-weight: 600;">Total Annual Cost:</div>
+                        <div class="calculated-value" style="font-size: 2.2rem; color: var(--primary);">${formatCurrency(result.totalCost)}</div>
+                    </div>
+                    <div class="calculated success">
+                        <div class="calculated-label" style="font-weight: 600;">Potential Annual Savings (50% improvement):</div>
+                        <div class="calculated-value" style="font-size: 2rem;">${formatCurrency(result.potentialSavings)}</div>
+                    </div>`, true);
+            }
 
             processResultsDiv.innerHTML = html;
 
-            // Recommendations (collapsible, starts open)
+            // Recommendations and next steps — mode-aware
             const analysisDiv = document.getElementById('analysisResults');
             let recBody = '';
             (result.recommendations || []).forEach(rec => {
@@ -7279,24 +7473,46 @@
                 </div>`;
             });
 
-            let nextBody = `<div class="checklist">
-                <div class="checklist-item"><span class="checklist-icon">&#9744;</span><span>Review this analysis</span></div>
-                <div class="checklist-item"><span class="checklist-icon">&#9744;</span><span>Book a discovery call to discuss findings</span></div>
-                <div class="checklist-item"><span class="checklist-icon">&#9744;</span><span>Connect tools for deeper automated analysis</span></div>
-                <div class="checklist-item"><span class="checklist-icon">&#9744;</span><span>Complete manual survey for offline workflows</span></div>
-            </div>
-            <p style="color: var(--text-mid); margin-top: 1rem;">Analysis sent to: <strong>${contact?.email || ''}</strong></p>`;
+            let nextBody;
+            if (diagnosticMode === 'map-only') {
+                nextBody = `<div class="checklist">
+                    <div class="checklist-item"><span class="checklist-icon">&#9744;</span><span>Review your process map above</span></div>
+                    <div class="checklist-item"><span class="checklist-icon">&#9744;</span><span>Share with your team to validate the steps</span></div>
+                    <div class="checklist-item"><span class="checklist-icon">&#9744;</span><span>Run the full analysis to uncover cost &amp; automation opportunities</span></div>
+                    <div class="checklist-item"><span class="checklist-icon">&#9744;</span><span>Book a discovery call to discuss your process</span></div>
+                </div>
+                <p style="color: var(--text-mid); margin-top: 1rem;">Report emailed to: <strong>${contact?.email || ''}</strong></p>`;
+            } else {
+                nextBody = `<div class="checklist">
+                    <div class="checklist-item"><span class="checklist-icon">&#9744;</span><span>Review this analysis</span></div>
+                    <div class="checklist-item"><span class="checklist-icon">&#9744;</span><span>Book a discovery call to discuss findings</span></div>
+                    <div class="checklist-item"><span class="checklist-icon">&#9744;</span><span>Connect tools for deeper automated analysis</span></div>
+                    <div class="checklist-item"><span class="checklist-icon">&#9744;</span><span>Complete manual survey for offline workflows</span></div>
+                </div>
+                <p style="color: var(--text-mid); margin-top: 1rem;">Analysis sent to: <strong>${contact?.email || ''}</strong></p>`;
+            }
 
-            analysisDiv.innerHTML = dsec('Recommendations', recBody) + dsec('Next Steps', nextBody);
+            analysisDiv.innerHTML = dsec('Observations', recBody) + dsec('Next Steps', nextBody);
 
-            // Automation Readiness Score
-            const scoreData = buildAutomationScore(completedProcesses);
-
-            // 90-Day Roadmap
-            const roadmapData = buildRoadmap(completedProcesses, result.totalCost);
-
-            // ROI Projection Calculator
-            buildROICalculator(result.totalCost, result.potentialSavings);
+            // Automation Readiness Score, Roadmap, ROI — only for comprehensive
+            let scoreData, roadmapData;
+            if (diagnosticMode !== 'map-only') {
+                scoreData = buildAutomationScore(completedProcesses);
+                roadmapData = buildRoadmap(completedProcesses, result.totalCost);
+                buildROICalculator(result.totalCost, result.potentialSavings);
+            } else {
+                // Hide cost-dependent sections for map-only
+                const costSummaryInResults = document.querySelector('#processResults');
+                if (costSummaryInResults) {
+                    // Strip the Cost Summary dsec (last child) from process results
+                    const dsecs = costSummaryInResults.querySelectorAll('.collapsible');
+                    dsecs.forEach(d => {
+                        if (d.querySelector('h3') && d.querySelector('h3').textContent.includes('Cost Summary')) {
+                            d.style.display = 'none';
+                        }
+                    });
+                }
+            }
 
             // Process Dependency Graph
             const depGraphHtml = renderDependencyGraph();
@@ -7319,6 +7535,43 @@
 
             // Wrap existing sections that are rendered by other functions in collapsible containers
             wrapExistingSections();
+
+            // Map-only gate: replace action buttons with portal sign-up prompt
+            if (diagnosticMode === 'map-only') {
+                showMapOnlyGate(contact);
+            }
+        }
+
+        function showMapOnlyGate(contact) {
+            var btnGroup = document.querySelector('#screen18 .button-group');
+            if (!btnGroup) return;
+            var email = (contact && contact.email) ? encodeURIComponent(contact.email) : '';
+            var name = (contact && contact.name) ? encodeURIComponent(contact.name) : '';
+            btnGroup.innerHTML =
+                // ── Primary action: email the report (free, no account) ──
+                '<button class="button button-primary" onclick="emailDiagnosticReport()" style="width:100%; margin-bottom:0.75rem;">' +
+                    '<span id="emailBtnText2">&#9993;&nbsp; Email My Process Map Report</span>' +
+                '</button>' +
+                // ── Gate: sign up to view again ──
+                '<div style="border: 1.5px solid rgba(61,142,166,0.3); border-radius: var(--radius-md); padding: 1.25rem 1.5rem; text-align: center; margin-top: 0.5rem;">' +
+                    '<div style="font-size: 1.2rem; margin-bottom: 0.4rem;">&#128274;</div>' +
+                    '<p style="font-weight: 600; color: var(--primary); font-family: Cormorant Garamond, serif; font-size: 1.05rem; margin-bottom: 0.35rem;">Want to view this report again?</p>' +
+                    '<p style="color: var(--text-mid); font-size: 0.88rem; margin-bottom: 1rem;">Create a free client portal account to save your report and access it any time. Also unlocks the full cost analysis.</p>' +
+                    '<a href="/portal/signup?source=map-only&email=' + email + '&name=' + name + '"' +
+                    '   class="button button-primary" style="display:inline-block; text-decoration:none; margin-bottom:0.5rem; background: linear-gradient(135deg, var(--accent), var(--primary)); border:none;">' +
+                        'Create Free Account &rarr;' +
+                    '</a>' +
+                    '<p style="font-size: 0.8rem; color: var(--text-light); margin-top: 0.5rem;">' +
+                        'Already have an account? <a href="/portal" style="color:var(--accent);">Sign in &rarr;</a>' +
+                    '</p>' +
+                '</div>' +
+                // ── Upgrade: run comprehensive ──
+                '<div style="margin-top: 0.75rem; text-align: center;">' +
+                    '<a href="/diagnostic?upgrade=1&source=map-only&email=' + email + '"' +
+                    '   style="font-size:0.85rem; color:#7c3aed; text-decoration:none; font-weight:500;">' +
+                        '&#128202;&nbsp; Want cost analysis, automation score &amp; 90-day roadmap? Run full analysis &rarr;' +
+                    '</a>' +
+                '</div>';
         }
 
         function wrapExistingSections() {
@@ -7923,7 +8176,7 @@
             }
 
             // Soft nudge on optional screens if no data was entered
-            const nudgeScreens = [8, 9, 10, 11, 12, 14, 15, 16];
+            const nudgeScreens = [8, 10, 11, 12, 14, 15, 16]; // 9 removed: systems now in screen 7
             if (nudgeScreens.indexOf(screen) >= 0 && !_skipNudge[screen] && !screenHasData(screen)) {
                 showSoftNudge(screen);
                 return;
@@ -7934,6 +8187,9 @@
                 if (screen === 3) { goToScreen(7); return; }
                 if (screen === 7) { goToScreen(17); return; }
             }
+
+            // Screen 9 (Systems & Tools) removed from nav — systems collected per-step in screen 7
+            if (screen === 8) { goToScreen(10); return; }
 
             goToScreen(screen + 1);
         }
