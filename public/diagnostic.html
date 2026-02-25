@@ -2951,6 +2951,200 @@
             visibility: hidden;
         }
 
+
+        /* ── Step systems tags ── */
+        .step-systems-wrap {
+            margin-top: 0.35rem;
+        }
+        .step-systems-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+            margin-bottom: 0.3rem;
+        }
+        .step-systems-tags:empty { display: none; }
+        .step-sys-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            background: rgba(61,142,166,0.12);
+            color: var(--accent);
+            border: 1px solid rgba(61,142,166,0.3);
+            padding: 0.18rem 0.5rem 0.18rem 0.65rem;
+            border-radius: 100px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            animation: tagIn 0.15s ease;
+        }
+        .step-sys-tag button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(61,142,166,0.15);
+            border: none;
+            color: var(--accent);
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 0.65rem;
+            line-height: 1;
+            padding: 0;
+            transition: background 0.15s;
+        }
+        .step-sys-tag button:hover { background: rgba(61,142,166,0.35); }
+        .step-sys-input-row {
+            display: flex;
+            gap: 0.3rem;
+            align-items: center;
+        }
+        .step-sys-input {
+            flex: 1;
+            font-size: 0.82rem;
+            padding: 0.3rem 0.55rem;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            background: var(--bg);
+            color: var(--text);
+            min-width: 0;
+        }
+        .step-sys-input:focus { border-color: var(--accent); outline: none; }
+        .step-sys-input::placeholder { color: var(--text-light); }
+        .step-sys-suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            margin-top: 0.3rem;
+        }
+        .step-sys-chip {
+            padding: 0.2rem 0.55rem;
+            font-size: 0.76rem;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            cursor: pointer;
+            color: var(--text-mid);
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+        .step-sys-chip:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+        .step-sys-chip.used {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+        .step-sys-label {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        /* ── Inline custom dept creator ── */
+        .step-dept-custom-wrap {
+            display: none;
+            margin-top: 0.3rem;
+            gap: 0.3rem;
+            align-items: center;
+        }
+        .step-dept-custom-wrap.show {
+            display: flex;
+        }
+        .step-dept-custom-input {
+            flex: 1;
+            font-size: 0.82rem;
+            padding: 0.3rem 0.55rem;
+            border: 1.5px solid var(--accent);
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            min-width: 0;
+        }
+        .step-dept-custom-input:focus { outline: none; border-color: var(--primary); }
+        .step-dept-custom-add {
+            font-size: 0.78rem;
+            padding: 0.3rem 0.65rem;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-family: inherit;
+            white-space: nowrap;
+            transition: background 0.15s;
+        }
+        .step-dept-custom-add:hover { background: var(--primary); }
+        /* ── Step layout tweaks ── */
+        .step-dept-row {
+            display: flex;
+            gap: 0.4rem;
+            align-items: center;
+        }
+        .step-dept-row select { flex: 1; }
+        /* ── Handoff compact ── */
+        .handoff-method-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.3rem;
+        }
+        @media (max-width: 480px) {
+            .handoff-method-grid { grid-template-columns: 1fr; }
+        }
+        .handoff-method-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.6rem;
+            background: var(--bg);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 0.78rem;
+            font-family: inherit;
+            color: var(--text-mid);
+            transition: all 0.15s;
+            text-align: left;
+        }
+        .handoff-method-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .handoff-method-btn.selected {
+            background: rgba(61,142,166,0.1);
+            border-color: var(--accent);
+            color: var(--accent);
+            font-weight: 600;
+        }
+        .handoff-clarity-row {
+            display: flex;
+            gap: 0.3rem;
+            flex-wrap: wrap;
+            margin-top: 0.4rem;
+        }
+        .handoff-clarity-btn {
+            flex: 1;
+            min-width: 80px;
+            padding: 0.35rem 0.5rem;
+            font-size: 0.76rem;
+            background: var(--bg);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-family: inherit;
+            color: var(--text-mid);
+            transition: all 0.15s;
+            text-align: center;
+        }
+        .handoff-clarity-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .handoff-clarity-btn.selected {
+            background: rgba(61,142,166,0.1);
+            border-color: var(--accent);
+            color: var(--accent);
+            font-weight: 600;
+        }
+
     </style>
 </head>
 <body>
@@ -3573,7 +3767,7 @@
 
                 <!-- Instruction strip -->
                 <div class="screen7-tip" id="screen7Tip">
-                    <strong>How it works:</strong> Add each step in order. For each step, name it, pick the team, and optionally describe how work is handed off to the next person.
+                    <strong>How it works:</strong> Name each step, pick the team, and add any systems used. Press <kbd style="background:var(--bg-alt);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-size:0.85em;">Enter</kbd> after each step name to move to the next. Drag handles to reorder.
                 </div>
 
                 <!-- Import shortcut -->
@@ -3697,7 +3891,7 @@
 
                 <div class="form-group">
                     <label for="longestStep">Which step took the LONGEST to complete?</label>
-                    <select id="longestStep"><option value="">Select step...</option></select>
+                    <select id="longestStep" onchange="refreshInsight8()"><option value="">Select step...</option></select>
                 </div>
 
                 <div class="form-group">
@@ -4554,7 +4748,7 @@
                 if (screenNum === 4) updateProcessRefs();
                 if (screenNum === 5) { populateScreen5(); showInsightCard(5); }
                 if (screenNum === 6) updateProcessRefs();
-                if (screenNum === 7) { populateScreen7(); setTimeout(buildStepSuggestions, 200); showInsightCard(7); }
+                if (screenNum === 7) { populateScreen7(); setTimeout(buildStepSuggestions, 200); setTimeout(() => showInsightCard(7), 800); }
                 if (screenNum === 8) { populateScreen8(); showInsightCard(8); }
                 if (screenNum === 9) populateScreen9();
                 if (screenNum === 10) updateProcessRefs();
@@ -4835,7 +5029,12 @@
             }
         }
 
-        function calculateTimeTotal() { recalcTimeFromRanges(); }
+        function calculateTimeTotal() {
+            recalcTimeFromRanges();
+            // Refresh insight card live as user selects time options
+            const card = document.getElementById('insightCard5');
+            if (card) showInsightCard(5);
+        }
 
         // ============================================================
         // SCREEN 6: PERFORMANCE
@@ -4874,6 +5073,22 @@
         // ============================================================
         // SCREEN 7: STEP BREAKDOWN
         // ============================================================
+
+        // Common systems by category — used for quick-add chips in step systems
+        const COMMON_SYSTEMS = [
+            'Salesforce','HubSpot','Pipedrive',
+            'Gmail','Outlook','Slack','Teams','Zoom',
+            'Xero','QuickBooks','Sage',
+            'Jira','Asana','Monday.com','Trello','Notion',
+            'Google Sheets','Excel','SharePoint',
+            'DocuSign','HelloSign',
+            'Stripe','Xero','GoCardless',
+            'Zendesk','Freshdesk','Intercom',
+            'NetSuite','SAP','Dynamics 365',
+            'Dropbox','Google Drive','OneDrive',
+            'Typeform','Calendly','Zapier','Make'
+        ];
+
         const DEPT_OPTIONS = '<option value="">Department...</option>' +
             '<optgroup label="Internal">' +
             '<option value="Sales">Sales</option>' +
@@ -5025,40 +5240,58 @@
             }
         }
 
-        // Toggle "Other" text input for step department selects (dynamic)
+        // Toggle inline custom dept creator when "Custom..." selected in step dropdown
         function toggleStepDeptOther(select, stepIdx) {
-            const inputId = 'step_' + stepIdx + '_deptOther';
-            let input = document.getElementById(inputId);
+            const wrap = document.getElementById('step_' + stepIdx + '_customDeptWrap');
+            const customInput = document.getElementById('step_' + stepIdx + '_customDeptInput');
             if (select.value === 'Other') {
-                if (!input) {
-                    input = document.createElement('input');
-                    input.type = 'text';
-                    input.id = inputId;
-                    input.className = 'step-custom-dept';
-                    input.placeholder = 'Type custom department or team name...';
-                    input.style.width = '100%';
-                    input.style.padding = '0.9rem';
-                    input.style.fontSize = '1rem';
-                    input.style.border = '2px solid var(--border)';
-                    input.style.borderRadius = 'var(--radius-sm)';
-                    input.style.fontFamily = "'Work Sans', sans-serif";
-                    select.closest('.list-item-content').appendChild(input);
+                if (wrap) { wrap.classList.add('show'); }
+                if (customInput) { customInput.value = ''; customInput.focus(); }
+            } else {
+                if (wrap) wrap.classList.remove('show');
+            }
+            // Auto-set INT/EXT toggle based on selection
+            if (select.value && select.value !== 'Other') {
+                const isExt = select.value.startsWith('External');
+                const radio = document.querySelector('input[name="step_' + stepIdx + '_ext"][value="' + (isExt ? 'external' : 'internal') + '"]');
+                if (radio) {
+                    radio.checked = true;
+                    const toggle = radio.closest('.int-ext-toggle');
+                    if (toggle) {
+                        toggle.querySelectorAll('label').forEach(l => l.classList.remove('active'));
+                        radio.closest('label').classList.add('active');
+                    }
                 }
-                input.style.display = 'block';
-                input.focus();
-            } else if (input) {
-                input.style.display = 'none';
-                input.value = '';
+            }
+        }
+
+        // Called by "Add & Select" button in inline custom dept creator
+        function stepAddCustomDept(stepIdx) {
+            const input = document.getElementById('step_' + stepIdx + '_customDeptInput');
+            const select = document.getElementById('step_' + stepIdx + '_dept');
+            const wrap = document.getElementById('step_' + stepIdx + '_customDeptWrap');
+            if (!input || !select) return;
+            const name = input.value.trim();
+            if (!name) { input.focus(); return; }
+
+            // Add to global customDepartments if not already there
+            const nameLower = name.toLowerCase();
+            if (!customDepartments.some(d => d.toLowerCase() === nameLower)) {
+                customDepartments.push(name);
+                renderCustomDeptTags(); // update screen 3 tags if visible
+                syncCustomDeptsToStepDropdowns(); // add to ALL step dropdowns
             }
 
-            // Auto-set external toggle when an "External" department is selected
-            if (select.value.startsWith('External')) {
-                const extRadio = document.querySelector('input[name="step_' + stepIdx + '_ext"][value="external"]');
-                if (extRadio) extRadio.checked = true;
-            } else if (select.value && select.value !== 'Other') {
-                const intRadio = document.querySelector('input[name="step_' + stepIdx + '_ext"][value="internal"]');
-                if (intRadio) intRadio.checked = true;
+            // Select it in this step's dropdown
+            select.value = name;
+            if (!select.querySelector('option[value="' + name + '"]')) {
+                // fallback: option wasn't added yet, set after sync
+                setTimeout(() => { select.value = name; }, 0);
             }
+
+            // Hide the creator
+            if (wrap) wrap.classList.remove('show');
+            input.value = '';
         }
 
         function populateScreen7() {
@@ -5067,6 +5300,24 @@
             if (stepCount === 0) {
                 addStep(); addStep(); addStep();
             }
+            // Show systems rows for any steps that already have a name (e.g. after resume/edit)
+            document.querySelectorAll('#stepsList .list-item').forEach(item => {
+                const uid = item.dataset.stepUid;
+                const nameEl = document.getElementById('step_u' + uid + '_name');
+                const sysRow = document.getElementById('step_u' + uid + '_systems_row');
+                if (nameEl && nameEl.value.trim() && sysRow) {
+                    sysRow.style.display = '';
+                    if (!sysRow.dataset.suggestionsShown) {
+                        sysRow.dataset.suggestionsShown = '1';
+                        renderStepSystemSuggestions('u' + uid);
+                    }
+                }
+                // Restore tag data for already-added systems
+                const tagged = _stepSystems['u' + uid];
+                if (tagged && tagged.length > 0) {
+                    renderStepSystemTags('u' + uid);
+                }
+            });
         }
 
         // -- Step Import (upload image / paste text) --
@@ -5228,6 +5479,16 @@
                     if (extRadio) { extRadio.checked = true; extRadio.dispatchEvent(new Event('change')); }
                 }
 
+                // Restore per-step systems into tag array
+                const importUid = div.dataset.stepUid;
+                if (importUid && s.systems && s.systems.length > 0) {
+                    _stepSystems['u' + importUid] = s.systems.slice();
+                    renderStepSystemTags('u' + importUid);
+                    renderStepSystemSuggestions('u' + importUid);
+                    const sysRow = document.getElementById('step_u' + importUid + '_systems_row');
+                    if (sysRow) sysRow.style.display = '';
+                }
+
                 if (s.isDecision && s.branches && s.branches.length > 0) {
                     const uid = div.dataset.stepUid;
                     const uidKey = 'u' + uid;
@@ -5279,7 +5540,13 @@
                 </div>
                 <div class="list-item-number"></div>
                 <div class="list-item-content">
-                    <input type="text" id="step_u${uid}_name" placeholder="Step name, e.g., Create customer account">
+
+                    <!-- Step name — Enter key adds next step -->
+                    <input type="text" id="step_u${uid}_name"
+                           placeholder="Step name, e.g., Create customer account"
+                           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();stepEnterKey(this);}">
+
+                    <!-- Department row -->
                     <div class="step-dept-row">
                         <select id="step_u${uid}_dept" onchange="toggleStepDeptOther(this, 'u${uid}')">${getDeptOptionsHTML()}</select>
                         <div class="int-ext-toggle">
@@ -5287,72 +5554,108 @@
                                 <input type="radio" name="step_u${uid}_ext" value="internal" checked>
                                 <span>INT</span>
                             </label>
-                            <label title="External party (vendor, client, regulator, etc.)">
+                            <label title="External party">
                                 <input type="radio" name="step_u${uid}_ext" value="external">
                                 <span>EXT</span>
                             </label>
                         </div>
                     </div>
+
+                    <!-- Inline custom dept creator — shown when "Custom..." selected -->
+                    <div class="step-dept-custom-wrap" id="step_u${uid}_customDeptWrap">
+                        <input type="text" class="step-dept-custom-input" id="step_u${uid}_customDeptInput"
+                               placeholder="Type team/dept name..."
+                               onkeydown="if(event.key==='Enter'){event.preventDefault();stepAddCustomDept('u${uid}');}">
+                        <button type="button" class="step-dept-custom-add" onclick="stepAddCustomDept('u${uid}')">Add &amp; Select</button>
+                    </div>
+
+                    <!-- Decision toggle (progressive — shown when name entered) -->
                     <div class="step-decision-toggle" id="step_u${uid}_decisionToggle" style="display:none;">
                         <input type="checkbox" id="step_u${uid}_decision" onchange="toggleDecisionBranches('u${uid}')">
                         <label for="step_u${uid}_decision">This step has a decision / routing point</label>
                     </div>
+
+                    <!-- Decision branches -->
                     <div class="step-branches" id="step_u${uid}_branches">
-                        <div class="step-branches-label">&#9670; Define the possible routes from this step:</div>
+                        <div class="step-branches-label">&#9670; Routes from this step:</div>
                         <div id="step_u${uid}_branchList">
                             <div class="branch-row">
                                 <span class="branch-icon">&#10132;</span>
-                                <input type="text" id="step_u${uid}_branch_0_label" placeholder="Route label, e.g., Approved">
-                                <input type="text" id="step_u${uid}_branch_0_target" placeholder="Goes to... e.g., Step 5 or Send Invoice" style="max-width: 180px;">
+                                <input type="text" id="step_u${uid}_branch_0_label" placeholder="Route, e.g., Approved">
+                                <input type="text" id="step_u${uid}_branch_0_target" placeholder="Goes to..." style="max-width:160px;">
                             </div>
                             <div class="branch-row">
                                 <span class="branch-icon">&#10132;</span>
-                                <input type="text" id="step_u${uid}_branch_1_label" placeholder="Route label, e.g., Rejected">
-                                <input type="text" id="step_u${uid}_branch_1_target" placeholder="Goes to... e.g., Step 3 or Review" style="max-width: 180px;">
+                                <input type="text" id="step_u${uid}_branch_1_label" placeholder="Route, e.g., Rejected">
+                                <input type="text" id="step_u${uid}_branch_1_target" placeholder="Goes to..." style="max-width:160px;">
                             </div>
                         </div>
-                        <button type="button" class="add-branch-btn" onclick="addBranch('u${uid}')">+ Add another route</button>
+                        <button type="button" class="add-branch-btn" onclick="addBranch('u${uid}')">+ Add route</button>
                     </div>
+
+                    <!-- Contributor badge -->
                     <div class="step-contributor-badge" style="display:none;" id="step_u${uid}_contributor"></div>
-                    <div class="step-systems-row" id="step_u${uid}_systems_row" style="margin-top:0.5rem;">
-                        <button type="button" class="step-handoff-toggle" onclick="toggleStepSystems('u${uid}')" style="font-size:0.8rem; color:var(--text-mid);">
-                            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-                            <span>Systems used in this step</span>
-                            <span id="step_u${uid}_systemsBadge" style="margin-left:auto; font-size:0.75rem; color:var(--accent); font-weight:500;"></span>
-                        </button>
-                        <div class="step-handoff-body" id="step_u${uid}_systemsBody">
-                            <input type="text" id="step_u${uid}_systems" placeholder="e.g., Salesforce, Gmail, spreadsheet..." style="margin-top:0.4rem; font-size:0.85rem;" oninput="updateStepSystemsBadge('u${uid}')">
+
+                    <!-- Systems — tag-based, progressive (shown when name entered) -->
+                    <div class="step-systems-wrap" id="step_u${uid}_systems_row" style="display:none;">
+                        <div class="step-sys-label">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                            Systems &amp; tools used
                         </div>
+                        <div class="step-systems-tags" id="step_u${uid}_sysTags"></div>
+                        <div class="step-sys-input-row">
+                            <input type="text" class="step-sys-input" id="step_u${uid}_sysInput"
+                                   placeholder="Add a system, e.g. Salesforce..."
+                                   onkeydown="if(event.key==='Enter'||event.key===','){event.preventDefault();addStepSystem('u${uid}');}">
+                            <button type="button" class="step-dept-custom-add" style="padding:0.3rem 0.6rem;font-size:0.78rem;" onclick="addStepSystem('u${uid}')">Add</button>
+                        </div>
+                        <div class="step-sys-suggestions" id="step_u${uid}_sysSuggestions"></div>
                     </div>
+
+                    <!-- Handoff (progressive — shown for all-but-last step) -->
                     <div class="step-handoff-inline" id="step_u${uid}_handoff" style="display:none;">
                         <button type="button" class="step-handoff-toggle" onclick="toggleInlineHandoff('u${uid}')">
                             <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
                             <span id="step_u${uid}_handoffLabel">Handoff to next step</span>
-                            <span id="step_u${uid}_handoffStatus" class="step-handoff-pending" style="margin-left:auto; font-weight:400;"></span>
+                            <span id="step_u${uid}_handoffStatus" class="step-handoff-pending" style="margin-left:auto;font-weight:400;"></span>
                         </button>
                         <div class="step-handoff-body" id="step_u${uid}_handoffBody">
-                            <div class="form-group">
-                                <label>How was the next person/team notified?</label>
-                                <div class="radio-group">
-                                    <label class="radio-option"><input type="radio" name="stepHandoffMethod_u${uid}" value="email-details" onchange="updateHandoffStatus('u${uid}')"> Email with all details</label>
-                                    <label class="radio-option"><input type="radio" name="stepHandoffMethod_u${uid}" value="email-check" onchange="updateHandoffStatus('u${uid}')"> Email saying "check the system"</label>
-                                    <label class="radio-option"><input type="radio" name="stepHandoffMethod_u${uid}" value="slack" onchange="updateHandoffStatus('u${uid}')"> Slack/Teams message</label>
-                                    <label class="radio-option"><input type="radio" name="stepHandoffMethod_u${uid}" value="spreadsheet" onchange="updateHandoffStatus('u${uid}')"> Updated a shared spreadsheet</label>
-                                    <label class="radio-option"><input type="radio" name="stepHandoffMethod_u${uid}" value="in-person" onchange="updateHandoffStatus('u${uid}')"> In-person handoff</label>
-                                    <label class="radio-option"><input type="radio" name="stepHandoffMethod_u${uid}" value="verbal" onchange="updateHandoffStatus('u${uid}')"> Phone/meeting</label>
-                                    <label class="radio-option"><input type="radio" name="stepHandoffMethod_u${uid}" value="they-knew" onchange="updateHandoffStatus('u${uid}')"> They just... knew to check</label>
-                                    <label class="radio-option"><input type="radio" name="stepHandoffMethod_u${uid}" value="other" onchange="updateHandoffStatus('u${uid}'); toggleRadioOther('stepHandoffMethod_u${uid}', 'stepHandoffMethodOther_u${uid}')"> Other</label>
-                                    <input type="text" id="stepHandoffMethodOther_u${uid}" placeholder="Please describe..." style="display:none; margin-top:0.35rem; font-size:0.85rem;">
-                                </div>
+                            <p style="font-size:0.78rem;color:var(--text-mid);margin-bottom:0.4rem;">How did the next person/team find out?</p>
+                            <div class="handoff-method-grid" id="step_u${uid}_methodGrid">
+                                <button type="button" class="handoff-method-btn" data-value="email-details" onclick="selectHandoffMethod('u${uid}','email-details',this)">&#128231; Email (full details)</button>
+                                <button type="button" class="handoff-method-btn" data-value="email-check" onclick="selectHandoffMethod('u${uid}','email-check',this)">&#128231; Email "check system"</button>
+                                <button type="button" class="handoff-method-btn" data-value="slack" onclick="selectHandoffMethod('u${uid}','slack',this)">&#128172; Slack / Teams</button>
+                                <button type="button" class="handoff-method-btn" data-value="spreadsheet" onclick="selectHandoffMethod('u${uid}','spreadsheet',this)">&#128202; Shared spreadsheet</button>
+                                <button type="button" class="handoff-method-btn" data-value="in-person" onclick="selectHandoffMethod('u${uid}','in-person',this)">&#129516; In-person</button>
+                                <button type="button" class="handoff-method-btn" data-value="verbal" onclick="selectHandoffMethod('u${uid}','verbal',this)">&#128222; Phone / meeting</button>
+                                <button type="button" class="handoff-method-btn" data-value="they-knew" onclick="selectHandoffMethod('u${uid}','they-knew',this)">&#128173; They just knew</button>
+                                <button type="button" class="handoff-method-btn" data-value="other" onclick="selectHandoffMethod('u${uid}','other',this)">&#10133; Other</button>
                             </div>
-                            <div class="form-group">
-                                <label>Did the next person come back asking for clarification?</label>
-                                <div class="radio-group">
-                                    <label class="radio-option"><input type="radio" name="stepHandoffClarity_u${uid}" value="no" onchange="updateHandoffStatus('u${uid}')"> No - had everything needed</label>
-                                    <label class="radio-option"><input type="radio" name="stepHandoffClarity_u${uid}" value="yes-once" onchange="updateHandoffStatus('u${uid}')"> Yes - once (minor clarification)</label>
-                                    <label class="radio-option"><input type="radio" name="stepHandoffClarity_u${uid}" value="yes-multiple" onchange="updateHandoffStatus('u${uid}')"> Yes - 2-3 back and forth</label>
-                                    <label class="radio-option"><input type="radio" name="stepHandoffClarity_u${uid}" value="yes-major" onchange="updateHandoffStatus('u${uid}')"> Yes - 4+ exchanges (major issues)</label>
-                                </div>
+                            <input type="text" id="stepHandoffMethodOther_u${uid}" placeholder="Describe the handoff method..." style="display:none;margin-top:0.35rem;font-size:0.82rem;width:100%;padding:0.3rem 0.55rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;">
+                            <!-- Hidden radio inputs for backward-compatible data collection -->
+                            <div style="display:none;">
+                                <input type="radio" name="stepHandoffMethod_u${uid}" value="email-details" id="shm_u${uid}_email-details">
+                                <input type="radio" name="stepHandoffMethod_u${uid}" value="email-check" id="shm_u${uid}_email-check">
+                                <input type="radio" name="stepHandoffMethod_u${uid}" value="slack" id="shm_u${uid}_slack">
+                                <input type="radio" name="stepHandoffMethod_u${uid}" value="spreadsheet" id="shm_u${uid}_spreadsheet">
+                                <input type="radio" name="stepHandoffMethod_u${uid}" value="in-person" id="shm_u${uid}_in-person">
+                                <input type="radio" name="stepHandoffMethod_u${uid}" value="verbal" id="shm_u${uid}_verbal">
+                                <input type="radio" name="stepHandoffMethod_u${uid}" value="they-knew" id="shm_u${uid}_they-knew">
+                                <input type="radio" name="stepHandoffMethod_u${uid}" value="other" id="shm_u${uid}_other">
+                            </div>
+                            <p style="font-size:0.78rem;color:var(--text-mid);margin:0.5rem 0 0.3rem;">Did they come back asking for clarification?</p>
+                            <div class="handoff-clarity-row" id="step_u${uid}_clarityRow">
+                                <button type="button" class="handoff-clarity-btn" data-value="no" onclick="selectHandoffClarity('u${uid}','no',this)">&#9989; No issues</button>
+                                <button type="button" class="handoff-clarity-btn" data-value="yes-once" onclick="selectHandoffClarity('u${uid}','yes-once',this)">&#128993; Once</button>
+                                <button type="button" class="handoff-clarity-btn" data-value="yes-multiple" onclick="selectHandoffClarity('u${uid}','yes-multiple',this)">&#128992; 2-3x</button>
+                                <button type="button" class="handoff-clarity-btn" data-value="yes-major" onclick="selectHandoffClarity('u${uid}','yes-major',this)">&#128308; 4+x</button>
+                            </div>
+                            <!-- Hidden radios for backward-compat -->
+                            <div style="display:none;">
+                                <input type="radio" name="stepHandoffClarity_u${uid}" value="no" id="shc_u${uid}_no">
+                                <input type="radio" name="stepHandoffClarity_u${uid}" value="yes-once" id="shc_u${uid}_yes-once">
+                                <input type="radio" name="stepHandoffClarity_u${uid}" value="yes-multiple" id="shc_u${uid}_yes-multiple">
+                                <input type="radio" name="stepHandoffClarity_u${uid}" value="yes-major" id="shc_u${uid}_yes-major">
                             </div>
                         </div>
                     </div>
@@ -5410,10 +5713,18 @@
             if (nameInput) {
                 nameInput.addEventListener('input', scheduleLiveFlowUpdate);
                 nameInput.addEventListener('input', function() {
+                    const hasName = !!this.value.trim();
                     const toggle = document.getElementById('step_u' + uid + '_decisionToggle');
-                    if (toggle) toggle.style.display = this.value.trim() ? '' : 'none';
+                    if (toggle) toggle.style.display = hasName ? '' : 'none';
                     const sysRow = document.getElementById('step_u' + uid + '_systems_row');
-                    if (sysRow) sysRow.style.display = this.value.trim() ? '' : 'none';
+                    if (sysRow) {
+                        sysRow.style.display = hasName ? '' : 'none';
+                        // Populate suggestions once on first show
+                        if (hasName && !sysRow.dataset.suggestionsShown) {
+                            sysRow.dataset.suggestionsShown = '1';
+                            renderStepSystemSuggestions('u' + uid);
+                        }
+                    }
                 });
             }
             if (deptSelect) deptSelect.addEventListener('change', scheduleLiveFlowUpdate);
@@ -5603,9 +5914,14 @@
         }
 
         function scheduleLiveFlowUpdate() {
-            if (!_liveFlowOpen) return;
             clearTimeout(_liveFlowTimer);
-            _liveFlowTimer = setTimeout(updateLiveFlow, 300);
+            _liveFlowTimer = setTimeout(() => {
+                if (_liveFlowOpen) updateLiveFlow();
+                // Refresh insight card 7 as steps change
+                if (document.getElementById('screen7')?.classList.contains('active')) {
+                    showInsightCard(7);
+                }
+            }, 600);
         }
 
         function updateLiveFlow() {
@@ -5959,10 +6275,10 @@
                         step.branches = branches;
                     }
                     if (item.dataset.contributor) step.contributor = item.dataset.contributor;
-                    // Collect per-step systems (integrated in screen 7)
+                    // Collect per-step systems from tag array
                     const uid = item.dataset.stepUid;
-                    const rawSystems = document.getElementById('step_u' + uid + '_systems')?.value?.trim() || '';
-                    if (rawSystems) step.systems = rawSystems.split(',').map(s => s.trim()).filter(Boolean);
+                    const taggedSystems = _stepSystems['u' + uid] || [];
+                    if (taggedSystems.length > 0) step.systems = taggedSystems.slice();
                     steps.push(step);
                 }
             });
@@ -6018,6 +6334,16 @@
                 opt.textContent = `Handoff: ${processData.steps[i].name} \u2192 ${processData.steps[i + 1].name}`;
                 bottleneckSelect.appendChild(opt);
             }
+
+            // Wire reason radios to refresh insight card live
+            document.querySelectorAll('input[name="bottleneckReason"]').forEach(r => {
+                r.addEventListener('change', refreshInsight8);
+            });
+            const whyInput = document.getElementById('bottleneckWhy');
+            if (whyInput) whyInput.addEventListener('input', function() {
+                clearTimeout(whyInput._t);
+                whyInput._t = setTimeout(refreshInsight8, 400);
+            });
         }
 
         // ============================================================
@@ -6070,34 +6396,139 @@
             systemCount = items.length;
         }
 
-        function toggleStepSystems(uid) {
-            const body = document.getElementById('step_' + uid + '_systemsBody');
-            const btn = document.querySelector('#step_' + uid + '_systems_row .step-handoff-toggle');
-            if (!body || !btn) return;
-            body.classList.toggle('open');
-            btn.classList.toggle('open');
+        // ── Per-step tag-based systems ──────────────────────────────────
+
+        // Keyed by uid, value is array of system name strings
+        const _stepSystems = {};
+
+        function addStepSystem(uid) {
+            const input = document.getElementById('step_' + uid + '_sysInput');
+            if (!input) return;
+            const raw = input.value.trim().replace(/,$/, '');
+            if (!raw) return;
+            if (!_stepSystems[uid]) _stepSystems[uid] = [];
+            // Support comma-separated paste
+            raw.split(',').map(s => s.trim()).filter(Boolean).forEach(name => {
+                if (!_stepSystems[uid].some(s => s.toLowerCase() === name.toLowerCase())) {
+                    _stepSystems[uid].push(name);
+                }
+            });
+            input.value = '';
+            renderStepSystemTags(uid);
+            renderStepSystemSuggestions(uid);
         }
 
-        function updateStepSystemsBadge(uid) {
-            const val = (document.getElementById('step_' + uid + '_systems')?.value || '').trim();
-            const badge = document.getElementById('step_' + uid + '_systemsBadge');
-            if (!badge) return;
-            badge.textContent = val ? '✓ ' + val.split(',').filter(s => s.trim()).length + ' system(s)' : '';
+        function removeStepSystem(uid, name) {
+            if (!_stepSystems[uid]) return;
+            _stepSystems[uid] = _stepSystems[uid].filter(s => s.toLowerCase() !== name.toLowerCase());
+            renderStepSystemTags(uid);
+            renderStepSystemSuggestions(uid);
         }
+
+        function renderStepSystemTags(uid) {
+            const container = document.getElementById('step_' + uid + '_sysTags');
+            if (!container) return;
+            const systems = _stepSystems[uid] || [];
+            container.innerHTML = '';
+            systems.forEach(name => {
+                const tag = document.createElement('span');
+                tag.className = 'step-sys-tag';
+                tag.textContent = name + ' ';
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.title = 'Remove';
+                btn.innerHTML = '&times;';
+                btn.addEventListener('click', () => removeStepSystem(uid, name));
+                tag.appendChild(btn);
+                container.appendChild(tag);
+            });
+        }
+
+        function renderStepSystemSuggestions(uid) {
+            const container = document.getElementById('step_' + uid + '_sysSuggestions');
+            if (!container) return;
+            const used = (_stepSystems[uid] || []).map(s => s.toLowerCase());
+            const toShow = COMMON_SYSTEMS.filter(s => !used.includes(s.toLowerCase())).slice(0, 8);
+            container.innerHTML = '';
+            toShow.forEach(function(name) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'step-sys-chip';
+                btn.textContent = name;
+                btn.addEventListener('click', function() { quickAddStepSystem(uid, btn, name); });
+                container.appendChild(btn);
+            });
+        }
+
+        function quickAddStepSystem(uid, chipEl, name) {
+            if (!_stepSystems[uid]) _stepSystems[uid] = [];
+            if (!_stepSystems[uid].some(s => s.toLowerCase() === name.toLowerCase())) {
+                _stepSystems[uid].push(name);
+                renderStepSystemTags(uid);
+            }
+            chipEl.classList.add('used');
+        }
+
+        // Compact handoff method button selector (replaces radio group)
+        function selectHandoffMethod(uid, value, btn) {
+            // Update hidden radio
+            const radio = document.getElementById('shm_u' + uid + '_' + value);
+            if (radio) { radio.checked = true; }
+            // Update button states
+            const grid = document.getElementById('step_' + uid + '_methodGrid');
+            if (grid) grid.querySelectorAll('.handoff-method-btn').forEach(b => b.classList.remove('selected'));
+            if (btn) btn.classList.add('selected');
+            // Show text input only for "other"
+            const otherInput = document.getElementById('stepHandoffMethodOther_u' + uid);
+            if (otherInput) otherInput.style.display = value === 'other' ? 'block' : 'none';
+            updateHandoffStatus(uid);
+        }
+
+        function selectHandoffClarity(uid, value, btn) {
+            const radio = document.getElementById('shc_u' + uid + '_' + value);
+            if (radio) radio.checked = true;
+            const row = document.getElementById('step_' + uid + '_clarityRow');
+            if (row) row.querySelectorAll('.handoff-clarity-btn').forEach(b => b.classList.remove('selected'));
+            if (btn) btn.classList.add('selected');
+            updateHandoffStatus(uid);
+        }
+
+        // Enter in step name → focus next step name, or add a new step
+        function stepEnterKey(input) {
+            const item = input.closest('.list-item');
+            const list = document.getElementById('stepsList');
+            const items = Array.from(list.querySelectorAll('.list-item'));
+            const idx = items.indexOf(item);
+            if (idx >= 0 && idx < items.length - 1) {
+                // Focus next step's name input
+                const nextName = items[idx + 1].querySelector('input[type="text"]');
+                if (nextName) { nextName.focus(); nextName.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return; }
+            }
+            // Last step — add a new one
+            const newStep = addStep();
+            if (newStep) {
+                const newName = newStep.querySelector('input[type="text"]');
+                if (newName) { newName.focus(); newName.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+            }
+        }
+
+        // Legacy stubs (referenced in old import/restore code)
+        function toggleStepSystems(uid) {}
+        function updateStepSystemsBadge(uid) {}
 
         function collectSystems() {
-            // Derive systems from per-step system entries (screen 9 is removed from flow)
+            // Derive systems from per-step tag arrays (screen 9 removed from flow)
             const stepItems = document.querySelectorAll('#stepsList .list-item');
             const seen = new Set();
             const systems = [];
             stepItems.forEach(item => {
                 const uid = item.dataset.stepUid;
-                const raw = document.getElementById('step_u' + uid + '_systems')?.value?.trim() || '';
-                raw.split(',').forEach(s => {
-                    const name = s.trim();
-                    if (name && !seen.has(name.toLowerCase())) {
+                const tagged = _stepSystems['u' + uid] || [];
+                const stepName = item.querySelector('[id$="_name"]')?.value?.trim() || '';
+                tagged.forEach(name => {
+                    if (!seen.has(name.toLowerCase())) {
                         seen.add(name.toLowerCase());
-                        systems.push({ name, purpose: '', actions: [], step: item.querySelector('[id$="_name"]')?.value?.trim() || '' });
+                        systems.push({ name, purpose: '', actions: [], step: stepName });
                     }
                 });
             });
@@ -6328,6 +6759,8 @@
                 stepCount = 0;
                 _stepUid = 0;
                 systemCount = 0;
+                // Clear per-step systems for fresh process
+                Object.keys(_stepSystems).forEach(k => delete _stepSystems[k]);
                 document.getElementById('stepsList').innerHTML = '';
                 document.getElementById('systemsList').innerHTML = '';
                 goToScreen(1);
@@ -6846,7 +7279,7 @@
             return {
                 processes: processResults,
                 totalCost,
-                potentialSavings: totalCost * 0.5,
+                potentialSavings: totalCost * 0.3, // Conservative 30% baseline; displayed as range in UI
                 recommendations: generateRecommendations(processes),
                 analysisType: 'client-side'
             };
@@ -6855,52 +7288,130 @@
         function generateRecommendations(processes) {
             const recs = [];
             processes.forEach(p => {
-                // Handoff quality
-                const poorHandoffs = (p.handoffs || []).filter(h =>
-                    h.clarity === 'yes-multiple' || h.clarity === 'yes-major' || h.method === 'they-knew'
+                const steps = p.steps || [];
+                const handoffs = p.handoffs || [];
+                const systems = p.systems || [];
+                const approvals = p.approvals || [];
+                const knowledge = p.knowledge || {};
+
+                // ── Handoff quality ────────────────────────────────────
+                const confusedHandoffs = handoffs.filter(h =>
+                    h.clarity === 'yes-multiple' || h.clarity === 'yes-major'
                 );
-                if (poorHandoffs.length > 0) {
+                const informalHandoffs = handoffs.filter(h =>
+                    h.method === 'they-knew' || h.method === 'verbal'
+                );
+                if (confusedHandoffs.length > 0) {
+                    const examples = confusedHandoffs.slice(0, 2)
+                        .map(h => h.from?.name ? `"${h.from.name}"` : null).filter(Boolean);
+                    const exText = examples.length > 0 ? ` (at ${examples.join(', ')})` : '';
                     recs.push({
                         type: 'handoff',
                         process: p.processName,
-                        text: `${poorHandoffs.length} handoff(s) in "${p.processName}" show poor information transfer. Automating notifications and standardising handoff checklists could eliminate delays.`
+                        text: `${confusedHandoffs.length} handoff${confusedHandoffs.length > 1 ? 's' : ''} triggered repeated clarification${exText}. Define a "handoff-ready" checklist for these transitions so the receiving party has everything they need without asking back.`
+                    });
+                } else if (informalHandoffs.length > 0) {
+                    recs.push({
+                        type: 'handoff',
+                        process: p.processName,
+                        text: `${informalHandoffs.length} handoff${informalHandoffs.length > 1 ? 's' : ''} rely on verbal or assumed communication. Replace with a logged notification or task creation so there's always a record of when work transferred hands.`
                     });
                 }
 
-                // Systems integration
-                const copySystems = (p.systems || []).filter(s =>
-                    s.actions.includes('copy-in') || s.actions.includes('copy-out')
-                );
-                if (copySystems.length >= 2) {
+                // ── Multi-system integration ───────────────────────────
+                // Infer copy-paste risk from step-level systems: if adjacent steps use 
+                // different named systems, there's likely a manual data transfer between them
+                const stepsWithSystems = steps.filter(s => s.systems && s.systems.length > 0);
+                const allStepSystemNames = [...new Set(steps.flatMap(s => s.systems || []))];
+                if (allStepSystemNames.length >= 3) {
+                    // Check for adjacent steps using different systems (handoff between tools)
+                    let systemSwitches = 0;
+                    for (let i = 1; i < steps.length; i++) {
+                        const prevSys = steps[i-1].systems || [];
+                        const currSys = steps[i].systems || [];
+                        const overlap = prevSys.some(s => currSys.includes(s));
+                        if (prevSys.length > 0 && currSys.length > 0 && !overlap) systemSwitches++;
+                    }
+                    if (systemSwitches >= 2) {
+                        recs.push({
+                            type: 'integration',
+                            process: p.processName,
+                            text: `${allStepSystemNames.length} systems in use (${allStepSystemNames.slice(0, 3).join(', ')}${allStepSystemNames.length > 3 ? '...' : ''}) with ${systemSwitches} points where adjacent steps use entirely different tools. Each system switch is a likely manual copy-paste step — and a direct integration candidate.`
+                        });
+                    }
+                } else if (allStepSystemNames.length >= 2) {
                     recs.push({
                         type: 'integration',
                         process: p.processName,
-                        text: `${copySystems.length} systems in "${p.processName}" require manual data copying. Integration could save ${Math.round(copySystems.length * 15)} minutes per instance.`
+                        text: `${allStepSystemNames.join(' and ')} both appear in this process. If data moves between them manually, a direct integration would eliminate that step entirely.`
                     });
                 }
 
-                // Approval bottlenecks
-                const bureaucratic = (p.approvals || []).filter(a => a.assessment === 'too-tight' || a.assessment === 'bureaucratic');
+                // ── Approval bottlenecks ───────────────────────────────
+                const bureaucratic = approvals.filter(a =>
+                    a.assessment === 'too-tight' || a.assessment === 'bureaucratic'
+                );
                 if (bureaucratic.length > 0) {
+                    const names = bureaucratic.map(a => a.name).filter(Boolean);
                     recs.push({
                         type: 'approval',
                         process: p.processName,
-                        text: `${bureaucratic.length} approval point(s) in "${p.processName}" are overly restrictive. Consider pre-approval rules or delegation matrices.`
+                        text: `${bureaucratic.length} approval${bureaucratic.length > 1 ? 's' : ''}${names.length > 0 ? ' (' + names.slice(0, 2).join(', ') + ')' : ''} flagged as overly restrictive. Look at whether conditional auto-approval (e.g., below a value threshold, or for a repeat customer) could remove the bottleneck for the majority of cases.`
                     });
                 }
 
-                // Knowledge risk
-                if (p.knowledge.vacationImpact === 'stops' || p.knowledge.vacationImpact === 'slows-down') {
+                // ── Knowledge / key-person risk ────────────────────────
+                if (knowledge.vacationImpact === 'stops') {
                     recs.push({
                         type: 'knowledge',
                         process: p.processName,
-                        text: `"${p.processName}" has critical knowledge risk. Key person absence would ${p.knowledge.vacationImpact === 'stops' ? 'halt' : 'significantly slow'} operations. Document and cross-train urgently.`
+                        text: `This process stops completely if the key person is away. That's single-point-of-failure risk. The fix is documentation plus at least one cross-trained backup — not more people, just captured knowledge and a practiced handover.`
                     });
+                } else if (knowledge.vacationImpact === 'slows-down') {
+                    recs.push({
+                        type: 'knowledge',
+                        process: p.processName,
+                        text: `Performance degrades when the main person is unavailable. Documenting the non-obvious decisions (the things only they know to do) would protect throughput when they're out.`
+                    });
+                }
+
+                // ── Performance issues ─────────────────────────────────
+                if (p.performance === 'way-longer' && (p.issues || []).length > 0) {
+                    const issueLabels = {
+                        'approval-delay': 'approval delays', 'slow-response': 'slow responses',
+                        'missing-info': 'missing information', 'wrong-person': 'wrong initial assignment',
+                        'system-issues': 'system issues', 'unavailable': 'unavailability',
+                        'escalation': 'unexpected escalation', 'external': 'external dependencies',
+                        'rework': 'rework', 'unclear-process': 'process ambiguity'
+                    };
+                    const issueNames = (p.issues || []).map(i => issueLabels[i] || i).filter(Boolean);
+                    if (issueNames.length > 0) {
+                        recs.push({
+                            type: 'performance',
+                            process: p.processName,
+                            text: `This instance ran longer than normal due to: ${issueNames.join(', ')}. These aren't random — they're recurring patterns. Each one points to a specific process gap that can be addressed structurally rather than managed case-by-case.`
+                        });
+                    }
                 }
             });
 
-            if (recs.length === 0) {
-                recs.push({ type: 'general', process: 'Overall', text: 'Your processes show room for optimisation. A detailed discovery call will identify the highest-impact improvements.' });
+            if (recs.length === 0 && processes.length > 0) {
+                // Build a summary from what was actually mapped
+                const p0 = processes[0];
+                const steps0 = p0.steps || [];
+                const allSystems0 = [...new Set(steps0.flatMap(s => s.systems || []))];
+                const depts0 = [...new Set(steps0.map(s => s.department).filter(Boolean))];
+                let summaryText = '';
+                if (steps0.length > 0 || allSystems0.length > 0) {
+                    const summaryParts = [];
+                    if (steps0.length > 0) summaryParts.push(`${steps0.length} steps mapped`);
+                    if (allSystems0.length > 0) summaryParts.push(`${allSystems0.length} system${allSystems0.length > 1 ? 's' : ''} identified`);
+                    if (depts0.length > 0) summaryParts.push(`${depts0.length} team${depts0.length > 1 ? 's' : ''} involved`);
+                    summaryText = `Based on the data entered (${summaryParts.join(', ')}), no structural red flags surfaced — no informal handoffs, no repeated clarification cycles, no single-point-of-failure knowledge holders. That's a solid baseline. The next layer to examine would be time cost per step and whether any systems are creating hidden copy-paste work.`;
+                } else {
+                    summaryText = `No specific friction points surfaced — either the process runs smoothly at a structural level, or the step-level detail wasn't sufficient to detect issues. Adding more step granularity (8+ steps, with departments and systems) tends to surface the friction that stays invisible in high-level maps.`;
+                }
+                recs.push({ type: 'general', process: 'Overall', text: summaryText });
             }
 
             return recs;
@@ -6957,7 +7468,7 @@
 
             let html = `<div class="result-section">`;
             html += `<h3>Automation Readiness Score</h3>`;
-            html += `<p class="helper-text" style="margin-bottom:1.25rem;">How much of your current workflow could be automated or agent-assisted today.</p>`;
+            html += `<p class="helper-text" style="margin-bottom:1.25rem;">Steps classified by their automation pattern based on what each step does, how it's connected, and where friction was detected. <em>Pattern-based estimate — a deeper audit will refine this.</em></p>`;
 
             html += `<div class="score-ring-container">`;
 
@@ -6995,15 +7506,32 @@
 
             html += `</div></div>`; // close breakdown + container
 
-            // Contextual insight
+            // Contextual insight — built from actual counts, never mentions zero
             html += `<div style="margin-top:1.25rem;padding:1rem;background:linear-gradient(135deg,${scoreColor}11,${scoreColor}05);border-left:4px solid ${scoreColor};border-radius:var(--radius-sm);">`;
+            const insightParts = [];
             if (readinessScore >= 70) {
-                html += `<p style="margin:0;font-size:0.9rem;"><strong style="color:${scoreColor};">High automation potential.</strong> ${totalAutomatable} of ${totalSteps} steps can be improved. ${counts.simple > 0 ? counts.simple + ' step(s) are quick wins that can be automated this week with simple integrations.' : ''} ${counts.agent > 0 ? counts.agent + ' step(s) would benefit from an AI agent.' : ''}</p>`;
+                insightParts.push(`<strong style="color:${scoreColor};">High automation potential</strong> — ${totalAutomatable} of ${totalSteps} steps are candidates for improvement.`);
+                if (counts.simple > 0) insightParts.push(`${counts.simple} step${counts.simple > 1 ? 's' : ''} (S) can be automated with straightforward integrations — low cost, fast to build.`);
+                if (counts.agent > 0) insightParts.push(`${counts.agent} step${counts.agent > 1 ? 's' : ''} (A) would benefit from an AI agent that can handle context and variability.`);
+                if (counts['human-loop'] > 0) insightParts.push(`${counts['human-loop']} step${counts['human-loop'] > 1 ? 's' : ''} (H) suit an agent-assisted approach where a human reviews the outcome.`);
+                if (counts['multi-agent'] > 0) insightParts.push(`${counts['multi-agent']} step${counts['multi-agent'] > 1 ? 's' : ''} (M) involve cross-team coordination that would benefit from a multi-agent orchestration layer.`);
             } else if (readinessScore >= 40) {
-                html += `<p style="margin:0;font-size:0.9rem;"><strong style="color:${scoreColor};">Moderate automation potential.</strong> ${totalAutomatable} of ${totalSteps} steps have improvement opportunities. Focus on the ${counts.simple} simple automation(s) first for quick wins, then build toward agent-assisted workflows.</p>`;
+                insightParts.push(`<strong style="color:${scoreColor};">Moderate automation potential</strong> — ${totalAutomatable} of ${totalSteps} steps have clear improvement opportunities.`);
+                if (counts.simple > 0) {
+                    insightParts.push(`Start with the ${counts.simple} simple automation${counts.simple > 1 ? 's' : ''} (S) — these are rule-based, fast to implement, and demonstrate value quickly.`);
+                } else if (counts.agent > 0) {
+                    insightParts.push(`The ${counts.agent} agent-suitable step${counts.agent > 1 ? 's' : ''} (A) are the best starting point — they handle variability that simple rules can't.`);
+                }
+                if (counts['human-loop'] > 0 || counts['multi-agent'] > 0) {
+                    const complex = counts['human-loop'] + counts['multi-agent'];
+                    insightParts.push(`${complex} step${complex > 1 ? 's' : ''} involve decisions or cross-team coordination best tackled in a second phase once simpler automations are live.`);
+                }
             } else {
-                html += `<p style="margin:0;font-size:0.9rem;"><strong style="color:${scoreColor};">Process optimisation recommended first.</strong> ${totalAutomatable} of ${totalSteps} steps show automation potential. Before automating, consider simplifying the process - removing unnecessary steps and standardising handoffs will increase automation readiness.</p>`;
+                insightParts.push(`<strong style="color:${scoreColor};">Limited automation candidates</strong> — ${totalAutomatable} of ${totalSteps} steps match automation patterns, but the majority are complex or require human judgment.`);
+                insightParts.push(`The most valuable work here is likely process simplification: removing unnecessary steps and tightening handoffs before automating what remains.`);
+                if (totalAutomatable > 0) insightParts.push(`The ${totalAutomatable} candidate${totalAutomatable > 1 ? 's' : ''} that are flagged are still worth pursuing — small wins build confidence and free up time to tackle the harder work.`);
             }
+            html += `<p style="margin:0;font-size:0.9rem;line-height:1.55;">${insightParts.join(' ')}</p>`;
             html += `</div>`;
 
             html += `</div>`;
@@ -7065,7 +7593,11 @@
 
             let html = `<div class="result-section">`;
             html += `<h3>90-Day Implementation Roadmap</h3>`;
-            html += `<p class="helper-text" style="margin-bottom:0.75rem;">A phased approach starting with quick wins, progressing to intelligent automation. Estimated savings based on ${formatCurrency(totalAnnualCost || 0)} annual process cost.</p>`;
+            if (totalAnnualCost > 0) {
+                html += `<p class="helper-text" style="margin-bottom:0.75rem;">Steps classified by automation type, ordered by implementation effort. Savings distributed proportionally to phase complexity. Based on <strong>${formatCurrency(totalAnnualCost)}</strong> total annual process cost.</p>`;
+            } else {
+                html += `<p class="helper-text" style="margin-bottom:0.75rem;">Steps classified by automation type and ordered by implementation effort. Add cost data to see projected savings per phase.</p>`;
+            }
 
             // Phase cards
             html += `<div class="roadmap-phases">`;
@@ -7084,9 +7616,13 @@
 
                 html += `<div class="roadmap-phase-body">`;
                 phase.items.forEach(item => {
-                    html += `<div class="roadmap-item">`;
-                    html += `<span class="badge" style="background:${phase.color};">${k === 'quick' ? 'S' : k === 'agent' ? 'A' : k === 'human' ? 'H' : 'M'}</span>`;
-                    html += `<span><strong>${escSvg(item.step)}</strong></span>`;
+                    html += `<div class="roadmap-item" style="flex-direction:column;align-items:flex-start;gap:0.2rem;">`;
+                    html += `<div style="display:flex;align-items:center;gap:0.5rem;">`;
+                    html += `<span class="badge" style="background:${phase.color};flex-shrink:0;">${k === 'quick' ? 'S' : k === 'agent' ? 'A' : k === 'human' ? 'H' : 'M'}</span>`;
+                    html += `<strong style="font-size:0.88rem;">${escSvg(item.step)}</strong>`;
+                    if (item.process && processes.length > 1) html += `<span style="font-size:0.75rem;color:var(--text-light);margin-left:auto;">${escSvg(item.process)}</span>`;
+                    html += `</div>`;
+                    if (item.reason) html += `<div style="font-size:0.78rem;color:var(--text-mid);padding-left:1.6rem;line-height:1.4;">${escSvg(item.reason)}</div>`;
                     html += `</div>`;
                 });
 
@@ -7322,7 +7858,8 @@
                 .dep-edge { animation: depDash 2s linear infinite; }
                 .dep-node { cursor: pointer; transition: filter 0.25s ease, transform 0.25s cubic-bezier(0.16,1,0.3,1); transform-origin: center; transform-box: fill-box; animation: depNodeIn 0.5s cubic-bezier(0.16,1,0.3,1) both; }
                 .dep-node:hover { filter: url(#depGlow); transform: scale(1.04) translateY(-2px); }
-            </style>`;
+    
+        </style>`;
 
             // Draw edges (curved Bezier paths)
             processDependencies.forEach(dep => {
@@ -7477,8 +8014,9 @@
                         <div class="calculated-value" style="font-size: 2.2rem; color: var(--primary);">${formatCurrency(result.totalCost)}</div>
                     </div>
                     <div class="calculated success">
-                        <div class="calculated-label" style="font-weight: 600;">Potential Annual Savings (50% improvement):</div>
+                        <div class="calculated-label" style="font-weight: 600;">Potential Annual Savings (conservative estimate):</div>
                         <div class="calculated-value" style="font-size: 2rem;">${formatCurrency(result.potentialSavings)}</div>
+                        <div style="font-size:0.78rem;color:var(--text-mid);margin-top:0.3rem;">Based on a 20–50% efficiency improvement — typical range for organisations that address the issues surfaced in this analysis. Actual results depend on which improvements are implemented.</div>
                     </div>`, true);
             }
 
@@ -7512,7 +8050,8 @@
                 <p style="color: var(--text-mid); margin-top: 1rem;">Analysis sent to: <strong>${contact?.email || ''}</strong></p>`;
             }
 
-            analysisDiv.innerHTML = dsec('Observations', recBody) + dsec('Next Steps', nextBody);
+            const obsTitle = diagnosticMode === 'map-only' ? 'Process Map Observations' : 'Analysis & Recommendations';
+            analysisDiv.innerHTML = dsec(obsTitle, recBody) + dsec('Next Steps', nextBody);
 
             // Automation Readiness Score, Roadmap, ROI — only for comprehensive
             let scoreData, roadmapData;
@@ -7988,20 +8527,31 @@
             const container = document.getElementById('insightCard' + screenNum);
             if (!container) return;
 
-            let insight = null;
+            let parts = [];
 
-            switch (screenNum) {
-                case 5: insight = generateInsight5(); break;
-                case 7: insight = generateInsight7(); break;
-                case 8: insight = generateInsight8(); break;
+            if (screenNum === 5) {
+                const i5 = generateInsight5();
+                if (i5) parts.push(i5);
+            } else if (screenNum === 7) {
+                const i7 = generateInsight7();
+                if (i7) parts.push(i7);
+            } else if (screenNum === 8) {
+                // Handoff insight comes first (collected in populateScreen8)
+                const ih = generateHandoffInsight();
+                if (ih) parts.push(ih);
+                // Bottleneck insight (requires selections — will be empty on first load, refreshed live)
+                const i8 = generateInsight8();
+                if (i8) parts.push(i8);
             }
+
+            const insight = parts.join('<hr style="border:none;border-top:1px dashed var(--border);margin:0.75rem 0;">');
 
             if (!insight) { container.style.display = 'none'; return; }
 
             container.innerHTML = `
                 <div class="ai-insight-card">
                     <div class="insight-header">
-                        <span>&#9889;</span> AI Insight
+                        <span>&#9650;</span> Pattern Analysis
                     </div>
                     <div class="insight-body">${insight}</div>
                 </div>
@@ -8010,134 +8560,291 @@
         }
 
         function generateInsight5() {
+            // Always recalc from live DOM before reading — screen 5 may not have been submitted yet
+            recalcTimeFromRanges();
             const t = processData.userTime;
             if (!t || t.total <= 0) return null;
 
             const parts = [];
-            const waitPct = t.total > 0 ? Math.round((t.waiting / t.total) * 100) : 0;
-            const meetPct = t.total > 0 ? Math.round((t.meetings / t.total) * 100) : 0;
-            const emailPct = t.total > 0 ? Math.round((t.emails / t.total) * 100) : 0;
-            const execPct = t.total > 0 ? Math.round((t.execution / t.total) * 100) : 0;
+            const total = t.total;
+            const waitPct  = Math.round((t.waiting  / total) * 100);
+            const meetPct  = Math.round((t.meetings / total) * 100);
+            const emailPct = Math.round((t.emails   / total) * 100);
+            const execPct  = Math.round((t.execution / total) * 100);
+            const reworkPct = Math.round(((t.rework || 0) / total) * 100);
+            const overheadPct = 100 - execPct;
 
-            if (waitPct > 30) {
-                parts.push(`You spent <strong>${waitPct}%</strong> of your time waiting for others. In optimised processes, waiting time typically drops to 10-15% with automated notifications and SLA tracking.`);
-            }
-            if (meetPct > 25) {
-                parts.push(`<strong>${meetPct}%</strong> of your time went to meetings. Async handoffs and status dashboards can reduce coordination meetings by 40-60%.`);
-            }
-            if (emailPct > 25) {
-                parts.push(`<strong>${emailPct}%</strong> of your time was spent on email. Structured workflow tools with auto-notifications typically cut email coordination by 50-70%.`);
-            }
-            if (execPct < 30 && t.total > 2) {
-                parts.push(`Only <strong>${execPct}%</strong> of your time was actual execution. The rest is overhead. A strong signal that process automation could reclaim significant capacity.`);
+            // Waiting: only flag if meaningful share of total time AND enough total time to matter
+            if (waitPct >= 35 && total >= 2) {
+                const waitH = t.waiting.toFixed(1);
+                parts.push(`<strong>${waitPct}% of your time (${waitH}h) was spent waiting</strong> — not working. Waiting time this high usually means handoffs lack urgency signals. Automated notifications and deadline tracking can turn passive waiting into active chasing.`);
+            } else if (waitPct >= 20 && total >= 4) {
+                parts.push(`<strong>${waitPct}% waiting time</strong> accounts for ${t.waiting.toFixed(1)} hours in this single instance. At that rate, waiting is your second-largest time cost after execution — worth targeting with structured handoff protocols.`);
             }
 
-            if (parts.length === 0 && t.total > 5) {
-                parts.push(`You invested <strong>${t.total} hours</strong> in a single instance. At your process frequency, that's a meaningful time investment worth optimising.`);
+            // Meetings: flag when they dominate relative to execution
+            if (meetPct > emailPct && meetPct >= 25) {
+                parts.push(`<strong>Meetings consumed ${meetPct}% of the time</strong> in this process. When coordination time rivals or exceeds execution time, it's often a sign that status and decisions that could be async are pulling people into calls.`);
             }
 
-            return parts.length > 0 ? parts.join('<br style="margin-bottom:0.3rem;">') : null;
+            // Email: flag when it's the dominant coordination method
+            if (emailPct >= 25 && emailPct >= meetPct) {
+                parts.push(`<strong>${emailPct}% email/messaging overhead</strong> — ${t.emails.toFixed(1)}h spent on coordination messages. High email load in a process usually means there's no single source of truth. A shared workflow view or structured form can eliminate most of this back-and-forth.`);
+            }
+
+            // Execution ratio: the core health signal
+            if (execPct < 25 && total >= 3) {
+                parts.push(`Only <strong>${execPct}% of the time (${t.execution.toFixed(1)}h of ${total}h) was actual hands-on work</strong>. The other ${overheadPct}% is coordination, waiting, and rework overhead. Processes where less than a quarter of time is execution have the highest automation ROI.`);
+            }
+
+            // Rework: always worth flagging
+            if (reworkPct >= 15) {
+                parts.push(`<strong>${reworkPct}% rework</strong> (${(t.rework || 0).toFixed(1)}h). Rework time is pure waste — it means something was done, then done again. This points to unclear requirements, missing validation, or a handoff that didn't include the right context.`);
+            }
+
+            // Fallback: total time signal
+            if (parts.length === 0 && total >= 8) {
+                parts.push(`<strong>${total}h of people time in a single instance</strong>. That's a full working day or more of combined effort per run. Even modest improvements to how this process flows would compound meaningfully at scale.`);
+            }
+
+            // Positive confirmation when execution % is high and waste is low
+            if (parts.length === 0 && execPct >= 60 && total >= 2) {
+                parts.push(`<strong>${execPct}% of time was active execution</strong> — that's a healthy ratio. Most inefficient processes sit at 30–40% or lower. The remaining overhead (${overheadPct}%) is still worth reviewing, but this process doesn't have obvious time-waste at the surface level.`);
+            }
+
+            // Positive confirmation when no friction signals
+            if (parts.length === 0 && namedSteps.length >= 3) {
+                const msg = depts.length <= 2
+                    ? `This process stays within ${depts.length === 1 ? 'a single team' : '2 teams'} across ${namedSteps.length} steps — minimal handoff surface area. Processes that stay within one or two teams are the easiest to optimise and automate.`
+                    : `No major structural friction detected in the step pattern. That doesn't mean there's nothing to improve — it means the bottlenecks are more likely in time costs or tool friction than in the process map itself.`;
+                parts.push(msg);
+            }
+
+            return parts.length > 0 ? parts.join('<br style="margin-bottom:0.35rem;">') : null;
         }
 
         function generateInsight7() {
-            const steps = processData.steps || [];
+            const steps = collectSteps(); // use live DOM data for real-time insight
             if (steps.length < 3) return null;
 
             const parts = [];
-            const depts = [...new Set(steps.map(s => s.department).filter(Boolean))];
-            const handoffCount = steps.length - 1;
-            const extSteps = steps.filter(s => s.isExternal);
-            const intSteps = steps.filter(s => !s.isExternal);
+            const namedSteps = steps.filter(s => s.name);
+            const depts = [...new Set(namedSteps.map(s => s.department).filter(Boolean))];
+            const extSteps = namedSteps.filter(s => s.isExternal);
 
+            // Dept span: name the specific teams involved
             if (depts.length >= 3) {
-                parts.push(`Your process spans <strong>${depts.length} departments</strong> across ${steps.length} steps. Each department transition is a potential delay point. Cross-functional processes benefit most from orchestration automation.`);
+                const deptList = depts.slice(0, 5).join(', ') + (depts.length > 5 ? ' and more' : '');
+                parts.push(`This process touches <strong>${depts.length} teams</strong> (${deptList}) across ${namedSteps.length} steps. Every time work crosses a team boundary, there's a handoff — and handoffs are where delays accumulate. Processes spanning 3+ teams benefit the most from a shared workflow layer.`);
             }
 
-            if (steps.length > 10) {
-                parts.push(`With <strong>${steps.length} steps</strong>, this is a complex process. Research shows processes with 10+ steps have 3x more failure points than simpler ones. Consider whether any steps can be combined or eliminated.`);
+            // Step count complexity — qualified commentary, no fake citation
+            if (namedSteps.length >= 12) {
+                parts.push(`At <strong>${namedSteps.length} steps</strong>, this is a high-complexity process. Longer processes have more opportunities for steps to stall, get skipped, or be done out of sequence. It's worth checking whether any steps could be combined or removed entirely before optimising what's left.`);
+            } else if (namedSteps.length >= 7 && depts.length >= 3) {
+                parts.push(`<strong>${namedSteps.length} steps across ${depts.length} teams</strong> means there are at least ${depts.length - 1} handoff points where context needs to transfer cleanly. Each one is a potential friction point.`);
             }
 
-            // External party insights
+            // External handoffs: name what they are
             if (extSteps.length > 0) {
                 const extDepts = [...new Set(extSteps.map(s => s.department).filter(Boolean))];
-                parts.push(`<strong>${extSteps.length} of ${steps.length} steps involve external parties</strong> (${extDepts.join(', ')}). External handoffs are typically 2-5x slower than internal ones. These are prime candidates for automated tracking and SLA monitoring.`);
+                const extNames = extSteps.slice(0, 3).map(s => `"${s.name}"`).join(', ');
+                parts.push(`<strong>${extSteps.length} step${extSteps.length > 1 ? 's' : ''} involve external parties</strong>${extDepts.length > 0 ? ' (' + extDepts.join(', ') + ')' : ''}: ${extNames}${extSteps.length > 3 ? ' and more' : ''}. External handoffs can't be forced to move faster — but you can automate the chasing, track response times, and surface escalations before they become blockers.`);
             }
 
-            // Internal-to-external transitions (high-friction points)
+            // Internal ↔ external boundary crossings
             let intExtTransitions = 0;
-            for (let i = 1; i < steps.length; i++) {
-                if (steps[i].isExternal !== steps[i-1].isExternal) intExtTransitions++;
-            }
-            if (intExtTransitions >= 3) {
-                parts.push(`Your process crosses the <strong>internal/external boundary ${intExtTransitions} times</strong>. Each boundary crossing introduces communication latency, data format mismatches, and compliance checkpoints. An orchestration agent can bridge these gaps.`);
-            }
-
-            // Check for duplicate departments (back-and-forth)
-            let backAndForth = 0;
-            for (let i = 2; i < steps.length; i++) {
-                if (steps[i].department && steps[i].department === steps[i-2].department && steps[i].department !== steps[i-1].department) {
-                    backAndForth++;
+            const crossingStepNames = [];
+            for (let i = 1; i < namedSteps.length; i++) {
+                if (namedSteps[i].isExternal !== namedSteps[i-1].isExternal) {
+                    intExtTransitions++;
+                    crossingStepNames.push(`"${namedSteps[i].name}"`);
                 }
             }
-            if (backAndForth > 0) {
-                parts.push(`We spotted <strong>${backAndForth} back-and-forth handoff(s)</strong> between departments. Work bouncing between teams is a classic inefficiency that agents can eliminate by bridging the gap.`);
+            if (intExtTransitions >= 3) {
+                parts.push(`The process crosses the <strong>internal/external boundary ${intExtTransitions} times</strong> (at ${crossingStepNames.slice(0, 2).join(' and ')}${intExtTransitions > 2 ? ' and others' : ''}). Each crossing is a context switch — different tools, different response norms, different accountability. These are the most fragile points in the process.`);
             }
 
-            return parts.length > 0 ? parts.join('<br style="margin-bottom:0.3rem;">') : null;
+            // Back-and-forth: same dept appears separated by another (A→B→A pattern)
+            const bounceDepts = new Set();
+            for (let i = 2; i < namedSteps.length; i++) {
+                const d = namedSteps[i].department;
+                if (d && d !== '' && d === namedSteps[i-2].department && d !== namedSteps[i-1].department) {
+                    bounceDepts.add(d);
+                }
+            }
+            if (bounceDepts.size > 0) {
+                const bounceList = [...bounceDepts].join(', ');
+                parts.push(`<strong>${bounceList} appear${bounceDepts.size === 1 ? 's' : ''} more than once with other teams in between</strong> — a sign of back-and-forth. Work returning to a team it already visited usually means something wasn't resolved or ready the first time. Clarifying what "done" looks like at each step prevents the bounce.`);
+            }
+
+            // Systems per step signal (lower threshold — any 2+ unique systems in 1+ tagged steps)
+            const stepsWithSystems = namedSteps.filter(s => s.systems && s.systems.length > 0);
+            const allSystems = [...new Set(namedSteps.flatMap(s => s.systems || []))];
+            if (allSystems.length >= 2) {
+                // Check for adjacent steps with entirely different systems (copy-paste risk)
+                let switches = 0;
+                const switchPairs = [];
+                for (let i = 1; i < namedSteps.length; i++) {
+                    const prev = namedSteps[i-1].systems || [];
+                    const curr = namedSteps[i].systems || [];
+                    if (prev.length > 0 && curr.length > 0) {
+                        const overlap = prev.some(a => curr.map(b => b.toLowerCase()).includes(a.toLowerCase()));
+                        if (!overlap) {
+                            switches++;
+                            if (switchPairs.length < 2) switchPairs.push(`"${namedSteps[i-1].name}" → "${namedSteps[i].name}"`);
+                        }
+                    }
+                }
+                if (switches >= 2) {
+                    parts.push(`<strong>${switches} tool switches</strong> between adjacent steps (${switchPairs[0]}${switchPairs[1] ? ', ' + switchPairs[1] : ''}). Each time a step hands off to a step using a different system, someone likely copies data manually. That's not a process — it's a recurring integration gap. Each switch is a direct automation candidate.`);
+                } else {
+                    parts.push(`<strong>${allSystems.length} systems in use</strong> across this process (${allSystems.slice(0, 4).join(', ')}${allSystems.length > 4 ? '...' : ''}). Unless these talk to each other already, there's likely at least one manual copy-paste step hidden somewhere in the flow. That's where automation delivers fastest.`);
+                }
+            }
+
+            // Positive confirmation when no friction signals
+            if (parts.length === 0 && namedSteps.length >= 3) {
+                const msg = depts.length <= 2
+                    ? `This process stays within ${depts.length === 1 ? 'a single team' : '2 teams'} across ${namedSteps.length} steps — minimal handoff surface area. Processes that stay within one or two teams are the easiest to optimise and automate.`
+                    : `No major structural friction detected in the step pattern. That doesn't mean there's nothing to improve — it means the bottlenecks are more likely in time costs or tool friction than in the process map itself.`;
+                parts.push(msg);
+            }
+
+            return parts.length > 0 ? parts.join('<br style="margin-bottom:0.35rem;">') : null;
         }
 
         function generateHandoffInsight() {
             const handoffs = processData.handoffs || [];
+            const steps = processData.steps || [];
             if (handoffs.length === 0) return null;
 
             const parts = [];
-            const emailHandoffs = handoffs.filter(h => h.method === 'email').length;
-            const badHandoffs = handoffs.filter(h => h.clarity === 'yes-multiple' || h.clarity === 'yes-major').length;
-            const verbalHandoffs = handoffs.filter(h => h.method === 'verbal' || h.method === 'they-knew').length;
 
-            if (emailHandoffs > handoffs.length * 0.5) {
-                parts.push(`<strong>${emailHandoffs} of ${handoffs.length}</strong> handoffs use email. Email-based handoffs average <strong>3.2x longer</strong> delays than system-triggered transitions, because they depend on someone reading and acting on a message.`);
-            }
-            if (badHandoffs > 0) {
-                parts.push(`<strong>${badHandoffs} handoff(s)</strong> have clarity issues. Unclear handoffs are the #1 source of rework. They cause an average <strong>2-5 day delay</strong> per occurrence. Each one is a prime candidate for agent automation.`);
-            }
-            if (verbalHandoffs > 0) {
-                parts.push(`<strong>${verbalHandoffs} handoff(s)</strong> rely on verbal/informal communication. These are fragile. They break when people are sick, on holiday, or just busy. A simple notification automation eliminates this risk entirely.`);
-            }
-            if (parts.length === 0 && handoffs.length > 3) {
-                parts.push(`With <strong>${handoffs.length} handoff points</strong>, even small delays compound. If each handoff adds just 30 minutes of waiting, that's <strong>${Math.round(handoffs.length * 0.5)} hours</strong> of dead time per instance.`);
+            // Count email handoffs (actual values are 'email-details' and 'email-check')
+            const emailHandoffs = handoffs.filter(h => h.method === 'email-details' || h.method === 'email-check');
+            // Clarity problems: 2+ back-and-forth rounds
+            const badClarityHandoffs = handoffs.filter(h => h.clarity === 'yes-multiple' || h.clarity === 'yes-major');
+            // Informal / invisible handoffs (they-knew, verbal) are the most fragile
+            const informalHandoffs = handoffs.filter(h => h.method === 'verbal' || h.method === 'they-knew');
+
+            // Worst-case: a handoff that is BOTH informal AND caused clarification issues
+            const worstHandoffs = handoffs.filter(h =>
+                (h.method === 'verbal' || h.method === 'they-knew') &&
+                (h.clarity === 'yes-multiple' || h.clarity === 'yes-major')
+            );
+            if (worstHandoffs.length > 0) {
+                const wi = worstHandoffs[0];
+                const fromName = wi.from?.name || 'a step';
+                const toName = wi.to?.name || 'the next step';
+                parts.push(`The handoff from <strong>"${fromName}"</strong> to <strong>"${toName}"</strong> is your highest-friction point: it uses an informal channel <em>and</em> still needed multiple rounds of clarification. That combination means work leaves one person's hands without enough context to act on. A structured checklist or automated context-pass at this transition would eliminate the back-and-forth.`);
             }
 
-            return parts.length > 0 ? parts.join('<br style="margin-bottom:0.3rem;">') : null;
+            // Email as the dominant method
+            if (emailHandoffs.length > 0 && emailHandoffs.length >= handoffs.length * 0.5) {
+                const emailCheckCount = handoffs.filter(h => h.method === 'email-check').length;
+                if (emailCheckCount > 0) {
+                    parts.push(`<strong>${emailCheckCount} handoff${emailCheckCount > 1 ? 's' : ''} use "email to check the system"</strong> as the notification method. This is a weak signal — it depends on someone reading, understanding, and then switching to another tool. System-triggered push notifications or task creation are a direct replacement that removes the human relay entirely.`);
+                } else {
+                    parts.push(`<strong>${emailHandoffs.length} of ${handoffs.length} handoffs use email</strong>. Email works when the recipient reads it immediately; it fails when it sits. Processes that rely on email for handoffs are as fast as the slowest inbox. Even a simple task queue or notification in the team's existing tool is more reliable.`);
+                }
+            }
+
+            // Clarity issues — be specific about which handoffs
+            if (badClarityHandoffs.length > 0 && !worstHandoffs.some(w => badClarityHandoffs.includes(w))) {
+                const majorCount = handoffs.filter(h => h.clarity === 'yes-major').length;
+                if (majorCount > 0) {
+                    parts.push(`<strong>${majorCount} handoff${majorCount > 1 ? 's' : ''} triggered 4+ rounds of clarification</strong>. That's not a one-off; it's a sign that the handoff is missing something structural — a required field, a decision that needs to happen earlier, or a template that captures what the next person actually needs.`);
+                } else {
+                    parts.push(`<strong>${badClarityHandoffs.length} handoff${badClarityHandoffs.length > 1 ? 's' : ''} needed clarification</strong> after work was passed on. Each one is a round-trip: someone acts, discovers a gap, and asks back. Defining "handoff complete" criteria explicitly eliminates this cycle.`);
+                }
+            }
+
+            // Informal handoffs (no worst case already covered)
+            const uncoveredInformal = informalHandoffs.filter(h => !worstHandoffs.includes(h));
+            if (uncoveredInformal.length > 0) {
+                const theyKnewCount = uncoveredInformal.filter(h => h.method === 'they-knew').length;
+                if (theyKnewCount > 0) {
+                    parts.push(`<strong>${theyKnewCount} handoff${theyKnewCount > 1 ? 's' : ''} relied on the next person "just knowing" to check.</strong> This is invisible work — it only works if everyone's following an unwritten norm. When someone's new, busy, or away, it breaks silently with no one realising work has stalled.`);
+                } else {
+                    parts.push(`<strong>${uncoveredInformal.length} verbal/phone handoff${uncoveredInformal.length > 1 ? 's' : ''}</strong> in this process. Verbal handoffs don't leave a record — meaning there's no way to know if work was actually received, when it was received, or what was said. Even a one-line message log would turn an invisible transfer into a traceable one.`);
+                }
+            }
+
+            // Fallback: compound delay math — only when no specific issues
+            if (parts.length === 0 && handoffs.length >= 4) {
+                parts.push(`With <strong>${handoffs.length} handoffs</strong> in this process, delays don't have to be large to matter. Even a consistent 1-hour lag at each transition adds up to half a working day of dead time per instance — before anyone has done anything wrong.`);
+            }
+
+            // Positive confirmation when no friction signals
+            if (parts.length === 0 && namedSteps.length >= 3) {
+                const msg = depts.length <= 2
+                    ? `This process stays within ${depts.length === 1 ? 'a single team' : '2 teams'} across ${namedSteps.length} steps — minimal handoff surface area. Processes that stay within one or two teams are the easiest to optimise and automate.`
+                    : `No major structural friction detected in the step pattern. That doesn't mean there's nothing to improve — it means the bottlenecks are more likely in time costs or tool friction than in the process map itself.`;
+                parts.push(msg);
+            }
+
+            return parts.length > 0 ? parts.join('<br style="margin-bottom:0.35rem;">') : null;
         }
 
         function generateInsight8() {
-            const bn = processData.bottleneck;
-            if (!bn?.longestStep) return null;
+            // Read live from DOM — this screen is interactive and user may change selections
+            const longestStepVal = document.getElementById('longestStep')?.value || '';
+            const reason = getRadioValue('bottleneckReason') || '';
+            const whyText = document.getElementById('bottleneckWhy')?.value?.trim() || '';
+
+            if (!longestStepVal && !reason) return null;
 
             const parts = [];
-            const reason = bn.reason || '';
             const steps = processData.steps || [];
-            const bnIdx = parseInt(String(bn.longestStep).replace('step-', ''));
-            const bnStep = steps[bnIdx];
 
+            // longestStep select value is 'step-0', 'step-1' etc — parse the index
+            const bnIdx = longestStepVal ? parseInt(longestStepVal.replace('step-', '')) : -1;
+            const bnStep = (bnIdx >= 0 && bnIdx < steps.length) ? steps[bnIdx] : null;
+            const stepLabel = bnStep
+                ? `<strong>"${bnStep.name}"</strong>${bnStep.department ? ' (' + bnStep.department + ')' : ''}`
+                : (longestStepVal ? `<strong>Step ${bnIdx + 1}</strong>` : null);
+
+            // Lead with the specific step + reason combination
             if (reason === 'busy') {
-                parts.push(`The bottleneck is caused by <strong>competing priorities</strong>. This is the most common pattern. It means the work itself isn't complex, just deprioritised. An AI agent can auto-assign, escalate, and track SLAs to prevent this.`);
+                const prefix = stepLabel ? `${stepLabel} is stalling` : 'The bottleneck is';
+                parts.push(`${prefix} because <strong>someone's queue is too full</strong> — the work exists but isn't getting attention. This is the most common pattern. The fix isn't hiring more people; it's removing the daily decision about whether to act. Auto-assignment, SLA timers, and escalation rules mean work can't quietly sit waiting.`);
             } else if (reason === 'approvals') {
-                parts.push(`<strong>Multiple approvals</strong> are creating the bottleneck. Consider whether all approval levels are necessary, or if conditional auto-approval (e.g., under a threshold amount) could eliminate the delay entirely.`);
+                const prefix = stepLabel ? `${stepLabel} is blocked on` : 'The bottleneck is';
+                parts.push(`${prefix} <strong>approvals</strong>. The right question isn't "how do we speed up approvals" — it's "which approvals actually change the outcome?" Conditional auto-approval (below a threshold, or for a known customer) can eliminate the wait entirely for the majority of cases, leaving humans to handle only the genuine exceptions.`);
             } else if (reason === 'no-info') {
-                parts.push(`The bottleneck is <strong>missing information</strong>. An agent that pre-validates data completeness at the start of the process could catch this early. Moving the problem from a blocking delay to a 2-minute fix.`);
+                const prefix = stepLabel ? `${stepLabel} stalls because` : 'The bottleneck occurs because';
+                parts.push(`${prefix} <strong>information wasn't ready when work arrived</strong>. This is a sequencing problem — the handoff upstream is completing before it's actually complete. Defining what "ready to handoff" means, and enforcing it with a checklist, moves the problem from a blocking delay to a 2-minute upstream check.`);
             } else if (reason === 'external') {
-                parts.push(`An <strong>external dependency</strong> is causing the delay. While you can't control external parties, automated follow-up agents can chase responses at optimal intervals and escalate when SLAs are breached.`);
+                const prefix = stepLabel ? `${stepLabel} depends on` : 'The bottleneck involves';
+                parts.push(`${prefix} <strong>an external party</strong> — which means you can't force speed. But you can manage the wait: set explicit response expectations at handoff, automate follow-ups at defined intervals, and escalate automatically when deadlines slip. Passive waiting becomes active management.`);
             } else if (reason === 'unclear') {
-                parts.push(`The bottleneck stems from <strong>process ambiguity</strong>. This is a documentation and knowledge issue. An AI agent can surface the right procedure based on context, reducing decision paralysis.`);
+                const prefix = stepLabel ? `${stepLabel} stalls because` : 'The bottleneck occurs because';
+                parts.push(`${prefix} <strong>it's not clear what to do</strong>. That's a knowledge problem presenting as a process problem. Document the decision criteria once — who decides, on what basis, and what "done" looks like — and surface it at this exact point in the workflow. The per-instance confusion disappears.`);
+            } else if (stepLabel) {
+                parts.push(`${stepLabel} is your slowest step. Resolving the constraint at this single point would accelerate every instance of this process — it's the highest-leverage place to focus.`);
             }
 
-            if (bnStep && parts.length > 0) {
-                parts.push(`Step "${bnStep.name}" in ${bnStep.department || 'your team'} is the critical path constraint. Fixing this single point would accelerate every instance of this process.`);
+            // User's own description of the problem (if meaningful)
+            if (whyText.length > 15) {
+                parts.push(`You described it as: <em>"${whyText}"</em> — specific context like this is exactly what separates a useful fix from a generic one.`);
             }
 
-            return parts.length > 0 ? parts.join('<br style="margin-bottom:0.3rem;">') : null;
+            // Cross-reference bottleneck step with its handoff quality
+            if (bnIdx >= 0 && processData.handoffs) {
+                const ho = processData.handoffs[bnIdx];
+                if (ho && (ho.clarity === 'yes-multiple' || ho.clarity === 'yes-major')) {
+                    const toName = ho.to?.name ? `"${ho.to.name}"` : 'the next step';
+                    parts.push(`The handoff from this step to ${toName} also has clarity issues — meaning delays here don't just slow the step down, they send incomplete work forward too. Fixing the bottleneck and the handoff quality together removes two compounding problems at once.`);
+                }
+            }
+
+            return parts.length > 0 ? parts.join('<br style="margin-bottom:0.4rem;">') : null;
+        }
+
+        // Re-generate insight8 when user changes selections on screen 8
+        function refreshInsight8() {
+            showInsightCard(8);
         }
 
         // ============================================================
@@ -8410,7 +9117,18 @@
             const steps = process.steps || [];
             const handoff = handoffs[stepIdx];
             const prevHandoff = stepIdx > 0 ? handoffs[stepIdx - 1] : null;
-            const hasCopy = systems.some(s => (s.actions || []).some(a => a === 'copy-in' || a === 'copy-out'));
+
+            // hasCopy: true if multiple distinct systems are used across the process
+            // (systems.actions is always [] since systems now come from per-step tags,
+            //  so we infer copy risk from system diversity instead)
+            const allStepSystems = steps.flatMap(s => s.systems || []);
+            const uniqueSystems = new Set(allStepSystems.map(s => s.toLowerCase()));
+            // Also check adjacent step system switches (different tool = likely manual transfer)
+            const prevStepSystems = stepIdx > 0 ? (steps[stepIdx - 1]?.systems || []) : [];
+            const thisStepSystems = step.systems || [];
+            const adjacentSwitch = prevStepSystems.length > 0 && thisStepSystems.length > 0
+                && !prevStepSystems.some(s => thisStepSystems.map(x => x.toLowerCase()).includes(s.toLowerCase()));
+            const hasCopy = uniqueSystems.size >= 2 || adjacentSwitch;
 
             // Count how many departments this step touches (cross-dept context)
             const stepDept = step.department || 'Other';
@@ -8548,6 +9266,12 @@
             // Poor handoff within same department - simple routing fix
             if (hasBadHandoff && !crossesDepts) {
                 return { ...AUTOMATION_CATEGORIES.simple, reason: 'Handoff automation - automate with a queue/notification that pushes work to the next person' };
+            }
+
+            // Catch-all for unrecognised step names that still have a system switch
+            // (likely a manual data transfer step regardless of what it's called)
+            if (adjacentSwitch) {
+                return { ...AUTOMATION_CATEGORIES.simple, reason: 'System-to-system boundary — likely involves manual data transfer. API integration would eliminate this step.' };
             }
 
             return null;
@@ -11617,6 +12341,10 @@
                 if (upgradeLoaded) return;
             }
 
+            // Check for handover URL (?handover_v2= or ?handover=)
+            const handoverLoaded = await checkForHandoverUrl();
+            if (handoverLoaded) return;
+
             // Check for cloud resume link (?resume=xxx)
             const cloudResumed = await checkForCloudResume();
             if (cloudResumed) return;
@@ -11942,6 +12670,127 @@
                 console.warn('Upgrade mode failed:', err.message);
                 return false;
             }
+        }
+
+
+        // ── Handover URL param handler ────────────────────────────────
+        // Reads ?handover_v2= (gzip-compressed base64) or ?handover= (plain base64)
+        // Also checks ?hk= (localStorage key for same-device fallback)
+        async function decompressFromBase64(b64) {
+            try {
+                const binary = atob(b64);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                const ds = new DecompressionStream('gzip');
+                const writer = ds.writable.getWriter();
+                writer.write(bytes);
+                writer.close();
+                const chunks = [];
+                const reader = ds.readable.getReader();
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    chunks.push(value);
+                }
+                const total = chunks.reduce((a, b) => a + b.length, 0);
+                const merged = new Uint8Array(total);
+                let pos = 0;
+                for (const c of chunks) { merged.set(c, pos); pos += c.length; }
+                return new TextDecoder().decode(merged);
+            } catch (e) { return null; }
+        }
+
+        function restoreHandoverData(data) {
+            if (!data) return false;
+            try {
+                if (data.diagnosticMode) diagnosticMode = data.diagnosticMode;
+                if (data.teamMode) teamMode = data.teamMode;
+
+                processData = ensureProcessDataShape(data.processData) || createEmptyProcess();
+                completedProcesses = data.completedProcesses || [];
+
+                if (data.customDepartments && data.customDepartments.length > 0) {
+                    customDepartments.length = 0;
+                    data.customDepartments.forEach(d => customDepartments.push(d));
+                    renderCustomDeptTags();
+                    syncCustomDeptsToStepDropdowns();
+                }
+
+                if (processData.steps && processData.steps.length > 0) {
+                    rebuildStepsFromData(processData.steps, processData.handoffs || []);
+                }
+
+                restoreRadioSelections(processData);
+
+                const targetScreen = data.currentScreen || 7;
+                goToScreen(targetScreen);
+
+                // Show handover banner
+                if (data.handover) {
+                    _handoverData = data.handover;
+                    _currentContributor = '';
+                    const hb = document.getElementById('handoverBanner');
+                    if (hb) {
+                        const fromName = data.handover.from || 'A colleague';
+                        document.getElementById('handoverBannerTitle').textContent = fromName + ' shared this diagnostic with you';
+                        const contribList = (data.handover.contributors || []).filter(Boolean);
+                        let desc = 'Review the steps below and add any that are missing. You can drag to reorder or insert new steps anywhere.';
+                        if (contribList.length > 0) desc += ' Contributors so far: ' + contribList.join(', ') + '.';
+                        document.getElementById('handoverBannerDesc').textContent = desc;
+                        const noteEl = document.getElementById('handoverBannerNote');
+                        if (data.handover.note) {
+                            noteEl.textContent = '\u201c' + data.handover.note + '\u201d';
+                            noteEl.style.display = 'block';
+                        }
+                        hb.classList.add('show');
+                    }
+                }
+
+                // Clean URL
+                history.replaceState(null, '', location.pathname);
+                return true;
+            } catch (e) {
+                console.error('restoreHandoverData error:', e);
+                return false;
+            }
+        }
+
+        async function checkForHandoverUrl() {
+            const params = new URLSearchParams(location.search);
+
+            // Compressed variant (?handover_v2=)
+            const compressed = params.get('handover_v2');
+            if (compressed) {
+                const json = await decompressFromBase64(decodeURIComponent(compressed));
+                if (json) {
+                    try {
+                        return restoreHandoverData(JSON.parse(json));
+                    } catch (e) { /* fall through */ }
+                }
+            }
+
+            // Plain base64 variant (?handover=)
+            const plain = params.get('handover');
+            if (plain) {
+                try {
+                    const json = decodeURIComponent(escape(atob(decodeURIComponent(plain))));
+                    return restoreHandoverData(JSON.parse(json));
+                } catch (e) { /* fall through */ }
+            }
+
+            // Same-device localStorage fallback (?hk=)
+            const hk = params.get('hk');
+            if (hk) {
+                try {
+                    const stored = localStorage.getItem(hk);
+                    if (stored) {
+                        localStorage.removeItem(hk); // clean up
+                        return restoreHandoverData(JSON.parse(stored));
+                    }
+                } catch (e) { /* storage blocked */ }
+            }
+
+            return false;
         }
 
         async function checkForCloudResume() {
@@ -12304,6 +13153,80 @@
             document.getElementById('handoverModalOverlay').classList.remove('show');
         }
 
+        // ── Handover link generation ──────────────────────────────────
+        // Strategy: try server API first; if unavailable, build a self-contained
+        // URL using the browser's CompressionStream (halves payload) with base64
+        // fallback. The URL encodes only the fields needed for handover context.
+
+        async function compressToBase64(str) {
+            if (typeof CompressionStream === 'undefined') return null;
+            try {
+                const encoder = new TextEncoder();
+                const bytes = encoder.encode(str);
+                const cs = new CompressionStream('gzip');
+                const writer = cs.writable.getWriter();
+                writer.write(bytes);
+                writer.close();
+                const chunks = [];
+                const reader = cs.readable.getReader();
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    chunks.push(value);
+                }
+                const total = chunks.reduce((a, b) => a + b.length, 0);
+                const merged = new Uint8Array(total);
+                let pos = 0;
+                for (const chunk of chunks) { merged.set(chunk, pos); pos += chunk.length; }
+                // btoa needs latin1 — convert byte-by-byte
+                let binary = '';
+                for (let i = 0; i < merged.length; i++) binary += String.fromCharCode(merged[i]);
+                return btoa(binary);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function buildHandoverPayload(yourName, note, contributors) {
+            // Only encode what the receiver needs — strip large unused fields
+            const minimalProcessData = {
+                processName: processData.processName,
+                processType: processData.processType,
+                definition: processData.definition,
+                lastExample: processData.lastExample,
+                steps: (processData.steps || []).map(s => ({
+                    number: s.number,
+                    name: s.name,
+                    department: s.department,
+                    isExternal: s.isExternal,
+                    isDecision: s.isDecision,
+                    branches: s.branches,
+                    systems: s.systems,
+                    contributor: s.contributor
+                })),
+                handoffs: processData.handoffs,
+                customDepartments: customDepartments.slice(),
+                diagnosticMode: diagnosticMode || 'comprehensive',
+                teamMode: teamMode || false,
+                teamCode: processData.teamCode || null
+            };
+            return {
+                currentScreen: 7,
+                processData: minimalProcessData,
+                completedProcesses: completedProcesses.slice(),
+                customDepartments: customDepartments.slice(),
+                stepCount: typeof stepCount !== 'undefined' ? stepCount : 0,
+                teamMode: teamMode || false,
+                diagnosticMode: diagnosticMode || 'comprehensive',
+                handover: {
+                    from: yourName || 'A colleague',
+                    note: note,
+                    contributors: contributors,
+                    timestamp: new Date().toISOString()
+                }
+            };
+        }
+
         async function saveAndHandover() {
             const btn = document.getElementById('handoverSaveBtn');
             const yourName = document.getElementById('handoverYourName').value.trim();
@@ -12311,11 +13234,12 @@
             const colleagueEmail = document.getElementById('handoverColleagueEmail').value.trim();
 
             btn.disabled = true;
-            btn.textContent = 'Saving...';
+            btn.textContent = 'Generating link...';
 
             try {
                 collectAllProcessData();
 
+                // Tag existing steps with contributor name
                 if (yourName) {
                     _currentContributor = yourName;
                     document.querySelectorAll('#stepsList .list-item').forEach(item => {
@@ -12334,74 +13258,95 @@
                 const contributors = _handoverData ? [...(_handoverData.contributors || [])] : [];
                 if (yourName && !contributors.includes(yourName)) contributors.push(yourName);
 
-                const body = {
-                    email: colleagueEmail || null,
-                    progressData: {
-                        currentScreen: 7,
-                        processData,
-                        completedProcesses,
-                        customDepartments,
-                        stepCount: typeof stepCount !== 'undefined' ? stepCount : 0,
-                        teamMode: teamMode || null,
-                        diagnosticMode: diagnosticMode || 'comprehensive',
-                        handover: {
-                            from: yourName || 'A colleague',
-                            note: note,
-                            contributors: contributors,
-                            timestamp: new Date().toISOString()
-                        }
-                    },
-                    currentScreen: 7,
-                    processName: processData.processName || ''
-                };
-
-                if (cloudProgressId) {
-                    body.progressId = cloudProgressId;
-                }
+                const progressData_snapshot = buildHandoverPayload(yourName, note, contributors);
 
                 let resumeUrl = null;
 
+                // ── 1. Try server API ───────────────────────────────────
                 try {
                     const resp = await fetch('/api/progress', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(body)
+                        body: JSON.stringify({
+                            email: colleagueEmail || null,
+                            progressData: progressData_snapshot,
+                            currentScreen: 7,
+                            processName: processData.processName || ''
+                        })
                     });
-                    const result = await resp.json();
-                    if (resp.ok && result.success && result.resumeUrl) {
-                        resumeUrl = result.resumeUrl;
-                        cloudProgressId = result.progressId;
+                    if (resp.ok) {
+                        const result = await resp.json();
+                        if (result.success && result.resumeUrl) {
+                            resumeUrl = result.resumeUrl;
+                            cloudProgressId = result.progressId;
+                        }
                     }
                 } catch (apiErr) {
-                    console.warn('API unavailable, falling back to local link:', apiErr);
+                    // Expected when running without server — proceed to URL encoding
                 }
 
-                // Fallback: encode progress into URL hash if API didn't return a link
+                // ── 2. Encode into URL (compressed if available) ────────
                 if (!resumeUrl) {
-                    try {
-                        const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(body.progressData))));
-                        resumeUrl = window.location.origin + window.location.pathname + '#resume=' + encoded;
-                    } catch (encErr) {
-                        resumeUrl = window.location.href;
+                    const json = JSON.stringify(progressData_snapshot);
+
+                    // Try compressed first (gzip via CompressionStream)
+                    const compressed = await compressToBase64(json);
+                    const base = window.location.origin + window.location.pathname;
+
+                    if (compressed) {
+                        // Use ?handover=COMPRESSED (param, not hash — easier to share)
+                        resumeUrl = base + '?handover_v2=' + encodeURIComponent(compressed);
+                    } else {
+                        // Plain base64 fallback
+                        try {
+                            const encoded = btoa(unescape(encodeURIComponent(json)));
+                            resumeUrl = base + '?handover=' + encodeURIComponent(encoded);
+                        } catch (e) {
+                            resumeUrl = base;
+                        }
                     }
+
+                    // Also store in localStorage as a backup (same-device scenario)
+                    const localKey = 'handover_' + Date.now();
+                    try {
+                        localStorage.setItem(localKey, json);
+                        // Append key to URL for same-device fallback
+                        resumeUrl += '&hk=' + localKey;
+                    } catch (lsErr) { /* storage full or blocked */ }
                 }
 
-                const form = document.getElementById('handoverModalForm');
-                const success = document.getElementById('handoverModalSuccess');
+                // ── 3. Show success UI ─────────────────────────────────
+                const formEl = document.getElementById('handoverModalForm');
+                const successEl = document.getElementById('handoverModalSuccess');
                 const linkBox = document.getElementById('handoverLinkBox');
 
-                form.style.display = 'none';
-                success.style.display = 'block';
+                formEl.style.display = 'none';
+                successEl.style.display = 'block';
                 linkBox.classList.add('show');
 
-                document.getElementById('handoverLinkInput').value = resumeUrl;
+                const linkInput = document.getElementById('handoverLinkInput');
+                linkInput.value = resumeUrl;
+
+                // Wire share buttons
+                const processName = processData.processName || 'a process diagnostic';
+                const msgText = (yourName ? yourName + ' has shared' : 'Someone shared') + ' a process diagnostic with you: ' + processName + '. Click the link to add your steps.';
+                const waBtn = document.getElementById('handoverWhatsAppBtn');
+                if (waBtn) waBtn.href = 'https://wa.me/?text=' + encodeURIComponent(msgText + '\n\n' + resumeUrl);
+                const emailBtn = document.getElementById('handoverEmailShareBtn');
+                if (emailBtn) {
+                    const subject = 'Process diagnostic: ' + processName;
+                    const body = msgText + '\n\nOpen the link below to add your steps:\n' + resumeUrl;
+                    emailBtn.href = colleagueEmail
+                        ? 'mailto:' + encodeURIComponent(colleagueEmail) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body)
+                        : 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+                }
 
                 if (colleagueEmail) {
                     document.getElementById('handoverSuccessMsg').textContent =
-                        'A link has been sent to ' + colleagueEmail + '. They can add their steps and hand over to the next person.';
+                        'Link ready. Use the Email button below to open a draft to ' + colleagueEmail + ', or copy the link to share any other way.';
                 } else {
                     document.getElementById('handoverSuccessMsg').textContent =
-                        'Copy the link below and send it to your colleague.';
+                        'Your progress has been saved. Share this link with your colleague — they can add their steps and hand over to the next person.';
                 }
 
             } catch (err) {
@@ -12598,4 +13543,22 @@
             <div class="save-modal-link-box" id="handoverLinkBox">
                 <label>Share this link with your colleague</label>
                 <div class="save-modal-link-row">
-                    <input type="text" id="handoverLinkIn
+                    <input type="text" id="handoverLinkInput" readonly onclick="this.select()" style="font-size:0.82rem;">
+                    <button onclick="copyHandoverLink()">Copy</button>
+                </div>
+                <div style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+                    <button class="button button-secondary" style="flex:1;font-size:0.83rem;padding:0.5rem 0.75rem;" onclick="closeHandoverModal()">Done</button>
+                    <a id="handoverWhatsAppBtn" href="#" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;gap:0.4rem;padding:0.5rem 0.75rem;background:#25D366;color:white;border-radius:var(--radius-sm);font-size:0.83rem;text-decoration:none;font-family:inherit;font-weight:500;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.118 1.532 5.845L.062 23.938l6.306-1.538A11.929 11.929 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.894 0-3.669-.505-5.203-1.388l-.374-.22-3.862.943.976-3.742-.242-.388A9.986 9.986 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+                        WhatsApp
+                    </a>
+                    <a id="handoverEmailShareBtn" href="#" style="flex:1;display:flex;align-items:center;justify-content:center;gap:0.4rem;padding:0.5rem 0.75rem;background:var(--accent);color:white;border-radius:var(--radius-sm);font-size:0.83rem;text-decoration:none;font-family:inherit;font-weight:500;">
+                        ✉ Email
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
