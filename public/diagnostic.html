@@ -6694,6 +6694,18 @@
                 return;
             }
 
+            // Ensure current processData is collected and in completedProcesses.
+            // Map-only skips screen 16 (handleProcessComplete) so completedProcesses
+            // may be empty. Comprehensive also benefits from a final collect pass.
+            collectAllProcessData();
+            if (completedProcesses.length === 0) {
+                // First (and only) process — push a snapshot
+                completedProcesses.push(JSON.parse(JSON.stringify(processData)));
+            } else {
+                // Update the last entry with freshly collected data (handles edits)
+                completedProcesses[completedProcesses.length - 1] = JSON.parse(JSON.stringify(processData));
+            }
+
             const contact = {
                 name,
                 email,
@@ -6810,6 +6822,12 @@
                 const annualCost = costs.totalAnnualCost ?? p.annualCost ?? 0;
                 totalCost += annualCost;
                 const quality = calculateProcessQuality(p);
+                // Derive unique departments from steps
+                const deptSet = new Set();
+                (p.steps || []).forEach(s => { if (s.department) deptSet.add(s.department); });
+                const departments = Array.from(deptSet);
+                // Count handoffs
+                const handoffCount = (p.handoffs || []).length;
                 return {
                     name: p.processName || 'Process',
                     elapsedDays: p.lastExample?.elapsedDays ?? p.elapsedDays ?? 0,
@@ -6817,6 +6835,8 @@
                     annualInstances: p.frequency?.annual ?? p.annualInstances ?? 12,
                     teamSize: costs.teamSize ?? p.teamSize ?? 1,
                     stepsCount: (p.steps || []).length,
+                    handoffCount,
+                    departments,
                     quality,
                     bottleneck: p.bottleneck || {},
                     priority: p.priority || {}
@@ -7549,8 +7569,8 @@
             var name = (contact && contact.name) ? encodeURIComponent(contact.name) : '';
             btnGroup.innerHTML =
                 // ── Primary action: email the report (free, no account) ──
-                '<button class="button button-primary" onclick="emailDiagnosticReport()" style="width:100%; margin-bottom:0.75rem;">' +
-                    '<span id="emailBtnText2">&#9993;&nbsp; Email My Process Map Report</span>' +
+                '<button class="button button-primary" id="emailReportBtn" onclick="emailDiagnosticReport()" style="width:100%; margin-bottom:0.75rem;">' +
+                    '<span id="emailBtnText">&#9993;&nbsp; Email My Process Map Report</span>' +
                 '</button>' +
                 // ── Gate: sign up to view again ──
                 '<div style="border: 1.5px solid rgba(61,142,166,0.3); border-radius: var(--radius-md); padding: 1.25rem 1.5rem; text-align: center; margin-top: 0.5rem;">' +
@@ -7579,7 +7599,7 @@
                 { id: 'automationScoreSection', title: 'Automation Readiness Score', open: false },
                 { id: 'roadmapSection', title: '90-Day Transformation Roadmap', open: false },
                 { id: 'roiCalculator', title: 'ROI Projection Calculator', open: false },
-                { id: 'flowDiagramSection', title: 'Process Flow Diagrams', open: false }
+                { id: 'flowDiagramSection', title: 'Process Flow Diagrams', open: true }
             ];
 
             wrappable.forEach(({ id, title, open }) => {
@@ -8266,7 +8286,14 @@
             const container = document.getElementById('flowDiagramsContainer');
             const errorDiv = document.getElementById('flowDiagramError');
 
+            // Show the section and its collapsible wrapper if already wrapped
             section.style.display = 'block';
+            const wrapper = section.closest('.collapsible');
+            if (wrapper) {
+                wrapper.classList.remove('collapsed');
+                const btn = wrapper.querySelector('.collapse-btn');
+                if (btn) btn.textContent = '-';
+            }
             loading.style.display = 'block';
             container.style.display = 'none';
             errorDiv.style.display = 'none';
@@ -10260,16 +10287,16 @@
             const btn = document.getElementById('emailReportBtn');
             const btnText = document.getElementById('emailBtnText');
             const confirmation = document.getElementById('emailSentConfirmation');
-            btn.disabled = true;
-            btnText.textContent = 'Generating report...';
+            if (btn) btn.disabled = true;
+            if (btnText) btnText.textContent = 'Generating report...';
 
             try {
-                btnText.textContent = 'Sending report...';
+                if (btnText) btnText.textContent = 'Sending report...';
                 const contact = lastContact || {};
                 const result = lastResult || {};
 
                 if (window._autoSavedReportId) {
-                    btnText.innerHTML = '&#10003; Report Saved!';
+                    if (btnText) btnText.innerHTML = '&#10003; Report Saved!';
                     btn.style.background = 'linear-gradient(135deg, #16a34a, #15803d)';
                     confirmation.style.display = 'block';
                     const confText = document.getElementById('emailConfirmText');
