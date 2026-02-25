@@ -1,15 +1,28 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 export default function PortalAuth({ supabase, onAuthenticated, mode: initialMode }) {
-  const [mode, setMode] = useState(initialMode || 'login');
+  const searchParams = useSearchParams();
+
+  // Resolve initial mode: prop > ?mode= URL param > 'login'
+  const urlMode = searchParams?.get('mode');
+  const resolvedInitialMode = initialMode || (urlMode === 'signup' ? 'signup' : urlMode === 'forgot' ? 'forgot' : 'login');
+
+  const [mode, setMode] = useState(resolvedInitialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Pre-fill email from ?email= URL param (passed from diagnostic gate)
+  useEffect(() => {
+    const urlEmail = searchParams?.get('email');
+    if (urlEmail) setEmail(decodeURIComponent(urlEmail));
+  }, [searchParams]);
 
   const showError = (msg) => { setError(msg); setSuccess(''); };
 
@@ -39,7 +52,7 @@ export default function PortalAuth({ supabase, onAuthenticated, mode: initialMod
         const { data, error: err } = await supabase.auth.signUp({ email, password });
         if (err) throw err;
         if (data.user) onAuthenticated(data.user);
-        else showError('Check your email for a confirmation link.');
+        else setSuccess('Check your email for a confirmation link.');
       } else { onAuthenticated({ email }); }
     } catch (err) { showError(err.message || 'Sign up failed.'); }
     finally { setLoading(false); }
@@ -116,10 +129,11 @@ export default function PortalAuth({ supabase, onAuthenticated, mode: initialMod
       <h2>{mode === 'signup' ? 'Create Account' : 'Sign In'}</h2>
       <p className="auth-subtitle">
         {mode === 'signup'
-          ? 'Sign up to access your client login. Use the same email from your diagnostic.'
+          ? 'Sign up to access your client portal. Use the same email from your diagnostic.'
           : 'Access your diagnostic reports and track implementation progress.'}
       </p>
       {error && <div className="auth-error show">{error}</div>}
+      {success && <div className="auth-success show">{success}</div>}
       <form onSubmit={mode === 'signup' ? handleSignUp : handleSignIn}>
         <input type="email" className="auth-input" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} />
         <input type="password" className="auth-input" placeholder={mode === 'signup' ? 'Password (min 6 characters)' : 'Password'} value={password} onChange={(e) => setPassword(e.target.value)} />
