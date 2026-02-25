@@ -7534,6 +7534,31 @@
             html += `<p style="margin:0;font-size:0.9rem;line-height:1.55;">${insightParts.join(' ')}</p>`;
             html += `</div>`;
 
+            // Step-level breakdown — list every classified step with its reason
+            // This is the "rich" output the map-only user needs to see
+            const classifiedSteps = [];
+            processes.forEach(p => {
+                (p.steps || []).forEach((s, i) => {
+                    const auto = classifyAutomation(s, i, p);
+                    if (auto) classifiedSteps.push({ step: s.name, dept: s.department || '', ...auto, process: p.processName });
+                });
+            });
+
+            if (classifiedSteps.length > 0) {
+                html += `<div style="margin-top:1.25rem;">`;
+                html += `<p style="font-size:0.83rem;font-weight:600;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.6rem;">Step-by-step classification</p>`;
+                html += `<div style="display:flex;flex-direction:column;gap:0.4rem;">`;
+                classifiedSteps.forEach(cs => {
+                    html += `<div style="display:flex;align-items:flex-start;gap:0.6rem;padding:0.6rem 0.75rem;background:var(--bg-alt);border-radius:var(--radius-sm);border-left:3px solid ${cs.color};">`;
+                    html += `<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:${cs.color};color:white;font-size:0.72rem;font-weight:700;flex-shrink:0;">${cs.badge}</span>`;
+                    html += `<div>`;
+                    html += `<div style="font-size:0.88rem;font-weight:600;color:var(--text);">${cs.step}${cs.dept ? `<span style="font-weight:400;color:var(--text-light);"> · ${cs.dept}</span>` : ''}</div>`;
+                    html += `<div style="font-size:0.78rem;color:var(--text-mid);margin-top:0.15rem;">${cs.reason}</div>`;
+                    html += `</div></div>`;
+                });
+                html += `</div></div>`;
+            }
+
             html += `</div>`;
 
             section.innerHTML = html;
@@ -7947,6 +7972,254 @@
             </div>`;
         }
 
+
+        // ============================================================
+        // MAP-ONLY OBSERVATIONS — rich analysis from step/handoff data
+        // ============================================================
+        function buildMapObservations(processes, result) {
+            if (!processes || processes.length === 0) {
+                return '<p style="color:var(--text-mid);">No process data to analyse.</p>';
+            }
+
+            const sections = [];
+
+            processes.forEach(p => {
+                const steps = p.steps || [];
+                const handoffs = p.handoffs || [];
+                const namedSteps = steps.filter(s => s.name && s.name.trim());
+                const allSystems = [...new Set(namedSteps.flatMap(s => s.systems || []))];
+                const depts = [...new Set(namedSteps.map(s => s.department).filter(Boolean))];
+                const extSteps = namedSteps.filter(s => s.isExternal);
+                const decisionSteps = namedSteps.filter(s => s.isDecision);
+
+                const pLabel = processes.length > 1 ? `<strong>${p.processName}</strong>: ` : '';
+
+                // ── A. Structure analysis ──────────────────────────────
+                const structureItems = [];
+
+                // Step count + complexity signal
+                if (namedSteps.length >= 12) {
+                    structureItems.push({
+                        icon: '⚠', color: '#d97706',
+                        text: `${pLabel}<strong>${namedSteps.length} steps</strong> — high complexity. Processes this long are harder to train, harder to hand over, and have more places where something can go wrong. Worth auditing whether every step is strictly necessary before optimising anything else.`
+                    });
+                } else if (namedSteps.length >= 7) {
+                    structureItems.push({
+                        icon: '✓', color: '#059669',
+                        text: `${pLabel}<strong>${namedSteps.length} steps</strong> documented — well-scoped process with good visibility.`
+                    });
+                } else if (namedSteps.length > 0) {
+                    structureItems.push({
+                        icon: '↑', color: '#0891b2',
+                        text: `${pLabel}<strong>${namedSteps.length} steps</strong> captured. Adding more detail (8+ named steps) will surface friction points that high-level maps miss.`
+                    });
+                }
+
+                // Team span
+                if (depts.length >= 4) {
+                    structureItems.push({
+                        icon: '⚠', color: '#d97706',
+                        text: `${pLabel}Spans <strong>${depts.length} teams</strong> (${depts.join(', ')}). Processes crossing 4+ team boundaries have a high coordination overhead — each boundary is a potential handoff delay and a place where context gets lost.`
+                    });
+                } else if (depts.length >= 2) {
+                    structureItems.push({
+                        icon: '◉', color: '#0891b2',
+                        text: `${pLabel}Involves <strong>${depts.length} teams</strong>: ${depts.join(', ')}. There are ${depts.length - 1} internal handoff point${depts.length - 1 > 1 ? 's' : ''} where work transitions between teams — each one worth explicitly defining.`
+                    });
+                } else if (depts.length === 1) {
+                    structureItems.push({
+                        icon: '✓', color: '#059669',
+                        text: `${pLabel}Process stays within a <strong>single team</strong> (${depts[0]}). Minimal coordination overhead — the fastest type of process to improve and automate.`
+                    });
+                }
+
+                // Decision points
+                if (decisionSteps.length > 0) {
+                    const decNames = decisionSteps.slice(0, 3).map(s => `"${s.name}"`).join(', ');
+                    structureItems.push({
+                        icon: '◆', color: '#7c3aed',
+                        text: `${pLabel}<strong>${decisionSteps.length} decision point${decisionSteps.length > 1 ? 's' : ''}</strong> (${decNames}${decisionSteps.length > 3 ? '…' : ''}). Each branch adds a parallel path that needs to be tested, trained on, and tracked. Documenting the criteria for each decision prevents reliance on tribal knowledge.`
+                    });
+                }
+
+                // External parties
+                if (extSteps.length > 0) {
+                    const extDepts = [...new Set(extSteps.map(s => s.department).filter(Boolean))];
+                    structureItems.push({
+                        icon: '↔', color: '#ea580c',
+                        text: `${pLabel}<strong>${extSteps.length} step${extSteps.length > 1 ? 's' : ''} involve external parties</strong>${extDepts.length > 0 ? ' (' + extDepts.join(', ') + ')' : ''}. External handoffs are outside your control — you can't speed them up directly, but you can automate the follow-up, set explicit response expectations, and escalate automatically when deadlines slip.`
+                    });
+                }
+
+                // Back-and-forth detection (A→B→A dept pattern)
+                const bounceDepts = new Set();
+                for (let i = 2; i < namedSteps.length; i++) {
+                    const d = namedSteps[i].department;
+                    if (d && d === namedSteps[i-2].department && d !== namedSteps[i-1].department) {
+                        bounceDepts.add(d);
+                    }
+                }
+                if (bounceDepts.size > 0) {
+                    structureItems.push({
+                        icon: '↩', color: '#be185d',
+                        text: `${pLabel}<strong>Back-and-forth detected</strong> — ${[...bounceDepts].join(', ')} appear${bounceDepts.size === 1 ? 's' : ''} multiple times with other teams in between. Work returning to a team it already visited usually signals an incomplete handoff the first time. Defining "done" criteria at each exit point prevents the round-trip.`
+                    });
+                }
+
+                if (structureItems.length > 0) {
+                    sections.push({
+                        title: 'Process Structure',
+                        icon: '🗺',
+                        items: structureItems
+                    });
+                }
+
+                // ── B. Handoff quality ─────────────────────────────────
+                if (handoffs.length > 0) {
+                    const handoffItems = [];
+
+                    const formalMethods = handoffs.filter(h => h.method && !['verbal','they-knew'].includes(h.method));
+                    const informalHandoffs = handoffs.filter(h => h.method === 'verbal' || h.method === 'they-knew');
+                    const emailHandoffs = handoffs.filter(h => h.method === 'email-details' || h.method === 'email-check');
+                    const clarityIssues = handoffs.filter(h => h.clarity === 'yes-multiple' || h.clarity === 'yes-major');
+                    const cleanHandoffs = handoffs.filter(h => h.clarity === 'no');
+
+                    if (clarityIssues.length > 0) {
+                        const names = clarityIssues.slice(0,2).map(h => h.from?.name ? `"${h.from.name}"` : null).filter(Boolean);
+                        const majorCount = handoffs.filter(h => h.clarity === 'yes-major').length;
+                        handoffItems.push({
+                            icon: '⚠', color: '#d97706',
+                            text: `<strong>${clarityIssues.length} handoff${clarityIssues.length > 1 ? 's' : ''} triggered clarification rounds</strong>${names.length ? ' (at ' + names.join(', ') + ')' : ''}${majorCount > 0 ? ` — ${majorCount} required 4+ rounds` : ''}. Each clarification round is a round-trip delay. The fix is explicit "handoff-ready" criteria: a short checklist of what the receiving party needs before work transfers.`
+                        });
+                    }
+
+                    if (informalHandoffs.length > 0) {
+                        const theyKnew = handoffs.filter(h => h.method === 'they-knew').length;
+                        if (theyKnew > 0) {
+                            handoffItems.push({
+                                icon: '⚠', color: '#d97706',
+                                text: `<strong>${theyKnew} handoff${theyKnew > 1 ? 's' : ''} rely on someone "just knowing" to check.</strong> This is invisible work — it breaks silently when someone is new, busy, or away. Even a single-line notification would turn an untracked assumption into a visible, logged transfer.`
+                            });
+                        }
+                        const verbal = informalHandoffs.length - theyKnew;
+                        if (verbal > 0) {
+                            handoffItems.push({
+                                icon: '◉', color: '#ea580c',
+                                text: `<strong>${verbal} verbal handoff${verbal > 1 ? 's' : ''}</strong> — no written record means no way to know if work was received or when. A single message log per handoff converts an invisible transfer into a traceable one.`
+                            });
+                        }
+                    }
+
+                    if (emailHandoffs.length > 0 && emailHandoffs.length >= Math.ceil(handoffs.length * 0.5)) {
+                        handoffItems.push({
+                            icon: '◉', color: '#0891b2',
+                            text: `<strong>${emailHandoffs.length} of ${handoffs.length} handoffs use email</strong>. Email works when people read it immediately — it fails when it waits. Processes that depend on email for handoffs are only as fast as the slowest inbox. A task queue or in-tool notification is more reliable.`
+                        });
+                    }
+
+                    if (handoffItems.length === 0 && cleanHandoffs.length > 0) {
+                        handoffItems.push({
+                            icon: '✓', color: '#059669',
+                            text: `<strong>${cleanHandoffs.length} of ${handoffs.length} handoffs required no clarification</strong>. Clean handoffs mean work transfers without back-and-forth — a strong baseline for this process.`
+                        });
+                    }
+
+                    if (handoffItems.length > 0) {
+                        sections.push({ title: 'Handoff Quality', icon: '🔗', items: handoffItems });
+                    }
+                }
+
+                // ── C. System fragmentation ────────────────────────────
+                if (allSystems.length >= 2) {
+                    const sysItems = [];
+
+                    // Count adjacent system switches
+                    let switches = 0;
+                    const switchPairs = [];
+                    for (let i = 1; i < namedSteps.length; i++) {
+                        const prev = namedSteps[i-1].systems || [];
+                        const curr = namedSteps[i].systems || [];
+                        if (prev.length > 0 && curr.length > 0) {
+                            const overlap = prev.some(a => curr.map(b => b.toLowerCase()).includes(a.toLowerCase()));
+                            if (!overlap) {
+                                switches++;
+                                if (switchPairs.length < 2) switchPairs.push(`"${namedSteps[i-1].name}" → "${namedSteps[i].name}"`);
+                            }
+                        }
+                    }
+
+                    if (switches >= 2) {
+                        sysItems.push({
+                            icon: '⚠', color: '#d97706',
+                            text: `<strong>${switches} system-to-system switches</strong> between adjacent steps (e.g. ${switchPairs[0]}${switchPairs[1] ? '; ' + switchPairs[1] : ''}). Each switch without an integration is a manual copy-paste step — it adds time, introduces errors, and creates data inconsistency. These are your highest-value automation candidates.`
+                        });
+                    } else {
+                        sysItems.push({
+                            icon: '◉', color: '#0891b2',
+                            text: `<strong>${allSystems.length} systems in use</strong> (${allSystems.slice(0,5).join(', ')}${allSystems.length > 5 ? '…' : ''}). Unless these are already integrated, data is likely moving between them manually at some point in the flow. Mapping exactly where data transfers happen is the first step to eliminating them.`
+                        });
+                    }
+
+                    // Highlight specific steps with multiple systems
+                    const multiSysSteps = namedSteps.filter(s => s.systems && s.systems.length >= 2);
+                    if (multiSysSteps.length > 0) {
+                        sysItems.push({
+                            icon: '◆', color: '#7c3aed',
+                            text: `<strong>${multiSysSteps.length} step${multiSysSteps.length > 1 ? 's' : ''} use 2+ systems simultaneously</strong> (${multiSysSteps.slice(0,2).map(s => `"${s.name}"`).join(', ')}${multiSysSteps.length > 2 ? '…' : ''}). Multi-system steps are high-friction — someone is switching contexts or copy-pasting mid-step. A unified view or API sync would reduce the cognitive load and error risk.`
+                        });
+                    }
+
+                    sections.push({ title: 'System Fragmentation', icon: '⚙', items: sysItems });
+                }
+
+                // ── D. Specific recommendations (friction-based) ──────
+                const recs = generateRecommendations([p]);
+                const meaningfulRecs = recs.filter(r => r.type !== 'general');
+                if (meaningfulRecs.length > 0) {
+                    const recItems = meaningfulRecs.map(r => ({
+                        icon: '→', color: '#0891b2',
+                        text: r.text
+                    }));
+                    sections.push({ title: 'Specific Findings', icon: '🔍', items: recItems });
+                }
+            });
+
+            // No findings at all — give a structured positive summary
+            if (sections.length === 0) {
+                const p0 = processes[0];
+                const steps0 = p0.steps || [];
+                const sys0 = [...new Set(steps0.flatMap(s => s.systems || []))];
+                const d0 = [...new Set(steps0.map(s => s.department).filter(Boolean))];
+                sections.push({
+                    title: 'Process Structure',
+                    icon: '✓',
+                    items: [{
+                        icon: '✓', color: '#059669',
+                        text: `${steps0.length} steps documented across ${d0.length > 0 ? d0.length + ' team' + (d0.length > 1 ? 's' : '') : 'the process'}${sys0.length > 0 ? ' using ' + sys0.length + ' system' + (sys0.length > 1 ? 's' : '') : ''}. No structural friction signals detected at this level of detail. The process map is a clean baseline — the next step is running a full analysis to surface time costs and automation opportunities.`
+                    }]
+                });
+            }
+
+            // Render sections as styled cards
+            let html = '';
+            sections.forEach(sec => {
+                html += `<div style="margin-bottom:1.25rem;">`;
+                html += `<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem;">`;
+                html += `<span style="font-size:1rem;">${sec.icon}</span>`;
+                html += `<span style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-mid);">${sec.title}</span>`;
+                html += `</div>`;
+                sec.items.forEach(item => {
+                    html += `<div style="display:flex;gap:0.75rem;padding:0.85rem 1rem;background:var(--bg-alt);border-radius:var(--radius-sm);border-left:3px solid ${item.color};margin-bottom:0.5rem;">`;
+                    html += `<span style="color:${item.color};font-weight:700;font-size:1rem;flex-shrink:0;line-height:1.4;">${item.icon}</span>`;
+                    html += `<p style="margin:0;font-size:0.88rem;line-height:1.55;color:var(--text);">${item.text}</p>`;
+                    html += `</div>`;
+                });
+                html += `</div>`;
+            });
+
+            return html;
+        }
+
         function displayResults(result, contact) {
             lastResult = result;
             lastContact = contact;
@@ -7967,22 +8240,31 @@
             (result.processes || []).forEach((p, i) => {
                 let cardBody;
                 if (diagnosticMode === 'map-only') {
-                    // Map-only: show steps and departments only, no cost data
-                    const depts = (p.departments || []).join(', ') || '—';
-                    cardBody = `<div class="metric-grid">
+                    // Map-only: 3 equal tiles — steps, handoffs, teams
+                    const depts = (p.departments || []);
+                    const deptCount = depts.length;
+                    const deptLabel = deptCount > 0
+                        ? depts.slice(0, 3).join(', ') + (deptCount > 3 ? ` +${deptCount - 3}` : '')
+                        : '—';
+                    const systems = [...new Set((p.steps || []).flatMap(s => s.systems || []))];
+                    const sysCount = systems.length;
+
+                    cardBody = `<div class="metric-grid" style="grid-template-columns: repeat(3, 1fr); gap: 1rem;">
                         <div class="metric-card">
                             <div class="metric-value">${p.stepsCount || '—'}</div>
                             <div class="metric-label">Steps mapped</div>
                         </div>
                         <div class="metric-card">
-                            <div class="metric-value">${p.handoffCount || '—'}</div>
+                            <div class="metric-value">${p.handoffCount != null ? p.handoffCount : '—'}</div>
                             <div class="metric-label">Handoffs</div>
                         </div>
-                        <div class="metric-card" style="grid-column: 1 / -1;">
-                            <div class="metric-label" style="margin-bottom:0.25rem;">Teams involved</div>
-                            <div style="font-size:0.95rem; color:var(--text);">${depts}</div>
+                        <div class="metric-card">
+                            <div class="metric-value">${deptCount > 0 ? deptCount : '—'}</div>
+                            <div class="metric-label">Teams involved</div>
                         </div>
-                    </div>`;
+                    </div>
+                    ${deptCount > 0 ? `<div style="margin-top:0.5rem;padding:0.65rem 0.9rem;background:var(--bg-alt);border-radius:var(--radius-sm);font-size:0.83rem;color:var(--text-mid);">Teams: <strong style="color:var(--text);">${deptLabel}</strong></div>` : ''}
+                    ${sysCount > 0 ? `<div style="margin-top:0.5rem;padding:0.65rem 0.9rem;background:var(--bg-alt);border-radius:var(--radius-sm);font-size:0.83rem;color:var(--text-mid);">Systems: <strong style="color:var(--text);">${systems.slice(0,5).join(', ')}${sysCount > 5 ? ' +' + (sysCount - 5) + ' more' : ''}</strong></div>` : ''}`;
                 } else {
                     cardBody = `<div class="metric-grid">
                         <div class="metric-card">
@@ -8024,12 +8306,23 @@
 
             // Recommendations and next steps — mode-aware
             const analysisDiv = document.getElementById('analysisResults');
-            let recBody = '';
-            (result.recommendations || []).forEach(rec => {
-                recBody += `<div class="result-item" style="padding: 1rem; margin-bottom: 0.5rem; background: var(--bg-alt); border-radius: var(--radius-sm);">
-                    <strong>${rec.process}:</strong> ${rec.text}
-                </div>`;
-            });
+
+            let obsTitle, obsBody;
+
+            if (diagnosticMode === 'map-only') {
+                // Rich map-only observations derived from the actual process data
+                obsTitle = 'Process Map Observations';
+                obsBody = buildMapObservations(completedProcesses, result);
+            } else {
+                obsTitle = 'Analysis & Recommendations';
+                let recBody = '';
+                (result.recommendations || []).forEach(rec => {
+                    recBody += `<div class="result-item" style="padding: 1rem; margin-bottom: 0.5rem; background: var(--bg-alt); border-radius: var(--radius-sm);">
+                        <strong>${rec.process}:</strong> ${rec.text}
+                    </div>`;
+                });
+                obsBody = recBody;
+            }
 
             let nextBody;
             if (diagnosticMode === 'map-only') {
@@ -8050,27 +8343,22 @@
                 <p style="color: var(--text-mid); margin-top: 1rem;">Analysis sent to: <strong>${contact?.email || ''}</strong></p>`;
             }
 
-            const obsTitle = diagnosticMode === 'map-only' ? 'Process Map Observations' : 'Analysis & Recommendations';
-            analysisDiv.innerHTML = dsec(obsTitle, recBody) + dsec('Next Steps', nextBody);
+            analysisDiv.innerHTML = dsec(obsTitle, obsBody, true) + dsec('Next Steps', nextBody);
 
-            // Automation Readiness Score, Roadmap, ROI — only for comprehensive
+            // Automation Readiness Score — shown for ALL modes
             let scoreData, roadmapData;
+            scoreData = buildAutomationScore(completedProcesses);
+
             if (diagnosticMode !== 'map-only') {
-                scoreData = buildAutomationScore(completedProcesses);
+                // Comprehensive only: roadmap + ROI
                 roadmapData = buildRoadmap(completedProcesses, result.totalCost);
                 buildROICalculator(result.totalCost, result.potentialSavings);
             } else {
-                // Hide cost-dependent sections for map-only
-                const costSummaryInResults = document.querySelector('#processResults');
-                if (costSummaryInResults) {
-                    // Strip the Cost Summary dsec (last child) from process results
-                    const dsecs = costSummaryInResults.querySelectorAll('.collapsible');
-                    dsecs.forEach(d => {
-                        if (d.querySelector('h3') && d.querySelector('h3').textContent.includes('Cost Summary')) {
-                            d.style.display = 'none';
-                        }
-                    });
-                }
+                // Map-only: hide roadmap and ROI entirely
+                const roadmapEl = document.getElementById('roadmapSection');
+                if (roadmapEl) roadmapEl.style.display = 'none';
+                const roiEl = document.getElementById('roiCalculator');
+                if (roiEl) roiEl.style.display = 'none';
             }
 
             // Process Dependency Graph
@@ -8128,16 +8416,20 @@
                 '<div style="margin-top: 0.75rem; text-align: center;">' +
                     '<a href="/diagnostic?upgrade=1&source=map-only&email=' + email + '"' +
                     '   style="font-size:0.85rem; color:#7c3aed; text-decoration:none; font-weight:500;">' +
-                        '&#128202;&nbsp; Want cost analysis, automation score &amp; 90-day roadmap? Run full analysis &rarr;' +
+                        '&#128202;&nbsp; Want cost analysis &amp; 90-day transformation roadmap? Run full analysis &rarr;' +
                     '</a>' +
                 '</div>';
         }
 
         function wrapExistingSections() {
+            const isMapOnly = diagnosticMode === 'map-only';
             const wrappable = [
-                { id: 'automationScoreSection', title: 'Automation Readiness Score', open: false },
-                { id: 'roadmapSection', title: '90-Day Transformation Roadmap', open: false },
-                { id: 'roiCalculator', title: 'ROI Projection Calculator', open: false },
+                { id: 'automationScoreSection', title: 'Automation Readiness Score', open: true },
+                // Roadmap + ROI only wrapped (and shown) in comprehensive mode
+                ...(!isMapOnly ? [
+                    { id: 'roadmapSection', title: '90-Day Transformation Roadmap', open: false },
+                    { id: 'roiCalculator', title: 'ROI Projection Calculator', open: false }
+                ] : []),
                 { id: 'flowDiagramSection', title: 'Process Flow Diagrams', open: true }
             ];
 
