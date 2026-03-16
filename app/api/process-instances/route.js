@@ -1,26 +1,46 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { requireSupabase, getSupabaseHeaders, getSupabaseWriteHeaders } from '@/lib/api-helpers';
+import { requireSupabase, getSupabaseHeaders, getSupabaseWriteHeaders, fetchWithTimeout, isValidUUID, isValidEmail, getRequestId, checkOrigin } from '@/lib/api-helpers';
+import { ProcessInstanceInputSchema } from '@/lib/ai-schemas';
+import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
+import { requireAuth } from '@/lib/auth';
+import { logger } from '@/lib/logger';
 
 export async function POST(request) {
+  const originErr = checkOrigin(request);
+  if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
+  const auth = await requireAuth(request);
+  if (auth.error) return NextResponse.json(auth.error.body, { status: auth.error.status });
+
+  const rl = checkRateLimit(getRateLimitKey(request));
+  if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
+
+  const contentLength = parseInt(request.headers.get('content-length') || '0', 10);
+  if (contentLength > 2 * 1024 * 1024) return NextResponse.json({ error: 'Request body too large.' }, { status: 413 });
+
   const sbConfig = requireSupabase();
   if (!sbConfig) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
   const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
   try {
-    const { reportId, email, processName, instanceName, status, notes } = await request.json();
-    if (!processName || !status) return NextResponse.json({ error: 'processName and status are required.' }, { status: 400 });
+    let body;
+    try { body = await request.json(); } catch { return NextResponse.json({ error: 'Invalid JSON.' }, { status: 400 }); }
+    const parsed = ProcessInstanceInputSchema.safeParse(body);
+    if (!parsed.success) return NextResponse.json({ error: 'Invalid input. processName (max 200 chars) and status are required.' }, { status: 400 });
+    const { reportId, processName, instanceName, status, notes, userId, email } = parsed.data;
 
-    const validStatuses = ['started', 'in-progress', 'waiting', 'stuck', 'completed', 'cancelled'];
-    if (!validStatuses.includes(status)) return NextResponse.json({ error: `Invalid status. Use one of: ${validStatuses.join(', ')}` }, { status: 400 });
+    const userEmail = auth.email.toLowerCase();
+    const payloadEmail = (email || userEmail).toString().toLowerCase();
+    if (payloadEmail !== userEmail) return NextResponse.json({ error: 'You can only log instances for your own email.' }, { status: 403 });
 
     const payload = {
-      id: crypto.randomUUID(), report_id: reportId || null, email: email || null,
+      id: crypto.randomUUID(), report_id: reportId || null, email: userEmail,
       process_name: processName, instance_name: instanceName || null,
-      status, notes: notes || null, logged_at: new Date().toISOString()
+      status, notes: notes || null, logged_at: new Date().toISOString(),
+      ...(userId ? { user_id: userId } : {}),
     };
 
-    const sbResp = await fetch(`${supabaseUrl}/rest/v1/process_instances`, {
+    const sbResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/process_instances`, {
       method: 'POST',
       headers: getSupabaseWriteHeaders(supabaseKey),
       body: JSON.stringify(payload)
@@ -29,12 +49,20 @@ export async function POST(request) {
     if (!sbResp.ok) return NextResponse.json({ error: 'Failed to log instance.' }, { status: 502 });
     return NextResponse.json({ success: true, instanceId: payload.id });
   } catch (error) {
-    console.error('Log instance error:', error);
+    logger.error('Log instance error', { requestId: getRequestId(request), error: error.message, stack: error.stack });
     return NextResponse.json({ error: 'Failed to log instance.' }, { status: 500 });
   }
 }
 
 export async function GET(request) {
+  const originErr = checkOrigin(request);
+  if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
+  const auth = await requireAuth(request);
+  if (auth.error) return NextResponse.json(auth.error.body, { status: auth.error.status });
+
+  const rl = checkRateLimit(getRateLimitKey(request));
+  if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
+
   const sbConfig = requireSupabase();
   if (!sbConfig) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
   const { url: supabaseUrl, key: supabaseKey } = sbConfig;
@@ -48,21 +76,38 @@ export async function GET(request) {
 
     if (!email && !reportId) return NextResponse.json({ error: 'email or reportId is required.' }, { status: 400 });
 
+    // Scope to authenticated user: email must match, or reportId must be owned
+    const userEmail = auth.email.toLowerCase();
     let filter = '';
-    if (email) filter = `email=ilike.${encodeURIComponent(email.toLowerCase())}`;
-    else filter = `report_id=eq.${encodeURIComponent(reportId)}`;
+    if (email) {
+      if (!isValidEmail(email) || email.toLowerCase() !== userEmail) {
+        return NextResponse.json({ error: 'You can only query instances for your own email.' }, { status: 403 });
+      }
+      filter = `email=ilike.${encodeURIComponent(userEmail)}`;
+    } else {
+      if (!reportId || !isValidUUID(reportId)) return NextResponse.json({ error: 'Valid reportId required.' }, { status: 400 });
+      // Verify report ownership
+      const reportResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}&select=contact_email`, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
+      let reportRows;
+      try { reportRows = reportResp.ok ? await reportResp.json() : []; } catch (e) { logger.error('Get instances: Supabase report parse error', { requestId: getRequestId(request), error: e.message }); return NextResponse.json({ error: 'Failed to verify report.' }, { status: 502 }); }
+      if (!reportRows?.length || (reportRows[0].contact_email || '').toString().toLowerCase() !== userEmail) {
+        return NextResponse.json({ error: 'You do not have permission to access this report.' }, { status: 403 });
+      }
+      filter = `report_id=eq.${encodeURIComponent(reportId)}`;
+    }
     if (processName) filter += `&process_name=eq.${encodeURIComponent(processName)}`;
 
     const rowLimit = Math.min(parseInt(lim) || 200, 500);
     const url = `${supabaseUrl}/rest/v1/process_instances?${filter}&select=*&order=logged_at.desc&limit=${rowLimit}`;
 
-    const sbResp = await fetch(url, {
+    const sbResp = await fetchWithTimeout(url, {
       method: 'GET',
       headers: getSupabaseHeaders(supabaseKey)
     });
 
     if (!sbResp.ok) return NextResponse.json({ error: 'Failed to fetch instances.' }, { status: 502 });
-    const rows = await sbResp.json();
+    let rows;
+    try { rows = await sbResp.json(); } catch (e) { logger.error('Get instances: Supabase parse error', { requestId: getRequestId(request), error: e.message }); return NextResponse.json({ error: 'Failed to fetch instances.' }, { status: 502 }); }
 
     const byProcess = {};
     rows.forEach(r => {
@@ -92,7 +137,7 @@ export async function GET(request) {
 
     return NextResponse.json({ success: true, totalEvents: rows.length, processes: byProcess, recentEvents: rows.slice(0, 20) });
   } catch (error) {
-    console.error('Get instances error:', error);
+    logger.error('Get instances error', { requestId: getRequestId(request), error: error.message, stack: error.stack });
     return NextResponse.json({ error: 'Failed to retrieve instances.' }, { status: 500 });
   }
 }

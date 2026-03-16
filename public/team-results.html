@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Team Diagnostic Results | Sharpin</title>
+    <title>Team Alignment Results | Sharpin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles/base.css">
+    <link rel="stylesheet" href="/styles/diagnostic.css">
     <style>
         /* ── BASE.CSS (inlined) ─────────────────────────────────────── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -63,47 +65,6 @@
 
         h1, h2, h3 { font-family: 'Cormorant Garamond', Georgia, serif; color: var(--primary); line-height: 1.2; }
 
-        /* ── HEADER ─────────────────────────────────────────────────── */
-        .header {
-            background: linear-gradient(135deg, var(--primary) 0%, #1a5a6e 100%);
-            color: white;
-            padding: 40px 20px 70px;
-            text-align: center;
-        }
-        .header h1 {
-            font-family: 'Cormorant Garamond', Georgia, serif;
-            font-size: clamp(1.8rem, 5vw, 2.8rem);
-            font-weight: 700;
-            color: white;
-            margin-bottom: 8px;
-        }
-        .header p {
-            font-size: 1rem;
-            opacity: 0.85;
-            color: white;
-            max-width: 540px;
-            margin: 0 auto;
-        }
-        .header-nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 900px;
-            margin: 0 auto 24px;
-        }
-        .header-nav a {
-            color: rgba(255,255,255,0.9);
-            font-weight: 600;
-            font-size: 1.1rem;
-        }
-        .header-nav a:hover { color: white; text-decoration: none; }
-        .header-nav a span { color: var(--accent); }
-        .header-back {
-            font-size: 0.88rem !important;
-            font-weight: 400 !important;
-            opacity: 0.8;
-        }
-
         /* ── FOOTER ─────────────────────────────────────────────────── */
         .footer {
             text-align: center;
@@ -136,9 +97,30 @@
     <style>
         body { display: flex; flex-direction: column; }
         :root { --green-bg: #f0fdf4; --red-bg: #fef2f2; --blue-bg: #f0f9ff; --purple-bg: #faf5ff; --amber-bg: #fffbeb; --blue: #1e40af; }
-        .container { max-width: 900px; margin: -30px auto 60px; padding: 0 20px; flex: 1; }
-        .card { background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); overflow: hidden; }
-        .card-body { padding: 40px; }
+        [data-theme="dark"] {
+            --primary:       #f1f5f9;
+            --primary-light: #262626;
+            --accent:        #2dd4bf;
+            --white:         #171717;
+            --bg-alt:        #141414;
+            --bg-soft:       #1e1e1e;
+            --text:          #f1f5f9;
+            --text-mid:      #94a3b8;
+            --text-light:    #64748b;
+            --border:        #262626;
+            --border-light:  #2a2a2a;
+            --green:         #34d399;
+            --amber:         #fbbf24;
+            --red:           #f87171;
+            --purple:        #a78bfa;
+            --blue:          #60a5fa;
+            --green-bg:      rgba(16,185,129,0.12);
+            --red-bg:        rgba(239,68,68,0.12);
+            --blue-bg:       rgba(96,165,250,0.12);
+            --purple-bg:     rgba(167,139,250,0.12);
+            --amber-bg:      rgba(251,191,36,0.12);
+        }
+        .team-results-container { max-width: 1400px; margin: 0 auto; padding: 0 1.5rem 2rem; flex: 1; }
 
         .state { text-align: center; padding: 60px 20px; }
         .state h2 { font-size: 1.3rem; margin-bottom: 8px; }
@@ -180,7 +162,7 @@
         .gap-severity.medium { background: var(--amber); color: white; }
         .gap-detail { font-size: 0.9rem; color: var(--text-mid); margin-bottom: 10px; }
         .gap-people { list-style: none; font-size: 0.85rem; }
-        .gap-people li { padding: 4px 0; color: var(--text-mid); border-top: 1px solid rgba(0,0,0,0.06); }
+        .gap-people li { padding: 4px 0; color: var(--text-mid); border-top: 1px solid var(--border); }
         .gap-people li:first-child { border-top: none; }
 
         /* Respondents */
@@ -200,9 +182,12 @@
         .issue-fill span { font-size: 0.72rem; font-weight: 600; color: white; }
 
         /* Comparison table */
-        .comp-table { width: 100%; border-collapse: collapse; margin-bottom: 32px; font-size: 0.88rem; }
+        .comp-table-wrap { overflow-x: auto; margin-bottom: 32px; }
+        .comp-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
         .comp-table th { text-align: left; padding: 10px 12px; background: var(--bg-alt); color: var(--text-light); font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .comp-table th:not(:first-child) { text-align: center; }
         .comp-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+        .comp-table td:not(:first-child) { text-align: center; }
         .comp-table tr:last-child td { border-bottom: none; }
 
         /* AI Analysis section */
@@ -210,7 +195,7 @@
         .ai-badge { display: inline-block; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding: 3px 10px; border-radius: 100px; margin-left: 8px; vertical-align: middle; }
         .ai-badge.ai { background: linear-gradient(135deg, var(--purple), var(--blue)); color: white; }
         .ai-badge.rule { background: var(--bg-alt); color: var(--text-light); }
-        .ai-summary { font-size: 0.95rem; line-height: 1.7; color: var(--text); background: linear-gradient(135deg, #faf5ff, #f0f9ff); padding: 20px 24px; border-radius: var(--radius-md); border-left: 4px solid var(--purple); margin-bottom: 24px; }
+        .ai-summary { font-size: 0.95rem; line-height: 1.7; color: var(--text); background: var(--purple-bg); padding: 20px 24px; border-radius: var(--radius-md); border-left: 4px solid var(--purple); margin-bottom: 24px; }
         .root-cause { background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius-md); padding: 18px 20px; margin-bottom: 12px; }
         .root-cause.critical { border-left: 4px solid var(--red); }
         .root-cause.high { border-left: 4px solid var(--amber); }
@@ -223,7 +208,7 @@
         .root-cause-sev.medium { background: var(--blue); color: white; }
         .root-cause p { font-size: 0.88rem; color: var(--text-mid); margin-bottom: 4px; line-height: 1.6; }
         .root-cause .evidence { font-size: 0.8rem; color: var(--text-light); font-style: italic; }
-        .insight-card { background: linear-gradient(135deg, #fffbeb, #fef3c7); border-radius: var(--radius-sm); padding: 14px 18px; margin-bottom: 10px; }
+        .insight-card { background: var(--amber-bg); border-radius: var(--radius-sm); padding: 14px 18px; margin-bottom: 10px; border: 1px solid rgba(245,158,11,0.2); }
         .insight-card strong { display: block; font-size: 0.88rem; color: var(--amber); margin-bottom: 4px; }
         .insight-card p { font-size: 0.85rem; color: var(--text-mid); margin: 0; line-height: 1.5; }
         .rec-list { list-style: none; counter-reset: rec; }
@@ -235,9 +220,9 @@
         .rec-body p { font-size: 0.82rem; color: var(--text-mid); margin: 0; }
         .rec-tags { display: flex; gap: 6px; margin-top: 6px; }
         .rec-tag { font-size: 0.7rem; padding: 2px 8px; border-radius: 100px; background: var(--bg-alt); color: var(--text-light); }
-        .rec-tag.quick-win { background: #d1fae5; color: #065f46; }
-        .rec-tag.thirty { background: #dbeafe; color: #1e40af; }
-        .rec-tag.ninety { background: #fae8ff; color: #7c3aed; }
+        .rec-tag.quick-win { background: var(--green-bg); color: var(--green); }
+        .rec-tag.thirty { background: var(--blue-bg); color: var(--blue); }
+        .rec-tag.ninety { background: var(--purple-bg); color: var(--purple); }
         .alignment-list { list-style: none; }
         .alignment-list li { padding: 8px 0 8px 24px; position: relative; font-size: 0.88rem; color: var(--text-mid); border-bottom: 1px solid var(--border); }
         .alignment-list li:last-child { border-bottom: none; }
@@ -249,51 +234,70 @@
         .ai-loading .dot-pulse span:nth-child(3) { animation-delay: 0.4s; }
         @keyframes dot-pulse { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1.2); } }
 
-        /* Collapsible sections */
-        .collapsible { margin-bottom: 24px; }
-        .collapsible-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; padding-bottom: 8px; border-bottom: 2px solid var(--border); margin-bottom: 16px; }
-        .collapsible-header:hover .collapse-btn { background: linear-gradient(135deg, #5bb8d4, #3d8ea6); transform: scale(1.1); }
-        .collapsible-header h3 { font-size: 1.1rem; font-weight: 600; color: var(--primary); margin: 0; padding: 0; border: none; }
-        .collapse-btn { width: 36px; height: 36px; border-radius: 50%; border: none; background: linear-gradient(135deg, #3d8ea6, #1a2f4a); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 700; line-height: 1; flex-shrink: 0; transition: all 0.2s ease; box-shadow: 0 2px 8px rgba(61,142,166,0.3); cursor: pointer; }
-        .collapsible-body { overflow: hidden; transition: max-height 0.35s ease, opacity 0.25s ease; max-height: 5000px; opacity: 1; }
-        .collapsible.collapsed .collapsible-body { max-height: 0; opacity: 0; margin: 0; padding: 0; }
-        .collapsible.collapsed .collapsible-header { margin-bottom: 0; border-bottom-color: transparent; }
+        /* CTA section - matches report page styling */
+        .team-cta-section { background: var(--white); border: 2px solid var(--border); border-radius: var(--radius-md); padding: 32px; text-align: center; margin-top: 24px; }
+        .team-cta-section h3 { font-size: 1.2rem; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+        .team-cta-section p { font-size: 0.95rem; color: var(--text-mid); margin-bottom: 20px; }
+        .team-cta-section .cta-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        .team-cta-section .cta-button { display: inline-block; padding: 12px 28px; background: var(--accent); color: white; text-decoration: none; border-radius: 999px; font-weight: 600; font-size: 0.9rem; border: 1.5px solid var(--accent); transition: all 0.2s; }
+        .team-cta-section .cta-button:hover { opacity: 0.88; }
+        .team-cta-section .cta-button.secondary { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+        .team-cta-section .cta-button.secondary:hover { background: var(--bg-alt); }
 
-        .cta-section { background: linear-gradient(135deg, #eff6ff, #f0fdf4); border-radius: var(--radius-md); padding: 32px; text-align: center; margin-top: 8px; }
-        .cta-section h3 { font-size: 1.1rem; margin-bottom: 8px; }
-        .cta-section p { font-size: 0.9rem; color: var(--text-mid); margin-bottom: 20px; }
-        .cta-button { display: inline-block; padding: 12px 32px; background: linear-gradient(135deg, var(--accent), var(--primary)); color: white; text-decoration: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 0.95rem; }
-        .cta-button.secondary { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); margin-left: 12px; }
+        /* Consensus row in Overview tab */
+        .team-consensus-row { display: flex; align-items: center; gap: 24px; margin-bottom: 28px; padding: 20px 24px; background: var(--bg-alt); border-radius: var(--radius-md); }
+        .team-consensus-score { font-size: 2.5rem; font-weight: 700; flex-shrink: 0; font-family: 'Cormorant Garamond', Georgia, serif; }
+        .team-consensus-meta { flex: 1; }
+        .team-consensus-meta strong { font-size: 0.95rem; font-weight: 600; }
+
+        /* Sub-section label inside tab panels */
+        .team-section-label { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-light); margin: 0 0 12px; }
 
         @media (max-width: 600px) {
-            .card-body { padding: 20px; }
+            .report-card .report-collapsible-body { padding: 1rem; }
             .metrics-grid { grid-template-columns: repeat(2, 1fr); }
             .lookup-form { flex-direction: column; }
             .issue-label { width: auto; max-width: 100px; font-size: 0.78rem; }
             .respondent-grid { grid-template-columns: 1fr; }
-            .collapse-btn { width: 44px; height: 44px; }
             h1 { font-size: 1.8rem; }
         }
 
         @media (max-width: 400px) {
             .metrics-grid { grid-template-columns: 1fr; }
-            .card-body { padding: 16px; }
         }
     </style>
+    <script>(function(){var t=localStorage.getItem('sharpin-theme')||((window.matchMedia('(prefers-color-scheme:dark)').matches)?'dark':'light');document.documentElement.setAttribute('data-theme',t);})();</script>
 </head>
 <body>
-    <div class="header">
-        <div class="header-nav">
-            <a href="/">Sharpin<span>.</span></a>
-            <a href="/" class="header-back">&larr; Home</a>
+    <div class="report-page">
+        <div class="top-bar">
+            <div class="top-bar-inner">
+                <div class="top-bar-left">
+                    <a href="/">Sharpin<span class="top-bar-brand-dot">.</span></a>
+                    <div class="top-bar-divider"></div>
+                    <span class="top-bar-title">Team Alignment</span>
+                </div>
+                <div class="top-bar-nav">
+                    <a href="/" class="top-bar-link">&larr; Home</a>
+                    <a href="/portal" class="top-bar-link">Portal</a>
+                    <a href="/diagnostic" class="top-bar-link">Create Process Analysis</a>
+                    <button id="themeToggleBtn" class="top-bar-theme-btn" title="Toggle dark mode" aria-label="Toggle dark mode" onclick="toggleTheme()">
+                        <svg id="themeIconSun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                        <svg id="themeIconMoon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    </button>
+                </div>
+            </div>
         </div>
-        <h1>Team Diagnostic Comparison</h1>
-        <p>Compare how each team member perceives the same process — and where understanding diverges</p>
-    </div>
 
-    <div class="container">
-        <div class="card">
-            <div class="card-body">
+        <div class="team-results-container report-container">
+            <div class="report-card">
+                <div class="report-hero">
+                    <div class="report-hero-icon">&#128202;</div>
+                    <h1 class="report-title">Team Alignment Comparison</h1>
+                    <p style="font-size: 0.95rem; color: var(--text-mid); margin-bottom: 0;">Compare how each team member perceives the same process — and where understanding diverges</p>
+                </div>
+
+                <div class="team-results-body" style="padding: 1.25rem 1.25rem 1.5rem;">
 
                 <!-- Lookup -->
                 <div id="lookupState" class="state">
@@ -341,13 +345,29 @@
                 <!-- Results -->
                 <div id="resultsContent" style="display: none;"></div>
 
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="footer"><a href="/">Sharpin</a> &middot; <a href="/diagnostic">Run Diagnostic</a></div>
+    <div class="footer"><a href="/">Sharpin</a> &middot; <a href="/portal">Portal</a> &middot; <a href="/diagnostic">Create Process Analysis</a></div>
 
     <script>
+        // ── Theme toggle ──────────────────────────────
+        function updateThemeIcon(theme) {
+            document.getElementById('themeIconSun').style.display  = theme === 'dark' ? '' : 'none';
+            document.getElementById('themeIconMoon').style.display = theme === 'dark' ? 'none' : '';
+        }
+        function toggleTheme() {
+            var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('sharpin-theme', next);
+            updateThemeIcon(next);
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            updateThemeIcon(document.documentElement.getAttribute('data-theme') || 'light');
+        });
+
         function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
         const issueLabels = {
@@ -376,11 +396,13 @@
 
         function formatDate(d) { return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
 
-        function toggleSection(header) {
-            const section = header.parentElement;
-            const btn = header.querySelector('.collapse-btn');
-            section.classList.toggle('collapsed');
-            btn.textContent = section.classList.contains('collapsed') ? '+' : '−';
+        function switchTab(id) {
+            document.querySelectorAll('.team-tab-panel').forEach(p => { p.style.display = 'none'; });
+            var panel = document.getElementById('tab-' + id);
+            if (panel) panel.style.display = '';
+            document.querySelectorAll('.report-section-tab[data-tab]').forEach(b => {
+                b.classList.toggle('active', b.dataset.tab === id);
+            });
         }
 
 
@@ -531,7 +553,8 @@
                         company: sample.base.company
                     })
                 });
-                const createData = await createResp.json();
+                let createData;
+                try { createData = await createResp.json(); } catch (e) { throw new Error('Invalid response from server.'); }
                 if (!createResp.ok) throw new Error(createData.error || 'Failed to create team');
                 const teamCode = createData.teamCode;
 
@@ -560,7 +583,8 @@
                         body: JSON.stringify(respBody)
                     });
                     if (!submitResp.ok) {
-                        const err = await submitResp.json();
+                        let err;
+                        try { err = await submitResp.json(); } catch (e) { err = {}; }
                         throw new Error(err.error || `Failed to submit ${r.name}'s response`);
                     }
                 }
@@ -571,7 +595,8 @@
                 history.replaceState(null, '', '/team-results?code=' + teamCode);
 
                 const resultsResp = await fetch('/api/team?action=results&code=' + encodeURIComponent(teamCode));
-                const resultsData = await resultsResp.json();
+                let resultsData;
+                try { resultsData = await resultsResp.json(); } catch (e) { throw new Error('Invalid response from server.'); }
                 if (!resultsResp.ok) throw new Error(resultsData.error || 'Failed to load results');
 
                 renderResults(resultsData);
@@ -603,7 +628,8 @@
 
             try {
                 const resp = await fetch('/api/team?action=results&code=' + encodeURIComponent(code));
-                const data = await resp.json();
+                let data;
+                try { data = await resp.json(); } catch (parseErr) { console.error('Results response not JSON', parseErr); document.getElementById('errorTitle').textContent = 'Invalid Response'; document.getElementById('errorMsg').textContent = 'The server returned invalid data.'; showState('error'); return; }
 
                 if (!resp.ok) {
                     document.getElementById('errorTitle').textContent = 'Not Found';
@@ -660,7 +686,8 @@
                         aggregation: data.aggregation
                     })
                 });
-                const result = await resp.json();
+                let result;
+                try { result = await resp.json(); } catch (parseErr) { console.error('Analyze response not JSON', parseErr); container.innerHTML = '<p style="color: var(--text-light); font-size: 0.85rem; text-align: center;">Could not parse AI analysis response.</p>'; return; }
 
                 if (!result.success || !result.analysis) {
                     container.innerHTML = '<p style="color: var(--text-light); font-size: 0.85rem; text-align: center;">Analysis unavailable.</p>';
@@ -748,54 +775,39 @@
         // ═══════════════════════════════════════════════════════════
         // RENDER RESULTS
         // ═══════════════════════════════════════════════════════════
-        function sec(title, body, startOpen = false, extra = '') {
-            const cls = startOpen ? 'collapsible' : 'collapsible collapsed';
-            const icon = startOpen ? '−' : '+';
-            return `<div class="${cls}">
-                <div class="collapsible-header" onclick="toggleSection(this)">
-                    <h3>${title}${extra}</h3>
-                    <span class="collapse-btn">${icon}</span>
-                </div>
-                <div class="collapsible-body">${body}</div>
-            </div>`;
-        }
-
         function renderResults(data) {
             lastResultsData = data;
             const { team, responses, aggregation } = data;
             const a = aggregation;
 
-            let html = '';
+            // ── Build tab panels ──────────────────────────────────
 
-            // Header (always visible, not collapsible)
-            html += `<div style="margin-bottom: 24px;">
-                <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 700; color: var(--primary);">${esc(team.processName)}</h2>
-                <p style="color: var(--text-light); font-size: 0.9rem;">${team.company ? esc(team.company) + ' &middot; ' : ''}${data.responseCount} ${data.responseCount === 1 ? "response" : "team members responded"} &middot; Created ${formatDate(team.createdAt)}</p>
-            </div>`;
-
-            // 1. Consensus score (always open)
+            // Overview: consensus + respondents + metrics
             const csColor = a.consensusScore >= 70 ? 'var(--green)' : a.consensusScore >= 40 ? 'var(--amber)' : 'var(--red)';
             const csLabel = a.consensusScore >= 70 ? 'Strong Alignment' : a.consensusScore >= 40 ? 'Partial Alignment' : 'Significant Disagreement';
-            html += sec(`Team Consensus: ${a.consensusScore}% - ${csLabel}`, `
-                <div class="consensus-bar">
-                    <div class="consensus-track"><div class="consensus-fill" style="width: ${a.consensusScore}%; background: ${csColor};"></div></div>
-                    <div class="consensus-label"><span>Disagreement</span><span>Full alignment</span></div>
-                </div>`, true);
-
-            // 2. Respondents
-            let respHtml = '<div class="respondent-grid">';
+            let overviewHtml = `
+                <div class="team-consensus-row">
+                    <div class="team-consensus-score" style="color:${csColor};">${a.consensusScore}%</div>
+                    <div class="team-consensus-meta">
+                        <strong style="color:${csColor};">${esc(csLabel)}</strong>
+                        <div class="consensus-bar" style="margin-top:8px;margin-bottom:0;">
+                            <div class="consensus-track"><div class="consensus-fill" style="width:${a.consensusScore}%;background:${csColor};"></div></div>
+                            <div class="consensus-label"><span>Disagreement</span><span>Full alignment</span></div>
+                        </div>
+                    </div>
+                </div>
+                <h4 class="team-section-label">Respondents</h4>
+                <div class="respondent-grid">`;
             responses.forEach(r => {
                 const initials = r.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-                respHtml += `<div class="respondent-chip">
+                overviewHtml += `<div class="respondent-chip">
                     <div class="respondent-avatar">${esc(initials)}</div>
                     <div class="respondent-info"><strong>${esc(r.name)}</strong><span>${esc(r.department || 'No department')}</span></div>
                 </div>`;
             });
-            respHtml += '</div>';
-            html += sec('Respondents', respHtml);
-
-            // 3. Aggregated metrics
-            let metHtml = '<div class="metrics-grid">';
+            overviewHtml += `</div>
+                <h4 class="team-section-label">Aggregated Metrics</h4>
+                <div class="metrics-grid">`;
             const metrics = [
                 { value: a.elapsedDays.avg + ' days', label: 'Avg Cycle Time', color: 'blue', range: `${a.elapsedDays.min}–${a.elapsedDays.max} day range` },
                 { value: a.steps.avg, label: 'Avg Steps Seen', color: 'purple', range: `${a.steps.min}–${a.steps.max} step range` },
@@ -803,55 +815,54 @@
                 { value: a.totalHours.avg + 'h', label: 'Avg Time Invested', color: 'green', range: `${a.totalHours.min}–${a.totalHours.max}h range` }
             ];
             metrics.forEach(m => {
-                metHtml += `<div class="metric-card">
+                overviewHtml += `<div class="metric-card">
                     <div class="metric-value ${m.color}">${m.value}</div>
                     <div class="metric-label">${m.label}</div>
                     <div class="metric-range">${m.range}</div>
                 </div>`;
             });
-            metHtml += '</div>';
-            html += sec('Aggregated Metrics', metHtml);
+            overviewHtml += `</div>`;
 
-            // 4. Perception gaps
+            // Perception Gaps
+            let gapsHtml = '';
             if (a.perceptionGaps.length > 0) {
-                let gapHtml = '<p style="font-size: 0.88rem; color: var(--text-mid); margin-bottom: 16px;">These are areas where team members see the process differently. High gaps often reveal hidden inefficiencies.</p>';
+                gapsHtml = '<p style="font-size:0.88rem;color:var(--text-mid);margin-bottom:16px;">Areas where team members see the process differently. High gaps often reveal hidden inefficiencies.</p>';
                 a.perceptionGaps.forEach(g => {
-                    gapHtml += `<div class="gap-card ${g.severity}">
+                    gapsHtml += `<div class="gap-card ${esc(g.severity)}">
                         <div class="gap-header">
-                            <span class="gap-metric">${g.metric}</span>
-                            <span class="gap-severity ${g.severity}">${g.severity} gap</span>
+                            <span class="gap-metric">${esc(g.metric)}</span>
+                            <span class="gap-severity ${esc(g.severity)}">${esc(g.severity)} gap</span>
                         </div>
                         <div class="gap-detail">${esc(g.detail)}</div>
                         <ul class="gap-people">${(g.byPerson || []).map(p => `<li>${esc(p)}</li>`).join('')}</ul>
                     </div>`;
                 });
-                html += sec('Perception Gaps &#9888;', gapHtml);
             }
 
-            // 5. AI Analysis
-            html += sec('Deep Analysis', `<div id="aiAnalysisSection" class="ai-analysis">
+            // AI Analysis
+            const analysisHtml = `<div id="aiAnalysisSection" class="ai-analysis">
                 <div class="ai-loading">
                     <div class="dot-pulse"><span></span><span></span><span></span></div>
-                    <p style="margin-top: 12px; color: var(--text-mid); font-size: 0.88rem;">Analysing perception gaps...</p>
+                    <p style="margin-top:12px;color:var(--text-mid);font-size:0.88rem;">Analysing perception gaps...</p>
                 </div>
-            </div>`, false, ' <span class="ai-badge ai" style="vertical-align:middle;">AI-Powered</span>');
+            </div>`;
 
-            // 6. Issues heatmap
+            // Issue Frequency
+            let issuesHtml = '';
             if (a.issueFrequency && a.issueFrequency.length > 0) {
-                let issueHtml = '<p style="font-size: 0.88rem; color: var(--text-mid); margin-bottom: 16px;">How many team members reported each issue type.</p><div class="issue-bar-chart">';
+                issuesHtml = '<p style="font-size:0.88rem;color:var(--text-mid);margin-bottom:16px;">How many team members reported each issue type.</p><div class="issue-bar-chart">';
                 a.issueFrequency.forEach(issue => {
-                    const label = issueLabels[issue.issue] || issue.issue;
-                    issueHtml += `<div class="issue-row">
+                    const label = esc(issueLabels[issue.issue] || issue.issue);
+                    issuesHtml += `<div class="issue-row">
                         <div class="issue-label">${label}</div>
-                        <div class="issue-track"><div class="issue-fill" style="width: ${issue.pct}%;"><span>${issue.count}/${data.responseCount}</span></div></div>
+                        <div class="issue-track"><div class="issue-fill" style="width:${issue.pct}%;"><span>${issue.count}/${data.responseCount}</span></div></div>
                     </div>`;
                 });
-                issueHtml += '</div>';
-                html += sec('Issue Frequency', issueHtml, false);
+                issuesHtml += '</div>';
             }
 
-            // 7. Side-by-side comparison table
-            let tableHtml = '<div style="overflow-x: auto;"><table class="comp-table"><thead><tr><th>Metric</th>';
+            // Individual Responses table
+            let tableHtml = '<div class="comp-table-wrap"><table class="comp-table"><thead><tr><th>Metric</th>';
             responses.forEach(r => { tableHtml += `<th>${esc(r.name)}<br><span style="font-weight:400;text-transform:none;letter-spacing:0;">${esc(r.department || '')}</span></th>`; });
             tableHtml += '</tr></thead><tbody>';
             const rows = [
@@ -867,20 +878,47 @@
                 tableHtml += `<tr><td style="font-weight:500;">${row.label}</td>`;
                 responses.forEach(r => {
                     const val = r.metrics[row.key];
-                    const display = val ? val + row.suffix : '--';
-                    tableHtml += `<td>${esc(display)}</td>`;
+                    tableHtml += `<td>${esc(val != null ? val + row.suffix : '--')}</td>`;
                 });
                 tableHtml += '</tr>';
             });
             tableHtml += '</tbody></table></div>';
-            html += sec('Individual Responses', tableHtml, false);
 
-            // CTA (not collapsible)
-            html += `<div class="cta-section">
+            // ── Build tab definitions ─────────────────────────────
+            const tabs = [{ id: 'overview', label: 'Overview', html: overviewHtml }];
+            if (gapsHtml) tabs.push({ id: 'gaps', label: `Perception Gaps${a.perceptionGaps.length ? ' (' + a.perceptionGaps.length + ')' : ''}`, html: gapsHtml });
+            tabs.push({ id: 'analysis', label: 'Deep Analysis <span class="ai-badge ai" style="vertical-align:middle;font-size:0.6rem;">AI</span>', html: analysisHtml });
+            if (issuesHtml) tabs.push({ id: 'issues', label: 'Issue Frequency', html: issuesHtml });
+            tabs.push({ id: 'responses', label: 'Responses', html: tableHtml });
+
+            // ── Assemble HTML ─────────────────────────────────────
+            let html = `<div style="margin-bottom:20px;">
+                <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:700;color:var(--text);">${esc(team.processName)}</h2>
+                <p style="color:var(--text-light);font-size:0.9rem;margin-top:4px;">${team.company ? esc(team.company) + ' &middot; ' : ''}${data.responseCount} ${data.responseCount === 1 ? 'response' : 'team members responded'} &middot; Created ${formatDate(team.createdAt)}</p>
+            </div>`;
+
+            // Tab nav
+            html += '<nav class="report-section-tabs" style="margin-bottom:0;">';
+            tabs.forEach((t, i) => {
+                html += `<button class="report-section-tab${i === 0 ? ' active' : ''}" data-tab="${t.id}" onclick="switchTab('${t.id}')">${t.label}</button>`;
+            });
+            html += '</nav>';
+
+            // Tab content
+            html += '<div class="report-section-tab-content" style="border-top:none;border-radius:0 0 12px 12px;">';
+            tabs.forEach((t, i) => {
+                html += `<div id="tab-${t.id}" class="team-tab-panel" style="display:${i === 0 ? '' : 'none'}">${t.html}</div>`;
+            });
+            html += '</div>';
+
+            // CTA
+            html += `<div class="team-cta-section">
                 <h3>Turn These Insights Into Action</h3>
                 <p>Perception gaps are the #1 signal of process improvement opportunity. Let's discuss what your team's results reveal.</p>
-                <a href="mailto:hopektettey@gmail.com?subject=Team Diagnostic Discussion - ${encodeURIComponent(team.processName)}" class="cta-button">Book a Call</a>
-                <a href="/diagnostic" class="cta-button secondary">Run Individual Diagnostic</a>
+                <div class="cta-buttons">
+                    <a href="mailto:hopektettey@gmail.com?subject=Team Alignment Discussion - ${encodeURIComponent(team.processName)}" class="cta-button">Book a Call</a>
+                    <a href="/diagnostic" class="cta-button secondary">Create Process Analysis</a>
+                </div>
             </div>`;
 
             const container = document.getElementById('resultsContent');
@@ -901,8 +939,7 @@
             navigator.clipboard.writeText(json).then(() => {
                 alert('Team sample JSON copied to clipboard! (' + json.length + ' chars)');
             }).catch(() => {
-                console.log('Team Sample JSON:', json);
-                alert('Logged to console (clipboard blocked).');
+                alert('Clipboard blocked. Please copy the JSON manually from the page.');
             });
         }
 

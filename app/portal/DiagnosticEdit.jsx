@@ -1,15 +1,24 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Link from 'next/link';
+import ThemeToggle from '@/components/ThemeToggle';
+import { useTheme } from '@/components/ThemeProvider';
+import InteractiveFlowCanvas from '@/components/flow/InteractiveFlowCanvas';
 
 const PHASES = [
-  { key: 'define', label: 'Define' },
-  { key: 'measure', label: 'Measure' },
-  { key: 'map', label: 'Map' },
-  { key: 'assess', label: 'Assess' },
-  { key: 'quantify', label: 'Quantify' },
-  { key: 'details', label: 'Your Details' },
+  { key: 'define', label: 'Define', icon: '\u2699' },
+  { key: 'measure', label: 'Measure', icon: '\u23F1' },
+  { key: 'map', label: 'Map', icon: '\u2B13' },
+  { key: 'assess', label: 'Assess', icon: '\u2611' },
+  { key: 'quantify', label: 'Quantify', icon: '\u00A3' },
+  { key: 'details', label: 'Details', icon: '\u270E' },
+];
+
+const FLOW_VIEWS = [
+  { id: 'grid', label: 'Linear', icon: '\u2192' },
+  { id: 'swimlane', label: 'Swimlane', icon: '\u23F8' },
+  { id: 'list', label: 'List', icon: '\u2630' },
 ];
 
 const DEPARTMENTS = ['Sales', 'Operations', 'Finance', 'IT', 'Customer Success', 'Product', 'Leadership', 'HR'];
@@ -62,6 +71,7 @@ const INDUSTRIES = [
 ];
 
 export default function DiagnosticEdit({ reportId, email, onBack }) {
+  const { theme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -71,6 +81,10 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
   const [activeProcessIdx, setActiveProcessIdx] = useState(0);
   const [dragIdx, setDragIdx] = useState(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);
+  const [flowView, setFlowView] = useState('grid');
+  const isWrapped = flowView === 'wrap';
+  const handleWrapToggle = () => setFlowView((v) => v === 'wrap' ? 'grid' : 'wrap');
+  const [previewCollapsed, setPreviewCollapsed] = useState(false);
 
   const [processes, setProcesses] = useState([]);
   const [contact, setContact] = useState({ name: '', email: '', company: '', title: '', teamSize: '', industry: '', phone: '' });
@@ -84,7 +98,8 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
           ? `/api/get-diagnostic?id=${encodeURIComponent(reportId)}&editable=true&email=${encodeURIComponent(email)}`
           : `/api/get-diagnostic?id=${encodeURIComponent(reportId)}`;
         const resp = await fetch(url);
-        const data = await resp.json();
+        let data;
+        try { data = await resp.json(); } catch (e) { setError('Invalid response from server.'); setLoading(false); return; }
         if (cancelled) return;
         if (!resp.ok || !data.success) { setError(data.error || 'Failed to load report.'); setLoading(false); return; }
 
@@ -250,6 +265,31 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
   }
 
   const proc = processes[activeProcessIdx] || processes[0];
+
+  const processForFlow = useMemo(() => {
+    if (!proc || !proc.steps?.length) return null;
+    return {
+      processName: proc.processName || 'Process',
+      steps: proc.steps.map((s, si) => ({
+        number: si + 1,
+        name: s.name || `Step ${si + 1}`,
+        department: s.department || '',
+        isDecision: !!s.isDecision,
+        isMerge: !!s.isMerge,
+        isExternal: !!s.isExternal,
+        branches: (s.branches || []).map(b => ({ label: b.label || '', target: b.target || '' })),
+        systems: s.systems || [],
+      })),
+      handoffs: (proc.stepHandoffs || []).filter(Boolean).map((h, hi) => ({
+        from: { name: proc.steps[hi]?.name || '', department: proc.steps[hi]?.department || '' },
+        to: { name: proc.steps[hi + 1]?.name || '', department: proc.steps[hi + 1]?.department || '' },
+        method: h.method || '',
+        clarity: h.clarity || '',
+      })),
+      definition: { startsWhen: proc.startsWhen || 'Start', completesWhen: proc.completesWhen || 'End' },
+      bottleneck: {},
+    };
+  }, [proc]);
 
   const updateProc = useCallback((field, val) => {
     setProcesses(prev => prev.map((p, i) => i === activeProcessIdx ? { ...p, [field]: val } : p));
@@ -506,7 +546,8 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reportId, email, updates }),
       });
-      const data = await resp.json();
+      let data;
+      try { data = await resp.json(); } catch (e) { setError('Invalid response from server.'); return; }
       if (resp.ok && data.success) {
         setSuccess('Changes saved successfully.');
         setTimeout(() => setSuccess(null), 4000);
@@ -536,18 +577,18 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
           <span className="header-title">Edit Diagnostic</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <ThemeToggle className="header-theme-btn" />
           <button type="button" className="edit-save-btn" onClick={handleSave} disabled={saving} style={{ padding: '6px 18px', fontSize: '0.78rem' }}>
             {saving ? 'Saving...' : 'Save'}
           </button>
-          <button type="button" onClick={onBack} className="header-btn">&larr; Client Login</button>
+          <button type="button" onClick={onBack} className="header-btn">&larr; Portal</button>
         </div>
       </header>
 
-      <div className="portal-wrap edit-wrap">
+      <div className={`portal-wrap${activePhase === 'map' ? ' edit-wrap-wide' : ' edit-wrap'}`}>
         {error && <div className="edit-banner edit-banner-error">{error}</div>}
         {success && <div className="edit-banner edit-banner-success">{success}</div>}
 
-        {/* Process tabs */}
         {processes.length > 1 && (
           <div className="edit-proc-tabs">
             {processes.map((p, i) => (
@@ -558,13 +599,18 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
           </div>
         )}
 
-        {/* Phase navigation */}
         <div className="edit-phases">
-          {PHASES.map(ph => (
-            <button key={ph.key} type="button" className={`edit-phase${activePhase === ph.key ? ' active' : ''}`} onClick={() => setActivePhase(ph.key)}>
-              {ph.label}
-            </button>
-          ))}
+          {PHASES.map((ph, phi) => {
+            const isActive = activePhase === ph.key;
+            const pastIdx = PHASES.findIndex(p => p.key === activePhase);
+            const isPast = phi < pastIdx;
+            return (
+              <button key={ph.key} type="button" className={`edit-phase${isActive ? ' active' : ''}${isPast ? ' past' : ''}`} onClick={() => setActivePhase(ph.key)}>
+                <span className="edit-phase-icon">{ph.icon}</span>
+                {ph.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* ─── DEFINE PHASE ─── */}
@@ -686,110 +732,153 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
           </div>
         )}
 
-        {/* ─── MAP PHASE (Steps + Handoffs integrated) ─── */}
+        {/* ─── MAP PHASE (Steps + Handoffs + live flowchart preview) ─── */}
         {activePhase === 'map' && proc && (
-          <div className="edit-stage fade-in">
-            <div className="edit-stage-card">
-              <h3 className="edit-stage-title">Steps &amp; Handoffs</h3>
-              <p className="edit-stage-desc">Define each step and how it hands over to the next. Drag to reorder.</p>
-
-              <div className="edit-step-list">
-                {proc.steps.map((step, si) => (
-                  <div key={step._key ?? si}>
-                    {/* Insert divider above */}
-                    {si > 0 && (
-                      <div className="edit-insert-divider">
-                        <button type="button" onClick={() => insertStepAt(si)} title="Insert step here">+</button>
-                      </div>
-                    )}
-
-                    <div
-                      className={`edit-step-item${dragIdx === si ? ' dragging' : ''}${dragOverIdx === si && dragIdx !== si ? ' drag-over' : ''}`}
-                      draggable
-                      onDragStart={() => handleDragStart(si)}
-                      onDragOver={(e) => handleDragOver(e, si)}
-                      onDrop={() => handleDrop(si)}
-                      onDragEnd={handleDragEnd}
-                    >
-                      <div className="edit-step-drag-handle" title="Drag to reorder">
-                        <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor">
-                          <circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/>
-                          <circle cx="2" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/>
-                          <circle cx="2" cy="14" r="1.5"/><circle cx="8" cy="14" r="1.5"/>
-                        </svg>
-                      </div>
-
-                      <span className="edit-step-num">{si + 1}</span>
-
-                      <div className="edit-step-content">
-                        <div className="edit-step-top-row">
-                          <input type="text" value={step.name} onChange={e => updateStep(si, 'name', e.target.value)} placeholder="Step name" className="edit-step-name-input" />
-                          <select value={step.department} onChange={e => updateStep(si, 'department', e.target.value)} className="edit-step-dept-select">
-                            <option value="">Department</option>
-                            {[...DEPARTMENTS, ...(proc.departments || []).filter(d => !DEPARTMENTS.includes(d))].map(d => (
-                              <option key={d} value={d}>{d}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="edit-step-bottom-row">
-                          <label className="edit-step-check">
-                            <input type="checkbox" checked={step.isDecision} onChange={e => updateStep(si, 'isDecision', e.target.checked)} /> Decision / routing point
-                          </label>
-                          <label className="edit-step-check">
-                            <input type="checkbox" checked={step.isExternal} onChange={e => updateStep(si, 'isExternal', e.target.checked)} /> External party
-                          </label>
-                          {step.isDecision && <span className="edit-step-badge decision">Decision</span>}
-                          {step.isExternal && <span className="edit-step-badge external">External</span>}
-                        </div>
-                        {step.isDecision && (
-                          <div className="edit-step-branches">
-                            <div className="edit-step-branches-label">Define the possible routes from this step:</div>
-                            {(step.branches || []).map((br, bi) => (
-                              <div key={br._key ?? bi} className="edit-branch-row">
-                                <span className="edit-branch-icon">&#10132;</span>
-                                <input type="text" value={br.label || ''} onChange={e => updateBranch(si, bi, 'label', e.target.value)} placeholder="Route label, e.g. Approved" className="edit-branch-input" />
-                                <input type="text" value={br.target || ''} onChange={e => updateBranch(si, bi, 'target', e.target.value)} placeholder="Goes to... e.g. Step 5" className="edit-branch-input edit-branch-target" />
-                                <button type="button" className="edit-branch-remove" onClick={() => removeBranch(si, bi)} title="Remove route">&times;</button>
-                              </div>
-                            ))}
-                            <button type="button" className="edit-add-branch-btn" onClick={() => addBranch(si)}>+ Add another route</button>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="edit-step-actions">
-                        <button type="button" className="edit-step-arrow" onClick={() => moveStepUp(si)} disabled={si === 0} title="Move up">&uarr;</button>
-                        <button type="button" className="edit-step-arrow" onClick={() => moveStepDown(si)} disabled={si === proc.steps.length - 1} title="Move down">&darr;</button>
-                        <button type="button" className="edit-step-remove" onClick={() => removeStep(si)} title="Remove step">&times;</button>
-                      </div>
-                    </div>
-
-                    {/* Handoff connector */}
-                    {si < proc.steps.length - 1 && (
-                      <div className="edit-handoff-row">
-                        <div className="edit-handoff-connector">
-                          <span className="edit-handoff-pipe" />
-                          <span className="edit-handoff-tag">Handoff</span>
-                        </div>
-                        <div className="edit-handoff-fields">
-                          <select value={(proc.stepHandoffs || [])[si]?.method || ''} onChange={e => updateHandoff(si, 'method', e.target.value)} className="edit-handoff-select">
-                            <option value="">How is this handed over?</option>
-                            {HANDOFF_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                          </select>
-                          <select value={(proc.stepHandoffs || [])[si]?.clarity || 'no'} onChange={e => updateHandoff(si, 'clarity', e.target.value)} className="edit-handoff-select">
-                            {CLARITY_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                          </select>
-                        </div>
-                      </div>
-                    )}
+          <div className="edit-stage edit-map-split fade-in">
+            <div className={`edit-map-editor${previewCollapsed ? ' edit-map-editor-full' : ''}`}>
+              <div className="edit-stage-card">
+                <div className="edit-stage-card-header">
+                  <div>
+                    <h3 className="edit-stage-title">Steps &amp; Handoffs</h3>
+                    <p className="edit-stage-desc">Define each step and how it hands over to the next. Drag to reorder.</p>
                   </div>
-                ))}
-              </div>
+                  <span className="edit-step-count-badge">{proc.steps.length} step{proc.steps.length !== 1 ? 's' : ''}</span>
+                </div>
 
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <button type="button" className="edit-add-btn" onClick={() => addStep(false)}>+ Add Step</button>
-                <button type="button" className="edit-add-btn edit-add-decision-btn" onClick={() => addStep(true)} title="Add a step with decision/routing branches">+ Add Decision Step</button>
+                <div className="edit-step-list">
+                  {proc.steps.map((step, si) => (
+                    <div key={step._key ?? si}>
+                      {si > 0 && (
+                        <div className="edit-insert-divider">
+                          <button type="button" onClick={() => insertStepAt(si)} title="Insert step here">+</button>
+                        </div>
+                      )}
+
+                      <div
+                        className={`edit-step-item${dragIdx === si ? ' dragging' : ''}${dragOverIdx === si && dragIdx !== si ? ' drag-over' : ''}`}
+                        draggable
+                        onDragStart={() => handleDragStart(si)}
+                        onDragOver={(e) => handleDragOver(e, si)}
+                        onDrop={() => handleDrop(si)}
+                        onDragEnd={handleDragEnd}
+                      >
+                        <div className="edit-step-drag-handle" title="Drag to reorder">
+                          <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor">
+                            <circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/>
+                            <circle cx="2" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/>
+                            <circle cx="2" cy="14" r="1.5"/><circle cx="8" cy="14" r="1.5"/>
+                          </svg>
+                        </div>
+
+                        <span className="edit-step-num">{si + 1}</span>
+
+                        <div className="edit-step-content">
+                          <div className="edit-step-top-row">
+                            <input type="text" value={step.name} onChange={e => updateStep(si, 'name', e.target.value)} placeholder="Step name" className="edit-step-name-input" />
+                            <select value={step.department} onChange={e => updateStep(si, 'department', e.target.value)} className="edit-step-dept-select">
+                              <option value="">Department</option>
+                              {[...DEPARTMENTS, ...(proc.departments || []).filter(d => !DEPARTMENTS.includes(d))].map(d => (
+                                <option key={d} value={d}>{d}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="edit-step-bottom-row">
+                            <label className="edit-step-check">
+                              <input type="checkbox" checked={step.isDecision} onChange={e => updateStep(si, 'isDecision', e.target.checked)} /> Decision
+                            </label>
+                            <label className="edit-step-check">
+                              <input type="checkbox" checked={step.isExternal} onChange={e => updateStep(si, 'isExternal', e.target.checked)} /> External
+                            </label>
+                            {step.isDecision && <span className="edit-step-badge decision">Decision</span>}
+                            {step.isExternal && <span className="edit-step-badge external">External</span>}
+                          </div>
+                          {step.isDecision && (
+                            <div className="edit-step-branches">
+                              <div className="edit-step-branches-label">Routes from this decision:</div>
+                              {(step.branches || []).map((br, bi) => (
+                                <div key={br._key ?? bi} className="edit-branch-row">
+                                  <span className="edit-branch-icon">&#10132;</span>
+                                  <input type="text" value={br.label || ''} onChange={e => updateBranch(si, bi, 'label', e.target.value)} placeholder="Route label" className="edit-branch-input" />
+                                  <input type="text" value={br.target || ''} onChange={e => updateBranch(si, bi, 'target', e.target.value)} placeholder="Goes to..." className="edit-branch-input edit-branch-target" />
+                                  <button type="button" className="edit-branch-remove" onClick={() => removeBranch(si, bi)}>&times;</button>
+                                </div>
+                              ))}
+                              <button type="button" className="edit-add-branch-btn" onClick={() => addBranch(si)}>+ Add route</button>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="edit-step-actions">
+                          <button type="button" className="edit-step-arrow" onClick={() => moveStepUp(si)} disabled={si === 0} title="Move up">&uarr;</button>
+                          <button type="button" className="edit-step-arrow" onClick={() => moveStepDown(si)} disabled={si === proc.steps.length - 1} title="Move down">&darr;</button>
+                          <button type="button" className="edit-step-remove" onClick={() => removeStep(si)}>&times;</button>
+                        </div>
+                      </div>
+
+                      {si < proc.steps.length - 1 && (
+                        <div className="edit-handoff-row">
+                          <div className="edit-handoff-connector">
+                            <span className="edit-handoff-pipe" />
+                            <span className="edit-handoff-tag">Handoff</span>
+                          </div>
+                          <div className="edit-handoff-fields">
+                            <select value={(proc.stepHandoffs || [])[si]?.method || ''} onChange={e => updateHandoff(si, 'method', e.target.value)} className="edit-handoff-select">
+                              <option value="">How is this handed over?</option>
+                              {HANDOFF_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                            </select>
+                            <select value={(proc.stepHandoffs || [])[si]?.clarity || 'no'} onChange={e => updateHandoff(si, 'clarity', e.target.value)} className="edit-handoff-select">
+                              {CLARITY_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="edit-add-actions">
+                  <button type="button" className="edit-add-btn" onClick={() => addStep(false)}>+ Add Step</button>
+                  <button type="button" className="edit-add-btn edit-add-decision-btn" onClick={() => addStep(true)}>+ Add Decision</button>
+                </div>
               </div>
+            </div>
+
+            <div className={`edit-map-preview${previewCollapsed ? ' collapsed' : ''}`}>
+              <div className="edit-preview-header">
+                <span className="edit-preview-title">Flow Preview</span>
+                <div className="edit-preview-controls">
+                  <div className="edit-flow-view-toggle">
+                    {FLOW_VIEWS.map(v => (
+                      <button key={v.id} type="button" className={`edit-flow-view-btn${(flowView === v.id || (v.id === 'grid' && isWrapped)) ? ' active' : ''}`} onClick={() => setFlowView(v.id)} title={v.title || v.label}>
+                        {v.icon}
+                      </button>
+                    ))}
+                  </div>
+                  <button type="button" className="edit-preview-collapse" onClick={() => setPreviewCollapsed(c => !c)} title={previewCollapsed ? 'Show preview' : 'Hide preview'}>
+                    {previewCollapsed ? '\u25C0' : '\u25B6'}
+                  </button>
+                </div>
+              </div>
+              {!previewCollapsed && (
+                <div className="edit-preview-body">
+                  {processForFlow ? (
+                    <div className="edit-flow-canvas-wrap">
+                      <InteractiveFlowCanvas
+                        process={processForFlow}
+                        layout={flowView}
+                        darkTheme={theme === 'dark'}
+                        onWrapToggle={handleWrapToggle}
+                        isWrapped={isWrapped}
+                      />
+                    </div>
+                  ) : (
+                    <div className="edit-preview-empty">
+                      <span className="edit-preview-empty-icon">&#x2B13;</span>
+                      <p>Add steps to see your flow diagram</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1010,10 +1099,13 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
         )}
 
         <div className="edit-bottom-bar">
-          <button type="button" onClick={onBack} className="edit-cancel-btn">Back to Client Login</button>
-          <button type="button" className="edit-save-btn" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : 'Save All Changes'}
-          </button>
+          <button type="button" onClick={onBack} className="edit-cancel-btn">&larr; Portal</button>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <Link href={`/report?id=${reportId}`} className="edit-view-report-btn">View Report</Link>
+            <button type="button" className="edit-save-btn" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving...' : 'Save All Changes'}
+            </button>
+          </div>
         </div>
       </div>
     </>

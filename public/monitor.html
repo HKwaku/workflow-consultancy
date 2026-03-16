@@ -73,14 +73,20 @@
         <p>Track process instances in real time and spot trends</p>
     </div>
     <div class="container">
-        <div class="card" id="lookupCard">
+        <div class="card" id="authCard">
             <div class="state">
-                <h2 style="margin-bottom: 16px;">Enter your email to view your processes</h2>
+                <div id="configErrorMsg" style="display:none;background:#fef2f2;color:var(--red);padding:10px 16px;border-radius:var(--radius-sm);font-size:0.88rem;margin-bottom:14px;max-width:480px;margin-left:auto;margin-right:auto;"></div>
+                <h2 style="margin-bottom: 16px;">Sign in to use Process Monitor</h2>
+                <p style="color: var(--text-mid); margin-bottom: 20px;">Process Monitor requires you to be signed in to view and log your process instances.</p>
+                <a href="/portal" class="lookup-form button" style="display: inline-flex; align-items: center; justify-content: center; padding: 12px 28px; background: linear-gradient(135deg, var(--accent), var(--primary)); color: white; border-radius: var(--radius-sm); text-decoration: none; font-weight: 500;">Sign in via Portal</a>
+            </div>
+        </div>
+        <div class="card" id="lookupCard" style="display:none;">
+            <div class="state">
+                <h2 style="margin-bottom: 16px;">View your process instances</h2>
                 <div id="monitorError" style="display:none;background:#fef2f2;color:var(--red);padding:10px 16px;border-radius:var(--radius-sm);font-size:0.88rem;margin-bottom:14px;max-width:480px;margin-left:auto;margin-right:auto;"></div>
-                <form class="lookup-form" onsubmit="event.preventDefault(); loadMonitor();">
-                    <input type="email" id="monitorEmail" placeholder="your@email.com" required>
-                    <button type="submit">Load</button>
-                </form>
+                <p style="color: var(--text-mid); margin-bottom: 14px;">Signed in as <strong id="signedInEmail"></strong></p>
+                <button class="lookup-form" style="padding: 12px 28px; background: var(--accent); color: white; border: none; border-radius: var(--radius-sm); font-weight: 500; cursor: pointer;" onclick="loadMonitor()">Load</button>
             </div>
         </div>
 
@@ -88,6 +94,7 @@
             <!-- Log new instance -->
             <div class="card">
                 <h3 class="section-title">Log a Process Instance</h3>
+                <div id="logError" style="display:none;background:#fef2f2;color:var(--red);padding:10px 16px;border-radius:var(--radius-sm);font-size:0.88rem;margin-bottom:14px;"></div>
                 <div class="log-form" id="logForm">
                     <input type="text" id="logProcessName" placeholder="Process name">
                     <input type="text" id="logInstanceName" placeholder="Instance name (e.g. Acme Corp)">
@@ -119,12 +126,59 @@
     </div>
     <div class="footer"><a href="/">Sharpin</a> &middot; Technology-agnostic workflow optimisation</div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script>
         let currentEmail = '';
+        let accessToken = null;
+        let supabaseUrl = '';
+        let supabaseAnonKey = '';
+
         function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+        async function ensureAuth() {
+            if (!supabaseUrl || !supabaseAnonKey) {
+                let cfg = {};
+                try {
+                    const r = await fetch('/api/public-config');
+                    cfg = await r.json().catch(function(parseErr) { console.error('Config response not JSON', parseErr); return {}; });
+                    if (!r.ok) { console.error('Config fetch failed', r.status, cfg); }
+                } catch (err) { console.error('Failed to load config', err); }
+                supabaseUrl = cfg.supabaseUrl || '';
+                supabaseAnonKey = cfg.supabaseAnonKey || '';
+            }
+            if (!supabaseUrl || !supabaseAnonKey) {
+                document.getElementById('authCard').style.display = '';
+                document.getElementById('lookupCard').style.display = 'none';
+                var msgEl = document.getElementById('configErrorMsg');
+                if (msgEl) { msgEl.textContent = 'Unable to load configuration. Please check your connection and refresh the page.'; msgEl.style.display = ''; }
+                return false;
+            }
+            var cfgErr = document.getElementById('configErrorMsg');
+            if (cfgErr) cfgErr.style.display = 'none';
+            const supabase = window.supabase?.createClient(supabaseUrl, supabaseAnonKey);
+            if (!supabase) return false;
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.user?.email) {
+                document.getElementById('authCard').style.display = '';
+                document.getElementById('lookupCard').style.display = 'none';
+                return false;
+            }
+            currentEmail = session.user.email;
+            accessToken = session.access_token;
+            document.getElementById('signedInEmail').textContent = currentEmail;
+            document.getElementById('authCard').style.display = 'none';
+            document.getElementById('lookupCard').style.display = '';
+            return true;
+        }
 
         function showMonitorError(msg) {
             const el = document.getElementById('monitorError');
+            el.textContent = msg;
+            el.style.display = '';
+            setTimeout(function() { el.style.display = 'none'; }, 8000);
+        }
+        function showLogError(msg) {
+            const el = document.getElementById('logError');
             el.textContent = msg;
             el.style.display = '';
             setTimeout(function() { el.style.display = 'none'; }, 8000);
@@ -134,19 +188,24 @@
         function formatTime(d) { return new Date(d).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
 
         async function loadMonitor() {
-            currentEmail = document.getElementById('monitorEmail').value.trim();
-            if (!currentEmail) return;
+            if (!accessToken || !currentEmail) {
+                const ok = await ensureAuth();
+                if (!ok) return;
+            }
 
             try {
-                const resp = await fetch('/api/process-instances?email=' + encodeURIComponent(currentEmail));
-                const data = await resp.json();
-                if (!resp.ok) { showMonitorError(data.error || 'Failed to load monitor data.'); return; }
+                const resp = await fetch('/api/process-instances?email=' + encodeURIComponent(currentEmail), {
+                    headers: { Authorization: 'Bearer ' + accessToken }
+                });
+                let data;
+                try { data = await resp.json(); } catch (parseErr) { console.error('Monitor: response not JSON', parseErr); showMonitorError('Invalid response from server.'); return; }
+                if (!resp.ok) { showMonitorError(data?.error || 'Failed to load monitor data.'); return; }
 
                 document.getElementById('monitorError').style.display = 'none';
                 renderMonitor(data);
                 document.getElementById('lookupCard').style.display = 'none';
                 document.getElementById('monitorContent').style.display = '';
-                history.replaceState(null, '', '/monitor?email=' + encodeURIComponent(currentEmail));
+                history.replaceState(null, '', '/monitor');
             } catch (err) { console.error(err); showMonitorError('Connection error. Please check your network and try again.'); }
         }
 
@@ -171,10 +230,11 @@
 
             // Event log
             const log = document.getElementById('eventLog');
-            if (data.recentEvents.length === 0) {
+            const recentEvents = data.recentEvents || [];
+            if (recentEvents.length === 0) {
                 log.innerHTML = '<li class="event-item" style="justify-content: center; color: var(--text-light);">No events yet</li>';
             } else {
-                log.innerHTML = data.recentEvents.map(e => `
+                log.innerHTML = recentEvents.map(e => `
                     <li class="event-item">
                         <span class="event-time">${formatDate(e.logged_at)} ${formatTime(e.logged_at)}</span>
                         <span class="badge badge-${esc(e.status)}">${esc(e.status)}</span>
@@ -195,21 +255,25 @@
             try {
                 const resp = await fetch('/api/process-instances', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (accessToken || '') },
                     body: JSON.stringify({ email: currentEmail, processName, instanceName, status, notes })
                 });
-                const data = await resp.json();
+                let data;
+                try { data = await resp.json(); } catch (e) { throw new Error('Invalid response from server.'); }
                 if (data.success) {
                     document.getElementById('logInstanceName').value = '';
                     document.getElementById('logNotes').value = '';
+                    document.getElementById('logError').style.display = 'none';
                     loadMonitor();
+                } else {
+                    showLogError(data.error || 'Failed to log instance.');
                 }
-            } catch (err) { console.error(err); }
+            } catch (err) { console.error('Log instance error', err); showLogError('Connection error. Please try again.'); }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const email = new URLSearchParams(location.search).get('email');
-            if (email) { document.getElementById('monitorEmail').value = email; loadMonitor(); }
+        document.addEventListener('DOMContentLoaded', async function() {
+            const ok = await ensureAuth();
+            if (ok) loadMonitor();
         });
     </script>
 </body>

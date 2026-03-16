@@ -1,0 +1,321 @@
+{
+  "name": "Team Diagnostic Notifications",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "team-notifications",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "team-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [-288, 400],
+      "webhookId": "team-notifications"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nlet payload;\nif (raw.body?.body && typeof raw.body.body === 'object') {\n  payload = raw.body.body;\n} else if (raw.body && typeof raw.body === 'object') {\n  payload = raw.body;\n} else {\n  payload = raw;\n}\nreturn { json: payload };"
+      },
+      "id": "team-extract",
+      "name": "Extract Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-64, 400]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.requestType }}", "rightValue": "team-invite", "operator": { "type": "string", "operation": "equals" } }]
+              },
+              "renameOutput": true,
+              "outputKey": "team-invite"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.requestType }}", "rightValue": "team-response", "operator": { "type": "string", "operation": "equals" } }]
+              },
+              "renameOutput": true,
+              "outputKey": "team-response"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.requestType }}", "rightValue": "team-results-ready", "operator": { "type": "string", "operation": "equals" } }]
+              },
+              "renameOutput": true,
+              "outputKey": "team-results-ready"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.requestType }}", "rightValue": "team-closed", "operator": { "type": "string", "operation": "equals" } }]
+              },
+              "renameOutput": true,
+              "outputKey": "team-closed"
+            }
+          ]
+        },
+        "options": { "fallbackOutput": "extra" }
+      },
+      "id": "team-route",
+      "name": "Route by requestType",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [192, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst inviteeName = d.inviteeName || '';\nconst inviterName = d.inviterName || 'Your colleague';\nconst processName = d.processName || 'a workflow process';\nconst company = d.company || '';\nconst joinUrl = d.joinUrl || '';\nconst teamCode = d.teamCode || '';\n\nvar greeting = inviteeName ? 'Hi ' + inviteeName + ',' : 'Hi there,';\n\nvar html = '<div style=\"font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; max-width: 640px; margin: 0 auto; background: #f8fafc; padding: 20px;\">' +\n  '<div style=\"background: linear-gradient(135deg, #1e293b, #334155); color: white; padding: 30px; border-radius: 12px 12px 0 0;\">' +\n    '<p style=\"margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7;\">Team Alignment</p>' +\n    '<h1 style=\"margin: 0; font-size: 22px;\">You\\'re invited to share your perspective</h1>' +\n    (company ? '<p style=\"margin: 8px 0 0; opacity: 0.8; font-size: 14px;\">' + company + '</p>' : '') +\n  '</div>' +\n  '<div style=\"background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);\">' +\n    '<p style=\"font-size: 15px; color: #334155;\">' + greeting + '</p>' +\n    '<p style=\"font-size: 15px; color: #475569; line-height: 1.6;\"><strong>' + inviterName + '</strong> has invited you to participate in a team alignment exercise for <strong>' + processName + '</strong>.</p>' +\n    '<p style=\"font-size: 15px; color: #475569; line-height: 1.6;\">Each team member maps the process independently. The AI then compares everyone\\'s responses to reveal where your team\\'s understanding diverges.</p>' +\n    '<div style=\"margin: 24px 0; padding: 20px; background: #f8fafc; border-radius: 8px; text-align: center;\">' +\n      '<p style=\"margin: 0 0 4px; font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;\">Your team code</p>' +\n      '<p style=\"margin: 0; font-size: 28px; font-weight: 700; letter-spacing: 0.15em; color: #6366f1;\">' + teamCode + '</p>' +\n    '</div>' +\n    '<div style=\"margin: 24px 0; text-align: center;\">' +\n      '<a href=\"' + joinUrl + '\" style=\"display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;\">Start My Assessment</a>' +\n    '</div>' +\n    '<p style=\"font-size: 13px; color: #94a3b8; text-align: center;\">It takes about 10-15 minutes to complete.</p>' +\n  '</div>' +\n'</div>';\n\nreturn {\n  json: {\n    to: d.inviteeEmail,\n    subject: inviterName + ' invited you to a team alignment session — ' + processName,\n    html: html\n  }\n};"
+      },
+      "id": "team-invite-build",
+      "name": "Build Invite Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, 100]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "team-invite-send",
+      "name": "Send Invite Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [800, 100],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "6VIIYahGmCk2GmAo",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Invite sent\" } }}",
+        "options": {}
+      },
+      "id": "team-invite-resp",
+      "name": "Invite Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1040, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst creatorName = d.creatorName || 'there';\nconst respondentName = d.respondentName || 'A team member';\nconst respondentEmail = d.respondentEmail || '';\nconst processName = d.processName || 'your process';\nconst resultsUrl = d.resultsUrl || '';\n\nvar respondentInfo = respondentName;\nif (respondentEmail) respondentInfo += ' (' + respondentEmail + ')';\n\nvar html = '<div style=\"font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; max-width: 640px; margin: 0 auto; background: #f8fafc; padding: 20px;\">' +\n  '<div style=\"background: linear-gradient(135deg, #1e293b, #334155); color: white; padding: 30px; border-radius: 12px 12px 0 0;\">' +\n    '<p style=\"margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7;\">Team Alignment</p>' +\n    '<h1 style=\"margin: 0; font-size: 22px;\">New response received</h1>' +\n  '</div>' +\n  '<div style=\"background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);\">' +\n    '<p style=\"font-size: 15px; color: #334155;\">Hi ' + creatorName + ',</p>' +\n    '<p style=\"font-size: 15px; color: #475569; line-height: 1.6;\"><strong>' + respondentInfo + '</strong> has submitted their perspective on <strong>' + processName + '</strong>.</p>' +\n    '<div style=\"margin: 24px 0; text-align: center;\">' +\n      '<a href=\"' + resultsUrl + '\" style=\"display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;\">View Results</a>' +\n    '</div>' +\n    '<p style=\"font-size: 13px; color: #94a3b8; text-align: center;\">Results are available once 2 or more team members have responded.</p>' +\n  '</div>' +\n'</div>';\n\nreturn {\n  json: {\n    to: d.creatorEmail,\n    subject: respondentName + ' submitted their perspective — ' + processName,\n    html: html\n  }\n};"
+      },
+      "id": "team-response-build",
+      "name": "Build Response Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, 320]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "team-response-send",
+      "name": "Send Response Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [800, 320],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "6VIIYahGmCk2GmAo",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Response notification sent\" } }}",
+        "options": {}
+      },
+      "id": "team-response-resp",
+      "name": "Response Notification Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1040, 320]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst creatorName = d.creatorName || 'there';\nconst processName = d.processName || 'your process';\nconst responseCount = d.responseCount || 2;\nconst resultsUrl = d.resultsUrl || '';\n\nvar html = '<div style=\"font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; max-width: 640px; margin: 0 auto; background: #f8fafc; padding: 20px;\">' +\n  '<div style=\"background: linear-gradient(135deg, #059669, #047857); color: white; padding: 30px; border-radius: 12px 12px 0 0;\">' +\n    '<p style=\"margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7;\">Team Alignment</p>' +\n    '<h1 style=\"margin: 0; font-size: 22px;\">Your team results are ready!</h1>' +\n  '</div>' +\n  '<div style=\"background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);\">' +\n    '<p style=\"font-size: 15px; color: #334155;\">Hi ' + creatorName + ',</p>' +\n    '<p style=\"font-size: 15px; color: #475569; line-height: 1.6;\"><strong>' + responseCount + ' team members</strong> have submitted their perspectives on <strong>' + processName + '</strong>. Your alignment analysis is now available.</p>' +\n    '<div style=\"margin: 20px 0; padding: 16px; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #22c55e;\">' +\n      '<p style=\"margin: 0; font-size: 14px; color: #166534;\"><strong>What you\\'ll see:</strong> perception gaps, hidden inefficiencies, and AI-powered recommendations for getting your team aligned.</p>' +\n    '</div>' +\n    '<div style=\"margin: 24px 0; text-align: center;\">' +\n      '<a href=\"' + resultsUrl + '\" style=\"display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #059669, #047857); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;\">View Team Results</a>' +\n    '</div>' +\n    '<p style=\"font-size: 13px; color: #94a3b8; text-align: center;\">More team members can still submit — results update automatically.</p>' +\n  '</div>' +\n'</div>';\n\nreturn {\n  json: {\n    to: d.creatorEmail,\n    subject: 'Team results are ready — ' + responseCount + ' perspectives on ' + processName,\n    html: html\n  }\n};"
+      },
+      "id": "team-results-build",
+      "name": "Build Results Ready Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, 540]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "team-results-send",
+      "name": "Send Results Ready Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [800, 540],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "6VIIYahGmCk2GmAo",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Results ready notification sent\" } }}",
+        "options": {}
+      },
+      "id": "team-results-resp",
+      "name": "Results Ready Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1040, 540]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst processName = d.processName || 'your process';\nconst resultsUrl = d.resultsUrl || '';\nconst respondentEmails = d.respondentEmails || [];\n\nvar items = [];\nfor (var i = 0; i < respondentEmails.length; i++) {\n  var email = respondentEmails[i];\n  var html = '<div style=\"font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; max-width: 640px; margin: 0 auto; background: #f8fafc; padding: 20px;\">' +\n    '<div style=\"background: linear-gradient(135deg, #1e293b, #334155); color: white; padding: 30px; border-radius: 12px 12px 0 0;\">' +\n      '<p style=\"margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7;\">Team Alignment</p>' +\n      '<h1 style=\"margin: 0; font-size: 22px;\">Session closed</h1>' +\n    '</div>' +\n    '<div style=\"background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);\">' +\n      '<p style=\"font-size: 15px; color: #334155;\">Hi there,</p>' +\n      '<p style=\"font-size: 15px; color: #475569; line-height: 1.6;\">The team alignment session for <strong>' + processName + '</strong> has been closed by the session creator.</p>' +\n      '<p style=\"font-size: 15px; color: #475569; line-height: 1.6;\">You can still view the final results:</p>' +\n      '<div style=\"margin: 24px 0; text-align: center;\">' +\n        '<a href=\"' + resultsUrl + '\" style=\"display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;\">View Final Results</a>' +\n      '</div>' +\n      '<p style=\"font-size: 13px; color: #94a3b8; text-align: center;\">Thank you for participating.</p>' +\n    '</div>' +\n  '</div>';\n  items.push({ json: { to: email, subject: 'Team alignment session closed — ' + processName, html: html } });\n}\n\nreturn items;"
+      },
+      "id": "team-closed-build",
+      "name": "Build Closed Emails",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, 760]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "team-closed-send",
+      "name": "Send Closed Emails",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [800, 760],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "6VIIYahGmCk2GmAo",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Closed notifications sent\" } }}",
+        "options": {}
+      },
+      "id": "team-closed-resp",
+      "name": "Closed Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1040, 760]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Unknown team request type\" } }}",
+        "options": {}
+      },
+      "id": "team-fallback",
+      "name": "Fallback Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [560, 980]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Extract Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Data": {
+      "main": [
+        [{ "node": "Route by requestType", "type": "main", "index": 0 }]
+      ]
+    },
+    "Route by requestType": {
+      "main": [
+        [{ "node": "Build Invite Email", "type": "main", "index": 0 }],
+        [{ "node": "Build Response Email", "type": "main", "index": 0 }],
+        [{ "node": "Build Results Ready Email", "type": "main", "index": 0 }],
+        [{ "node": "Build Closed Emails", "type": "main", "index": 0 }],
+        [{ "node": "Fallback Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Invite Email": {
+      "main": [
+        [{ "node": "Send Invite Email", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send Invite Email": {
+      "main": [
+        [{ "node": "Invite Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Response Email": {
+      "main": [
+        [{ "node": "Send Response Email", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send Response Email": {
+      "main": [
+        [{ "node": "Response Notification Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Results Ready Email": {
+      "main": [
+        [{ "node": "Send Results Ready Email", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send Results Ready Email": {
+      "main": [
+        [{ "node": "Results Ready Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Closed Emails": {
+      "main": [
+        [{ "node": "Send Closed Emails", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send Closed Emails": {
+      "main": [
+        [{ "node": "Closed Response", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

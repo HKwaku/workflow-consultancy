@@ -2,24 +2,28 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import ThemeToggle from '@/components/ThemeToggle';
 import { useSearchParams } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/supabase';
 import PortalAuth from './PortalAuth';
 import PortalDashboard from './PortalDashboard';
-import DiagnosticEdit from './DiagnosticEdit';
+import '../../public/styles/diagnostic.css';
+import '../../public/styles/flow-canvas.css';
 import './portal.css';
 
 function PortalContent() {
   const searchParams = useSearchParams();
   const editFromUrl = searchParams.get('edit');
   const [user, setUser] = useState(null);
+  const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [supabase, setSupabase] = useState(null);
-  const [editingReportId, setEditingReportId] = useState(editFromUrl || null);
 
   useEffect(() => {
-    if (editFromUrl) setEditingReportId(editFromUrl);
-  }, [editFromUrl]);
+    if (editFromUrl && user?.email && typeof window !== 'undefined') {
+      window.location.href = `/diagnostic?edit=${encodeURIComponent(editFromUrl)}&email=${encodeURIComponent(user.email)}`;
+    }
+  }, [editFromUrl, user]);
 
   useEffect(() => {
     let mounted = true;
@@ -29,16 +33,19 @@ function PortalContent() {
         if (!mounted) return;
         setSupabase(sb);
 
-        const { data: { session } } = await sb.auth.getSession();
-        if (mounted && session?.user) setUser(session.user);
+        const { data: { session: s } } = await sb.auth.getSession();
+        if (mounted) {
+          setSession(s);
+          setUser(s?.user ?? null);
+        }
 
-        sb.auth.onAuthStateChange((event, session) => {
-          if (event === 'PASSWORD_RECOVERY') {
-            setUser({ ...session?.user, needsPasswordUpdate: true });
-          } else if (session?.user) {
-            setUser(session.user);
-          } else {
-            setUser(null);
+        sb.auth.onAuthStateChange((event, s) => {
+          if (event === 'PASSWORD_RECOVERY' && s?.user) {
+            setUser({ ...s.user, needsPasswordUpdate: true });
+            setSession(s);
+          } else if (mounted) {
+            setSession(s ?? null);
+            setUser(s?.user ?? null);
           }
         });
       } catch (e) {
@@ -52,10 +59,11 @@ function PortalContent() {
 
   const handleSignOut = async () => {
     if (supabase) await supabase.auth.signOut();
+    setSession(null);
     setUser(null);
   };
 
-  if (loading) {
+  if (loading || (editFromUrl && user?.email)) {
     return (
       <div className="loading-state" style={{ padding: 60 }}>
         <div className="spinner" />
@@ -73,6 +81,9 @@ function PortalContent() {
             <div className="header-divider" />
             <span className="header-title">Client Login</span>
           </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <ThemeToggle className="header-theme-btn" />
+          </div>
         </header>
         <div className="portal-wrap" style={{ maxWidth: 960, margin: '0 auto', padding: '48px 24px' }}>
           <PortalAuth supabase={supabase} onAuthenticated={setUser} />
@@ -88,6 +99,9 @@ function PortalContent() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <Link href="/" className="header-logo">Sharpin<span style={{ color: 'var(--gold)' }}>.</span></Link>
           </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <ThemeToggle className="header-theme-btn" />
+          </div>
         </header>
         <div className="portal-wrap" style={{ maxWidth: 400, margin: '48px auto', padding: 24 }}>
           <PortalAuth supabase={supabase} onAuthenticated={setUser} mode="updatePassword" />
@@ -96,17 +110,7 @@ function PortalContent() {
     );
   }
 
-  if (editingReportId) {
-    return (
-      <DiagnosticEdit
-        reportId={editingReportId}
-        email={user.email}
-        onBack={() => setEditingReportId(null)}
-      />
-    );
-  }
-
-  return <PortalDashboard user={user} onSignOut={handleSignOut} onEditReport={setEditingReportId} />;
+  return <PortalDashboard user={user} accessToken={session?.access_token} onSignOut={handleSignOut} />;
 }
 
 export default function PortalPage() {

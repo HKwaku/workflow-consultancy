@@ -1,190 +1,145 @@
-# Workflow Consultancy Partners
+# Workflow Consultancy (Sharpin)
 
-Technology-agnostic workflow optimization and data strategy consulting.
-
-## Overview
-
-Build adaptive operational foundations that grow with you, not against you. We optimize workflows and data strategy before recommending technology—preventing costly vendor lock-in and technical debt.
+Technology-agnostic workflow optimization and process mapping. Next.js app with AI-powered diagnostics, Supabase backend, and n8n webhooks.
 
 ## Tech Stack
 
-- **Frontend**: HTML5, CSS3, Vanilla JavaScript
+- **Framework**: Next.js 15
+- **Auth & DB**: Supabase
+- **AI**: Anthropic Claude (LangChain)
+- **Automation**: n8n webhooks
 - **Hosting**: Vercel
-- **Fonts**: Google Fonts (Cormorant Garamond + Work Sans)
-- **Domain**: [Add your domain here]
 
 ## Project Structure
 
 ```
 workflow-consultancy/
-├── index.html          # Main website file
-├── vercel.json         # Vercel configuration
-├── .gitignore          # Git ignore rules
-└── README.md           # This file
+├── app/
+│   ├── api/              # API routes
+│   ├── build/            # Build page
+│   ├── diagnostic/       # Diagnostic flow
+│   ├── portal/           # User portal (auth required)
+│   ├── report/           # Report view
+│   └── ...
+├── lib/
+│   ├── agents/           # AI agents (redesign, chat, etc.)
+│   ├── auth.js           # Supabase auth helpers
+│   ├── rate-limit.js     # Rate limiting
+│   └── ...
+├── public/               # Static assets, HTML pages
+├── .env.local.example    # Env template
+└── README.md
 ```
 
 ## Local Development
 
-### Option 1: Simple HTTP Server
-```bash
-# Using Python (built-in on Mac/Linux)
-python3 -m http.server 8000
+### Prerequisites
 
-# Visit: http://localhost:8000
-```
+- Node.js 18+
+- npm or pnpm
 
-### Option 2: Vercel Dev
-```bash
-# Install Vercel CLI
-npm install -g vercel
+### Setup
 
-# Run development server
-vercel dev
+1. **Clone and install**
+   ```bash
+   cd workflow-consultancy
+   npm install
+   ```
 
-# Visit: http://localhost:3000
-```
+2. **Configure environment**
+   ```bash
+   cp .env.local.example .env.local
+   # Edit .env.local with your keys (see Configuration below)
+   ```
 
-### Option 3: Live Server (Cursor/VS Code)
-1. Install "Live Server" extension
-2. Right-click `index.html`
-3. Select "Open with Live Server"
+3. **Run dev server**
+   ```bash
+   npm run dev
+   ```
+   Visit: http://localhost:3000
 
-## Deployment
+### Scripts
 
-### Deploy to Vercel
-
-```bash
-# Install Vercel CLI
-npm install -g vercel
-
-# Login to Vercel
-vercel login
-
-# Deploy to preview
-vercel
-
-# Deploy to production
-vercel --prod
-```
-
-### Auto-deployment (Recommended)
-1. Push code to GitHub
-2. Connect repository to Vercel dashboard
-3. Vercel automatically deploys on every push to main branch
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Production build |
+| `npm run start` | Start production server |
+| `npm run lint` | Run ESLint |
 
 ## Configuration
 
-### Update Contact Information
+Required environment variables (see `.env.local.example` for full list):
 
-Before deploying, update these placeholders in `index.html`:
+| Variable | Description |
+|----------|-------------|
+| `ANTHROPIC_API_KEY` | Anthropic API key for AI features |
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_SERVICE_KEY` | Supabase service role key |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase URL (client) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (client) |
+| `N8N_SAVE_PROGRESS_WEBHOOK_URL` | n8n webhook for save-progress email |
+| `N8N_HANDOVER_WEBHOOK_URL` | n8n webhook for handover email |
+| `N8N_DIAGNOSTIC_COMPLETE_WEBHOOK_URL` | n8n webhook for diagnostic-complete email |
+| `FOLLOWUP_API_KEY` | API key for `/api/get-followups` (n8n cron) |
 
-```javascript
-// Find and replace:
-contact@workflow-partners.com → your-email@domain.com
-+44 (0) 20 1234 5678 → your-phone-number
-London, United Kingdom → Your City, Country
+Optional:
+
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_APP_URL` | App URL for CORS and Origin checks (e.g. https://your-app.vercel.app) |
+| `LOG_LEVEL` | Log level: debug, info, warn, error |
+| `PUBLIC_CONFIG_RESTRICTED` | Set to `true` to disable `/api/public-config` in production |
+
+## Deployment
+
+### Vercel (recommended)
+
+1. Push to GitHub and connect repo to Vercel
+2. Add environment variables in Vercel dashboard
+3. Deploy: `vercel --prod`
+
+### Manual
+
+```bash
+npm run build
+npm run start
 ```
 
-### Add Google Analytics
+## API Routes
 
-Insert before closing `</head>` tag:
+| Route | Auth | Description |
+|-------|------|-------------|
+| `GET /api/get-dashboard` | Yes | User's reports |
+| `DELETE /api/get-dashboard` | Yes | Delete report |
+| `GET /api/get-diagnostic` | Editable only | Report by ID (read-only public for shareable links) |
+| `PATCH /api/get-diagnostic` | Yes | Update report steps |
+| `POST /api/send-diagnostic-report` | No (rate-limited) | Submit diagnostic |
+| `POST /api/process-diagnostic` | No (rate-limited) | Run process analysis |
+| `POST /api/diagnostic-chat` | No (rate-limited) | AI chat for diagnostic |
+| `POST /api/survey-submit` | No (rate-limited) | Submit survey |
+| `POST /api/progress` | No (rate-limited) | Save/load diagnostic progress |
+| `POST /api/team` | No (rate-limited) | Team alignment (create, invite, submit, close, analyze) |
+| `GET /api/team` | No | Team info/results |
+| `POST /api/generate-redesign` | Yes | Generate AI redesign |
+| `PUT /api/update-diagnostic` | Yes | Update report/redesign |
+| `POST /api/generate-workflow-export` | Yes | Export workflow |
+| `POST /api/recommend-workflow-platform` | Yes | Platform recommendations |
+| `POST /api/process-instances` | Yes | Log process instance |
+| `GET /api/process-instances` | Yes | Get process instances |
+| `GET /api/get-followups` | API key | Pending follow-ups (n8n) |
+| `POST /api/get-followups` | API key | Mark follow-up sent |
+| `GET /api/health` | No | Health check |
+| `GET /api/public-config` | No | Supabase config (for monitor; set `PUBLIC_CONFIG_RESTRICTED=true` to disable in prod) |
 
-```html
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-XXXXXXXXXX');
-</script>
-```
+## Production Checklist
 
-### Custom Domain Setup
-
-1. Purchase domain from Namecheap, Cloudflare, or Google Domains
-2. Add domain in Vercel dashboard: Settings → Domains
-3. Update DNS records at your registrar:
-   ```
-   Type: A
-   Name: @
-   Value: 76.76.21.21
-
-   Type: CNAME
-   Name: www
-   Value: cname.vercel-dns.com
-   ```
-4. Wait 24-48 hours for DNS propagation
-
-## Features
-
-- ✅ Fully responsive design
-- ✅ Smooth scroll animations
-- ✅ SEO optimized
-- ✅ Fast loading (<2s)
-- ✅ Mobile-first approach
-- ✅ Accessibility compliant
-- ✅ SSL secured (automatic via Vercel)
-
-## Services
-
-### Tier 1: Diagnostic Services
-- **Investment**: £8K-15K
-- **Duration**: 2-4 weeks
-- **Deliverable**: 30-40 page diagnostic report
-
-### Tier 2: Strategic Planning
-- **Investment**: £25K-50K
-- **Duration**: 4-8 weeks
-- **Deliverable**: 12-18 month transformation roadmap
-
-### Tier 3: Implementation Support
-- **Investment**: £5K-15K/month
-- **Duration**: 3-12 months
-- **Deliverable**: Ongoing embedded partnership
-
-## Performance
-
-- **Lighthouse Score**: 90+ (target)
-- **Page Load**: <2 seconds
-- **Mobile-friendly**: Yes
-- **Accessibility**: WCAG AA compliant
-
-## Browser Support
-
-- Chrome (latest)
-- Firefox (latest)
-- Safari (latest)
-- Edge (latest)
-- Mobile Safari (iOS 12+)
-- Chrome Mobile (Android 8+)
-
-## Contact
-
-- **Email**: [your-email@domain.com]
-- **Website**: [https://yourdomain.com]
-- **Location**: [Your City, Country]
+- [ ] Set all required env vars in Vercel
+- [ ] Add `FOLLOWUP_API_KEY` and configure n8n to pass it
+- [ ] Set `NEXT_PUBLIC_APP_URL` for CORS
+- [ ] Rate limiting is in-memory (resets on cold start); consider Redis for shared limits if needed
+- [ ] Ensure `.env.local` is never committed
 
 ## License
 
 © 2026 Workflow Consultancy Partners. All rights reserved.
-
----
-
-## Quick Commands
-
-```bash
-# Development
-python3 -m http.server 8000     # Local server
-vercel dev                       # Vercel dev server
-
-# Deployment
-vercel                          # Deploy preview
-vercel --prod                   # Deploy production
-vercel logs                     # View logs
-vercel rollback                 # Rollback deployment
-
-# Git
-git add .                       # Stage changes
-git commit -m "message"         # Commit
-git push                        # Push to remote
-```

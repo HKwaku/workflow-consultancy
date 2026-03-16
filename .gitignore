@@ -12,7 +12,6 @@ dist/
 # env files
 .env
 .env.local
-.env.local.example
 .env.production.local
 .env.development.local
 

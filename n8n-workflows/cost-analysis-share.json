@@ -1,0 +1,63 @@
+{
+  "name": "Sharpin - Cost Analysis Share Email",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cost-analysis-share",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "d4e5f6a7-0001-4000-8000-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "cost-analysis-share"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nconst d = raw.body && typeof raw.body === 'object' ? raw.body : raw;\nconst managerEmail = d.managerEmail || '';\nconst costUrl = d.costUrl || '';\nconst contactName = d.contactName || '';\nconst company = d.company || '';\n\nconst emailHtml = '<div style=\"font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; max-width: 640px; margin: 0 auto; background: #f8fafc; padding: 20px;\">' +\n  '<div style=\"background: linear-gradient(135deg, #1e293b, #334155); color: white; padding: 30px; border-radius: 12px 12px 0 0;\">' +\n    '<h1 style=\"margin: 0; font-size: 24px;\">Cost Analysis Shared</h1>' +\n    '<p style=\"margin: 8px 0 0; opacity: 0.8;\">' + (contactName || company ? 'From ' + [contactName, company].filter(Boolean).join(' — ') : 'Workflow diagnostic cost analysis') + '</p>' +\n  '</div>' +\n  '<div style=\"background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);\">' +\n    '<p style=\"font-size: 15px; color: #334155;\">Hi there,</p>' +\n    '<p style=\"font-size: 15px; color: #475569; line-height: 1.6;\">You have been sent a cost analysis link for a workflow diagnostic.</p>' +\n    '<div style=\"margin: 24px 0; text-align: center;\">' +\n      '<a href=\"' + costUrl + '\" style=\"display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;\">View Cost Analysis</a>' +\n    '</div>' +\n    '<p style=\"font-size: 13px; color: #94a3b8; text-align: center;\">This link allows you to view and edit the cost analysis.</p>' +\n  '</div>' +\n'</div>';\n\nreturn { json: { to: String(managerEmail), subject: 'Cost analysis shared with you' + (company ? ' — ' + company : ''), html: emailHtml } };"
+      },
+      "id": "d4e5f6a7-0002-4000-8000-000000000002",
+      "name": "Build Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "d4e5f6a7-0003-4000-8000-000000000003",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [680, 300],
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Cost analysis share email sent\" } }}",
+        "options": {}
+      },
+      "id": "d4e5f6a7-0004-4000-8000-000000000004",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Build Email", "type": "main", "index": 0 }]] },
+    "Build Email": { "main": [[{ "node": "Send Email", "type": "main", "index": 0 }]] },
+    "Send Email": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "1",
+  "meta": { "templateCredsSetupCompleted": false }
+}

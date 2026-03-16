@@ -1,6 +1,6 @@
 ---
-description: Routing and layout rules for the grid view SVG flowcharts generated in diagnostic.html buildGridSVG()
-globs: workflow-consultancy/diagnostic.html
+description: Routing and layout rules for the grid view SVG flowcharts generated in lib/flows/grid.js buildGridSVG()
+globs: workflow-consultancy/lib/flows/grid.js
 alwaysApply: false
 ---
 

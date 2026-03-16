@@ -1,18 +1,55 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { getSupabaseWriteHeaders, fetchWithTimeout, requireSupabase } from '@/lib/api-helpers';
+import { getSupabaseHeaders, getSupabaseWriteHeaders, fetchWithTimeout, requireSupabase, isValidEmail, checkOrigin, getRequestId, generateDisplayCode } from '@/lib/api-helpers';
+import { verifySupabaseSession } from '@/lib/auth';
+import { SendDiagnosticReportInputSchema } from '@/lib/ai-schemas';
+import { triggerWebhook } from '@/lib/triggerWebhook';
+import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
+import { logger } from '@/lib/logger';
 
 export async function POST(request) {
+  const originErr = checkOrigin(request);
+  if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
+
+  const rl = checkRateLimit(getRateLimitKey(request));
+  if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
+
+  const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024; // 2MB
   try {
-    const { editingReportId, contact, summary, recommendations, automationScore, roadmap, processes, rawProcesses, customDepartments, timestamp } = await request.json();
-    if (!contact || !contact.email) return NextResponse.json({ error: 'Contact email is required' }, { status: 400 });
+    const contentLength = parseInt(request.headers.get('content-length') || '0', 10);
+    if (contentLength > MAX_PAYLOAD_BYTES) return NextResponse.json({ error: 'Request body too large.' }, { status: 413 });
+
+    let body;
+    try { body = await request.json(); } catch { return NextResponse.json({ error: 'Invalid JSON.' }, { status: 400 }); }
+    const parsed = SendDiagnosticReportInputSchema.safeParse(body);
+    if (!parsed.success) {
+      const err = parsed.error.flatten();
+      const msg = err.formErrors?.join?.(' ') || err.errors?.[0]?.message || 'Invalid request.';
+      return NextResponse.json({ error: msg, details: err }, { status: 400 });
+    }
+    let { editingReportId, contact, fallbackEmail, authToken, summary, recommendations, automationScore, roadmap, processes, rawProcesses, customDepartments, diagnosticMode, timestamp, userId, auditTrail } = parsed.data;
+    let resolvedEmail = (contact?.email || '').trim() || (fallbackEmail || '').trim() || '';
+    if (!resolvedEmail || !isValidEmail(resolvedEmail)) {
+      const token = authToken || request.headers.get('Authorization')?.replace(/^Bearer\s+/i, '')?.trim();
+      if (token) {
+        const authReq = new Request(request.url, { headers: new Headers({ Authorization: `Bearer ${token}` }) });
+        const session = await verifySupabaseSession(authReq);
+        if (session?.email && isValidEmail(session.email)) resolvedEmail = session.email;
+      }
+    }
+    if (!resolvedEmail || !isValidEmail(resolvedEmail)) return NextResponse.json({ error: 'Invalid request. Contact email required.' }, { status: 400 });
+    contact = { ...(contact || {}), email: resolvedEmail, name: contact?.name ?? '', company: contact?.company ?? '' };
 
     const reportId = editingReportId || crypto.randomUUID();
     const isUpdate = !!editingReportId;
     const proto = request.headers.get('x-forwarded-proto') || 'https';
     const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'localhost:3000';
-    const reportUrl = `${proto}://${host}/report?id=${reportId}`;
+    const baseUrl = `${proto}://${host}`;
+    const reportUrl = `${baseUrl}/report?id=${reportId}`;
+    const portalUrl = `${baseUrl}/portal`;
+    const costAnalysisToken = crypto.randomBytes(24).toString('base64url');
     const leadScore = calculateLeadScore(contact, summary, automationScore, processes);
+    const now = new Date().toISOString();
 
     const sbConfig = requireSupabase();
     let storedInSupabase = false;
@@ -20,37 +57,130 @@ export async function POST(request) {
     if (sbConfig) {
       const { url: supabaseUrl, key: supabaseKey } = sbConfig;
       try {
-        const reportPayload = { id: reportId, contact_email: contact.email || '', contact_name: contact.name || '', company: contact.company || '', lead_score: leadScore.score, lead_grade: leadScore.grade, diagnostic_data: { contact, summary, recommendations, automationScore, roadmap, processes, rawProcesses: rawProcesses || null, customDepartments: customDepartments || [], leadScore }, created_at: timestamp || new Date().toISOString() };
+        const costAnalysisPending = (summary?.totalAnnualCost || 0) === 0 && diagnosticMode === 'comprehensive';
+        let costStatus = costAnalysisPending ? 'pending' : 'complete';
+        let costToken = costAnalysisPending ? costAnalysisToken : undefined;
+
+        if (isUpdate) {
+          const readResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}&select=diagnostic_data`, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
+          if (readResp.ok) {
+            try {
+              const [existing] = await readResp.json();
+              const dd = existing?.diagnostic_data || {};
+              if (dd.costAnalysisStatus === 'complete') {
+                costStatus = 'complete';
+                costToken = undefined;
+              } else if (dd.costAnalysisToken) {
+                costToken = dd.costAnalysisToken;
+              }
+            } catch { /* keep new token */ }
+          }
+        }
+
+        const reportPayload = {
+          id: reportId,
+          display_code: !isUpdate ? generateDisplayCode() : undefined,
+          contact_email: contact.email || '',
+          contact_name: contact.name || '',
+          company: contact.company || '',
+          lead_score: leadScore.score,
+          lead_grade: leadScore.grade,
+          diagnostic_mode: diagnosticMode || 'comprehensive',
+          diagnostic_data: {
+            contact, summary, recommendations, automationScore, roadmap, processes, rawProcesses: rawProcesses || null, customDepartments: customDepartments || [], leadScore, diagnosticMode: diagnosticMode || 'comprehensive', auditTrail: (auditTrail || []).slice(-50),
+            costAnalysisStatus: costStatus,
+            ...(costToken ? { costAnalysisToken: costToken } : {}),
+          },
+          updated_at: now,
+          ...(userId ? { user_id: userId } : {}),
+        };
+        if (!isUpdate) reportPayload.created_at = timestamp || now;
+
         let sbResp;
         if (isUpdate) {
-          const updatePayload = { ...reportPayload }; delete updatePayload.id;
+          const updatePayload = { ...reportPayload }; delete updatePayload.id; delete updatePayload.created_at;
           sbResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}`, { method: 'PATCH', headers: getSupabaseWriteHeaders(supabaseKey), body: JSON.stringify(updatePayload) });
         } else {
           sbResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports`, { method: 'POST', headers: getSupabaseWriteHeaders(supabaseKey), body: JSON.stringify(reportPayload) });
         }
         if (sbResp.ok || sbResp.status === 201 || sbResp.status === 204) storedInSupabase = true;
-        else console.warn('Supabase failed:', sbResp.status);
-      } catch (sbErr) { console.warn('Supabase error:', sbErr.message); }
+        else logger.warn('Supabase failed', { requestId: getRequestId(request), status: sbResp.status });
+
+        if (storedInSupabase && !isUpdate) {
+          scheduleFollowups(supabaseUrl, supabaseKey, reportId, contact, now, getRequestId(request));
+        }
+      } catch (sbErr) { logger.warn('Supabase error', { requestId: getRequestId(request), message: sbErr.message }); }
     }
 
     const notif = buildNotificationSummary(contact, summary, leadScore, automationScore);
-    const n8nPayload = { requestType: 'diagnostic-complete', reportId, reportUrl, contact: { name: contact.name || '', email: contact.email || '', company: contact.company || '', title: contact.title || '', industry: contact.industry || '', teamSize: contact.teamSize || '', phone: contact.phone || '' }, leadScore, summary: { totalProcesses: summary?.totalProcesses || 0, totalAnnualCost: summary?.totalAnnualCost || 0, potentialSavings: summary?.potentialSavings || 0, analysisType: summary?.analysisType || 'rule-based', qualityScore: summary?.qualityScore || 0 }, automationScore: { percentage: automationScore?.percentage || 0, grade: automationScore?.grade || 'N/A', insight: automationScore?.insight || '' }, recommendations: (recommendations || []).slice(0, 6).map(r => ({ type: r.type || 'general', process: r.process || '', text: r.text || '' })), roadmap: { quickWins: (roadmap?.phases?.quick?.items || []).length, totalSavings: roadmap?.totalSavings || 0 }, processes: (processes || []).map(p => ({ name: p.name || '', type: p.type || '', annualCost: p.annualCost || 0, stepsCount: p.stepsCount || 0 })), notification: notif, timestamp: timestamp || new Date().toISOString() };
+    const n8nPayload = {
+      requestType: 'diagnostic-complete',
+      reportId,
+      reportUrl,
+      portalUrl,
+      contact: {
+        name: contact.name || '',
+        email: contact.email || '',
+        company: contact.company || '',
+      },
+      leadScore: { score: leadScore.score, grade: leadScore.grade },
+      summary: {
+        totalProcesses: summary?.totalProcesses || 0,
+        totalAnnualCost: summary?.totalAnnualCost || 0,
+        potentialSavings: summary?.potentialSavings || 0,
+      },
+      automationScore: {
+        percentage: automationScore?.percentage || 0,
+        grade: automationScore?.grade || 'N/A',
+      },
+      notification: notif,
+      timestamp: timestamp || now,
+    };
 
-    const webhookUrl = process.env.N8N_DIAGNOSTIC_WEBHOOK_URL || process.env.N8N_WEBHOOK_URL;
-    const isValidUrl = webhookUrl && (webhookUrl.startsWith('http://') || webhookUrl.startsWith('https://'));
-    let webhookConfigured = false;
-    let webhookResponse = null;
-    if (isValidUrl) {
-      try {
-        const n8nResp = await fetch(webhookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(n8nPayload) });
-        if (n8nResp.ok) { webhookConfigured = true; try { webhookResponse = await n8nResp.json(); } catch { webhookResponse = { accepted: true }; } }
-      } catch (n8nErr) { console.warn('n8n webhook error:', n8nErr.message); }
-    }
+    const { sent: webhookConfigured, body: webhookResponse } = await triggerWebhook(n8nPayload, { envSuffix: 'DIAGNOSTIC_COMPLETE', requestId: getRequestId(request) });
 
-    return NextResponse.json({ success: true, reportId, reportUrl: storedInSupabase ? reportUrl : null, webhookConfigured, storedInSupabase, leadScore, message: webhookConfigured ? 'Report sent successfully.' : 'Report generated.', ...(webhookResponse || {}) });
+    const costAnalysisPending = (summary?.totalAnnualCost || 0) === 0 && diagnosticMode === 'comprehensive';
+    const costAnalysisUrl = costAnalysisPending ? `${baseUrl}/cost-analysis?id=${reportId}&token=${costAnalysisToken}` : null;
+
+    return NextResponse.json({
+      success: true, reportId,
+      reportUrl: storedInSupabase ? reportUrl : null,
+      costAnalysisUrl: costAnalysisPending ? costAnalysisUrl : null,
+      webhookConfigured, storedInSupabase, leadScore,
+      message: webhookConfigured ? 'Report sent successfully.' : 'Report generated.',
+      ...(webhookResponse || {}),
+    });
   } catch (error) {
-    console.error('Send diagnostic report error:', error);
+    logger.error('Send diagnostic report error', { requestId: getRequestId(request), error: error.message, stack: error.stack });
     return NextResponse.json({ error: 'Failed to process diagnostic report.' }, { status: 500 });
+  }
+}
+
+async function scheduleFollowups(supabaseUrl, supabaseKey, reportId, contact, now, requestId) {
+  try {
+    const base = new Date(now);
+    const rows = [
+      { followup_type: 'day3', scheduled_for: new Date(base.getTime() + 3 * 86400000).toISOString() },
+      { followup_type: 'day14', scheduled_for: new Date(base.getTime() + 14 * 86400000).toISOString() },
+      { followup_type: 'day30', scheduled_for: new Date(base.getTime() + 30 * 86400000).toISOString() },
+    ].map((r) => ({
+      id: crypto.randomUUID(),
+      report_id: reportId,
+      contact_email: contact.email,
+      contact_name: contact.name || null,
+      company: contact.company || null,
+      ...r,
+      status: 'pending',
+      created_at: now,
+    }));
+
+    await fetchWithTimeout(`${supabaseUrl}/rest/v1/followup_events`, {
+      method: 'POST',
+      headers: { ...getSupabaseWriteHeaders(supabaseKey), 'Prefer': 'return=minimal' },
+      body: JSON.stringify(rows),
+    });
+  } catch (err) {
+    logger.warn('Failed to schedule follow-ups', { requestId, message: err.message });
   }
 }
 

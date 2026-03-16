@@ -1,0 +1,640 @@
+/* Interactive Flow Canvas - N8N-style */
+
+.interactive-flow-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+}
+.interactive-flow-canvas .react-flow {
+  flex: 1;
+  min-height: 0;
+  overflow: visible;
+}
+.interactive-flow-canvas .react-flow__renderer {
+  background: transparent;
+}
+
+/* Flow variables - dark theme */
+.interactive-flow-canvas {
+  --flow-bg: #1a1a1a;
+  --flow-node-bg: #2d2d2d;
+  --flow-node-border: #404040;
+  --flow-text: #e8e8e8;
+  --flow-text-muted: #a0a0a0;
+}
+
+/* Flow nodes - prevent overflow distortion */
+.flow-node {
+  font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: box-shadow 0.2s, transform 0.2s;
+  box-sizing: border-box;
+}
+
+.react-flow__node {
+  box-sizing: border-box;
+  padding: 0 !important;
+  background: transparent !important;
+  overflow: visible !important;
+}
+
+.flow-node-step-wrapper,
+.flow-node-decision-wrapper,
+.flow-node-merge-wrapper {
+  overflow: visible;
+}
+
+.flow-node-lane-separator {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  min-height: 1px;
+  max-height: 1px;
+}
+
+/* Handles - larger hit area for reliable drag-to-connect (avoids grab/pan conflict) */
+.flow-handle {
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  min-height: 14px !important;
+  background: #525252 !important;
+  border: 2px solid #2d2d2d !important;
+  z-index: 1000 !important;
+  cursor: crosshair !important;
+  transition: background 0.12s !important;
+  pointer-events: all !important;
+  /* No transform on hover — prevents handle position jumping */
+}
+.flow-handle:hover {
+  background: #a3a3a3 !important;
+}
+/* Protrusion is applied via inline style (margin) on handles - avoids transform conflicts with React Flow */
+
+.flow-node:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+.flow-node.selected {
+  box-shadow: 0 0 0 2px var(--accent, #0d9488);
+}
+
+/* Start / End (oval) - single layer */
+.flow-node-start,
+.flow-node-end {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid;
+}
+
+/* Step node - single layer, no inner wrapper. overflow: visible so protruding handles remain clickable */
+.flow-node-step {
+  border: 2px solid;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: row;
+  overflow: visible;
+  position: relative;
+}
+
+.flow-node-step-bar {
+  width: 4px;
+  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 4px 0 0 4px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.flow-node-step-content {
+  padding: 14px 14px 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  justify-content: flex-start;
+  align-items: stretch;
+  text-align: left;
+}
+
+.flow-node-step-num,
+.flow-node-step-dept {
+  flex-shrink: 0;
+}
+
+.flow-node-step-num {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--flow-text-muted);
+}
+
+.flow-node-step-label {
+  font-weight: 600;
+  color: var(--flow-text);
+  line-height: 1.4;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.flow-node-step-dept {
+  font-size: 10px;
+  color: var(--flow-text-muted);
+}
+
+/* Merge node - blue square. Distinct from step (rectangle) and decision (diamond). */
+.flow-node-merge {
+  border: 2px solid #2563eb;
+  border-radius: 0;
+  display: flex;
+  flex-direction: row;
+  overflow: visible;
+  position: relative;
+  background-color: #3b82f6 !important;
+}
+
+.flow-node-step.bottleneck {
+  border-color: #ef4444;
+}
+
+/* Decision node (diamond) - contain rotated content, no outer rectangle */
+.flow-node-decision {
+  overflow: visible;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+.flow-node-decision.selected {
+  box-shadow: none !important;
+}
+
+.flow-node-decision-wrapper {
+  background: transparent !important;
+}
+
+.flow-node-decision-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(45deg);
+  border: 2px solid;
+  border-radius: 8px;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.flow-node-decision-num,
+.flow-node-decision-label {
+  transform: rotate(-45deg);
+  text-align: center;
+}
+
+.flow-node-decision-num {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--flow-text-muted);
+}
+
+.flow-node-decision-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--flow-text);
+  max-width: 180px;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  text-align: center;
+}
+
+/* React Flow overrides */
+.interactive-flow-canvas .react-flow__controls {
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  margin: 8px;
+}
+/* ── Canvas toolbar (sits above the ReactFlow canvas) ─────── */
+.flow-canvas-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  padding: 0 8px;
+  gap: 6px;
+  background: var(--flow-node-bg);
+  border-bottom: 1px solid var(--flow-node-border);
+  flex-shrink: 0;
+}
+.flow-canvas-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.flow-canvas-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+/* Hide toolbar in the floating viewer — it has its own header controls */
+.ffv-canvas-wrap .flow-canvas-toolbar,
+.ffv-flow-canvas .flow-canvas-toolbar {
+  display: none;
+}
+/* In the diagnostic preview, hide toolbar since that context has its own controls */
+.s7-preview-canvas .flow-canvas-toolbar {
+  display: none;
+}
+/* Legacy panel classes kept for any remaining usages */
+.flow-legend-panel {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  align-items: center;
+}
+.flow-legend-panel-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+.flow-legend-left,
+.flow-legend-right {
+  display: flex;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--flow-node-bg);
+  border: 1px solid var(--flow-node-border);
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 500;
+}
+.flow-legend-automation {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.flow-legend-automation-heading {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--flow-text-muted);
+}
+.flow-auto-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--flow-text-muted, #94a3b8);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  cursor: default;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.interactive-flow-canvas[data-theme="dark"] .flow-legend-automation-heading {
+  color: #94a3b8;
+}
+.flow-float-panel {
+  display: flex;
+  align-items: center;
+}
+.flow-automation-panel {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  padding: 10px;
+}
+.flow-legend {
+  display: flex;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--flow-node-bg);
+  border: 1px solid var(--flow-node-border);
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 500;
+}
+.flow-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.flow-legend-symbol {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+.flow-legend-exclusive,
+.flow-legend-parallel,
+.flow-legend-merge { color: #94a3b8; }
+.flow-legend-label { color: var(--flow-text-muted); }
+.interactive-flow-canvas[data-theme="dark"] .flow-legend-label { color: #94a3b8; }
+.flow-legend-hint {
+  font-size: 9px;
+  color: var(--flow-text-muted);
+  opacity: 0.9;
+}
+.interactive-flow-canvas[data-theme="dark"] .flow-legend-hint { color: #94a3b8; }
+.interactive-flow-canvas .flow-reset-btn {
+  margin: 0;
+}
+
+.interactive-flow-canvas .react-flow__minimap {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.flow-canvas-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0a0a0a;
+  background: var(--flow-node-bg);
+  padding: 6px 14px;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  max-width: min(600px, 95vw);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+.interactive-flow-canvas[data-theme="dark"] .flow-canvas-title {
+  color: #e2e8f0;
+}
+
+.flow-reset-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--flow-text-muted);
+  background: var(--flow-node-bg);
+  border: 1px solid var(--flow-node-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.flow-reset-btn .flow-reset-label {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  padding: 4px 10px;
+  background: var(--flow-node-bg);
+  color: var(--flow-text);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  border-radius: 6px;
+  border: 1px solid var(--flow-node-border);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s, transform 0.15s;
+  z-index: 100;
+}
+.flow-reset-btn:hover .flow-reset-label {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.flow-reset-btn:hover {
+  color: var(--flow-text);
+  background: var(--flow-node-border);
+}
+.flow-wrap-btn-active {
+  color: var(--flow-accent, #0d9488);
+  background: rgba(13,148,136,0.12);
+  border-color: rgba(13,148,136,0.35);
+}
+.flow-wrap-btn-active:hover {
+  color: var(--flow-accent, #0d9488);
+  background: rgba(13,148,136,0.2);
+}
+
+/* Edge action buttons - show only when hovering near connector midpoint */
+.flow-edge-actions {
+  z-index: 1002;
+  min-width: 100px;
+  min-height: 56px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.flow-edge-actions:hover {
+  opacity: 1;
+}
+.flow-edge-add-btn,
+.flow-edge-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: var(--flow-node-bg);
+  border: 1px solid var(--flow-node-border);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--flow-text-muted);
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+.flow-edge-add-btn:hover {
+  background: #10b981;
+  color: white;
+  border-color: #059669;
+  transform: scale(1.08);
+}
+.flow-edge-delete-btn:hover {
+  background: #ef4444;
+  color: white;
+  border-color: #dc2626;
+  transform: scale(1.08);
+}
+
+/* Swimlane: department labels stay fixed on horizontal pan */
+.flow-swimlane-container {
+  overflow: visible;
+}
+.flow-labels-panel {
+  flex-shrink: 0;
+  z-index: 10;
+}
+.flow-pane {
+  overflow: visible;
+  min-width: 0;
+}
+
+
+/* ---- Node badge styles (added for n8n redesign) ---- */
+
+/* Step number row + badges strip at top of step node */
+.flow-node-step-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.flow-node-step-badges {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Systems count badge */
+.flow-node-systems-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 9px;
+  font-weight: 600;
+  color: inherit;
+  opacity: 0.7;
+}
+
+/* Warning badge */
+.flow-node-warn-badge {
+  display: inline-flex;
+  align-items: center;
+  color: #f59e0b;
+}
+
+/* Merge node type chip */
+.flow-node-type-chip {
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.85);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+/* Duration badge shown above step nodes */
+.flow-node-duration-badge {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Decision parallel symbol */
+.flow-node-decision-parallel {
+  display: inline-block;
+  line-height: 1;
+}
+
+/* Mobile: automation legend vertical on top-right */
+@media (max-width: 768px) {
+  .flow-legend-automation {
+    align-items: flex-end;
+  }
+  .flow-legend-automation-heading {
+    font-size: 8px;
+  }
+  .flow-legend-right {
+    flex-direction: column;
+    gap: 3px;
+    padding: 4px 6px;
+    font-size: 9px;
+  }
+  .flow-legend-right .flow-legend-item {
+    gap: 4px;
+  }
+  .flow-legend-right .flow-legend-label {
+    font-size: 9px;
+    display: inline !important;
+  }
+  .flow-automation-panel {
+    max-width: 160px;
+    margin-top: 64px !important;
+  }
+  .flow-legend-panel {
+    max-width: calc(100vw - 170px);
+  }
+  .flow-legend.flow-legend-left {
+    flex-wrap: wrap;
+    gap: 4px 6px;
+    font-size: 9px;
+  }
+}
+
+/* Mobile flowchart prompt overlay */
+.flow-mobile-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 24px;
+  margin: auto;
+  text-align: center;
+  max-width: 320px;
+}
+.flow-mobile-prompt-icon {
+  color: var(--flow-text-muted, #94a3b8);
+  opacity: 0.7;
+}
+.flow-mobile-prompt-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--flow-text, #e8e8e8);
+  margin: 0;
+}
+.flow-mobile-prompt-body {
+  font-size: 13px;
+  color: var(--flow-text-muted, #94a3b8);
+  margin: 0;
+  line-height: 1.5;
+}
+.flow-mobile-prompt-btn {
+  margin-top: 4px;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--flow-text, #e8e8e8);
+  background: var(--flow-node-bg, #2d2d2d);
+  border: 1px solid var(--flow-node-border, #404040);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.flow-mobile-prompt-btn:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: #6b7280;
+}

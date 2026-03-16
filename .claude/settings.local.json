@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/workflow/workflow-consultancy -maxdepth 3 -name \"tailwind.config.*\" -o -name \"postcss.config.*\" 2>/dev/null | head -20)",
+      "Bash(/tmp/theme_audit.txt:*)",
+      "Read(//tmp/**)",
+      "Bash(cd C:/workflow/workflow-consultancy && npm run dev)",
+      "Bash(find \"C:\\\\workflow\\\\workflow-consultancy\\\\app\\\\api\\\\recommend-workflow-platform\" -type f -name \"*.js\" 2>/dev/null | head -5)",
+      "Bash(find /c/workflow/workflow-consultancy -type f \\\\\\( -name \"*.jsx\" -o -name \"*.js\" \\\\\\) ! -path \"*/node_modules/*\" ! -path \"*/.next/*\" 2>/dev/null | head -50)",
+      "Bash(ls -la \"C:\\\\workflow\\\\workflow-consultancy\\\\components\\\\diagnostic\\\\screens\\\\\" 2>/dev/null || echo \"Directory not found, checking alternative paths\")",
+      "Bash(grep -rn $'—' C:/workflow/workflow-consultancy/lib/prompts.js C:/workflow/workflow-consultancy/app/api/process-diagnostic/route.js C:/workflow/workflow-consultancy/app/portal/PortalAnalyticsPanel.jsx C:/workflow/workflow-consultancy/app/portal/PortalDashboard.jsx C:/workflow/workflow-consultancy/app/report/page.jsx C:/workflow/workflow-consultancy/lib/diagnostic/buildLocalResults.js C:/workflow/workflow-consultancy/lib/diagnostic/buildMapObservations.js 2>/dev/null | head -80)",
+      "Bash(perl -i -p -e 's/\\\\x{2014}/ - /g' \\\\\n  C:/workflow/workflow-consultancy/lib/prompts.js \\\\\n  C:/workflow/workflow-consultancy/app/api/process-diagnostic/route.js \\\\\n  C:/workflow/workflow-consultancy/lib/diagnostic/buildLocalResults.js \\\\\n  C:/workflow/workflow-consultancy/lib/diagnostic/buildMapObservations.js \\\\\n  C:/workflow/workflow-consultancy/lib/diagnostic/guidedPrompts.js \\\\\n  C:/workflow/workflow-consultancy/lib/flows/automation.js \\\\\n  C:/workflow/workflow-consultancy/lib/flows/grid.js \\\\\n  C:/workflow/workflow-consultancy/lib/flows/swimlane.js \\\\\n  C:/workflow/workflow-consultancy/app/portal/PortalAnalyticsPanel.jsx \\\\\n  C:/workflow/workflow-consultancy/app/portal/PortalDashboard.jsx \\\\\n  C:/workflow/workflow-consultancy/app/report/page.jsx \\\\\n  C:/workflow/workflow-consultancy/app/MarketingClient.jsx \\\\\n  C:/workflow/workflow-consultancy/app/api/get-followups/route.js)",
+      "Bash(perl -i -p -e 's/\\\\x{2014}/ - /g' \\\\\n  C:/workflow/workflow-consultancy/lib/agents/chat/graph.js \\\\\n  C:/workflow/workflow-consultancy/lib/agents/redesign/graph.js \\\\\n  C:/workflow/workflow-consultancy/lib/agents/redesign/tools.js \\\\\n  C:/workflow/workflow-consultancy/lib/agents/workflow-export/airtable.js \\\\\n  C:/workflow/workflow-consultancy/lib/agents/workflow-export/camunda.js \\\\\n  C:/workflow/workflow-consultancy/lib/agents/workflow-export/index.js \\\\\n  C:/workflow/workflow-consultancy/lib/agents/workflow-export/instructions.js \\\\\n  C:/workflow/workflow-consultancy/lib/agents/workflow-export/make.js \\\\\n  C:/workflow/workflow-consultancy/lib/agents/workflow-export/monday.js \\\\\n  C:/workflow/workflow-consultancy/lib/agents/workflow-export/pipedream.js \\\\\n  C:/workflow/workflow-consultancy/lib/agents/workflow-export/powerAutomate.js \\\\\n  C:/workflow/workflow-consultancy/lib/agents/workflow-export/processStreet.js \\\\\n  C:/workflow/workflow-consultancy/lib/agents/workflow-export/retool.js \\\\\n  C:/workflow/workflow-consultancy/lib/agents/workflow-export/smartsuite.js \\\\\n  C:/workflow/workflow-consultancy/lib/agents/workflow-export/temporal.js \\\\\n  C:/workflow/workflow-consultancy/lib/agents/workflow-export/trayIo.js \\\\\n  C:/workflow/workflow-consultancy/lib/agents/workflow-export/workato.js \\\\\n  C:/workflow/workflow-consultancy/lib/agents/workflow-export/zapier.js)",
+      "Bash(grep -rn \"report-section-tab\" C:/workflow/workflow-consultancy/app/report C:/workflow/workflow-consultancy/app/diagnostic C:/workflow/workflow-consultancy/public/styles --include=\"*.css\" --include=\"*.jsx\" --include=\"*.js\" 2>/dev/null | grep -v \".next\" | head -20)",
+      "Bash(cd \"C:\\\\workflow\\\\workflow-consultancy\" && npx next build 2>&1 | head -60)",
+      "Bash(cd \"C:\\\\workflow\\\\workflow-consultancy\" && npx next build 2>&1 | grep -E \"\\(error|warning|Warning|Error|✓|✗\\)\" | head -20)",
+      "Bash(cd \"C:\\\\workflow\\\\workflow-consultancy\" && npx next build 2>&1)",
+      "Bash(cd \"C:\\\\workflow\\\\workflow-consultancy\" && npx next build 2>&1 | grep -E \"\\(error|warning|Warning|Error|✓|✗|Attempted\\)\" | head -20)",
+      "Bash(cd \"C:\\\\workflow\\\\workflow-consultancy\" && npx next build 2>&1 | tail -50)",
+      "Bash(wc -l /c/workflow/workflow-consultancy/components/flow/*.jsx)",
+      "Bash(cd \"C:\\\\workflow\\\\workflow-consultancy\" && npx next build 2>&1 | grep -E \"\\(error|Error|warning|Warning|✓|✗|Attempted\\)\" | head -20)",
+      "Bash(cd \"C:\\\\workflow\\\\workflow-consultancy\" && npx next build 2>&1 | grep -E \"\\(error|Error|warning|Warning|✓|✗|Attempted\\)\" | head -10)",
+      "Bash(cd \"C:\\\\workflow\\\\workflow-consultancy\" && npx next build 2>&1 | grep -E \"\\(error|Error|✓\\)\" | head -5)",
+      "Bash(cd \"C:\\\\workflow\\\\workflow-consultancy\" && npm run build 2>&1 | tail -20)",
+      "Bash(cd \"C:\\\\workflow\\\\workflow-consultancy\" && npm run build 2>&1 | tail -15)",
+      "Bash(cd \"C:\\\\workflow\\\\workflow-consultancy\" && npm run build 2>&1 | tail -10)",
+      "Bash(npm run:*)",
+      "Bash(grep -rn \"layout\\\\|swimlane\\\\|'grid'\" C:/workflow/workflow-consultancy/app --include=\"*.jsx\" --include=\"*.js\" -l 2>/dev/null | head -20)",
+      "Bash(grep -n \"{ id: 'grid'\" C:/workflow/workflow-consultancy/app/report/page.jsx C:/workflow/workflow-consultancy/app/portal/DiagnosticEdit.jsx C:/workflow/workflow-consultancy/app/portal/PortalDashboard.jsx)",
+      "Bash(grep -n -A1 \"{ id: 'grid'\" C:/workflow/workflow-consultancy/app/report/page.jsx)",
+      "Bash(find /c/workflow/workflow-consultancy/app/api/diagnostic-chat -type f -name \"*.js\" -o -name \"*.json\" 2>/dev/null | head -20)",
+      "Bash(node:*)",
+      "Bash(grep:*)"
+    ]
+  }
+}

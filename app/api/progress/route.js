@@ -1,12 +1,29 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { getSupabaseHeaders, isValidUUID, fetchWithTimeout, requireSupabase } from '@/lib/api-helpers';
+import { getSupabaseHeaders, isValidUUID, fetchWithTimeout, requireSupabase, checkOrigin, getRequestId } from '@/lib/api-helpers';
+import { ProgressInputSchema } from '@/lib/ai-schemas';
+import { triggerWebhook } from '@/lib/triggerWebhook';
+import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
+import { logger } from '@/lib/logger';
+
+const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024; // 2MB
 
 export async function POST(request) {
+  const originErr = checkOrigin(request);
+  if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
+
+  const rl = checkRateLimit(getRateLimitKey(request));
+  if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
+
+  const contentLength = parseInt(request.headers.get('content-length') || '0', 10);
+  if (contentLength > MAX_PAYLOAD_BYTES) return NextResponse.json({ error: 'Request body too large.' }, { status: 413 });
+
   try {
-    const body = await request.json();
-    const { email, progressData, currentScreen, processName } = body;
-    if (!progressData) return NextResponse.json({ error: 'Progress data is required.' }, { status: 400 });
+    let body;
+    try { body = await request.json(); } catch { return NextResponse.json({ error: 'Invalid JSON.' }, { status: 400 }); }
+    const parsed = ProgressInputSchema.safeParse(body);
+    if (!parsed.success) return NextResponse.json({ error: 'Invalid progress data.' }, { status: 400 });
+    const { email, progressData, currentScreen, processName, isHandover, senderName, comments } = parsed.data;
 
     const payloadSize = JSON.stringify(progressData).length;
     if (payloadSize > 2 * 1024 * 1024) return NextResponse.json({ error: 'Progress data too large.' }, { status: 413 });
@@ -21,9 +38,13 @@ export async function POST(request) {
     const proto = request.headers.get('x-forwarded-proto') || 'https';
     const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'localhost:3000';
     const teamCode = progressData?.teamMode?.code;
-    const resumeUrl = teamCode
-      ? `${proto}://${host}/diagnostic?resume=${progressId}&team=${teamCode}`
-      : `${proto}://${host}/diagnostic?resume=${progressId}`;
+    const step = body.step != null ? body.step : null;
+    let resumeUrl = `${proto}://${host}/diagnostic?resume=${progressId}`;
+    if (teamCode) resumeUrl += `&team=${teamCode}`;
+    if (step != null) resumeUrl += `&step=${step}`;
+
+    if (senderName) progressData.handoverSender = senderName;
+    if (comments) progressData.handoverComments = comments;
 
     const payload = {
       id: progressId, email: email || null, process_name: processName || null,
@@ -31,29 +52,42 @@ export async function POST(request) {
     };
     if (!isUpdate) payload.created_at = new Date().toISOString();
 
-    const sbResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_progress`, {
-      method: 'POST',
-      headers: { ...getSupabaseHeaders(supabaseKey), 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify(payload)
-    });
+    let sbResp;
+    try {
+      sbResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_progress`, {
+        method: 'POST',
+        headers: { ...getSupabaseHeaders(supabaseKey), 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify(payload)
+      });
+    } catch (fetchErr) {
+      logger.error('Save progress: Supabase fetch failed', { requestId: getRequestId(request), error: fetchErr.message });
+      return NextResponse.json({ error: 'Failed to save progress. Storage unavailable.' }, { status: 503 });
+    }
 
     if (!sbResp.ok && sbResp.status !== 201) {
+      let sbError = '';
+      try { const errBody = await sbResp.text(); sbError = errBody?.slice(0, 200) || ''; } catch { /* ignore */ }
+      logger.error('Save progress: Supabase rejected', { requestId: getRequestId(request), status: sbResp.status, body: sbError });
       return NextResponse.json({ error: 'Failed to save progress.' }, { status: 502 });
     }
 
     let emailSent = false;
     if (email) {
-      const webhookUrl = process.env.N8N_DIAGNOSTIC_WEBHOOK_URL || process.env.N8N_WEBHOOK_URL;
-      const isValidUrl = webhookUrl && (webhookUrl.startsWith('http://') || webhookUrl.startsWith('https://'));
-      if (isValidUrl) {
-        try {
-          const n8nResp = await fetch(webhookUrl, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ requestType: 'save-progress', progressId, resumeUrl, email, processName: processName || 'your diagnostic', currentScreen: currentScreen || 0, screenLabel: getScreenLabel(currentScreen), timestamp: new Date().toISOString() })
-          });
-          if (n8nResp.ok) emailSent = true;
-        } catch (n8nErr) { console.warn('n8n webhook error:', n8nErr.message); }
-      }
+      const isHandoverReq = isHandover === true || (isHandover !== false && !!senderName);
+      const webhookSuffix = isHandoverReq ? 'HANDOVER' : 'SAVE_PROGRESS';
+      const { sent } = await triggerWebhook({
+        requestType: isHandoverReq ? 'handover' : 'save-progress',
+        progressId,
+        resumeUrl,
+        email,
+        processName: processName || 'your diagnostic',
+        currentScreen: currentScreen || 0,
+        screenLabel: getScreenLabel(currentScreen),
+        senderName: senderName || null,
+        comments: comments || null,
+        timestamp: new Date().toISOString(),
+      }, { envSuffix: webhookSuffix, requestId: getRequestId(request) });
+      emailSent = sent;
     }
 
     return NextResponse.json({
@@ -61,12 +95,18 @@ export async function POST(request) {
       message: emailSent ? 'Progress saved! A resume link has been sent to your email.' : email ? 'Progress saved! Email delivery is not configured, but you can use the link below.' : 'Progress saved!'
     });
   } catch (error) {
-    console.error('Save progress error:', error);
-    return NextResponse.json({ error: 'Failed to save progress.' }, { status: 500 });
+    logger.error('Save progress error', { requestId: getRequestId(request), error: error.message, stack: error.stack });
+    const devHint = process.env.NODE_ENV === 'development' ? error.message : undefined;
+    return NextResponse.json({ error: 'Failed to save progress.', ...(devHint && { _devHint: devHint }) }, { status: 500 });
   }
 }
 
 export async function GET(request) {
+  const originErr = checkOrigin(request);
+  if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
+  const rl = checkRateLimit(getRateLimitKey(request));
+  if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
+
   try {
     const id = request.nextUrl.searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'Progress ID is required. Use ?id=xxx' }, { status: 400 });
@@ -79,7 +119,8 @@ export async function GET(request) {
     const url = `${supabaseUrl}/rest/v1/diagnostic_progress?id=eq.${id}&select=*`;
     const sbResp = await fetchWithTimeout(url, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
     if (!sbResp.ok) return NextResponse.json({ error: 'Failed to fetch progress from storage.' }, { status: 502 });
-    const rows = await sbResp.json();
+    let rows;
+    try { rows = await sbResp.json(); } catch (e) { logger.error('Load progress: Supabase parse error', { requestId: getRequestId(request), error: e.message }); return NextResponse.json({ error: 'Failed to fetch progress from storage.' }, { status: 502 }); }
     if (!rows || rows.length === 0) return NextResponse.json({ error: 'Saved progress not found.' }, { status: 404 });
 
     const progress = rows[0];
@@ -92,12 +133,12 @@ export async function GET(request) {
       progress: { id: progress.id, email: progress.email, processName: progress.process_name, currentScreen: progress.current_screen, progressData: progress.progress_data, updatedAt: progress.updated_at, createdAt: progress.created_at }
     });
   } catch (error) {
-    console.error('Load progress error:', error);
+    logger.error('Load progress error', { requestId: getRequestId(request), error: error.message, stack: error.stack });
     return NextResponse.json({ error: 'Failed to retrieve saved progress.' }, { status: 500 });
   }
 }
 
 function getScreenLabel(screen) {
-  const labels = { 0: 'Getting Started', 1: 'Process Selection', 2: 'Process Name', 3: 'Define Boundaries', 4: 'Last Example', 5: 'Time Investment', 6: 'Performance', 7: 'Steps & Handoffs', 8: 'Bottlenecks', 9: 'Systems & Tools', 10: 'Approvals', 11: 'Knowledge', 12: 'New Hire', 13: 'Frequency', 14: 'Cost Calculation', 15: 'Team Cost & Savings', 16: 'Priority', 17: 'Your Details', 18: 'Results' };
+  const labels = { 0: 'Getting Started', 1: 'Process Definition', 2: 'Map Steps', 4: 'Cost & Impact', 5: 'Your Details', 6: 'Complete', '-2': 'Team Alignment' };
   return labels[screen] || 'In Progress';
 }

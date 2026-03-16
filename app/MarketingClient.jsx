@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/lib/useAuth';
+import HeroCanvas from '@/components/marketing/HeroCanvas';
 import './marketing.css';
 
 const ArrowIcon = () => (
@@ -86,7 +88,6 @@ function SignalsCarousel({ scrollTo }) {
         <div className="section-header scroll-reveal">
           <div className="section-label">Sound familiar?</div>
           <h2 className="section-title">The Problems That Quietly Drain <strong>Your Profitability</strong></h2>
-          <p className="section-desc">These operational symptoms cost more than most leaders realise. If any resonate, the good news is they&apos;re measurable, and fixable.</p>
         </div>
 
         <div className="signals-carousel">
@@ -103,7 +104,6 @@ function SignalsCarousel({ scrollTo }) {
                       {s.icon}
                     </div>
                     <h3 className="signal-headline">{s.headline}</h3>
-                    <p className="signal-detail">{s.detail}</p>
                     <a href="#approach" className="signal-cta" onClick={scrollTo('approach')}>
                       See how we solve this
                       <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m0 0L9.5 4.5M13 8l-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -130,9 +130,60 @@ function SignalsCarousel({ scrollTo }) {
   );
 }
 
+/* ── Services segments component ── */
+const segments = [
+  {
+    color: 'teal',
+    label: 'Scaling Mid-Market',
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></svg>,
+    tagline: 'Growing companies, breaking processes',
+    outcome: 'We surface exactly where your operations are slowing you down, and what fixing them is worth.',
+  },
+  {
+    color: 'indigo',
+    label: 'M&A Integration',
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="18" r="3" /><circle cx="16" cy="6" r="3" /><path d="M8 15V9a6 6 0 016-6" /><path d="M16 9v6a6 6 0 01-6 6" /></svg>,
+    tagline: 'Structure from Day 1, not Day 100',
+    outcome: 'We bring operational clarity to post-merger complexity before it compounds into something harder to fix.',
+  },
+  {
+    color: 'purple',
+    label: 'Private Equity Value Creation',
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" /><line x1="12" y1="12" x2="12" y2="16" /><line x1="10" y1="14" x2="14" y2="14" /></svg>,
+    tagline: 'From acquisition baseline to exit-ready',
+    outcome: 'Operational excellence that shows up in the multiple, from Day 1 post-acquisition to the data room.',
+  },
+  {
+    color: 'gold',
+    label: 'High-stakes Operational Events',
+    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>,
+    tagline: 'Carve-outs, ERP, VC-backed scale-ups',
+    outcome: 'High-stakes operational moments with hard deadlines. We provide the structure when there is no time to improvise.',
+  },
+];
+
+function ServicesSegments() {
+  return (
+    <div className="seg-grid">
+      {segments.map((s) => (
+        <div key={s.label} className={`seg-card seg-card--${s.color} scroll-reveal`}>
+          <div className={`seg-card-icon seg-card-icon--${s.color}`}>{s.icon}</div>
+          <div className={`seg-card-label seg-card-label--${s.color}`}>{s.label}</div>
+          <p className="seg-card-tagline">{s.tagline}</p>
+          <p className="seg-card-outcome">{s.outcome}</p>
+          <a href="#contact" className={`seg-card-cta seg-card-cta--${s.color}`}>
+            Get in touch <ArrowIcon />
+          </a>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function MarketingClient() {
   const navRef = useRef(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user: sessionUser, signOut: sessionSignOut } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -182,17 +233,22 @@ export default function MarketingClient() {
             <li><a href="#diagnostic" onClick={scrollTo('diagnostic')}>Diagnostic</a></li>
             <li><a href="#services" onClick={scrollTo('services')}>Services</a></li>
             <li><a href="#approach" onClick={scrollTo('approach')}>Approach</a></li>
-            <li><Link href="/portal" onClick={closeMenu}>Client Login</Link></li>
+            {sessionUser?.email ? (
+              <li><Link href="/portal" onClick={closeMenu}>Client Login</Link></li>
+            ) : (
+              <li><Link href="/portal" onClick={closeMenu}>Client Login</Link></li>
+            )}
             <li><a href="#contact" className="cta-nav" onClick={scrollTo('contact')}>Get Started</a></li>
+            {sessionUser?.email && (
+              <li><button type="button" className="nav-signout-btn" onClick={() => { closeMenu(); sessionSignOut(); }}>Sign Out</button></li>
+            )}
           </ul>
         </div>
       </nav>
 
       {/* Hero */}
       <section className="hero">
-        <video className="hero-bg-video" autoPlay muted loop playsInline poster="">
-          <source src="/videos/hero-bg.mp4" type="video/mp4" />
-        </video>
+        <HeroCanvas />
         <div className="hero-overlay" />
 
         <div className="hero-main">
@@ -204,7 +260,7 @@ export default function MarketingClient() {
                 We find the hidden capacity in your operations by fixing broken processes and deploying the right technology so your team delivers more.
               </p>
               <div className="hero-cta-row">
-                <Link href="/diagnostic" className="btn-primary">
+                <Link href="/diagnostic" className="btn-primary" target="_blank" rel="noopener noreferrer">
                   Start Free Diagnostic <ArrowIcon />
                 </Link>
                 <a href="#comparison" className="btn-secondary" onClick={scrollTo('comparison')}>
@@ -217,11 +273,20 @@ export default function MarketingClient() {
 
       </section>
 
+      {/* Services  -  immediately below hero */}
+      <section className="services-section" id="services">
+        <div className="container">
+          <div className="section-header scroll-reveal">
+            <div className="section-label">What We Do</div>
+            <h2 className="section-title">Wherever the Complexity Lives,<br /><strong>We Work There</strong></h2>
+            
+          </div>
+          <ServicesSegments />
+        </div>
+      </section>
+
       {/* Sound Familiar - Sliding carousel */}
       <SignalsCarousel scrollTo={scrollTo} />
-
-
-      {/* Comparison */}
       <section className="comparison-section" id="comparison">
         <div className="container">
           <div className="section-header">
@@ -472,58 +537,22 @@ export default function MarketingClient() {
           <h2>Discover What&apos;s <strong>Actually Broken</strong></h2>
           <p>Walk through your real processes with real examples. Our diagnostic reveals the rework, bottlenecks, and manual workarounds that are quietly consuming your team&apos;s capacity.</p>
           <div className="diagnostic-stats">
-            <div className="diagnostic-stat scroll-reveal"><span className="diagnostic-stat-number">12&ndash;15 min</span><span className="diagnostic-stat-label">Per process</span></div>
+            <div className="diagnostic-stat scroll-reveal"><span className="diagnostic-stat-number">Hours</span><span className="diagnostic-stat-label">Not months</span></div>
             <div className="diagnostic-stat scroll-reveal"><span className="diagnostic-stat-number">Evidence-led</span><span className="diagnostic-stat-label">Real data, real costs</span></div>
             <div className="diagnostic-stat scroll-reveal"><span className="diagnostic-stat-number">Free</span><span className="diagnostic-stat-label">Full report included</span></div>
           </div>
-          <Link href="/diagnostic" className="btn-white">
+          <Link href="/diagnostic" className="btn-white" target="_blank" rel="noopener noreferrer">
             Start Process Diagnostic <ArrowIcon />
           </Link>
-        </div>
-      </section>
-
-      {/* Services */}
-      <section className="services-section" id="services">
-        <div className="container">
-          <div className="section-header scroll-reveal">
-            <div className="section-label">Diagnose &middot; Design &middot; Deploy</div>
-            <h2 className="section-title">Your Journey <strong>With Us</strong></h2>
-            <p className="section-desc">A proven framework that starts with operational reality. From first audit to ongoing optimisation, we meet you where you are.</p>
-          </div>
-          <div className="services-grid">
-            {[
-              { num: '1', title: 'Diagnose', time: '2\u20136 weeks', features: ['Map current-state workflows and measure cycle times', 'Data architecture and technology stack review', 'Identify bottlenecks, friction points, and quick wins'], deliverable: 'Diagnostic report with prioritised recommendations and baseline metrics' },
-              { num: '2', title: 'Design', time: '4\u20138 weeks', features: ['Transformation roadmap with milestones', 'Technology selection: best fit, no vendor bias', 'Change management and business case development'], deliverable: 'Implementation-ready roadmap with process architectures and success metrics' },
-              { num: '3', title: 'Deploy & Scale', time: 'Ongoing', features: ['Implementation oversight with embedded advisory', 'Vendor negotiation and integration support', 'Quarterly reviews and continuous improvement'], deliverable: '3\u201312 month engagements, from first deployment to organisation-wide rollout' },
-            ].map((s) => (
-              <div key={s.num} className="service-card scroll-reveal">
-                <div className="service-card-head">
-                  <div className="service-step-badge">{s.num}</div>
-                  <h3>{s.title}</h3>
-                  <span className="price-label">{s.time}</span>
-                </div>
-                <div className="service-card-body">
-                  <ul className="service-features">
-                    {s.features.map((f) => <li key={f}>{f}</li>)}
-                  </ul>
-                  <div className="service-deliverable">{s.deliverable}</div>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
       {/* Bottom CTA */}
       <section className="bottom-cta" id="contact">
         <div className="container">
-          <div className="cta-box scroll-reveal">
-            <h2>Ready to Get More From <strong>What You Have?</strong></h2>
-            <p>Schedule a 30-minute discovery call to discuss your operational challenges and explore where the hidden capacity is.</p>
-            <div className="cta-buttons">
-              <a href="mailto:hopektettey@gmail.com" className="btn-primary">Schedule Discovery Call</a>
-              <a href="#services" className="btn-outline" onClick={scrollTo('services')}>View Services</a>
-            </div>
+          <div className="cta-buttons">
+            <a href="mailto:hopektettey@gmail.com" className="btn-primary">Book Discovery Call</a>
+            <a href="#services" className="btn-outline" onClick={scrollTo('services')}>Explore Services</a>
           </div>
         </div>
       </section>
@@ -533,13 +562,16 @@ export default function MarketingClient() {
         <div className="footer-content">
           <div>
             <div className="footer-brand">Sharpin</div>
-            <p className="footer-tagline">Technology-agnostic process optimization. We fix broken processes and apply the right technology so your team delivers more without growing proportionally.</p>
+            <p className="footer-tagline">Evidence-based process diagnostics and operations transformation. We work across scaling companies, M&amp;A integration, private equity portfolios, and high-stakes operational events.</p>
           </div>
           <div>
             <h4>Services</h4>
             <ul>
-              <li><a href="#services" onClick={scrollTo('services')}>Diagnostic</a></li>
-              <li><Link href="/portal">Client Login</Link></li>
+              <li><a href="#services" onClick={scrollTo('services')}>Scaling Mid-Market</a></li>
+              <li><a href="#services" onClick={scrollTo('services')}>M&amp;A Integration</a></li>
+              <li><a href="#services" onClick={scrollTo('services')}>Private Equity Value Creation</a></li>
+              <li><a href="#services" onClick={scrollTo('services')}>High-stakes Operational Events</a></li>
+
             </ul>
           </div>
           <div>
@@ -558,7 +590,7 @@ export default function MarketingClient() {
           </div>
         </div>
         <div className="footer-bottom">
-          <p>&copy; {new Date().getFullYear()} Sharpin. All rights reserved.</p>
+          <p suppressHydrationWarning>&copy; {new Date().getFullYear()} Sharpin. All rights reserved.</p>
         </div>
       </footer>
     </div>

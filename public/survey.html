@@ -1018,9 +1018,9 @@
                 return;
             }
             let html = '';
-            if (params.healthScore) html += '<div class="diagnostic-stat"><strong>' + params.healthScore + '</strong><span>Health score</span></div>';
+            if (params.healthScore) html += '<div class="diagnostic-stat"><strong>' + esc(params.healthScore) + '</strong><span>Health score</span></div>';
             if (params.totalCost) html += '<div class="diagnostic-stat"><strong>£' + Number(params.totalCost).toLocaleString() + '</strong><span>Est. annual cost</span></div>';
-            if (params.workflowCount) html += '<div class="diagnostic-stat"><strong>' + params.workflowCount + '</strong><span>Workflows</span></div>';
+            if (params.workflowCount) html += '<div class="diagnostic-stat"><strong>' + esc(params.workflowCount) + '</strong><span>Workflows</span></div>';
             el.innerHTML = html;
         }
 

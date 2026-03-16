@@ -9,28 +9,28 @@
 
 /* ── CSS Variables ───────────────────────────────── */
 :root {
-    --primary: #1a2f4a;
-    --primary-light: #2a4a6b;
-    --accent: #3d8ea6;
-    --accent-light: #5bb8d4;
-    --gold: #b8976a;
-    --text: #1e293b;
-    --text-mid: #475569;
+    --primary: #171717;
+    --primary-light: #262626;
+    --accent: #5bb8d4;
+    --accent-light: #7dd3e8;
+    --gold: #d4a85c;
+    --text: #f1f5f9;
+    --text-mid: #94a3b8;
     --text-light: #64748b;
-    --bg: #fafbfc;
-    --bg-alt: #f1f5f9;
-    --white: #ffffff;
-    --border: #e2e8f0;
-    --green: #16a34a;
-    --red: #dc2626;
-    --amber: #d97706;
-    --purple: #7c3aed;
+    --bg: #0a0a0a;
+    --bg-alt: #141414;
+    --white: #171717;
+    --border: #262626;
+    --green: #4ade80;
+    --red: #f87171;
+    --amber: #fbbf24;
+    --purple: #a78bfa;
     --radius-sm: 8px;
     --radius-md: 12px;
     --radius-lg: 16px;
-    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-    --shadow-md: 0 4px 20px rgba(0,0,0,0.06);
-    --shadow-lg: 0 12px 40px rgba(0,0,0,0.08);
+    --shadow: 0 1px 3px rgba(0,0,0,0.5);
+    --shadow-md: 0 4px 20px rgba(0,0,0,0.5);
+    --shadow-lg: 0 16px 48px rgba(0,0,0,0.6);
 }
 
 /* ── Body ────────────────────────────────────────── */

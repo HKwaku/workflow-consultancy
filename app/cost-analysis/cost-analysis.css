@@ -1,0 +1,343 @@
+/* Cost analysis page - matches report page theme */
+
+.cost-analysis-page .report-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1.5rem 2rem;
+}
+
+.cost-analysis-page .report-hero {
+  text-align: left;
+}
+
+.cost-analysis-page .report-subtitle {
+  margin-bottom: 0;
+}
+
+.cost-analysis-page .report-collapsible {
+  margin-bottom: 1.5rem;
+}
+
+.cost-analysis-page .report-collapsible:last-of-type {
+  margin-bottom: 0;
+}
+
+/* Cost analysis section tabs (clickable text) */
+.cost-analysis-tabs-wrap {
+  margin-bottom: 1.5rem;
+}
+
+.cost-analysis-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.5rem;
+  padding-bottom: 12px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.cost-analysis-tab {
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-mid);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.15s;
+}
+
+.cost-analysis-tab:hover {
+  color: var(--text);
+}
+
+.cost-analysis-tab.active {
+  color: var(--accent);
+}
+
+.cost-analysis-tab.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -13px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+}
+
+.cost-analysis-tab-content {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-top: 0;
+}
+
+[data-theme="dark"] .cost-analysis-tab-content {
+  background: var(--primary-light);
+  border-color: var(--border);
+}
+
+.cost-analysis-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.cost-analysis-summary-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  text-align: center;
+}
+
+.cost-analysis-summary-card-success {
+  border-left: 4px solid var(--green, #16a34a);
+}
+
+.cost-analysis-summary-label {
+  font-size: 0.78rem;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.35rem;
+}
+
+.cost-analysis-summary-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.cost-analysis-summary-card-success .cost-analysis-summary-value {
+  color: var(--green, #16a34a);
+}
+
+.cost-analysis-section-desc {
+  font-size: 0.9rem;
+  color: var(--text-mid);
+  margin: 0 0 1.25rem;
+  line-height: 1.5;
+}
+
+/* Labour rates - matches report-meta-row style */
+.cost-analysis-rates-wrapper {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+}
+
+.cost-analysis-rate-row {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 0.75rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.83rem;
+}
+
+.cost-analysis-rate-row:last-child {
+  margin-bottom: 0;
+}
+
+.cost-analysis-rate-row:hover {
+  background: var(--bg-alt);
+}
+
+.cost-analysis-dept-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  min-width: 220px;
+  flex-shrink: 0;
+}
+
+.cost-analysis-rate-row .cost-input-rate {
+  width: 110px;
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.cost-analysis-rate-row .cost-input-util {
+  width: 100px;
+  min-width: 88px;
+  flex-shrink: 0;
+}
+
+.cost-analysis-rate-row .cost-label-util {
+  font-size: 0.78rem;
+  color: var(--text-light);
+  font-weight: 500;
+  min-width: 88px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Inputs - match report-metric-card */
+.cost-analysis-input {
+  padding: 10px 12px;
+  min-height: 42px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  font-family: inherit;
+  font-size: 0.9rem;
+  background: #fff;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.cost-analysis-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.cost-analysis-input::placeholder {
+  color: var(--text-light);
+}
+
+/* Blended rate & non-labour */
+.cost-analysis-form-row {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.cost-analysis-field {
+  flex: 0 0 auto;
+}
+
+.cost-analysis-field label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-light);
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.cost-analysis-field input {
+  display: block;
+  width: 140px;
+}
+
+.cost-analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.cost-analysis-grid .cost-analysis-field input {
+  width: 100%;
+}
+
+/* Process list - matches report-obs-item */
+.cost-analysis-process-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cost-analysis-process-item {
+  padding: 1.25rem 1.25rem 1.25rem 1rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  border-left: 4px solid #2563eb;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.cost-analysis-process-item strong {
+  color: var(--text);
+}
+
+.cost-analysis-process-item .cost-process-meta {
+  color: var(--text-mid);
+  margin-left: 0.5rem;
+}
+
+/* Actions */
+.cost-analysis-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid var(--border);
+}
+
+.cost-analysis-error {
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  background: rgba(245, 158, 11, 0.08);
+  color: var(--amber);
+  border: 1px solid var(--border);
+}
+
+@media (max-width: 900px) {
+  .cost-analysis-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .cost-analysis-page .report-container {
+    padding: 0 1rem 1.5rem;
+  }
+
+  .cost-analysis-rate-row {
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .cost-analysis-dept-name {
+    min-width: 100%;
+  }
+
+  .cost-analysis-rates-wrapper {
+    padding: 1rem;
+  }
+
+  .cost-analysis-form-row {
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .cost-analysis-field input {
+    width: 100%;
+    max-width: 240px;
+  }
+}
+
+/* Cost analysis dark theme */
+[data-theme="dark"] .cost-analysis-summary-card,
+[data-theme="dark"] .cost-analysis-rates-wrapper,
+[data-theme="dark"] .cost-analysis-process-item {
+  background: var(--bg-alt) !important;
+  border-color: var(--border);
+}
+[data-theme="dark"] .cost-analysis-input {
+  background: var(--bg) !important;
+  border-color: var(--border);
+  color: var(--text);
+}
+[data-theme="dark"] .cost-analysis-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(13,148,136,0.2);
+}
+[data-theme="dark"] .cost-analysis-rate-row:hover {
+  background: var(--white) !important;
+}

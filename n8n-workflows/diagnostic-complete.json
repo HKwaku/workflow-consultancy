@@ -1,0 +1,63 @@
+{
+  "name": "Sharpin - Diagnostic Complete Email",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "diagnostic-complete",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c3d4e5f6-0001-4000-8000-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "diagnostic-complete"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nconst d = raw.body && typeof raw.body === 'object' ? raw.body : raw;\nconst c = d.contact || {};\nconst s = d.summary || {};\nconst auto = d.automationScore || {};\nconst reportUrl = d.reportUrl || '';\nconst portalUrl = d.portalUrl || '';\nconst autoPct = auto.percentage || 0;\n\nconst metricsTable = '<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" align=\"center\" style=\"margin: 20px auto; width: 100%; max-width: 540px;\">' +\n  '<tr><td align=\"center\" width=\"100%\" style=\"padding: 0 4px;\">' +\n    '<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\"><tr><td style=\"background: #faf5ff; padding: 18px 8px; border-radius: 8px; text-align: center;\">' +\n      '<div style=\"font-size: 26px; font-weight: 700; color: #7c3aed; line-height: 1.2;\">' + autoPct + '%</div>' +\n      '<div style=\"font-size: 11px; color: #64748b; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.3px;\">Automation Ready</div>' +\n    '</td></tr></table></td></tr></table>';\n\nconst emailHtml = '<div style=\"font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; max-width: 640px; margin: 0 auto; background: #f8fafc; padding: 20px;\">' +\n  '<div style=\"background: linear-gradient(135deg, #1e293b, #334155); color: white; padding: 30px; border-radius: 12px 12px 0 0;\">' +\n    '<h1 style=\"margin: 0; font-size: 24px;\">Your Diagnostic Report is Ready</h1>' +\n    '<p style=\"margin: 8px 0 0; opacity: 0.8;\">Prepared for ' + (c.company || c.name || '') + '</p>' +\n  '</div>' +\n  '<div style=\"background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);\">' +\n    '<p style=\"font-size: 15px; color: #334155;\">Hi ' + (c.name || 'there') + ',</p>' +\n    '<p style=\"font-size: 15px; color: #475569; line-height: 1.6;\">Thank you for completing your workflow diagnostic. Here is a snapshot of what we found:</p>' +\n    metricsTable +\n    '<p style=\"font-size: 15px; color: #475569; line-height: 1.6; text-align: center; margin-top: 24px;\">Your full report includes process flow diagrams, detailed recommendations, and a personalised 90-day roadmap.</p>' +\n    '<div style=\"margin: 24px 0; text-align: center;\">' +\n      '<a href=\"' + reportUrl + '\" style=\"display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;\">View Full Report</a>' +\n    '</div>' +\n    (portalUrl ? '<div style=\"margin: 16px 0 0; padding: 20px; background: #f0f9ff; border-radius: 8px; text-align: center;\">' +\n      '<p style=\"margin: 0 0 10px; font-size: 14px; color: #1e293b; font-weight: 600;\">Manage all your reports in one place</p>' +\n      '<p style=\"margin: 0 0 12px; font-size: 13px; color: #475569;\">Log in to your Client Portal to view, edit, request redesigns, and track your processes.</p>' +\n      '<a href=\"' + portalUrl + '\" style=\"display: inline-block; padding: 10px 28px; border: 2px solid #6366f1; color: #6366f1; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;\">Go to Client Portal</a>' +\n    '</div>' : '') +\n    '<hr style=\"border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;\">' +\n    '<p style=\"font-size: 12px; color: #94a3b8; text-align: center;\">You received this because you completed a workflow diagnostic. If you don\\'t have a portal account yet, use the same email to sign up.</p>' +\n  '</div>' +\n'</div>';\n\nreturn { json: { to: String(d.email || c.email || ''), subject: 'Your Diagnostic Report is Ready', html: emailHtml } };"
+      },
+      "id": "c3d4e5f6-0002-4000-8000-000000000002",
+      "name": "Build Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "c3d4e5f6-0003-4000-8000-000000000003",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [680, 300],
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Diagnostic email sent\" } }}",
+        "options": {}
+      },
+      "id": "c3d4e5f6-0004-4000-8000-000000000004",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Build Email", "type": "main", "index": 0 }]] },
+    "Build Email": { "main": [[{ "node": "Send Email", "type": "main", "index": 0 }]] },
+    "Send Email": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "1",
+  "meta": { "templateCredsSetupCompleted": false }
+}

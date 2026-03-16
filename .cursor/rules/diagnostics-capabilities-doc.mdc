@@ -1,12 +1,12 @@
 ---
 description: Keep DIAGNOSTICS_CAPABILITIES.md up to date when diagnostic flow changes
-globs: diagnostic.html
+globs: workflow-consultancy/components/diagnostic/**/*.jsx, workflow-consultancy/app/diagnostic/**
 alwaysApply: false
 ---
 
 # Diagnostics Capabilities Document
 
-When making changes to `diagnostic.html` that affect the diagnostics flow, **always update `DIAGNOSTICS_CAPABILITIES.md`** to reflect the change.
+When making changes to the diagnostic React components or flow, **always update `DIAGNOSTICS_CAPABILITIES.md`** to reflect the change.
 
 This includes changes to:
 - Screens (adding, removing, reordering, renaming)

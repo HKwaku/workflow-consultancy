@@ -1,0 +1,155 @@
+{
+  "name": "Follow-Up Nurture Sequence (Fixed)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "triggerAtHour": 9 }]
+        }
+      },
+      "id": "fc3be631-ea56-4779-bb5a-06677e6f35df",
+      "name": "Daily at 9am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-720, 64]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.APP_BASE_URL || 'https://workflow-consultancy.vercel.app' }}/api/get-followups",
+        "options": {
+          "response": { "response": {} }
+        }
+      },
+      "id": "cac5832b-cac5-4866-848b-50df7652d489",
+      "name": "Fetch Due Follow-Ups",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-480, 64]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "check-total",
+              "leftValue": "={{ $json.totalDue }}",
+              "rightValue": 0,
+              "operator": { "type": "number", "operation": "gt" }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f93b134a-0769-4857-a50c-7cfa53587ab3",
+      "name": "Any Follow-Ups Due?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-240, 64]
+    },
+    {
+      "parameters": {
+        "jsCode": "const followups = $input.first().json.followups || [];\nreturn followups.map(f => ({ json: f }));"
+      },
+      "id": "52cc9a84-bc3c-4083-890f-955a7754a563",
+      "name": "Split Into Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const f = $input.first().json;\nconst baseUrl = $env.APP_BASE_URL || 'https://workflow-consultancy.vercel.app';\nconst reportUrl = f.reportId ? baseUrl + '/report?id=' + f.reportId : '';\nconst portalUrl = baseUrl + '/portal';\n\nvar ctaText = 'View Your Report';\nvar ctaUrl = reportUrl;\nvar ctaColor = '#6366f1';\n\nif (f.followupType === 'day14') {\n  ctaText = 'Book a Quick Wins Call';\n  ctaUrl = 'mailto:hopektettey@gmail.com?subject=Quick Wins Call - ' + encodeURIComponent(f.company || '');\n  ctaColor = '#16a34a';\n} else if (f.followupType === 'day30') {\n  ctaText = 'Schedule Your Strategy Session';\n  ctaUrl = 'mailto:hopektettey@gmail.com?subject=Strategy Session - ' + encodeURIComponent(f.company || '');\n  ctaColor = '#1e40af';\n}\n\nvar stageLabels = { day3: 'Quick Check-In', day14: 'Two Week Review', day30: 'Monthly Strategy Update' };\nvar stageLabel = stageLabels[f.followupType] || 'Follow-Up';\n\nvar html = '<div style=\"font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; max-width: 640px; margin: 0 auto; background: #f8fafc; padding: 20px;\">' +\n  '<div style=\"background: linear-gradient(135deg, #1e293b, #334155); color: white; padding: 30px; border-radius: 12px 12px 0 0;\">' +\n    '<p style=\"margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7;\">' + stageLabel + '</p>' +\n    '<h1 style=\"margin: 0; font-size: 22px;\">' + f.subject + '</h1>' +\n    (f.company ? '<p style=\"margin: 8px 0 0; opacity: 0.8; font-size: 14px;\">For ' + f.company + '</p>' : '') +\n  '</div>' +\n  '<div style=\"background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);\">' +\n    '<p style=\"font-size: 15px; color: #334155; line-height: 1.6;\">' + f.message + '</p>' +\n    (reportUrl && f.followupType === 'day3' ? '<div style=\"margin: 20px 0; padding: 16px; background: #f0f9ff; border-radius: 8px; border-left: 4px solid #3b82f6;\"><p style=\"margin: 0; font-size: 14px; color: #1e40af;\"><strong>Your report is still available:</strong> view your full analysis including process maps, automation scores, and your personalised 90-day roadmap.</p></div>' : '') +\n    (f.followupType === 'day14' ? '<div style=\"margin: 20px 0; padding: 16px; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #22c55e;\"><p style=\"margin: 0; font-size: 14px; color: #166534;\"><strong>Did you know?</strong> Companies that act on quick wins within 30 days see results 3x faster than those who wait.</p></div>' : '') +\n    (f.followupType === 'day30' ? '<div style=\"margin: 20px 0; padding: 16px; background: #eff6ff; border-radius: 8px; border-left: 4px solid #1e40af;\"><p style=\"margin: 0; font-size: 14px; color: #1e3a8a;\"><strong>Your roadmap is ready.</strong> The 90-day transformation plan from your diagnostic is designed to deliver measurable results within the first quarter.</p></div>' : '') +\n    '<div style=\"margin: 28px 0 20px; text-align: center;\">' +\n      '<a href=\"' + ctaUrl + '\" style=\"display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, ' + ctaColor + ', ' + ctaColor + 'dd); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;\">' + ctaText + '</a>' +\n    '</div>' +\n    '<p style=\"text-align: center; margin: 16px 0 0;\"><a href=\"' + portalUrl + '\" style=\"font-size: 13px; color: #6366f1; text-decoration: underline;\">Manage your reports in the Client Portal</a></p>' +\n    '<hr style=\"border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;\">' +\n    '<p style=\"font-size: 12px; color: #94a3b8; text-align: center;\">You\\'re receiving this because you completed a workflow diagnostic with us. No further automated emails will be sent after this series.</p>' +\n  '</div>' +\n'</div>';\n\nreturn {\n  json: {\n    to: f.email,\n    subject: f.subject,\n    html: html,\n    reportId: f.reportId,\n    followupType: f.followupType\n  }\n};"
+      },
+      "id": "fa7b6eaf-2b2b-45af-8f9f-4f139802640d",
+      "name": "Build Follow-Up Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "3554fdf5-ad67-4489-9f87-60d1330cc62a",
+      "name": "Send Follow-Up Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [480, 0],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "6VIIYahGmCk2GmAo",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_BASE_URL || 'https://workflow-consultancy.vercel.app' }}/api/get-followups",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ reportId: $json.reportId, followupType: $json.followupType }) }}",
+        "options": {}
+      },
+      "id": "113dc5b4-8a11-42d2-af74-fa281640a8ab",
+      "name": "Mark Follow-Up Sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 0]
+    },
+    {
+      "parameters": {},
+      "id": "fdb56d18-7c71-4ff3-a452-d9f79dfacc96",
+      "name": "No Follow-Ups Due",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [0, 192]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Daily at 9am": {
+      "main": [
+        [{ "node": "Fetch Due Follow-Ups", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Due Follow-Ups": {
+      "main": [
+        [{ "node": "Any Follow-Ups Due?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Any Follow-Ups Due?": {
+      "main": [
+        [{ "node": "Split Into Items", "type": "main", "index": 0 }],
+        [{ "node": "No Follow-Ups Due", "type": "main", "index": 0 }]
+      ]
+    },
+    "Split Into Items": {
+      "main": [
+        [{ "node": "Build Follow-Up Email", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Follow-Up Email": {
+      "main": [
+        [{ "node": "Send Follow-Up Email", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send Follow-Up Email": {
+      "main": [
+        [{ "node": "Mark Follow-Up Sent", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

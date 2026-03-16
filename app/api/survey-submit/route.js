@@ -1,17 +1,43 @@
 import { NextResponse } from 'next/server';
-import { fetchWithTimeout, stripEmDashes } from '@/lib/api-helpers';
+import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
+import { checkOrigin, getRequestId } from '@/lib/api-helpers';
+import { logger } from '@/lib/logger';
+import { SurveyAnalysisSchema, SurveySubmitInputSchema } from '@/lib/ai-schemas';
+
+const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024; // 2MB
+import { invokeStructured } from '@/lib/agents/structured-output';
+import { get, set } from '@/lib/agents/ai-cache';
+import { surveyAnalysisSystemPrompt, surveyAnalysisUserPrompt } from '@/lib/prompts';
+import { getFastModel } from '@/lib/agents/models';
+import { SystemMessage, HumanMessage } from '@langchain/core/messages';
 
 export async function POST(request) {
+  const originErr = checkOrigin(request);
+  if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
+
   try {
-    const { workflows, diagnostic } = await request.json();
-    if (!workflows || !Array.isArray(workflows) || workflows.length === 0) return NextResponse.json({ error: 'No workflow data provided' }, { status: 400 });
+    const rl = checkRateLimit(getRateLimitKey(request));
+    if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
+
+    const contentLength = parseInt(request.headers.get('content-length') || '0', 10);
+    if (contentLength > MAX_PAYLOAD_BYTES) return NextResponse.json({ error: 'Request body too large.' }, { status: 413 });
+
+    let body;
+    try { body = await request.json(); } catch { return NextResponse.json({ error: 'Invalid JSON.' }, { status: 400 }); }
+    const parsed = SurveySubmitInputSchema.safeParse(body);
+    if (!parsed.success) return NextResponse.json({ error: 'Invalid request. workflows (1-50) required.', details: parsed.error.flatten() }, { status: 400 });
+    const { workflows, diagnostic } = parsed.data;
 
     const surveyMetrics = calculateSurveyMetrics(workflows);
     const swimlaneData = workflows.map(wf => generateSwimlaneData(wf));
 
     let aiAnalysis = null;
     if (process.env.ANTHROPIC_API_KEY) {
-      try { aiAnalysis = await generateAIAnalysis(workflows, surveyMetrics, diagnostic); } catch (e) { console.warn('AI analysis failed:', e.message); }
+      try {
+        aiAnalysis = await generateAIAnalysis(workflows, surveyMetrics, diagnostic);
+      } catch (e) {
+        logger.warn('AI analysis failed', { requestId: getRequestId(request), message: e.message });
+      }
     }
 
     return NextResponse.json({
@@ -20,7 +46,7 @@ export async function POST(request) {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Survey submission error:', error);
+    logger.error('Survey submission error', { requestId: getRequestId(request), error: error.message, stack: error.stack });
     return NextResponse.json({ error: 'Failed to process survey.' }, { status: 500 });
   }
 }
@@ -53,10 +79,22 @@ function generateSwimlaneData(workflow) {
 
 async function generateAIAnalysis(workflows, metrics, diagnostic) {
   const workflowSummaries = workflows.map(wf => { const m = metrics.workflows.find(w => w.name === (wf.workflowName || wf.name)); return `Workflow: ${wf.workflowName || wf.name}\n- Steps: ${(wf.steps || []).length}\n- Total elapsed: ${m ? m.totalElapsed : 'N/A'} hours\n- Work: ${m ? m.workPercentage : 'N/A'}% | Wait: ${m ? m.waitPercentage : 'N/A'}%`; }).join('\n');
-  const response = await fetchWithTimeout('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 8000, temperature: 0.7, messages: [{ role: 'user', content: `Analyse these workflow surveys and return JSON insights:\n\n${workflowSummaries}\n\nReturn JSON: { "summary": "...", "keyFindings": [...], "bottlenecks": [...], "recommendations": [...], "estimatedSavings": "..." }` }] }) });
-  if (!response.ok) return null;
-  const data = await response.json();
-  let text = data.content[0].text;
-  text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-  return stripEmDashes(JSON.parse(text));
+
+  const cacheKey = { workflowSummaries };
+  const cached = get(cacheKey);
+  if (cached && typeof cached === 'object') return cached;
+
+  const fallback = { summary: '', keyFindings: [], bottlenecks: [], recommendations: [], estimatedSavings: null };
+  const analysis = await invokeStructured(
+    getFastModel({ temperature: 0.5 }),
+    [
+      new SystemMessage(surveyAnalysisSystemPrompt()),
+      new HumanMessage(surveyAnalysisUserPrompt(workflowSummaries)),
+    ],
+    SurveyAnalysisSchema,
+    fallback
+  );
+
+  set(cacheKey, analysis);
+  return analysis;
 }
