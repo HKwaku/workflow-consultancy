@@ -341,3 +341,471 @@
 [data-theme="dark"] .cost-analysis-rate-row:hover {
   background: var(--white) !important;
 }
+
+/* Cost analysis — new styles */
+.cost-tooltip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1px solid var(--text-light, #9ca3af);
+  color: var(--text-light, #9ca3af);
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-style: normal;
+  cursor: help;
+  margin-left: 4px;
+  vertical-align: middle;
+  line-height: 1;
+  transition: border-color 0.15s, color 0.15s;
+}
+.cost-tooltip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.cost-summary-sublabel {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 2px;
+}
+
+.cost-input-warn {
+  border-color: var(--warning, #d97706) !important;
+  background: rgba(217, 119, 6, 0.05);
+}
+
+.cost-analysis-warnings {
+  margin-bottom: 16px;
+}
+.cost-analysis-warning {
+  padding: 8px 12px;
+  background: rgba(217, 119, 6, 0.08);
+  border: 1px solid rgba(217, 119, 6, 0.3);
+  border-radius: 6px;
+  color: #92400e;
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+}
+
+/* Variable cost drivers tab */
+.cost-variable-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+.cost-variable-process-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.cost-variable-process-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.cost-variable-process-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.cost-variable-process-annual {
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 0.95rem;
+}
+.cost-variable-process-meta {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.cost-variable-savings-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.cost-variable-savings-row label {
+  font-size: 0.85rem;
+  color: var(--fg);
+  white-space: nowrap;
+}
+.cost-variable-savings-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cost-input-pct {
+  width: 64px !important;
+}
+.cost-pct-symbol {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.cost-variable-savings-val {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #059669;
+}
+
+.cost-leverage-callout {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: rgba(5, 150, 105, 0.07);
+  border: 1px solid rgba(5, 150, 105, 0.25);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: var(--fg);
+  line-height: 1.5;
+}
+
+/* Review screen */
+.cost-review-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 20px 0;
+}
+.cost-review-process-row {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+.cost-review-process-name {
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+}
+.cost-review-process-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  font-size: 0.82rem;
+  color: var(--text-light);
+}
+.cost-review-annual { color: var(--fg); }
+.cost-review-savings-val { color: #059669; }
+
+.cost-review-fixed-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+
+.cost-review-totals {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+.cost-review-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.95rem;
+}
+.cost-review-total-row:last-child { border-bottom: none; }
+.cost-review-total-row.success { background: rgba(5, 150, 105, 0.05); }
+.cost-review-total-val { font-weight: 700; font-size: 1.1rem; }
+.cost-review-total-row.success .cost-review-total-val { color: #059669; }
+.cost-review-leverage {
+  padding: 12px 16px;
+  background: rgba(5, 150, 105, 0.07);
+  font-size: 0.85rem;
+  color: var(--fg);
+}
+
+/* Post-save / share screen */
+.cost-save-done-hero {
+  text-align: center;
+  padding: 32px 0 24px;
+}
+.cost-save-done-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #059669;
+  color: #fff;
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.cost-save-done-hero h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+.cost-save-done-hero p {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.cost-share-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin: 0 0 20px;
+}
+.cost-share-card h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.cost-share-desc {
+  font-size: 0.875rem;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.cost-share-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.cost-share-success {
+  padding: 10px 14px;
+  background: rgba(5, 150, 105, 0.08);
+  border: 1px solid rgba(5, 150, 105, 0.25);
+  border-radius: 6px;
+  color: #065f46;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* Per-system cost inputs */
+.cost-systems-section {
+  margin-bottom: 8px;
+}
+.cost-systems-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.cost-system-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cost-system-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.cost-system-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.cost-currency-prefix {
+  font-size: 0.9rem;
+  color: var(--text-light);
+}
+.cost-input-system {
+  flex: 1;
+  min-width: 0;
+}
+.cost-system-unit {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  white-space: nowrap;
+}
+.cost-systems-total {
+  margin-top: 10px;
+  font-size: 0.875rem;
+  color: var(--text-mid);
+  padding: 8px 12px;
+  background: var(--bg-alt);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+/* Variable cost drivers — AI suggest */
+.cost-variable-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.cost-ai-suggest-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.cost-ai-refresh-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.8rem;
+  font-family: inherit;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+  opacity: 0.8;
+}
+.cost-ai-refresh-btn:hover { opacity: 1; }
+
+.cost-ai-loading {
+  font-size: 0.8rem;
+  color: var(--text-mid);
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.cost-ai-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  color: #1d4ed8;
+  font-size: 0.72rem;
+  font-weight: 500;
+  white-space: nowrap;
+  margin-left: 4px;
+}
+
+.cost-ai-error {
+  font-size: 0.8rem;
+  color: #dc2626;
+}
+
+/* AI reasoning block per process */
+.cost-ai-reasoning {
+  margin-top: 8px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+.cost-ai-reasoning-high {
+  background: rgba(5, 150, 105, 0.07);
+  border: 1px solid rgba(5, 150, 105, 0.2);
+  color: #065f46;
+}
+.cost-ai-reasoning-medium {
+  background: rgba(217, 119, 6, 0.06);
+  border: 1px solid rgba(217, 119, 6, 0.2);
+  color: #92400e;
+}
+.cost-ai-reasoning-low {
+  background: rgba(99, 102, 241, 0.06);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  color: var(--text);
+}
+.cost-ai-reasoning-label {
+  font-weight: 600;
+}
+
+[data-theme="dark"] .cost-ai-reasoning-high { background: rgba(5,150,105,0.12); border-color: rgba(5,150,105,0.25); color: #6ee7b7; }
+[data-theme="dark"] .cost-ai-reasoning-medium { background: rgba(217,119,6,0.1); border-color: rgba(217,119,6,0.25); color: #fcd34d; }
+[data-theme="dark"] .cost-ai-reasoning-low { background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.25); color: var(--text); }
+[data-theme="dark"] .cost-systems-total { background: var(--bg); color: var(--text-mid); }
+
+/* Dark: variable cost drivers & new cards */
+[data-theme="dark"] .cost-variable-process-card {
+  background: var(--bg-alt);
+  border-color: var(--border);
+}
+[data-theme="dark"] .cost-variable-process-meta { color: var(--text-mid); }
+[data-theme="dark"] .cost-variable-savings-row label { color: var(--text); }
+[data-theme="dark"] .cost-variable-savings-val { color: #6ee7b7; }
+[data-theme="dark"] .cost-pct-symbol { color: var(--text-mid); }
+[data-theme="dark"] .cost-leverage-callout {
+  background: rgba(5,150,105,0.1);
+  border-color: rgba(5,150,105,0.25);
+  color: var(--text);
+}
+
+/* Dark: review screen */
+[data-theme="dark"] .cost-review-process-row {
+  background: var(--bg-alt);
+  border-color: var(--border);
+}
+[data-theme="dark"] .cost-review-process-details { color: var(--text-mid); }
+[data-theme="dark"] .cost-review-annual { color: var(--text); }
+[data-theme="dark"] .cost-review-savings-val { color: #6ee7b7; }
+[data-theme="dark"] .cost-review-fixed-row {
+  background: var(--bg-alt);
+  border-color: var(--border);
+  color: var(--text);
+}
+[data-theme="dark"] .cost-review-totals { border-color: var(--border); }
+[data-theme="dark"] .cost-review-total-row {
+  border-bottom-color: var(--border);
+  color: var(--text);
+}
+[data-theme="dark"] .cost-review-total-row.success { background: rgba(5,150,105,0.08); }
+[data-theme="dark"] .cost-review-total-row.success .cost-review-total-val { color: #6ee7b7; }
+[data-theme="dark"] .cost-review-leverage {
+  background: rgba(5,150,105,0.08);
+  color: var(--text-mid);
+}
+
+/* Dark: post-save share screen */
+[data-theme="dark"] .cost-save-done-hero h2 { color: var(--text); }
+[data-theme="dark"] .cost-save-done-hero p { color: var(--text-mid); }
+[data-theme="dark"] .cost-share-card {
+  border-color: var(--border);
+  background: var(--bg-alt);
+}
+[data-theme="dark"] .cost-share-card h3 { color: var(--text); }
+[data-theme="dark"] .cost-share-desc { color: var(--text-mid); }
+[data-theme="dark"] .cost-share-success {
+  background: rgba(5,150,105,0.1);
+  border-color: rgba(5,150,105,0.25);
+  color: #6ee7b7;
+}
+
+/* Dark: warning banners */
+[data-theme="dark"] .cost-analysis-warning {
+  background: rgba(217,119,6,0.1);
+  border-color: rgba(217,119,6,0.25);
+  color: #fcd34d;
+}
+[data-theme="dark"] .cost-input-warn {
+  border-color: #f59e0b !important;
+  background: rgba(245,158,11,0.08);
+}
+
+/* Dark: system inputs */
+[data-theme="dark"] .cost-system-label { color: var(--text); }
+[data-theme="dark"] .cost-currency-prefix,
+[data-theme="dark"] .cost-system-unit { color: var(--text-mid); }
+
+/* Dark: AI badge */
+[data-theme="dark"] .cost-ai-badge {
+  background: rgba(59,130,246,0.15);
+  border-color: rgba(59,130,246,0.3);
+  color: #93c5fd;
+}
+[data-theme="dark"] .cost-ai-loading { color: var(--text-mid); }
+[data-theme="dark"] .cost-ai-refresh-btn { color: var(--accent); }
+[data-theme="dark"] .cost-ai-error { color: var(--red); }
+
+/* Dark: summary sub-label */
+[data-theme="dark"] .cost-summary-sublabel { color: var(--text-mid); }

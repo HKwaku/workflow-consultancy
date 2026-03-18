@@ -5,6 +5,7 @@ import Link from 'next/link';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/components/ThemeProvider';
 import InteractiveFlowCanvas from '@/components/flow/InteractiveFlowCanvas';
+import { getSupabaseClient } from '@/lib/supabase';
 
 const PHASES = [
   { key: 'define', label: 'Define', icon: '\u2699' },
@@ -541,9 +542,14 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
         processes: summaryProcesses,
       };
 
+      const sb = getSupabaseClient();
+      const { data: { session } } = await sb.auth.getSession();
+      const headers = { 'Content-Type': 'application/json' };
+      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+
       const resp = await fetch('/api/update-diagnostic', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ reportId, email, updates }),
       });
       let data;

@@ -108,7 +108,7 @@ export function EndNode({ data }) {
 export function StepNode({ data, selected }) {
   const {
     label, stepIndex = 0,
-    deptColor, darkTheme,
+    deptColor, showDept, darkTheme,
     isBottleneck, auto, durationLabel, isApproval,
   } = data;
 
@@ -116,7 +116,7 @@ export function StepNode({ data, selected }) {
   const stroke = isBottleneck
     ? '#ef4444'
     : (deptColor?.stroke || (darkTheme ? '#404040' : '#e2e8f0'));
-  const barColor = BAR_COLORS[stepIndex % BAR_COLORS.length];
+  const barColor = deptColor?.bar || BAR_COLORS[stepIndex % BAR_COLORS.length];
 
   return (
     <div style={{ position: 'relative', width: NODE_W, overflow: 'visible' }}>
@@ -181,9 +181,9 @@ export function StepNode({ data, selected }) {
 
 /* ── Decision (diamond) ─────────────────────────────────────────────────── */
 export function DecisionNode({ data, selected }) {
-  const { label, stepIndex = 0, isParallel, darkTheme, deptColor } = data;
+  const { label, stepIndex = 0, isParallel, darkTheme, deptColor, showDept } = data;
   const stroke = deptColor?.stroke || (darkTheme ? '#94a3b8' : '#94a3b8');
-  const bg     = darkTheme ? '#2d2d2d' : '#ffffff';
+  const bg     = deptColor?.bg ? deptColor.bg : (darkTheme ? '#2d2d2d' : '#ffffff');
 
   return (
     <div style={{ position: 'relative', width: DIAMOND_SZ, overflow: 'visible' }}>

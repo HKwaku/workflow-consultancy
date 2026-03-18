@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useDiagnostic } from './DiagnosticContext';
 import { DEPT_INTERNAL, DEPT_EXTERNAL } from '@/lib/diagnostic/stepConstants';
 import { getFriendlyChatError, isRetryableError } from '@/lib/chat-utils';
+import { repairFlow } from '@/lib/flows/normalizer';
 
 const PREDEFINED_DEPTS = new Set([...DEPT_INTERNAL, ...DEPT_EXTERNAL]);
 
@@ -223,8 +224,9 @@ export default function ChatPanel() {
           }
         }
         if (newSteps !== currentSteps) {
-          newSteps.forEach((s) => { if (isCustomDepartment(s.department)) addCustomDepartment(s.department.trim()); });
-          updateProcessData({ steps: newSteps, handoffs: newHandoffs });
+          const { steps: repairedSteps } = repairFlow(newSteps);
+          repairedSteps.forEach((s) => { if (isCustomDepartment(s.department)) addCustomDepartment(s.department.trim()); });
+          updateProcessData({ steps: repairedSteps, handoffs: newHandoffs });
         }
       }
         lastErr = null;

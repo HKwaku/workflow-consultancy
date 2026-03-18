@@ -15,16 +15,46 @@ import {
   reconnectEdge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { processToReactFlow, recomputeSwimlaneLanesFromNodes } from '@/lib/flows/processToReactFlow';
+import { processToReactFlow, recomputeSwimlaneLanesFromNodes, SWIMLANE_CONSTANTS } from '@/lib/flows/processToReactFlow';
 import { AUTOMATION_CATEGORIES } from '@/lib/flows/automation';
 import { StartNode, EndNode, StepNode, DecisionNode, MergeNode, LaneLabelNode, LaneSeparatorNode } from './FlowNodes';
 import DecisionBranchEdge from './DecisionBranchEdge';
 import DeletableEdge from './DeletableEdge';
+import WrapEdge from './WrapEdge';
 
 const nodeTypes = { start: StartNode, end: EndNode, step: StepNode, decision: DecisionNode, merge: MergeNode, laneLabel: LaneLabelNode, laneSeparator: LaneSeparatorNode };
-const edgeTypes = { decisionBranch: DecisionBranchEdge, deletable: DeletableEdge };
+const edgeTypes = { decisionBranch: DecisionBranchEdge, deletable: DeletableEdge, wrapConnector: WrapEdge };
 const DEPT_LABEL_WIDTH = 180;
 
+/**
+ * Given a set of nodes and the initial lanes, recompute lane bounds from current
+ * node positions and return a new nodes array with all lane separator/label nodes
+ * repositioned accordingly.
+ */
+function applySwimlaneLayout(nodeList, initialLanes) {
+  const { lanes: updatedLanes } = recomputeSwimlaneLanesFromNodes(nodeList, initialLanes);
+  const lastLane = updatedLanes[updatedLanes.length - 1];
+  return nodeList.map((n) => {
+    if (n.id === 'lane-sep-top') {
+      const first = updatedLanes[0];
+      return first ? { ...n, position: { x: 0, y: first.y } } : n;
+    }
+    if (n.id === 'lane-sep-bottom') {
+      return lastLane ? { ...n, position: { x: 0, y: lastLane.y + lastLane.h } } : n;
+    }
+    const sepMatch = n.id?.match(/^lane-sep-(\d+)$/);
+    if (sepMatch) {
+      const lane = updatedLanes[parseInt(sepMatch[1], 10)];
+      return lane ? { ...n, position: { x: 0, y: lane.y - 1 } } : n;
+    }
+    const labelMatch = n.id?.match(/^lane-(\d+)$/);
+    if (labelMatch) {
+      const lane = updatedLanes[parseInt(labelMatch[1], 10)];
+      return lane ? { ...n, position: { x: 0, y: lane.y }, data: { ...n.data, height: lane.h } } : n;
+    }
+    return n;
+  });
+}
 
 function SwimlaneLabelsPanel({ lanes, layoutHeight, darkTheme }) {
   const { y, zoom } = useViewport();
@@ -108,12 +138,15 @@ function FlowCanvasInner({
   hideBuiltInToolbar = false,
   innerRef = null,
 }) {
+  const [maxCols, setMaxCols] = useState(4); // updated from container width after mount
+  const [outsideLaneWarning, setOutsideLaneWarning] = useState(false);
+
   const flowData = useMemo(
-    () => processToReactFlow(process, layout, darkTheme),
-    [process, layout, darkTheme]
+    () => processToReactFlow(process, layout, darkTheme, { maxCols }),
+    [process, layout, darkTheme, maxCols]
   );
 
-  const { nodes: initialNodes, edges: initialEdges, lanes, layoutHeight } = flowData;
+  const { nodes: initialNodes, edges: initialEdges, lanes, layoutHeight, deptColorMap } = flowData;
 
   const deletedSet = useMemo(() => new Set(deletedEdges || []), [deletedEdges]);
   const filteredCustomEdges = useMemo(() => {
@@ -152,6 +185,9 @@ function FlowCanvasInner({
   }, [initialEdges, filteredCustomEdges, deletedSet]);
 
   useEffect(() => {
+    // Skip on initial mount — a newly-created canvas instance (e.g. floating viewer) must
+    // not clear custom edges just because they're already baked into initialEdges.
+    if (isInitialMount.current) return;
     if (onCustomEdgesChange && filteredCustomEdges.length < (customEdges || []).length) {
       onCustomEdgesChange(filteredCustomEdges);
     }
@@ -179,12 +215,23 @@ function FlowCanvasInner({
   }, [isSwimlane, nodes, lanes, layoutHeight]);
 
   const typeSignature = (process?.steps || []).map((s) => s.isMerge ? 'M' : s.isDecision ? (s.parallel ? 'P' : 'D') : 'S').join('');
-  const layoutKey = `${process?.steps?.length ?? 0}-${layout}`;
+  const layoutKey = `${process?.steps?.length ?? 0}-${layout}-${maxCols}`;
   const structureKey = `${layoutKey}-${typeSignature}`;
   const structureKeyRef = useRef(structureKey);
   const layoutKeyRef = useRef(layoutKey);
   const isInitialMount = useRef(true);
-  const layoutChangedRef = useRef(false);
+  // Always-current refs so the structureKey effect reads the latest values
+  // even if React batches prop updates after the layout change.
+  const storedPositionsRef = useRef(storedPositions);
+  storedPositionsRef.current = storedPositions;
+  // Positions as they were when the page first loaded — never updated after mount.
+  // Reset uses this so it always goes back to the original report state, not the bare layout.
+  const mountStoredPositionsRef = useRef(storedPositions);
+  const originalEdgesRef = useRef(null);
+  const lanesRef = useRef(lanes);
+  lanesRef.current = lanes;
+  const isSwimlaneRef = useRef(isSwimlane);
+  isSwimlaneRef.current = isSwimlane;
 
   // Track step names/labels so node data updates without position reset when only names change.
   const dataKey = (process?.steps || []).map((s) => s.name || '').join('\x00');
@@ -194,40 +241,65 @@ function FlowCanvasInner({
 
   // Only sync edges when content actually changes — allEdges gets new ref every render
   // because process prop is recreated by parent, which would cause infinite setEdges loop.
+  // Include type and handles so layout-driven type changes (e.g. default→wrapConnector)
+  // are detected and trigger a setEdges call.
   const allEdgesKey = useMemo(
-    () => allEdges.map((e) => `${e.id}:${e.source}-${e.target}`).join('|'),
+    () => allEdges.map((e) => `${e.id}:${e.source}-${e.target}:${e.type}:${e.sourceHandle}:${e.targetHandle}`).join('|'),
     [allEdges]
   );
   const prevEdgesKeyRef = useRef('');
   useEffect(() => {
     if (prevEdgesKeyRef.current === allEdgesKey) return;
+    if (prevEdgesKeyRef.current === '') originalEdgesRef.current = allEdges; // first sync = original
     prevEdgesKeyRef.current = allEdgesKey;
     setEdges(allEdges);
   }, [allEdgesKey, allEdges, setEdges]);
 
   useEffect(() => {
-    const prevKey = structureKeyRef.current;
-    const keyChanged = prevKey !== structureKey;
     const prevLayoutKey = layoutKeyRef.current;
     const layoutChanged = prevLayoutKey !== layoutKey;
     structureKeyRef.current = structureKey;
     layoutKeyRef.current = layoutKey;
-    // Reset positions only when step count or layout changes (not just node type changes).
-    layoutChangedRef.current = layoutChanged || isInitialMount.current;
+    const isMount = isInitialMount.current;
     isInitialMount.current = false;
 
-    setNodes((prev) =>
-      initialNodesRef.current.map((initN) => {
-        const stored = storedPositions?.[initN.id];
-        if (stored) return { ...initN, position: stored };
-        // On layout switch fall back to computed initial position, not the
-        // previous layout's dragged position (wrong coordinate system).
-        if (layoutChangedRef.current) return initN;
-        const cur = prev.find((p) => p.id === initN.id);
-        return cur ? { ...initN, position: cur.position } : initN;
-      })
-    );
-  }, [structureKey, setNodes, storedPositions]);
+    if (layoutChanged || isMount) {
+      // Layout or step-count changed: apply stored offsets on top of the new
+      // layout's initial positions so manual adjustments carry across views.
+      const sp = storedPositionsRef.current;
+      const withOffsets = initialNodesRef.current.map((initN) => {
+        const stored = sp?.[initN.id];
+        if (stored && (stored.dx != null || stored.dy != null)) {
+          return {
+            ...initN,
+            position: {
+              x: initN.position.x + (stored.dx ?? 0),
+              y: initN.position.y + (stored.dy ?? 0),
+            },
+          };
+        }
+        return initN;
+      });
+      // In swimlane mode, also recompute lane separators so nodes that land
+      // outside their lane bounds (due to offsets from another layout) expand
+      // the lane to contain them rather than appearing in the wrong row.
+      let nodesToSet;
+      if (isSwimlaneRef.current && lanesRef.current?.length) {
+        nodesToSet = applySwimlaneLayout(withOffsets, lanesRef.current);
+      } else {
+        nodesToSet = withOffsets;
+      }
+      setNodes(nodesToSet);
+    } else {
+      // Only node-type changed (e.g. step→decision): keep current dragged positions.
+      setNodes((prev) =>
+        initialNodesRef.current.map((initN) => {
+          const cur = prev.find((p) => p.id === initN.id);
+          return cur ? { ...initN, position: cur.position } : initN;
+        })
+      );
+    }
+  }, [structureKey, setNodes]);
 
   // Sync node labels/data when step names change without a structural change (no position reset).
   useEffect(() => {
@@ -256,37 +328,69 @@ function FlowCanvasInner({
         changesToApply = changes.filter((c) => c.type !== 'remove');
       }
       const nextNodes = applyNodeChanges(changesToApply, nodes);
+
+      // In swimlane mode: when a lane expands/contracts due to a node being dragged,
+      // shift all non-dragged nodes in affected lanes by the same delta so their
+      // relative position within their lane is preserved.
+      let effectiveNodes = nextNodes;
+      if (isSwimlane && lanes?.length) {
+        const posChanges = changes.filter((c) => c.type === 'position');
+        if (posChanges.length > 0) {
+          const { lanes: oldLanes } = recomputeSwimlaneLanesFromNodes(nodes, lanes);
+          const { lanes: newLanes } = recomputeSwimlaneLanesFromNodes(nextNodes, lanes);
+          const draggedIds = new Set(posChanges.map((c) => c.id));
+
+          // Warn if any actively-dragged node's centre Y falls within another lane
+          const activeDrag = changes.find((c) => c.type === 'position' && c.dragging === true);
+          if (activeDrag) {
+            const draggedNode = nextNodes.find((n) => n.id === activeDrag.id);
+            const dept = draggedNode?.data?.department;
+            if (draggedNode && dept != null) {
+              const nodeH = draggedNode.data?.isDecision ? SWIMLANE_CONSTANTS.DIAMOND_W : SWIMLANE_CONSTANTS.NODE_H;
+              const centerY = draggedNode.position.y + nodeH / 2;
+              const inForeignLane = oldLanes.some((l) => l.dept !== dept && centerY >= l.y && centerY <= l.y + l.h);
+              setOutsideLaneWarning(inForeignLane);
+            }
+          } else if (changes.some((c) => c.type === 'position' && c.dragging === false)) {
+            setOutsideLaneWarning(false);
+          }
+
+          const anyShift = newLanes.some((nl, i) => nl.y !== oldLanes[i]?.y);
+          if (anyShift) {
+            effectiveNodes = nextNodes.map((n) => {
+              if (draggedIds.has(n.id)) return n;
+              if (n.type !== 'step' && n.type !== 'decision' && n.type !== 'merge') return n;
+              const dept = n.data?.department;
+              if (dept == null) return n;
+              const oldLane = oldLanes.find((l) => l.dept === dept);
+              const newLane = newLanes.find((l) => l.dept === dept);
+              if (!oldLane || !newLane || newLane.y === oldLane.y) return n;
+              return { ...n, position: { x: n.position.x, y: n.position.y + (newLane.y - oldLane.y) } };
+            });
+          }
+        }
+      }
+
       const positionChanges = changes.filter((c) => c.type === 'position' && c.dragging === false);
       if (positionChanges.length > 0 && onPositionsChange) {
-        const positions = {};
-        nextNodes.forEach((n) => {
+        // Store offsets (dx/dy from initial position) so the same adjustment
+        // applies regardless of which layout is active.
+        const offsets = {};
+        effectiveNodes.forEach((n) => {
           if (n.position && (n.type === 'step' || n.type === 'decision' || n.type === 'merge')) {
-            positions[n.id] = n.position;
+            const initN = initialNodesRef.current.find((p) => p.id === n.id);
+            offsets[n.id] = initN
+              ? { dx: n.position.x - initN.position.x, dy: n.position.y - initN.position.y }
+              : { dx: 0, dy: 0 };
           }
         });
-        onPositionsChange(positions, layout);
+        onPositionsChange(offsets, layout);
       }
       if (!isSwimlane || !lanes?.length) {
-        setNodes(nextNodes);
+        setNodes(effectiveNodes);
         return;
       }
-      const { lanes: updatedLanes } = recomputeSwimlaneLanesFromNodes(nextNodes, lanes);
-      const result = nextNodes.map((n) => {
-        const sepMatch = n.id?.match(/^lane-sep-(\d+)$/);
-        const labelMatch = n.id?.match(/^lane-(\d+)$/);
-        if (sepMatch) {
-          const li = parseInt(sepMatch[1], 10);
-          const lane = updatedLanes[li];
-          if (lane) return { ...n, position: { x: 0, y: lane.y - 1 } };
-        }
-        if (labelMatch) {
-          const li = parseInt(labelMatch[1], 10);
-          const lane = updatedLanes[li];
-          if (lane) return { ...n, position: { x: 0, y: lane.y }, data: { ...n.data, height: lane.h } };
-        }
-        return n;
-      });
-      setNodes(result);
+      setNodes(applySwimlaneLayout(effectiveNodes, lanes));
     },
     [nodes, setNodes, isSwimlane, lanes, onPositionsChange, onDeleteNode]
   );
@@ -435,7 +539,7 @@ function FlowCanvasInner({
       const showAddBetween = onAddNodeBetween && canAddBetween(sourceId, targetId);
       return {
         ...e,
-        type: e.type === 'decisionBranch' ? 'decisionBranch' : 'deletable',
+        type: e.type === 'decisionBranch' ? 'decisionBranch' : e.type === 'wrapConnector' ? 'wrapConnector' : 'deletable',
         data: {
           ...e.data,
           sourceId,
@@ -491,22 +595,24 @@ function FlowCanvasInner({
   );
 
   const handleResetPositions = useCallback(() => {
-    const defaults = initialNodesRef.current;
-    setNodes(defaults);
-    setEdges(initialEdges);
-    if (onPositionsChange) {
-      const positions = {};
-      defaults.forEach((n) => {
-        if (n.position && (n.type === 'step' || n.type === 'decision' || n.type === 'merge')) {
-          positions[n.id] = n.position;
-        }
-      });
-      onPositionsChange(positions, layout);
-    }
-    if (onCustomEdgesChange) onCustomEdgesChange([]);
-    if (onDeletedEdgesChange) onDeletedEdgesChange([]);
+    // Restore to the view as it was when the page first loaded.
+    // Uses mount-time storedPositions so this is always the original report state,
+    // regardless of any drags or saves the user has done this session.
+    const sp = mountStoredPositionsRef.current;
+    const withOffsets = initialNodesRef.current.map((initN) => {
+      const stored = sp?.[initN.id];
+      if (stored && (stored.dx != null || stored.dy != null)) {
+        return { ...initN, position: { x: initN.position.x + (stored.dx ?? 0), y: initN.position.y + (stored.dy ?? 0) } };
+      }
+      return initN;
+    });
+    const originalNodes = (isSwimlaneRef.current && lanesRef.current?.length)
+      ? applySwimlaneLayout(withOffsets, lanesRef.current)
+      : withOffsets;
+    setNodes(originalNodes);
+    setEdges(originalEdgesRef.current || initialEdges);
     instanceRef.current?.fitView({ padding: 0.12, maxZoom: 1, minZoom: 0.35, duration: 200 });
-  }, [setNodes, setEdges, initialEdges, onPositionsChange, onCustomEdgesChange, onDeletedEdgesChange]);
+  }, [setNodes, setEdges, initialEdges]);
 
   useImperativeHandle(innerRef, () => ({ resetView: handleResetPositions }), [handleResetPositions]);
 
@@ -519,16 +625,25 @@ function FlowCanvasInner({
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => {
-      // Intentionally no fitView here — only the explicit reset button should refit the view.
-    });
+    const WRAP_COLS = 9;
+    const computeCols = () => WRAP_COLS;
+    const update = () => {
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      if (w > 0) {
+        setMaxCols((prev) => { const c = computeCols(); return prev === c ? prev : c; });
+      }
+    };
+    update(); // measure immediately at mount
+    const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [process?.steps?.length]);
 
   const proOptions = { hideAttribution: true };
 
   const [showAutoLegend, setShowAutoLegend] = useState(false);
+  const [showDeptLegend, setShowDeptLegend] = useState(false);
 
   const automationContent = (
     <div className="flow-legend-automation" data-theme={darkTheme ? 'dark' : 'light'}>
@@ -559,6 +674,8 @@ function FlowCanvasInner({
     </div>
   );
 
+  const deptEntries = deptColorMap ? Object.values(deptColorMap) : [];
+
   const toolbarContent = (
     <>
       <div className="flow-legend flow-legend-left" data-theme={darkTheme ? 'dark' : 'light'}>
@@ -588,9 +705,10 @@ function FlowCanvasInner({
       {onWrapToggle && (
         <button
           type="button"
-          className={`flow-reset-btn${isWrapped ? ' flow-wrap-btn-active' : ''}`}
-          onClick={onWrapToggle}
-          title={isWrapped ? 'Switch to linear' : 'Wrap flow'}
+          className="flow-reset-btn"
+          disabled
+          title="Wrap functionality coming soon"
+          style={{ opacity: 0.4, cursor: 'not-allowed' }}
         >
           ↩
         </button>
@@ -654,8 +772,54 @@ function FlowCanvasInner({
         </Panel>
       )}
       <Panel position="top-right" className="flow-automation-panel">
+        {deptEntries.length > 0 && (
+          <div className="flow-legend-automation" data-theme={darkTheme ? 'dark' : 'light'}>
+            <div className="flow-legend-automation-heading">
+              Owner
+              <span
+                className="flow-auto-hint"
+                onMouseEnter={() => setShowDeptLegend(true)}
+                onMouseLeave={() => setShowDeptLegend(false)}
+              >?</span>
+            </div>
+            {showDeptLegend && (
+              <div className="flow-legend flow-legend-right">
+                {deptEntries.map((d) => (
+                  <span key={d.name} className="flow-legend-item">
+                    <span style={{
+                      display: 'inline-block',
+                      width: 12,
+                      height: 12,
+                      borderRadius: 3,
+                      background: d.bar,
+                      flexShrink: 0,
+                    }} />
+                    <span className="flow-legend-label">{d.name}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {automationContent}
       </Panel>
+      {outsideLaneWarning && (
+        <Panel position="top-center">
+          <div style={{
+            background: '#7c3aed',
+            color: '#fff',
+            padding: '6px 14px',
+            borderRadius: 6,
+            fontSize: 13,
+            fontWeight: 600,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap',
+          }}>
+            ⚠ Node is outside its team lane
+          </div>
+        </Panel>
+      )}
     </ReactFlow>
   );
 

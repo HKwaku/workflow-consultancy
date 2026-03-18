@@ -278,8 +278,7 @@
   flex: 1;
   min-width: 0;
 }
-.flow-legend-left,
-.flow-legend-right {
+.flow-legend-left {
   display: flex;
   gap: 8px;
   padding: 4px 8px;
@@ -289,11 +288,27 @@
   font-size: 10px;
   font-weight: 500;
 }
+.flow-legend-right {
+  display: flex;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--flow-node-bg);
+  border: 1px solid var(--flow-node-border);
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 500;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 10;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
 .flow-legend-automation {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 4px;
+  position: relative;
 }
 .flow-legend-automation-heading {
   display: flex;

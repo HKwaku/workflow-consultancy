@@ -30,7 +30,9 @@
       "Bash(grep -n -A1 \"{ id: 'grid'\" C:/workflow/workflow-consultancy/app/report/page.jsx)",
       "Bash(find /c/workflow/workflow-consultancy/app/api/diagnostic-chat -type f -name \"*.js\" -o -name \"*.json\" 2>/dev/null | head -20)",
       "Bash(node:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(cd:*)"
     ]
   }
 }

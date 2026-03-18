@@ -65,8 +65,8 @@ export async function PUT(request) {
     const dd = existing.diagnostic_data || {};
 
     const topLevelPatch = { updated_at: new Date().toISOString() };
-    if (updates.contactName !== undefined) topLevelPatch.contact_name = updates.contactName;
-    if (updates.contactEmail !== undefined) topLevelPatch.contact_email = updates.contactEmail;
+    if (updates.contactName) topLevelPatch.contact_name = updates.contactName;
+    if (updates.contactEmail) topLevelPatch.contact_email = updates.contactEmail;
     if (updates.company !== undefined) topLevelPatch.company = updates.company;
     if (updates.leadScore !== undefined) topLevelPatch.lead_score = updates.leadScore;
     if (updates.leadGrade !== undefined) topLevelPatch.lead_grade = updates.leadGrade;

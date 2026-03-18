@@ -4,6 +4,7 @@ import { memo } from 'react';
 import {
   BaseEdge,
   getBezierPath,
+  getSmoothStepPath,
   EdgeLabelRenderer,
   Position,
 } from '@xyflow/react';
@@ -30,14 +31,10 @@ function DecisionBranchEdge({
   markerEnd,
   data = {},
 }) {
-  const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-  });
+  const useStepPath = data?.useStepPath ?? false;
+  const [edgePath, labelX, labelY] = useStepPath
+    ? getSmoothStepPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, borderRadius: 8 })
+    : getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition });
 
   // Place label close to the source so it's visible above the connector, not buried near the target
   const t = 0.18;

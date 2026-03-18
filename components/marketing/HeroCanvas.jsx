@@ -59,7 +59,7 @@ export default function HeroCanvas() {
       nodes = []; edges = []; particles = [];
 
       // Vertical positions — use upper ~60 % so they're visible above gradient overlay
-      const topY  = H * 0.13;
+      const topY  = H * 0.04;
       const spanY = H * 0.50;
       const laneGap = numLanes > 1 ? spanY / (numLanes - 1) : 0;
 

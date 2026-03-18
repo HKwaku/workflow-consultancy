@@ -104,6 +104,7 @@ function SignalsCarousel({ scrollTo }) {
                       {s.icon}
                     </div>
                     <h3 className="signal-headline">{s.headline}</h3>
+                    <p className="signal-detail">{s.detail}</p>
                     <a href="#approach" className="signal-cta" onClick={scrollTo('approach')}>
                       See how we solve this
                       <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m0 0L9.5 4.5M13 8l-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -233,11 +234,7 @@ export default function MarketingClient() {
             <li><a href="#diagnostic" onClick={scrollTo('diagnostic')}>Diagnostic</a></li>
             <li><a href="#services" onClick={scrollTo('services')}>Services</a></li>
             <li><a href="#approach" onClick={scrollTo('approach')}>Approach</a></li>
-            {sessionUser?.email ? (
-              <li><Link href="/portal" onClick={closeMenu}>Client Login</Link></li>
-            ) : (
-              <li><Link href="/portal" onClick={closeMenu}>Client Login</Link></li>
-            )}
+            <li><Link href="/portal" onClick={closeMenu}>Client Login</Link></li>
             <li><a href="#contact" className="cta-nav" onClick={scrollTo('contact')}>Get Started</a></li>
             {sessionUser?.email && (
               <li><button type="button" className="nav-signout-btn" onClick={() => { closeMenu(); sessionSignOut(); }}>Sign Out</button></li>
@@ -255,10 +252,7 @@ export default function MarketingClient() {
           <div className="container">
             <div className="hero-content">
               <div className="hero-label">Unlock Operating Leverage</div>
-              <h1>Do More. <strong>With Less Friction.</strong></h1>
-              <p className="hero-subtitle">
-                We find the hidden capacity in your operations by fixing broken processes and deploying the right technology so your team delivers more.
-              </p>
+              <h1>Do More.<br /><strong>With Less Friction.</strong></h1>
               <div className="hero-cta-row">
                 <Link href="/diagnostic" className="btn-primary" target="_blank" rel="noopener noreferrer">
                   Start Free Diagnostic <ArrowIcon />
@@ -279,7 +273,7 @@ export default function MarketingClient() {
           <div className="section-header scroll-reveal">
             <div className="section-label">What We Do</div>
             <h2 className="section-title">Wherever the Complexity Lives,<br /><strong>We Work There</strong></h2>
-            
+            <p className="section-desc">We find the hidden capacity in your operations by fixing broken processes and deploying the right technology so your team delivers more.</p>
           </div>
           <ServicesSegments />
         </div>
@@ -291,7 +285,7 @@ export default function MarketingClient() {
         <div className="container">
           <div className="section-header">
             <div className="section-label">The Difference</div>
-            <h2 className="section-title">Don&apos;t Automate the Chaos.<br /><strong>Eliminate It.</strong></h2>
+            <h2 className="section-title">Don&apos;t Automate the Chaos. <strong>Eliminate It.</strong></h2>
             <p className="section-desc">Most digital transformations fail because they digitise broken processes. We fix the process first.</p>
           </div>
 

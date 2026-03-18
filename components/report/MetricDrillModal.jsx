@@ -65,6 +65,41 @@ const METRIC_EXPLANATIONS = {
     description: 'Total estimated annual cost of running all processes across your reports.',
     formula: 'Sum of totalAnnualCost from each report\'s metrics.',
   },
+  systems: {
+    title: 'Systems used',
+    description: 'The number of unique tools, platforms, or software systems involved in this process. Each system represents a distinct application or service used by one or more steps.',
+    formula: 'Count of distinct system names across all steps (systems field per step).',
+  },
+  decisionPoints: {
+    title: 'Decision points',
+    description: 'Steps where the process branches into two or more paths. Decision points indicate complexity and often require human judgement to evaluate conditions.',
+    formula: 'Count of steps where isDecision is true and at least one branch is defined.',
+  },
+  approvals: {
+    title: 'Approvals',
+    description: 'Steps that require an explicit sign-off or approval before the process can continue. High approval counts can indicate bottlenecks or governance overhead.',
+    formula: 'Count of steps where isApproval is true.',
+  },
+  bottlenecks: {
+    title: 'Bottlenecks',
+    description: 'Steps identified as bottlenecks — they slow down the overall process, often due to waiting time, limited resources, or dependency on a single person or system.',
+    formula: 'Count of steps where isBottleneck is true.',
+  },
+  workWaitRatio: {
+    title: 'Work / Wait ratio',
+    description: 'Active work time versus waiting/idle time across all steps. A high proportion of wait time indicates delays caused by handoffs, approvals, or queuing — prime targets for process improvement.',
+    formula: 'Sum of workMinutes across all steps vs sum of waitMinutes. Value-adding % = work ÷ (work + wait) × 100.',
+  },
+  complexity: {
+    title: 'Complexity score',
+    description: 'A composite score reflecting how complex this process is to manage and improve. Higher scores indicate more decision points, bottlenecks, cross-team handoffs, and parallel branches.',
+    formula: '(decision points × 2) + (bottlenecks × 2) + teams + (handoffs × 0.5). Ranges: Low 0–3, Medium 4–7, High 8–12, Very High 13+.',
+  },
+  timelineEstimate: {
+    title: 'Timeline estimate',
+    description: 'Estimated end-to-end duration based on the sum of work and wait times captured across all steps.',
+    formula: 'Sum of workMinutes + waitMinutes across all steps, converted to hours or days.',
+  },
 };
 
 export default function MetricDrillModal({ metricKey, value, label, onClose }) {
@@ -74,6 +109,8 @@ export default function MetricDrillModal({ metricKey, value, label, onClose }) {
     formula: 'See process data for details.',
   };
 
+  const isArrayValue = Array.isArray(value);
+
   return (
     <div className="metric-drill-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="metric-drill-modal" onClick={e => e.stopPropagation()}>
@@ -81,7 +118,13 @@ export default function MetricDrillModal({ metricKey, value, label, onClose }) {
           <h4 className="metric-drill-title">{meta.title}</h4>
           <button type="button" className="metric-drill-close" onClick={onClose} aria-label="Close">×</button>
         </div>
-        <div className="metric-drill-value">{value}</div>
+        {isArrayValue ? (
+          <ul className="metric-drill-list">
+            {value.map((item, i) => <li key={i}>{item}</li>)}
+          </ul>
+        ) : (
+          <div className="metric-drill-value">{value}</div>
+        )}
         <p className="metric-drill-desc">{meta.description}</p>
         <div className="metric-drill-formula">
           <strong>How we calculated:</strong> {meta.formula}

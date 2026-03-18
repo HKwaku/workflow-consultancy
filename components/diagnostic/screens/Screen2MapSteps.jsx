@@ -14,6 +14,8 @@ import { COMMON_SYSTEMS } from '@/lib/diagnostic/constants';
 import { getFriendlyChatError, isRetryableError } from '@/lib/chat-utils';
 import { STEP_SUGGESTIONS } from '@/lib/diagnostic/stepSuggestions';
 import { resolveBranchTarget } from '@/lib/flows/shared';
+import { repairFlow } from '@/lib/flows/normalizer';
+import { reconcileDecisionBranches } from '@/lib/flows/reconcileEdges';
 import FloatingFlowViewer from '../FloatingFlowViewer';
 
 const MIN_STEPS = 3;
@@ -67,6 +69,7 @@ function ensureHandoffs(steps, handoffs) {
   while (out.length < needed) out.push({ method: '', clarity: '' });
   return out.slice(0, needed);
 }
+
 
 export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) {
   const {
@@ -123,6 +126,42 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
   const chatFileRef = useRef(null);
   const lastFailedChatPayloadRef = useRef(null);
   const previewCanvasRef = useRef(null);
+  const stepsSyncTimerRef = useRef(null);
+  const stepsSyncMountedRef = useRef(false);
+  // Refs hold the LATEST canvas edge state synchronously — no stale closures
+  const flowCustomEdgesRef = useRef(flowCustomEdges);
+  const flowDeletedEdgesRef = useRef(flowDeletedEdges);
+
+  /* ═══════ Sync local steps → global processData (debounced) ═════
+   * processActions updates local state via setSteps but not global state.
+   * Manual edits (addStep, updateStep, canvas ops) do the same.
+   * This effect ensures processData.steps always mirrors local steps so
+   * that navigation away/back and other components (ChatPanel, report
+   * generation) see the current state.                               */
+  useEffect(() => {
+    if (!stepsSyncMountedRef.current) {
+      stepsSyncMountedRef.current = true;
+      return; // skip initial mount — no change yet
+    }
+    clearTimeout(stepsSyncTimerRef.current);
+    stepsSyncTimerRef.current = setTimeout(() => {
+      updateProcessData({ steps, handoffs });
+    }, 350);
+    return () => clearTimeout(stepsSyncTimerRef.current);
+  }, [steps, handoffs]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ═══════ Canvas edges always win ═══════════════════════════════
+   * When AI/chat rewrites steps, re-apply any manual canvas overrides so
+   * they are never silently lost. Refs always hold the latest edge state
+   * (updated synchronously in the callbacks below), so no stale closure risk.
+   * The fast-path guard makes this a no-op when no canvas overrides exist. */
+  useEffect(() => {
+    if (!flowCustomEdgesRef.current?.length && !flowDeletedEdgesRef.current?.length) return;
+    setSteps((prev) => {
+      const reconciled = reconcileDecisionBranches(prev, flowCustomEdgesRef.current, flowDeletedEdgesRef.current);
+      return reconciled.every((s, i) => s === prev[i]) ? prev : reconciled;
+    });
+  }, [steps]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ═══════ Step helpers ═══════ */
   const syncHandoffs = useCallback((s) => setHandoffs((p) => ensureHandoffs(s, p)), []);
@@ -132,6 +171,8 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
     setSteps((prev) => {
       if (prev.length >= MAX_STEPS) return prev;
       const blank = { number: 0, name: '', department: '', isDecision: false, isMerge: false, isExternal: false, durationMinutes: undefined, durationUnit: 'hours', branches: [], systems: [], contributor: '', checklist: [], ...init };
+      // Default team to "Automated" for new decision nodes that have no team yet
+      if (blank.isDecision && !blank.department) blank.department = 'Automated';
       let next;
       if (afterIdx === -2) {
         next = [blank, ...prev];
@@ -176,6 +217,8 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
         isMerge,
         parallel,
         branches,
+        // Default team to "Automated" when switching to a decision node with no team set
+        department: isDecision && !s.department ? 'Automated' : s.department,
       };
     }));
     addAuditEvent({ type: 'step_edit', detail: `Changed step ${idx + 1} to ${opt.label}` });
@@ -262,6 +305,9 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
     updateStep(idx, 'isDecision', d);
     if (d && (!steps[idx].branches || steps[idx].branches.length === 0)) {
       updateStep(idx, 'branches', [{ label: '', target: '' }, { label: '', target: '' }]);
+    }
+    if (d && !steps[idx].department) {
+      updateStep(idx, 'department', 'Automated');
     }
     addAuditEvent({ type: 'step_edit', detail: `${d ? 'Enabled' : 'Disabled'} decision point on step ${idx + 1}${steps[idx].name ? ` "${steps[idx].name}"` : ''}` });
   };
@@ -358,9 +404,13 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
   const handleContinue = useCallback(() => {
     const valid = steps.filter((s) => s.name.trim());
     if (valid.length < MIN_STEPS) { setError(`Add at least ${MIN_STEPS} steps.`); return; }
-    const h = ensureHandoffs(valid, handoffs);
-    const allSys = [...new Set(valid.flatMap((s) => s.systems || []).filter(Boolean))];
-    updateProcessData({ steps: valid, handoffs: h, systems: allSys.length > 0 ? allSys : processData.systems });
+    // Apply canvas edge overrides before repairing — ensures manual reconnections
+    // are preserved even if the async reconciliation effect hasn't fired yet.
+    const reconciled = reconcileDecisionBranches(valid, flowCustomEdgesRef.current, flowDeletedEdgesRef.current);
+    const { steps: repairedValid } = repairFlow(reconciled);
+    const h = ensureHandoffs(repairedValid, handoffs);
+    const allSys = [...new Set(repairedValid.flatMap((s) => s.systems || []).filter(Boolean))];
+    updateProcessData({ steps: repairedValid, handoffs: h, systems: allSys.length > 0 ? allSys : processData.systems });
     setError('');
     addAuditEvent({ type: 'navigate', detail: `Completed step mapping with ${valid.length} steps` });
     goToScreen(5);
@@ -374,10 +424,12 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
   /* ═══════ Build fresh processData snapshot (avoids stale-state race) ═══════ */
   const buildFreshProcessData = useCallback(() => {
     const valid = steps.filter((s) => s.name.trim());
-    const h = ensureHandoffs(valid, handoffs);
-    const allSys = [...new Set(valid.flatMap((s) => s.systems || []).filter(Boolean))];
-    const pd = { ...processData, steps: valid, handoffs: h, systems: allSys.length > 0 ? allSys : processData.systems };
-    updateProcessData({ steps: valid, handoffs: h, systems: pd.systems });
+    const reconciled = reconcileDecisionBranches(valid, flowCustomEdgesRef.current, flowDeletedEdgesRef.current);
+    const { steps: repairedValid } = repairFlow(reconciled);
+    const h = ensureHandoffs(repairedValid, handoffs);
+    const allSys = [...new Set(repairedValid.flatMap((s) => s.systems || []).filter(Boolean))];
+    const pd = { ...processData, steps: repairedValid, handoffs: h, systems: allSys.length > 0 ? allSys : processData.systems };
+    updateProcessData({ steps: repairedValid, handoffs: h, systems: pd.systems });
     return pd;
   }, [steps, handoffs, processData, updateProcessData]);
 
@@ -485,6 +537,8 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
           newSteps.forEach((s) => { if (isCustomDepartment(s.department)) addCustomDepartment(s.department.trim()); });
           setSteps(newSteps);
           setHandoffs(ensureHandoffs(newSteps, []));
+          flowCustomEdgesRef.current = [];
+          flowDeletedEdgesRef.current = [];
           setFlowCustomEdges([]);
           setFlowDeletedEdges([]);
           queueMicrotask(() => updateProcessData({ flowCustomEdges: [], flowDeletedEdges: [] }));
@@ -514,6 +568,8 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
           };
           const idx = typeof afterStep === 'number' ? afterStep - 1 : -1;
           addStep(idx, init);
+          flowCustomEdgesRef.current = [];
+          flowDeletedEdgesRef.current = [];
           setFlowCustomEdges([]);
           setFlowDeletedEdges([]);
           queueMicrotask(() => updateProcessData({ flowCustomEdges: [], flowDeletedEdges: [] }));
@@ -548,6 +604,8 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
         case 'remove_step': {
           const idx = action.input.stepNumber - 1;
           removeStep(idx);
+          flowCustomEdgesRef.current = [];
+          flowDeletedEdgesRef.current = [];
           setFlowCustomEdges([]);
           setFlowDeletedEdges([]);
           queueMicrotask(() => updateProcessData({ flowCustomEdges: [], flowDeletedEdges: [] }));
@@ -581,17 +639,23 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
     if (!files.length) return;
     let done = 0;
     const toAdd = [];
+    const TEXT_TYPES = ['text/csv', 'text/plain', 'application/json', 'text/tab-separated-values'];
     files.forEach((f) => {
       const reader = new FileReader();
+      const isText = TEXT_TYPES.includes(f.type) || /\.(csv|txt|tsv|json)$/i.test(f.name);
       reader.onload = () => {
-        const base64 = reader.result?.split(',')[1];
-        if (base64) toAdd.push({ name: f.name, type: f.type || 'application/octet-stream', content: base64 });
-        done++;
-        if (done === files.length) {
-          setChatAttachments((p) => [...p, ...toAdd]);
+        if (isText) {
+          const textContent = reader.result;
+          if (textContent) toAdd.push({ name: f.name, type: f.type || 'text/plain', textContent });
+        } else {
+          const base64 = reader.result?.split(',')[1];
+          if (base64) toAdd.push({ name: f.name, type: f.type || 'application/octet-stream', content: base64 });
         }
+        done++;
+        if (done === files.length) setChatAttachments((p) => [...p, ...toAdd]);
       };
-      reader.readAsDataURL(f);
+      if (isText) reader.readAsText(f);
+      else reader.readAsDataURL(f);
     });
   }, []);
 
@@ -1167,22 +1231,38 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
     }
   }, [steps.length]);
 
-  const getFlowPositionsKey = (layout) => `${layout || previewViewMode}-${steps.length}`;
-  const storedPositions = flowNodePositions[getFlowPositionsKey(previewViewMode)] || null;
-  const onFlowPositionsChange = useCallback((positions, layout) => {
-    const key = getFlowPositionsKey(layout);
+  // Positions are stored as {dx, dy} offsets keyed by step count only — no layout
+  // — so the same manual adjustments apply in grid, wrap, and swimlane views.
+  const getFlowPositionsKey = () => `${steps.length}`;
+  const storedPositions = flowNodePositions[getFlowPositionsKey()] || null;
+  const onFlowPositionsChange = useCallback((offsets, _layout) => {
+    const key = getFlowPositionsKey();
     setFlowNodePositions((p) => {
-      const next = { ...p, [key]: positions };
+      const next = { ...p, [key]: offsets };
       queueMicrotask(() => updateProcessData({ flowNodePositions: next }));
       return next;
     });
   }, [steps.length, updateProcessData]);
   const onFlowCustomEdgesChange = useCallback((edges) => {
+    // Update ref FIRST so the functional setSteps updater sees the latest value
+    flowCustomEdgesRef.current = edges;
     setFlowCustomEdges(edges);
+    // Immediately reconcile decision branches — no async effect needed
+    setSteps((prev) => {
+      const r = reconcileDecisionBranches(prev, flowCustomEdgesRef.current, flowDeletedEdgesRef.current);
+      return r.every((s, i) => s === prev[i]) ? prev : r;
+    });
     queueMicrotask(() => updateProcessData({ flowCustomEdges: edges }));
   }, [updateProcessData]);
   const onFlowDeletedEdgesChange = useCallback((ids) => {
+    // Update ref FIRST so the functional setSteps updater sees the latest value
+    flowDeletedEdgesRef.current = ids;
     setFlowDeletedEdges(ids);
+    // Immediately reconcile decision branches — no async effect needed
+    setSteps((prev) => {
+      const r = reconcileDecisionBranches(prev, flowCustomEdgesRef.current, flowDeletedEdgesRef.current);
+      return r.every((s, i) => s === prev[i]) ? prev : r;
+    });
     queueMicrotask(() => updateProcessData({ flowDeletedEdges: ids }));
   }, [updateProcessData]);
 
@@ -1202,19 +1282,17 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
           deletedEdges={flowDeletedEdges}
           onDeletedEdgesChange={onFlowDeletedEdgesChange}
           onDeleteNode={removeStep}
-          onAddNodeBetween={(insertIdx, newPos) => {
+          onAddNodeBetween={(insertIdx) => {
             const prevLen = steps.length;
-            const oldKey = `${previewViewMode}-${prevLen}`;
+            const oldKey = `${prevLen}`;
             addStep(insertIdx - 1);
-            const newKey = `${previewViewMode}-${prevLen + 1}`;
-            const oldPositions = flowNodePositions[oldKey] || {};
-            const COL_W = 180;
+            const newKey = `${prevLen + 1}`;
+            const oldOffsets = flowNodePositions[oldKey] || {};
+            // Preserve existing offsets, remapping step IDs around the inserted node.
+            // The new node gets no offset (starts at its computed initial position).
             const merged = {};
-            for (let j = 0; j < insertIdx; j++) { const p = oldPositions[`step-${j}`]; if (p) merged[`step-${j}`] = p; }
-            const srcPos = oldPositions[`step-${insertIdx - 1}`];
-            const newNodePos = srcPos ? { x: srcPos.x + COL_W, y: srcPos.y } : newPos;
-            if (newNodePos) merged[`step-${insertIdx}`] = newNodePos;
-            for (let j = insertIdx; j < prevLen; j++) { const p = oldPositions[`step-${j}`]; if (p) merged[`step-${j + 1}`] = { x: p.x + COL_W, y: p.y }; }
+            for (let j = 0; j < insertIdx; j++) { const o = oldOffsets[`step-${j}`]; if (o) merged[`step-${j}`] = o; }
+            for (let j = insertIdx; j < prevLen; j++) { const o = oldOffsets[`step-${j}`]; if (o) merged[`step-${j + 1}`] = o; }
             if (Object.keys(merged).length > 0) {
               setFlowNodePositions((p) => {
                 const next = { ...p, [newKey]: merged };
@@ -1477,19 +1555,15 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
                 deletedEdges={flowDeletedEdges}
                 onDeletedEdgesChange={onFlowDeletedEdgesChange}
                 onDeleteNode={removeStep}
-                onAddNodeBetween={(insertIdx, newPos) => {
+                onAddNodeBetween={(insertIdx) => {
                   const prevLen = steps.length;
-                  const oldKey = `${previewViewMode}-${prevLen}`;
+                  const oldKey = `${prevLen}`;
                   addStep(insertIdx - 1);
-                  const newKey = `${previewViewMode}-${prevLen + 1}`;
-                  const oldPositions = flowNodePositions[oldKey] || {};
-                  const COL_W = 180;
+                  const newKey = `${prevLen + 1}`;
+                  const oldOffsets = flowNodePositions[oldKey] || {};
                   const merged = {};
-                  for (let j = 0; j < insertIdx; j++) { const p = oldPositions[`step-${j}`]; if (p) merged[`step-${j}`] = p; }
-                  const srcPos = oldPositions[`step-${insertIdx - 1}`];
-                  const newNodePos = srcPos ? { x: srcPos.x + COL_W, y: srcPos.y } : newPos;
-                  if (newNodePos) merged[`step-${insertIdx}`] = newNodePos;
-                  for (let j = insertIdx; j < prevLen; j++) { const p = oldPositions[`step-${j}`]; if (p) merged[`step-${j + 1}`] = { x: p.x + COL_W, y: p.y }; }
+                  for (let j = 0; j < insertIdx; j++) { const o = oldOffsets[`step-${j}`]; if (o) merged[`step-${j}`] = o; }
+                  for (let j = insertIdx; j < prevLen; j++) { const o = oldOffsets[`step-${j}`]; if (o) merged[`step-${j + 1}`] = o; }
                   if (Object.keys(merged).length > 0) { setFlowNodePositions((p) => { const next = { ...p, [newKey]: merged }; queueMicrotask(() => updateProcessData({ flowNodePositions: next })); return next; }); }
                   setExpandedStepIdx(insertIdx);
                   setActiveIdx(insertIdx);
@@ -1555,19 +1629,15 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
           chatContent={chatContent}
           chatLoading={chatLoading}
           stepDetailContent={stepDetailContent}
-          onAddNodeBetween={(insertIdx, newPos) => {
+          onAddNodeBetween={(insertIdx) => {
             const prevLen = steps.length;
-            const oldKey = `${previewViewMode}-${prevLen}`;
+            const oldKey = `${prevLen}`;
             addStep(insertIdx - 1);
-            const newKey = `${previewViewMode}-${prevLen + 1}`;
-            const oldPositions = flowNodePositions[oldKey] || {};
-            const COL_W = 180;
+            const newKey = `${prevLen + 1}`;
+            const oldOffsets = flowNodePositions[oldKey] || {};
             const merged = {};
-            for (let j = 0; j < insertIdx; j++) { const p = oldPositions[`step-${j}`]; if (p) merged[`step-${j}`] = p; }
-            const srcPos = oldPositions[`step-${insertIdx - 1}`];
-            const newNodePos = srcPos ? { x: srcPos.x + COL_W, y: srcPos.y } : newPos;
-            if (newNodePos) merged[`step-${insertIdx}`] = newNodePos;
-            for (let j = insertIdx; j < prevLen; j++) { const p = oldPositions[`step-${j}`]; if (p) merged[`step-${j + 1}`] = { x: p.x + COL_W, y: p.y }; }
+            for (let j = 0; j < insertIdx; j++) { const o = oldOffsets[`step-${j}`]; if (o) merged[`step-${j}`] = o; }
+            for (let j = insertIdx; j < prevLen; j++) { const o = oldOffsets[`step-${j}`]; if (o) merged[`step-${j + 1}`] = o; }
             if (Object.keys(merged).length > 0) {
               setFlowNodePositions((p) => {
                 const next = { ...p, [newKey]: merged };

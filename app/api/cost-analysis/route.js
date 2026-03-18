@@ -43,12 +43,28 @@ export async function GET(request) {
   const processes = (dd.processes || []).map((p, i) => {
     const raw = rawProcesses[i] || {};
     const costs = raw.costs || {};
+    const steps = raw.steps || [];
+    const autoScore = typeof dd.automationScore?.percentage === 'number'
+      ? dd.automationScore.percentage
+      : (() => {
+          const total = steps.length;
+          if (total === 0) return 50;
+          const manual = steps.filter(s => !s.isAutomated && !s.isDecision).length;
+          return Math.round((1 - manual / total) * 100);
+        })();
+    const suggestedSavingsPct = autoScore >= 75 ? 55
+      : autoScore >= 60 ? 40
+      : autoScore >= 40 ? 28
+      : autoScore >= 20 ? 18
+      : 12;
     return {
       name: p.name || raw.processName,
       hoursPerInstance: costs.hoursPerInstance ?? 4,
       teamSize: costs.teamSize ?? 1,
       annual: costs.annual ?? (raw.frequency?.annual ?? 12),
-      departments: [...new Set((raw.steps || []).map((s) => s.department).filter(Boolean))],
+      departments: [...new Set(steps.map((s) => s.department).filter(Boolean))],
+      systems: [...new Set(steps.flatMap((s) => s.systems || []).filter(Boolean))],
+      suggestedSavingsPct,
     };
   });
 
@@ -58,11 +74,13 @@ export async function GET(request) {
     : [...new Set(rawProcesses.flatMap((p) => (p.steps || []).map((s) => s.department).filter(Boolean)))];
   const finalDepartments = departmentsList.length > 0 ? departmentsList : ['Default'];
 
+  const allSystems = [...new Set(rawProcesses.flatMap((p) => (p.steps || []).flatMap((s) => s.systems || []).filter(Boolean)))];
   return NextResponse.json({
     success: true,
     report: { id, costAnalysisStatus: dd.costAnalysisStatus || 'pending', diagnosticData: dd },
     processes,
     departments: finalDepartments,
+    allSystems,
     existingCostAnalysis: existingCost || undefined,
   });
 }
@@ -102,7 +120,7 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Access denied. Use the link assigned to you by the report owner.' }, { status: 403 });
   }
 
-  const { labourRates, blendedRate, onCostMultiplier, nonLabour } = costAnalysis;
+  const { labourRates, blendedRate, onCostMultiplier, nonLabour, processSavings } = costAnalysis;
   const rawProcesses = dd.rawProcesses || dd.processes || [];
 
   let totalAnnualCost = 0;
@@ -126,7 +144,7 @@ export async function POST(request) {
       : defaultRate;
     const instanceCost = hoursPerInstance * avgRate;
     const annualCost = instanceCost * annual * teamSize;
-    const savingsPct = (raw.savings?.percent ?? 30);
+    const savingsPct = (costAnalysis.processSavings?.[i] ?? raw.savings?.percent ?? 30);
     const potentialSavings = annualCost * (savingsPct / 100);
 
     totalAnnualCost += annualCost;
@@ -154,7 +172,8 @@ export async function POST(request) {
   dd.rawProcesses = rawProcesses;
   dd.summary = { ...(dd.summary || {}), totalAnnualCost, potentialSavings: totalPotentialSavings, totalProcesses: updatedProcesses.length };
   dd.costAnalysisStatus = 'complete';
-  dd.costAnalysis = { labourRates, blendedRate, onCostMultiplier, nonLabour, completedAt: new Date().toISOString() };
+  dd.costAnalysis = { labourRates, blendedRate, onCostMultiplier, nonLabour, processSavings: costAnalysis.processSavings || {}, completedAt: new Date().toISOString() };
+  dd.costAnalysisHistory = [...(dd.costAnalysisHistory || []), { savedAt: new Date().toISOString(), savedBy: hasValidToken ? 'manager' : 'owner' }];
   dd.costCompletedByManager = !isOwner;
 
   const patchResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}`, {
@@ -170,4 +189,59 @@ export async function POST(request) {
 
   const reportUrl = token ? `/report?id=${reportId}&token=${encodeURIComponent(token)}` : `/report?id=${reportId}`;
   return NextResponse.json({ success: true, reportId, reportUrl });
+}
+
+export async function PATCH(request) {
+  const originErr = checkOrigin(request);
+  if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
+
+  const rl = checkRateLimit(getRateLimitKey(request));
+  if (!rl.allowed) return NextResponse.json({ error: 'Too many requests.' }, { status: 429 });
+
+  let body;
+  try { body = await request.json(); } catch { return NextResponse.json({ error: 'Invalid JSON.' }, { status: 400 }); }
+
+  const { reportId, token, shareWithOwner } = body;
+  if (!reportId || !isValidUUID(reportId)) return NextResponse.json({ error: 'Valid report ID required.' }, { status: 400 });
+  if (shareWithOwner !== true) return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
+
+  const sbConfig = requireSupabase();
+  if (!sbConfig) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+  const { url: supabaseUrl, key: supabaseKey } = sbConfig;
+
+  const readResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}&select=id,contact_email,diagnostic_data`, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
+  if (!readResp.ok) return NextResponse.json({ error: 'Report not found.' }, { status: 404 });
+  const rows = await readResp.json();
+  if (!rows?.length) return NextResponse.json({ error: 'Report not found.' }, { status: 404 });
+
+  const report = rows[0];
+  const dd = JSON.parse(JSON.stringify(report.diagnostic_data || {}));
+  const storedToken = dd.costAnalysisToken || '';
+  const session = await verifySupabaseSession(request);
+  const hasValidToken = token && storedToken && token === storedToken;
+  const isOwner = session && report.contact_email && report.contact_email.toLowerCase() === session.email.toLowerCase();
+
+  if (!hasValidToken && !isOwner) {
+    return NextResponse.json({ error: 'Access denied.' }, { status: 403 });
+  }
+
+  if (dd.costAnalysisStatus !== 'complete') {
+    return NextResponse.json({ error: 'Cost analysis must be completed before sharing.' }, { status: 400 });
+  }
+
+  dd.costSharedWithOwner = true;
+  dd.costSharedAt = new Date().toISOString();
+
+  const patchResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}`, {
+    method: 'PATCH',
+    headers: getSupabaseWriteHeaders(supabaseKey),
+    body: JSON.stringify({ diagnostic_data: dd, updated_at: new Date().toISOString() }),
+  });
+
+  if (!patchResp.ok) {
+    logger.error('Cost analysis share failed', { requestId: getRequestId(request), status: patchResp.status });
+    return NextResponse.json({ error: 'Failed to share cost analysis.' }, { status: 502 });
+  }
+
+  return NextResponse.json({ success: true });
 }

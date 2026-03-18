@@ -151,6 +151,9 @@ export async function GET(request) {
           processName: rp.processName,
           steps: (rp.steps || []).map(s => ({ name: s.name, department: s.department, isDecision: s.isDecision || false, branches: s.branches || [] })),
           handoffs: (rp.handoffs || []).map(h => ({ method: h.method, clarity: h.clarity })),
+          flowNodePositions: rp.flowNodePositions || undefined,
+          flowCustomEdges: rp.flowCustomEdges || undefined,
+          flowDeletedEdges: rp.flowDeletedEdges || undefined,
         })),
         redesignStatus: hasAcceptedRedesign ? 'accepted' : redesign ? 'pending' : null,
         redesignVersions: allRedesigns.map((rd, i) => ({

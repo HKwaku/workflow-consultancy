@@ -6,6 +6,68 @@ import { useDiagnostic } from '../DiagnosticContext';
 import { useAuth } from '@/lib/useAuth';
 import { buildLocalResults } from '@/lib/diagnostic';
 
+/* ── SSE stream reader ────────────────────────────────────────── */
+
+async function readDiagnosticStream(payload, onProgress) {
+  const resp = await fetch('/api/process-diagnostic', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!resp.ok) throw new Error('Analysis failed');
+
+  const contentType = resp.headers.get('content-type') || '';
+
+  // Legacy JSON fallback (in case server returns non-streaming response)
+  if (!contentType.includes('text/event-stream')) {
+    const data = await resp.json();
+    if (!data.success) throw new Error(data.error || 'Analysis failed');
+    return data;
+  }
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  let result = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+
+    let idx;
+    while ((idx = buf.indexOf('\n\n')) !== -1) {
+      const chunk = buf.slice(0, idx);
+      buf = buf.slice(idx + 2);
+
+      let eventName = 'message';
+      let dataStr = '';
+      for (const line of chunk.split('\n')) {
+        if (line.startsWith('event: ')) eventName = line.slice(7).trim();
+        else if (line.startsWith('data: ')) dataStr = line.slice(6).trim();
+      }
+      if (!dataStr) continue;
+
+      let parsed;
+      try { parsed = JSON.parse(dataStr); } catch { continue; }
+
+      if (eventName === 'progress') {
+        onProgress(parsed.message || '');
+      } else if (eventName === 'done') {
+        result = parsed;
+      } else if (eventName === 'error') {
+        throw new Error(parsed.error || 'Analysis failed');
+      }
+    }
+  }
+
+  if (!result?.success) throw new Error('Analysis failed');
+  return result;
+}
+
+/* ── Component ───────────────────────────────────────────────── */
+
 export default function Screen6Complete() {
   const router = useRouter();
   const { user: sessionUser, loading: authLoading, accessToken } = useAuth();
@@ -23,9 +85,11 @@ export default function Screen6Complete() {
     goToScreen,
     setContact,
   } = useDiagnostic();
+
   const [status, setStatus] = useState('loading'); // loading | success | error
   const [reportId, setReportId] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [progressMessage, setProgressMessage] = useState('Starting analysis…');
 
   const processes = completedProcesses.length > 0 ? completedProcesses : [processData];
 
@@ -54,9 +118,7 @@ export default function Screen6Complete() {
 
   useEffect(() => {
     if (!effectiveEmail) {
-      if (authLoading && !contact?.email) {
-        return;
-      }
+      if (authLoading && !contact?.email) return;
       setStatus('error');
       setErrorMsg('Contact details missing. Please go back and enter your details.');
       return;
@@ -67,6 +129,7 @@ export default function Screen6Complete() {
     async function run() {
       try {
         setStatus('loading');
+        setProgressMessage('Starting analysis…');
         const teamCode = teamMode?.code;
 
         if (teamCode) {
@@ -119,6 +182,7 @@ export default function Screen6Complete() {
           userTime: p.userTime,
         }));
         if (sanitizedProcesses.length === 0) throw new Error('No process data to analyse.');
+
         const payload = {
           processes: sanitizedProcesses,
           contact: effectiveContact.email ? effectiveContact : undefined,
@@ -129,22 +193,17 @@ export default function Screen6Complete() {
 
         let result;
         try {
-          const resp = await fetch('/api/process-diagnostic', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
+          result = await readDiagnosticStream(payload, (msg) => {
+            if (!cancelled) setProgressMessage(msg);
           });
-          if (resp.ok) {
-            try { result = await resp.json(); } catch { throw new Error('Invalid response'); }
-          } else {
-            throw new Error('Analysis failed');
-          }
         } catch (apiErr) {
           result = buildLocalResults({ processes, contact: effectiveContact });
           if (!result.success) throw apiErr;
         }
 
         if (cancelled) return;
+
+        if (!cancelled) setProgressMessage('Saving your report…');
 
         const reportPayload = {
           editingReportId: editingReportId || null,
@@ -174,13 +233,7 @@ export default function Screen6Complete() {
             }));
             const handoffs = raw.handoffs || [];
             const departments = [...new Set(steps.map((s) => s.department).filter(Boolean))];
-            return {
-              ...p,
-              steps,
-              handoffs,
-              handoffCount: handoffs.length,
-              departments,
-            };
+            return { ...p, steps, handoffs, handoffCount: handoffs.length, departments };
           }),
           rawProcesses: JSON.parse(JSON.stringify(processes)),
           customDepartments: customDepartments || [],
@@ -217,10 +270,10 @@ export default function Screen6Complete() {
       <div className="screen-card">
         {(status === 'loading' || status === 'success') && (
           <>
-            <h1 className="screen-title">Generating your report...</h1>
-            <p className="screen-subtitle">Sharp is analysing your process. You&apos;ll be redirected shortly.</p>
+            <h1 className="screen-title">Generating your report…</h1>
             <div className="loading-state loading-fallback">
               <div className="loading-spinner" />
+              <p className="sc6-progress-message">{progressMessage}</p>
             </div>
           </>
         )}

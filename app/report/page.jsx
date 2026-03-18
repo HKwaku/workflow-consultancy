@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { buildMapObservations } from '@/lib/diagnostic/buildMapObservations';
 import { calculateAutomationScore } from '@/lib/diagnostic/buildLocalResults';
 import { getAutomationReadinessColor } from '@/lib/diagnostic/automationReadiness';
+import { detectBottlenecks } from '@/lib/diagnostic/detectBottlenecks';
+import { classifyAutomation } from '@/lib/flows';
 import { useAuth } from '@/lib/useAuth';
 import { useTheme } from '@/components/ThemeProvider';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -120,48 +122,88 @@ function normalizeRecommendations(recs) {
     action: r.action,
     estimatedTimeSavedMinutes: r.estimatedTimeSavedMinutes,
     effortLevel: r.effortLevel,
+    industryContext: r.industryContext,
+    frameworkRef: r.frameworkRef,
+    benchmarkSource: r.benchmarkSource,
   })).filter((r) => r.text);
 }
+
+const OBS_EFFORT_GROUPS = [
+  { key: 'quick-win', label: 'Quick Wins',   icon: '⚡', desc: 'Low effort, high impact — do these first.', defaultOpen: true  },
+  { key: 'medium',    label: 'Medium-term',  icon: '🎯', desc: 'Worth planning into the next cycle.',      defaultOpen: false },
+  { key: 'project',   label: 'Longer-term',  icon: '🔧', desc: 'Require more planning or investment.',     defaultOpen: false },
+  { key: 'other',     label: 'Other',        icon: '📋', desc: '',                                         defaultOpen: false },
+];
 
 function ObservationsContent({ recs, isMapOnly, rawProcesses }) {
   const items = isMapOnly && rawProcesses?.length
     ? buildMapObservations(rawProcesses)
     : normalizeRecommendations(recs);
+
   if (items.length === 0) {
     return <p className="report-obs-empty">Review your process map and share with your team to validate the steps.</p>;
   }
-  return (
-    <>
-    <div className="report-obs-list">
-      {items.map((r, i) => (
-        <div key={i} className="report-obs-item" style={r.color ? { borderLeftColor: r.color } : undefined}>
-          <div className="report-obs-header">
-            {r.icon && <span className="report-obs-icon" style={{ color: r.color }}>{r.icon}</span>}
-            <span className="report-obs-num">{i + 1}</span>
-            <span className={`report-obs-badge report-obs-badge-${(r.type || 'general').toLowerCase()}`}>
-              {(r.type || 'general').replace(/-/g, ' ')}
-            </span>
-            {r.severity && (
-              <span className={`report-obs-badge report-obs-badge-severity-${r.severity}`}>{r.severity}</span>
-            )}
-            {r.process && <span className="report-obs-process">{r.process}</span>}
-            {r.effortLevel && <span className="report-obs-effort">{r.effortLevel.replace(/-/g, ' ')}</span>}
-          </div>
-          {r.finding ? (
-            <>
-              <p className="report-obs-finding"><strong>Finding:</strong> {r.finding}</p>
-              <p className="report-obs-action"><strong>Action:</strong> {r.action || r.text}</p>
-              {r.estimatedTimeSavedMinutes > 0 && (
-                <p className="report-obs-saving">~{r.estimatedTimeSavedMinutes} min saved per run</p>
-              )}
-            </>
-          ) : (
+
+  // Map-only mode: observations don't have effort levels — show flat list
+  if (isMapOnly) {
+    return (
+      <div className="report-obs-list">
+        {items.map((r, i) => (
+          <div key={i} className="report-obs-item" style={r.color ? { borderLeftColor: r.color } : undefined}>
+            <div className="report-obs-header">
+              {r.icon && <span className="report-obs-icon" style={{ color: r.color }}>{r.icon}</span>}
+              <span className="report-obs-num">{i + 1}</span>
+              {r.process && <span className="report-obs-process">{r.process}</span>}
+            </div>
             <p className="report-obs-text">{r.text || ''}</p>
-          )}
-        </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Full mode: group by effort level
+  const byEffort = {};
+  items.forEach(r => {
+    const key = ['quick-win', 'medium', 'project'].includes(r.effortLevel) ? r.effortLevel : 'other';
+    if (!byEffort[key]) byEffort[key] = [];
+    byEffort[key].push(r);
+  });
+
+  return (
+    <div className="report-rec-groups">
+      {OBS_EFFORT_GROUPS.filter(g => byEffort[g.key]?.length).map(g => (
+        <details key={g.key} className="report-rec-group" open={g.defaultOpen}>
+          <summary className="report-rec-group-summary">
+            <span className="report-rec-group-icon">{g.icon}</span>
+            <span className="report-rec-group-label">{g.label}</span>
+            <span className="report-rec-group-count">{byEffort[g.key].length}</span>
+            {g.desc && <span className="report-rec-group-desc">{g.desc}</span>}
+            <span className="report-auto-group-chevron">›</span>
+          </summary>
+          <div className="report-rec-list">
+            {byEffort[g.key].map((r, ri) => (
+              <div key={ri} className="report-rec-card report-rec-card-full">
+                <div className="report-rec-card-top">
+                  {r.severity && <span className={`report-severity-pill sev-${r.severity}`}>{r.severity}</span>}
+                  {r.process && <span className="report-obs-process">{r.process}</span>}
+                </div>
+                {r.finding && <p className="report-obs-finding"><strong>Finding:</strong> {r.finding}</p>}
+                <p className="report-obs-action">{r.action || r.text}</p>
+                {(r.estimatedTimeSavedMinutes > 0 || r.frameworkRef || r.benchmarkSource || r.industryContext) && (
+                  <div className="report-obs-meta">
+                    {r.estimatedTimeSavedMinutes > 0 && <span className="report-obs-saving">~{r.estimatedTimeSavedMinutes} min saved per run</span>}
+                    {r.frameworkRef && <span className="report-obs-framework">{r.frameworkRef}</span>}
+                    {r.benchmarkSource && <span className="report-obs-source">Source: {r.benchmarkSource}</span>}
+                    {r.industryContext && <span className="report-obs-industry-ctx">{r.industryContext}</span>}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </details>
       ))}
     </div>
-    </>
   );
 }
 
@@ -236,6 +278,24 @@ const FLOW_VIEWS = [
   { id: 'grid', label: 'Linear', icon: '\u2192' },
   { id: 'swimlane', label: 'Swimlane', icon: '\u23F8' },
 ];
+
+const DEPT_PALETTE = ['#0d9488','#3b82f6','#8b5cf6','#f59e0b','#10b981','#ef4444','#ec4899','#06b6d4','#84cc16','#f97316'];
+
+const BENCHMARK_DATA = {
+  'Technology & Software':          { cycleDays: { best: 1,  median: 5,  worst: 21  }, optimalHandoffs: 3 },
+  'Financial Services & Banking':   { cycleDays: { best: 1,  median: 7,  worst: 30  }, optimalHandoffs: 4 },
+  'Healthcare & Life Sciences':     { cycleDays: { best: 2,  median: 10, worst: 45  }, optimalHandoffs: 5 },
+  'Manufacturing & Engineering':    { cycleDays: { best: 3,  median: 14, worst: 60  }, optimalHandoffs: 6 },
+  'Retail & E-commerce':            { cycleDays: { best: 1,  median: 5,  worst: 21  }, optimalHandoffs: 4 },
+  'Professional Services':          { cycleDays: { best: 2,  median: 8,  worst: 28  }, optimalHandoffs: 4 },
+  'Government & Public Sector':     { cycleDays: { best: 5,  median: 21, worst: 90  }, optimalHandoffs: 6 },
+  'Non-profit & Charities':         { cycleDays: { best: 3,  median: 10, worst: 35  }, optimalHandoffs: 4 },
+  'Construction & Real Estate':     { cycleDays: { best: 5,  median: 21, worst: 90  }, optimalHandoffs: 5 },
+  'Logistics & Supply Chain':       { cycleDays: { best: 1,  median: 7,  worst: 21  }, optimalHandoffs: 5 },
+  'Education & Training':           { cycleDays: { best: 2,  median: 10, worst: 30  }, optimalHandoffs: 4 },
+  'Legal & Compliance':             { cycleDays: { best: 3,  median: 14, worst: 45  }, optimalHandoffs: 5 },
+  'Insurance':                      { cycleDays: { best: 2,  median: 10, worst: 40  }, optimalHandoffs: 5 },
+};
 
 function MetricCard({ metricKey, value, drillValue, label, title, onClick, valueStyle }) {
   const v = drillValue ?? value;
@@ -332,6 +392,9 @@ const FlowDiagramCard = forwardRef(function FlowDiagramCard({ proc, processIndex
           <InteractiveFlowCanvas
             ref={ref}
             process={processForFlow}
+            customEdges={proc.flowCustomEdges || []}
+            deletedEdges={proc.flowDeletedEdges || []}
+            storedPositions={proc.flowNodePositions?.[`${steps.length}`] || null}
             layout={viewMode}
             darkTheme={darkTheme}
             onStepClick={(idx) => setInsightStepIndex(idx)}
@@ -356,6 +419,9 @@ const FlowDiagramCard = forwardRef(function FlowDiagramCard({ proc, processIndex
           initialViewMode={viewMode}
           onStepClick={(idx) => setInsightStepIndex(idx)}
           darkTheme={darkTheme}
+          customEdges={proc.flowCustomEdges || []}
+          deletedEdges={proc.flowDeletedEdges || []}
+          flowNodePositions={proc.flowNodePositions || {}}
         />
       )}
     </>
@@ -400,9 +466,10 @@ function FlowDiagramsSection({ rawProcesses, processes, darkTheme }) {
         <FlowResetBtn onClick={handleReset} darkTheme={darkTheme} />
         <button
           type="button"
-          className={`flow-reset-btn report-flow-reset-btn${isWrapped ? ' flow-wrap-btn-active' : ''}`}
-          onClick={handleWrapToggle}
-          title={isWrapped ? 'Switch to linear' : 'Wrap flow'}
+          className="flow-reset-btn report-flow-reset-btn"
+          disabled
+          title="Wrap functionality coming soon"
+          style={{ opacity: 0.4, cursor: 'not-allowed' }}
         >↩</button>
         {singleProcess && <FlowFloatBtn onClick={() => setFloatOpen(true)} />}
       </div>
@@ -1191,7 +1258,8 @@ function ReportContent() {
   const costAnalysisPending = d.costAnalysisStatus === 'pending';
   const hasNoCostData = (s.totalAnnualCost ?? 0) === 0 && (processes || []).every((p) => (p.annualCost ?? 0) === 0);
   const isMapOnly = storedMode === 'map-only' || (storedMode == null && hasNoCostData);
-  const showCostData = !isMapOnly && !costAnalysisPending && (hasNoCostData === false || (s.totalAnnualCost ?? 0) > 0);
+  const isManagerTokenView = !!tokenFromUrl;
+  const showCostData = !isMapOnly && !costAnalysisPending && (hasNoCostData === false || (s.totalAnnualCost ?? 0) > 0) && (isManagerTokenView || d.costSharedWithOwner === true);
 
   const costEditToken = tokenFromUrl || d.costAnalysisToken;
   const costEditUrl = id
@@ -1206,6 +1274,8 @@ function ReportContent() {
     ? `${p0.processName || p0.name} - Operating Model Redesign`
     : 'Operating Model Redesign';
   const rawProcesses = d.rawProcesses || [];
+  const industry = rawProcesses[0]?.industry || processes[0]?.industry || c.industry || d.industry || null;
+  const benchmark = BENCHMARK_DATA[industry] || null;
   const processSections = (processes || []).map((proc, i) => {
     const raw = rawProcesses[i] || proc;
     const steps = raw.steps || proc.steps || [];
@@ -1220,23 +1290,63 @@ function ReportContent() {
     const checksDone = allChecks.filter(c => c.checked).length;
     const checksTotal = allChecks.length;
 
+    const decisionCount = steps.filter(s => s.isDecision && (s.branches || []).length > 0).length;
+    const approvalCount = steps.filter(s => s.isApproval).length;
+    const bottleneckCount = steps.filter(s => s.isBottleneck).length;
+
+    const totalWork = steps.reduce((sum, s) => sum + (s.workMinutes ?? 0), 0);
+    const totalWait = steps.reduce((sum, s) => sum + (s.waitMinutes ?? 0), 0);
+    const workWaitRatio = (totalWork > 0 || totalWait > 0)
+      ? `${Math.round(totalWork)}m / ${Math.round(totalWait)}m`
+      : 'N/A';
+    const workWaitDrill = (totalWork > 0 || totalWait > 0)
+      ? `${Math.round(totalWork)}m work, ${Math.round(totalWait)}m wait — ${totalWait > 0 ? Math.round((totalWork / (totalWork + totalWait)) * 100) : 100}% value-adding`
+      : 'N/A';
+
     const procAuto = calculateAutomationScore([raw]);
+
+    // ── Feature 6: Complexity score ──
+    const complexityRaw = (decisionCount * 2) + (bottleneckCount * 2) + deptCount + Math.round(handoffCount * 0.5);
+    const complexityLabel = complexityRaw <= 3 ? 'Low' : complexityRaw <= 7 ? 'Medium' : complexityRaw <= 12 ? 'High' : 'Very High';
+    const complexityColor = complexityRaw <= 3 ? '#059669' : complexityRaw <= 7 ? '#d97706' : complexityRaw <= 12 ? '#ea580c' : '#dc2626';
+
+    // ── Feature 7: Timeline estimate ──
+    const totalMinutes = totalWork + totalWait;
+    const timelineStr = totalMinutes > 0
+      ? (totalMinutes >= 1440
+        ? `${(totalMinutes / 1440).toFixed(1)} days`
+        : totalMinutes >= 60
+        ? `${Math.round(totalMinutes / 60)}h`
+        : `${Math.round(totalMinutes)}m`)
+      : null;
 
     /* Summary metrics: exclude Annual cost (shown in Cost Summary tab) to avoid duplication */
     const summaryMetrics = (isMapOnly || costAnalysisPending) ? (
       <div className="report-metric-grid">
         <MetricCard metricKey="stepsMapped" value={(steps.length || proc.stepsCount) ?? ' - '} label="Steps mapped" onClick={setMetricDrill} />
-        <MetricCard metricKey="handoffs" value={handoffCount} label="Handoffs" title="Transfers of work between steps (e.g. from one team to the next)" onClick={setMetricDrill} />
-        <MetricCard metricKey="teamsInvolved" value={deptCount > 0 ? deptCount : ' - '} label="Teams involved" onClick={setMetricDrill} />
+        <MetricCard metricKey="handoffs" value={handoffCount} label="Handoffs" onClick={setMetricDrill} />
+        <MetricCard metricKey="teamsInvolved" value={deptCount > 0 ? deptCount : ' - '} drillValue={depts.length > 0 ? depts : undefined} label="Teams involved" onClick={setMetricDrill} />
+        <MetricCard metricKey="workWaitRatio" value={workWaitRatio} drillValue={workWaitDrill} label="Work / Wait" onClick={setMetricDrill} />
+        {sysCount > 0 && <MetricCard metricKey="systems" value={sysCount} label="Systems" onClick={setMetricDrill} />}
+        {decisionCount > 0 && <MetricCard metricKey="decisionPoints" value={decisionCount} label="Decision points" onClick={setMetricDrill} />}
+        {approvalCount > 0 && <MetricCard metricKey="approvals" value={approvalCount} label="Approvals" onClick={setMetricDrill} />}
+        {bottleneckCount > 0 && <MetricCard metricKey="bottlenecks" value={bottleneckCount} label="Bottlenecks" onClick={setMetricDrill} />}
         <MetricCard metricKey="automationReadiness" value={`${procAuto.percentage ?? 0}%`} drillValue={`${procAuto.percentage ?? 0}% (${procAuto.grade || 'N/A'})`} label="Automation readiness" title={procAuto.insight} onClick={setMetricDrill} valueStyle={{ color: getAutomationReadinessColor(procAuto.percentage ?? 0) }} />
-        {checksTotal > 0 && (
-          <MetricCard metricKey="checklistItems" value={`${checksDone}/${checksTotal}`} label="Checklist items" title="Checklist completion across all steps" onClick={setMetricDrill} />
-        )}
+        {checksTotal > 0 && <MetricCard metricKey="checklistItems" value={`${checksDone}/${checksTotal}`} label="Checklist items" onClick={setMetricDrill} />}
+        <MetricCard metricKey="complexity" value={complexityLabel} drillValue={`${complexityLabel} (score: ${complexityRaw})`} label="Complexity" onClick={setMetricDrill} valueStyle={{ color: complexityColor }} />
+        {timelineStr && <MetricCard metricKey="timelineEstimate" value={timelineStr} drillValue={`${timelineStr} estimated end-to-end${proc.elapsedDays > 0 ? ` · actual: ${proc.elapsedDays} days` : ''}`} label="Timeline est." onClick={setMetricDrill} />}
       </div>
     ) : (
       <div className="report-metric-grid">
         <MetricCard metricKey="averageCycle" value={proc.elapsedDays > 0 ? `${proc.elapsedDays} days` : ' - '} label="Average cycle" onClick={setMetricDrill} />
         <MetricCard metricKey="steps" value={proc.stepsCount ?? (proc.steps || []).length ?? ' - '} label="Steps" onClick={setMetricDrill} />
+        <MetricCard metricKey="handoffs" value={handoffCount} label="Handoffs" onClick={setMetricDrill} />
+        <MetricCard metricKey="teamsInvolved" value={deptCount > 0 ? deptCount : ' - '} drillValue={depts.length > 0 ? depts : undefined} label="Teams involved" onClick={setMetricDrill} />
+        <MetricCard metricKey="workWaitRatio" value={workWaitRatio} drillValue={workWaitDrill} label="Work / Wait" onClick={setMetricDrill} />
+        {sysCount > 0 && <MetricCard metricKey="systems" value={sysCount} label="Systems" onClick={setMetricDrill} />}
+        {decisionCount > 0 && <MetricCard metricKey="decisionPoints" value={decisionCount} label="Decision points" onClick={setMetricDrill} />}
+        {approvalCount > 0 && <MetricCard metricKey="approvals" value={approvalCount} label="Approvals" onClick={setMetricDrill} />}
+        {bottleneckCount > 0 && <MetricCard metricKey="bottlenecks" value={bottleneckCount} label="Bottlenecks" onClick={setMetricDrill} />}
         <MetricCard metricKey="automationReadiness" value={`${procAuto.percentage ?? 0}%`} drillValue={`${procAuto.percentage ?? 0}% (${procAuto.grade || 'N/A'})`} label="Automation readiness" title={procAuto.insight} onClick={setMetricDrill} valueStyle={{ color: getAutomationReadinessColor(procAuto.percentage ?? 0) }} />
         <MetricCard
           metricKey="confidence"
@@ -1245,17 +1355,325 @@ function ReportContent() {
           label={`Confidence (${(proc.quality?.score ?? ' - ')}/100)`}
           onClick={setMetricDrill}
         />
-        {checksTotal > 0 && (
-          <MetricCard metricKey="checklistItems" value={`${checksDone}/${checksTotal}`} label="Checklist items" title="Checklist completion across all steps" onClick={setMetricDrill} />
-        )}
+        {checksTotal > 0 && <MetricCard metricKey="checklistItems" value={`${checksDone}/${checksTotal}`} label="Checklist items" onClick={setMetricDrill} />}
+        <MetricCard metricKey="complexity" value={complexityLabel} drillValue={`${complexityLabel} (score: ${complexityRaw})`} label="Complexity" onClick={setMetricDrill} valueStyle={{ color: complexityColor }} />
+        {timelineStr && <MetricCard metricKey="timelineEstimate" value={timelineStr} drillValue={`${timelineStr} estimated end-to-end${proc.elapsedDays > 0 ? ` · actual: ${proc.elapsedDays} days` : ''}`} label="Timeline est." onClick={setMetricDrill} />}
       </div>
     );
 
+    // ── Feature 1: Process Health Indicator ──
+    let healthStatus, healthReason;
+    if (bottleneckCount > 0 && (procAuto.percentage < 30 || (totalWork > 0 && totalWait > totalWork * 2))) {
+      healthStatus = 'red';
+      healthReason = bottleneckCount > 0 && procAuto.percentage < 30
+        ? 'bottlenecks detected with low automation coverage'
+        : 'bottlenecks detected with high wait-to-work ratio';
+    } else if (bottleneckCount > 0 || procAuto.percentage < 50 || approvalCount >= 3) {
+      healthStatus = 'amber';
+      healthReason = bottleneckCount > 0
+        ? `${bottleneckCount} bottleneck${bottleneckCount > 1 ? 's' : ''} identified`
+        : approvalCount >= 3
+        ? `${approvalCount} approval steps may slow throughput`
+        : `automation readiness at ${procAuto.percentage ?? 0}%`;
+    } else {
+      healthStatus = 'green';
+      healthReason = 'no critical issues detected';
+    }
+    const healthLabel = healthStatus === 'red' ? 'At Risk' : healthStatus === 'amber' ? 'Needs Attention' : 'Healthy';
+    const healthIndicator = (
+      <div className={`report-health-indicator health-${healthStatus}`}>
+        <span className="report-health-dot" />
+        <span className="report-health-label">{healthLabel}</span>
+        <span className="report-health-reason">— {healthReason}</span>
+      </div>
+    );
+
+    // ── Bottleneck analysis ──
+    const detectedBottlenecks = detectBottlenecks(raw);
+    const highBottlenecks     = detectedBottlenecks.filter(b => b.risk === 'high');
+    const medBottlenecks      = detectedBottlenecks.filter(b => b.risk === 'medium');
+
+    const RISK_META = {
+      high:   { label: 'High risk',   color: '#dc2626', bg: '#fee2e2', darkBg: 'rgba(220,38,38,0.12)', darkColor: '#fca5a5' },
+      medium: { label: 'Medium risk', color: '#d97706', bg: '#fef3c7', darkBg: 'rgba(217,119,6,0.12)',  darkColor: '#fcd34d' },
+    };
+
+    const bottleneckAnalysis = detectedBottlenecks.length > 0 ? (
+      <div className="report-process-extra-section">
+        <p className="report-section-heading">Bottleneck Analysis</p>
+        <div className="report-bottleneck-list">
+          {detectedBottlenecks.map((b, bi) => {
+            const meta = RISK_META[b.risk];
+            if (!meta) return null;
+            return (
+              <div key={bi} className="report-bottleneck-item">
+                <div className="report-bottleneck-header">
+                  <span className="report-bottleneck-num">{b.stepIndex + 1}</span>
+                  <span className="report-bottleneck-name">{b.stepName}</span>
+                  <span className="report-bottleneck-risk" style={{ background: meta.bg, color: meta.color }}>
+                    {meta.label}
+                  </span>
+                  {b.isSelfReported && (
+                    <span className="report-bottleneck-self-flag" title="Also flagged by team">★ flagged</span>
+                  )}
+                </div>
+                <ul className="report-bottleneck-reasons">
+                  {b.reasons.map((reason, ri) => (
+                    <li key={ri}>{reason}</li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+        {detectedBottlenecks.some(b => !b.isSelfReported) && (
+          <p className="report-bottleneck-note">
+            ★ Steps not previously flagged by the team but identified through structural analysis.
+          </p>
+        )}
+      </div>
+    ) : (
+      <div className="report-process-extra-section">
+        <p className="report-section-heading">Bottleneck Analysis</p>
+        <p className="report-bottleneck-none">No significant bottleneck signals detected in this process.</p>
+      </div>
+    );
+
+    // ── Feature 2: Automation breakdown by step (grouped, collapsible) ──
+    const AUTO_GROUP_ORDER = ['multi-agent', 'agent', 'human-loop', 'simple', null];
+    const AUTO_GROUP_META = {
+      'multi-agent': { label: 'Multi-Agent System',  badge: 'M', color: '#be185d', bg: '#fdf2f8', desc: 'Requires coordinated agents across multiple teams or systems.' },
+      'agent':       { label: 'AI Agent',             badge: 'A', color: '#7c3aed', bg: '#f5f3ff', desc: 'An autonomous AI agent can handle this end-to-end.' },
+      'human-loop':  { label: 'Agent + Human Review', badge: 'H', color: '#ea580c', bg: '#fff7ed', desc: 'Agent does the work; human reviews or approves.' },
+      'simple':      { label: 'Simple Automation',    badge: 'S', color: '#0891b2', bg: '#ecfeff', desc: 'Rule-based or workflow automation — no AI needed.' },
+      null:          { label: 'Manual',               badge: '—', color: '#94a3b8', bg: '#f8fafc', desc: 'No automation opportunity identified for these steps.' },
+    };
+
+    const autoGroups = {};
+    steps.forEach((step, si) => {
+      const cat = classifyAutomation(step, si, raw);
+      const key = cat ? cat.key : null;
+      if (!autoGroups[key]) autoGroups[key] = [];
+      autoGroups[key].push({ step, si, cat });
+    });
+
+    const autoBreakdown = steps.length > 0 ? (
+      <div className="report-process-extra-section">
+        <p className="report-section-heading">Automation Opportunities</p>
+        <div className="report-auto-groups">
+          {AUTO_GROUP_ORDER.filter(k => autoGroups[k]?.length).map(groupKey => {
+            const meta    = AUTO_GROUP_META[groupKey];
+            const members = autoGroups[groupKey];
+            const groupId = `auto-group-${i}-${groupKey ?? 'manual'}`;
+            return (
+              <details key={groupKey ?? 'manual'} className="report-auto-group">
+                <summary className="report-auto-group-summary">
+                  <span className="report-auto-group-badge" style={{ background: meta.color }}>{meta.badge}</span>
+                  <span className="report-auto-group-label" style={{ color: meta.color }}>{meta.label}</span>
+                  <span className="report-auto-group-count">{members.length} step{members.length !== 1 ? 's' : ''}</span>
+                  <span className="report-auto-group-desc">{meta.desc}</span>
+                  <span className="report-auto-group-chevron">›</span>
+                </summary>
+                <div className="report-auto-step-list">
+                  {members.map(({ step, si, cat }) => (
+                    <div key={si} className="report-auto-step-row">
+                      <span className="report-auto-step-num">{si + 1}.</span>
+                      <span className="report-auto-step-name">{step.name || `Step ${si + 1}`}</span>
+                      {cat?.reason && <span className="report-auto-step-reason">{cat.reason}</span>}
+                    </div>
+                  ))}
+                </div>
+              </details>
+            );
+          })}
+        </div>
+      </div>
+    ) : null;
+
+    // ── Feature 3: Recommendations grouped by theme ──
+    const normRecs = normalizeRecommendations(recs);
+    const procRecs = normRecs
+      .filter(r => r.process === proc.name || r.process === raw.processName || r.process === 'Cross-process' || r.process === 'Overall')
+      .sort((a, b) => {
+        const order = { high: 0, medium: 1, low: 2 };
+        return (order[a.severity] ?? 3) - (order[b.severity] ?? 3);
+      });
+
+    const REC_GROUP_META = {
+      'quick-win': { label: 'Quick Wins',        icon: '⚡', desc: 'Low effort, high impact — do these first.' },
+      'medium':    { label: 'Medium-term',        icon: '🎯', desc: 'Worth planning into the next cycle.' },
+      'project':   { label: 'Longer-term',        icon: '🔧', desc: 'Require more planning or investment.' },
+      'other':     { label: 'Other',              icon: '📋', desc: '' },
+    };
+    const recsByEffort = {};
+    procRecs.forEach(r => {
+      const key = ['quick-win', 'medium', 'project'].includes(r.effortLevel) ? r.effortLevel : 'other';
+      if (!recsByEffort[key]) recsByEffort[key] = [];
+      recsByEffort[key].push(r);
+    });
+
+    const recsBlock = procRecs.length > 0 ? (
+      <div className="report-process-extra-section">
+        <p className="report-section-heading">Recommendations</p>
+        <div className="report-rec-groups">
+          {['quick-win', 'medium', 'project', 'other'].filter(k => recsByEffort[k]?.length).map(effortKey => {
+            const meta = REC_GROUP_META[effortKey];
+            return (
+              <details key={effortKey} className="report-rec-group" open={effortKey === 'quick-win'}>
+                <summary className="report-rec-group-summary">
+                  <span className="report-rec-group-icon">{meta.icon}</span>
+                  <span className="report-rec-group-label">{meta.label}</span>
+                  <span className="report-rec-group-count">{recsByEffort[effortKey].length}</span>
+                  {meta.desc && <span className="report-rec-group-desc">{meta.desc}</span>}
+                  <span className="report-auto-group-chevron">›</span>
+                </summary>
+                <div className="report-rec-list">
+                  {recsByEffort[effortKey].map((r, ri) => (
+                    <div key={ri} className="report-rec-card">
+                      {r.severity && <span className={`report-severity-pill sev-${r.severity}`}>{r.severity}</span>}
+                      <span className="report-rec-text">{r.action || r.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            );
+          })}
+        </div>
+      </div>
+    ) : null;
+
+    // ── Feature 4: Department workload split ──
+    const deptWorkload = deptCount > 1 ? (() => {
+      const deptData = {};
+      for (const step of steps) {
+        const deptName = step.department || 'Unassigned';
+        if (!deptData[deptName]) deptData[deptName] = { steps: 0, work: 0, wait: 0 };
+        deptData[deptName].steps += 1;
+        deptData[deptName].work  += step.workMinutes ?? 0;
+        deptData[deptName].wait  += step.waitMinutes ?? 0;
+      }
+      const deptEntries = Object.entries(deptData).sort((a, b) => b[1].steps - a[1].steps);
+      const totalSteps = steps.length || 1;
+      const totalWork  = deptEntries.reduce((s, [, d]) => s + d.work, 0);
+      const totalWait  = deptEntries.reduce((s, [, d]) => s + d.wait, 0);
+      const hasWork    = totalWork > 0;
+      const hasWait    = totalWait > 0;
+      const fmtMin     = (m) => m >= 60 ? `${Math.round(m / 60)}h` : `${Math.round(m)}m`;
+
+      const BarChart = ({ title, entries, getValue, getTotal, fmtValue, barColor }) => {
+        const total = getTotal();
+        return (
+          <div className="report-dept-chart">
+            <p className="report-dept-chart-title">{title}</p>
+            <div className="report-dept-bars">
+              {entries.map(([dept, data], di) => {
+                const val  = getValue(data);
+                const pct  = total > 0 ? Math.round((val / total) * 100) : 0;
+                const color = typeof barColor === 'function' ? barColor(di) : barColor;
+                return (
+                  <div key={dept} className="report-dept-bar-row">
+                    <span className="report-dept-bar-label" title={dept}>
+                      <span className="report-dept-bar-dot" style={{ background: DEPT_PALETTE[di % DEPT_PALETTE.length] }} />
+                      {dept}
+                    </span>
+                    <div className="report-dept-bar-track">
+                      <div className="report-dept-bar-fill" style={{ width: `${pct}%`, background: color }} />
+                    </div>
+                    <span className="report-dept-bar-pct">
+                      {fmtValue(val)} <span className="report-dept-bar-pct-sub">({pct}%)</span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      };
+
+      return (
+        <div className="report-process-extra-section">
+          <p className="report-section-heading">Team Workload Split</p>
+          <div className="report-dept-charts-grid">
+            <BarChart
+              title="Steps owned"
+              entries={deptEntries}
+              getValue={(d) => d.steps}
+              getTotal={() => totalSteps}
+              fmtValue={(v) => `${v}`}
+              barColor={(di) => DEPT_PALETTE[di % DEPT_PALETTE.length]}
+            />
+            {hasWork && (
+              <BarChart
+                title="Work time"
+                entries={deptEntries}
+                getValue={(d) => d.work}
+                getTotal={() => totalWork}
+                fmtValue={(v) => v > 0 ? fmtMin(v) : '—'}
+                barColor={(di) => DEPT_PALETTE[di % DEPT_PALETTE.length]}
+              />
+            )}
+            {hasWait && (
+              <BarChart
+                title="Wait time"
+                entries={deptEntries}
+                getValue={(d) => d.wait}
+                getTotal={() => totalWait}
+                fmtValue={(v) => v > 0 ? fmtMin(v) : '—'}
+                barColor="#f59e0b"
+              />
+            )}
+          </div>
+        </div>
+      );
+    })() : null;
+
+    // ── Feature 5: Benchmark callout ──
+    const benchmarkBlock = (benchmark && proc.elapsedDays > 0) ? (() => {
+      const cycleVsMedian = proc.elapsedDays <= benchmark.cycleDays.best
+        ? { label: `${proc.elapsedDays}d (best-in-class)`, good: true }
+        : proc.elapsedDays <= benchmark.cycleDays.median
+        ? { label: `${proc.elapsedDays}d (below median)`, good: true }
+        : proc.elapsedDays <= benchmark.cycleDays.worst
+        ? { label: `${proc.elapsedDays}d (above median)`, good: false }
+        : { label: `${proc.elapsedDays}d (outlier)`, good: false };
+      const handoffVsOptimal = handoffCount <= benchmark.optimalHandoffs
+        ? { label: `${handoffCount} (within optimal)`, good: true }
+        : { label: `${handoffCount} (above optimal ${benchmark.optimalHandoffs})`, good: false };
+      return (
+        <div className="report-process-extra-section">
+          <p className="report-section-heading">Industry Benchmark · {industry}</p>
+          <div className="report-benchmark-row">
+            <div className="report-benchmark-stat">
+              <span className="report-benchmark-stat-label">Cycle time</span>
+              <span className={`report-benchmark-stat-value ${cycleVsMedian.good ? 'report-benchmark-good' : 'report-benchmark-warn'}`}>
+                {cycleVsMedian.label}
+              </span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-mid)' }}>
+                Median: {benchmark.cycleDays.median}d · Best: {benchmark.cycleDays.best}d
+              </span>
+            </div>
+            <div className="report-benchmark-stat">
+              <span className="report-benchmark-stat-label">Handoffs</span>
+              <span className={`report-benchmark-stat-value ${handoffVsOptimal.good ? 'report-benchmark-good' : 'report-benchmark-warn'}`}>
+                {handoffVsOptimal.label}
+              </span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-mid)' }}>
+                Optimal: ≤{benchmark.optimalHandoffs}
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    })() : null;
+
     return (
       <div key={i} className="report-process-summary-block">
+        {healthIndicator}
         {summaryMetrics}
-        {deptCount > 0 && <div className="report-meta-row">Teams: <strong>{deptLabel}</strong></div>}
-        {sysCount > 0 && <div className="report-meta-row">Systems: <strong>{systems.slice(0, 5).join(', ')}{sysCount > 5 ? ` +${sysCount - 5} more` : ''}</strong></div>}
+        {benchmarkBlock}
+        {bottleneckAnalysis}
+        {deptWorkload}
+        {autoBreakdown}
       </div>
     );
   });
@@ -1301,10 +1719,23 @@ function ReportContent() {
 
         <div className="report-card">
           {/* Hero */}
-          <div className="report-hero">
-            <div className="report-hero-icon" style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 700, fontSize: '1.6rem', color: 'var(--text)' }}>Sharpin<span style={{ color: 'var(--gold, #b45309)' }}>.</span></div>
-            <h1 className="report-title">{redesign ? redesignTitle : `${(processes[0]?.name || rawProcesses[0]?.processName || 'Process')} Diagnostics`}</h1>
-          </div>
+          {(() => {
+            const company = c.company || d.company || null;
+            const industry = rawProcesses[0]?.industry || processes[0]?.industry || c.industry || d.industry || null;
+            return (
+              <div className="report-hero">
+                <div className="report-hero-icon" style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 700, fontSize: '1.6rem', color: 'var(--text)' }}>Sharpin<span style={{ color: 'var(--gold, #b45309)' }}>.</span></div>
+                <h1 className="report-title">{redesign ? redesignTitle : `${(processes[0]?.name || rawProcesses[0]?.processName || 'Process')} Diagnostics`}</h1>
+                {(company || industry) && (
+                  <div className="report-hero-meta">
+                    {company && <span className="report-hero-company">{company}</span>}
+                    {company && industry && <span className="report-hero-meta-sep">·</span>}
+                    {industry && <span className="report-hero-industry">{industry}</span>}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {costAnalysisPending && (() => {
             const costUrl = (typeof window !== 'undefined' && sessionStorage.getItem('costAnalysisUrl_' + id)) || (d.costAnalysisToken ? `${typeof window !== 'undefined' ? window.location.origin : ''}/cost-analysis?id=${id}&token=${d.costAnalysisToken}` : null);
@@ -1319,9 +1750,61 @@ function ReportContent() {
           )}
 
           <div className="report-ai-disclaimer">
-            <span className="report-ai-disclaimer-icon">&#9888;</span>
-            <span>This report is AI-generated based solely on the information you provided and may contain errors or oversimplifications. It is a starting point, not a final recommendation. <a href="mailto:hello@sharpin.co.uk?subject=Redesign%20consultation">Book a free consultation</a> to validate these findings with our team.</span>
+            AI-generated from the information you provided — a starting point, not a final recommendation. <a href="mailto:hello@sharpin.co.uk?subject=Redesign%20consultation">Book a free consultation</a> to validate with our team.
           </div>
+
+          {/* Feature 8: Redesign Delta — before/after summary when redesign exists */}
+          {redesign && (() => {
+            const cs = redesign.costSummary || {};
+            // Try costSummary first, fall back to computing from process arrays
+            const origSteps = cs.originalStepsCount
+              ?? (rawProcesses.reduce((sum, p) => sum + (p.steps?.length ?? 0), 0) || null);
+            const optSteps = cs.optimisedStepsCount
+              ?? (redesign.optimisedProcesses?.reduce((sum, p) => sum + (p.steps?.length ?? 0), 0) || null);
+            const stepsRemoved = cs.stepsRemoved ?? (origSteps != null && optSteps != null ? origSteps - optSteps : null);
+            const stepsAutomated = cs.stepsAutomated ?? null;
+            const timeSaved = cs.estimatedTimeSavedPercent ?? null;
+            const costSaved = cs.estimatedCostSavedPercent ?? null;
+            const hasContent = origSteps != null || stepsRemoved != null || timeSaved != null || costSaved != null;
+            if (!hasContent) return null;
+            return (
+              <div className="report-redesign-delta">
+                <p className="report-redesign-delta-heading">Redesign Impact Summary</p>
+                <div className="report-delta-grid">
+                  {origSteps != null && optSteps != null && (
+                    <div className="report-delta-item">
+                      <span className="report-delta-item-label">Steps</span>
+                      <span className="report-delta-item-value">{origSteps} → {optSteps}</span>
+                    </div>
+                  )}
+                  {stepsRemoved != null && stepsRemoved > 0 && (
+                    <div className="report-delta-item">
+                      <span className="report-delta-item-label">Steps removed</span>
+                      <span className="report-delta-item-value">−{stepsRemoved}</span>
+                    </div>
+                  )}
+                  {stepsAutomated != null && stepsAutomated > 0 && (
+                    <div className="report-delta-item">
+                      <span className="report-delta-item-label">Steps automated</span>
+                      <span className="report-delta-item-value">{stepsAutomated}</span>
+                    </div>
+                  )}
+                  {timeSaved != null && (
+                    <div className="report-delta-item">
+                      <span className="report-delta-item-label">Time saved</span>
+                      <span className="report-delta-item-value">{timeSaved}%</span>
+                    </div>
+                  )}
+                  {costSaved != null && (
+                    <div className="report-delta-item">
+                      <span className="report-delta-item-label">Cost saved</span>
+                      <span className="report-delta-item-value">{costSaved}%</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Main report sections as clickable tabs  -  Summary, Cost Summary, Process Flow Diagrams, etc. on one line */}
           {(() => {
@@ -1339,7 +1822,7 @@ function ReportContent() {
                 label: 'Cost Summary',
                 content: (
                   <div className="report-cost-summary">
-                    {costEditUrl && (
+                    {costEditUrl && isManagerTokenView && (
                       <Link href={costEditUrl} className="button button-primary report-edit-costs-btn" style={{ marginBottom: 16, display: 'inline-block' }}>
                         Edit costs
                       </Link>
@@ -1437,16 +1920,18 @@ function ReportContent() {
             ) : null;
           })()}
 
-          {/* Create Account card */}
-          <div className="report-gate-card">
-            <div className="report-gate-icon">&#128274;</div>
-            <h3 className="report-gate-title">Want to view this report again or edit it?</h3>
-            <p className="report-gate-text">Create a free client portal account to save your report and access it any time. Also unlocks the full cost analysis, and process redesign.</p>
-            <Link href={`/portal?mode=signup&source=map-only&email=${encodeURIComponent(contactEmail)}`} className="report-gate-btn">
-              Create Free Account &rarr;
-            </Link>
-            <p className="report-gate-signin">Already have an account? <Link href="/portal">Sign in &rarr;</Link></p>
-          </div>
+          {/* Create Account card — only shown to guests */}
+          {!sessionUser && (
+            <div className="report-gate-card">
+              <div className="report-gate-icon">&#128274;</div>
+              <h3 className="report-gate-title">Want to view this report again or edit it?</h3>
+              <p className="report-gate-text">Create a free client portal account to save your report and access it any time. Also unlocks the full cost analysis, and process redesign.</p>
+              <Link href={`/portal?mode=signup&source=map-only&email=${encodeURIComponent(contactEmail)}`} className="report-gate-btn">
+                Create Free Account &rarr;
+              </Link>
+              <p className="report-gate-signin">Already have an account? <Link href="/portal">Sign in &rarr;</Link></p>
+            </div>
+          )}
 
           {/* Green banner */}
           {isMapOnly && (

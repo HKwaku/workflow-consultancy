@@ -33,7 +33,7 @@ function DiagnosticContent() {
     currentScreen, loadProgress, restoreProgress, goToScreen,
     chatOpen, toggleChatOpen, setChatOpen,
     setAuthUser, authUser, setTeamMode,
-    setEditingReportId, editingReportId, setEditingRedesign, setDiagnosticMode, setContact,
+    setEditingReportId, editingReportId, setEditingRedesign, setDiagnosticMode,
     setChatMessages, addAuditEvent, auditTrail,
   } = useDiagnostic();
   const [showResume, setShowResume] = useState(false);
@@ -136,7 +136,13 @@ function DiagnosticContent() {
         const mode = 'process'; // single mode — legacy 'map-only'/'comprehensive' treated identically
         setEditingReportId(urlEdit);
         setDiagnosticMode(mode);
-        setContact({
+        const isEditRedesign = !!data.report?.editRedesign;
+        setEditingRedesign(isEditRedesign);
+        const editGreeting = isEditRedesign
+          ? "You're editing your redesigned flow. I can help you refine steps, add details, or adjust the process. What would you like to change?"
+          : "You're editing your diagnostic. I can help you refine steps, add details, or adjust the process. What would you like to change?";
+        setChatMessages([{ role: 'assistant', content: editGreeting }]);
+        const editContact = {
           name: r.contactName || contact.name || '',
           email: r.contactEmail || contact.email || urlEditEmail || '',
           company: r.company || contact.company || '',
@@ -144,17 +150,11 @@ function DiagnosticContent() {
           teamSize: contact.teamSize || '',
           industry: contact.industry || '',
           phone: contact.phone || '',
-        });
-
-        const isEditRedesign = !!data.report?.editRedesign;
-        setEditingRedesign(isEditRedesign);
-        const editGreeting = isEditRedesign
-          ? "You're editing your redesigned flow. I can help you refine steps, add details, or adjust the process. What would you like to change?"
-          : "You're editing your diagnostic. I can help you refine steps, add details, or adjust the process. What would you like to change?";
-        setChatMessages([{ role: 'assistant', content: editGreeting }]);
+        };
         restoreProgress({
           currentScreen: 2,
           processData,
+          contact: editContact,
           completedProcesses: (r.rawProcesses || dd.rawProcesses || []).slice(1).map((rp, i) => ({
             processName: rp.processName,
             processType: rp.processType,
@@ -175,7 +175,7 @@ function DiagnosticContent() {
         setEditError('Failed to load report. Please check your connection and try again.');
         setEditLoading(false);
       });
-  }, [urlEdit, urlEditEmail, urlEditRedesign, authLoading, accessToken, restoreProgress, setEditingReportId, setEditingRedesign, setChatMessages, setDiagnosticMode, setContact, addAuditEvent]);
+  }, [urlEdit, urlEditEmail, urlEditRedesign, authLoading, accessToken, restoreProgress, setEditingReportId, setEditingRedesign, setChatMessages, setDiagnosticMode, addAuditEvent]);
 
   // Handle ?team=CODE — require auth then go to team setup
   const urlTeam = searchParams.get('team');

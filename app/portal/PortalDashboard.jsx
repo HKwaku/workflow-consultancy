@@ -301,18 +301,19 @@ function ensureHandoffs(steps, handoffs) {
   return out.slice(0, needed);
 }
 
-function PortalCollapsible({ title, children, defaultOpen = false, level = 0, badge, headerActions, white }) {
+function PortalCollapsible({ title, children, defaultOpen = false, level = 0, badge, headerActions, headerBelow, white }) {
   const [open, setOpen] = useState(defaultOpen);
   const cls = level === 0 ? 'portal-collapse' : level === 1 ? 'portal-collapse portal-collapse-child' : 'portal-collapse portal-collapse-grandchild';
   const sectionCls = white ? ' portal-collapse-section' : '';
   return (
     <div className={`${cls}${sectionCls} ${open ? '' : 'collapsed'}`}>
       <div className="portal-collapse-header" onClick={() => setOpen(!open)}>
-        <span className="portal-collapse-toggle">{open ? '\u2212' : '+'}</span>
         <span className="portal-collapse-title">{title}</span>
         {badge && <span className="portal-collapse-badge">{badge}</span>}
         {headerActions && <span className="portal-collapse-actions" onClick={e => e.stopPropagation()}>{headerActions}</span>}
+        <span className="portal-collapse-toggle">›</span>
       </div>
+      {headerBelow && <div className="portal-collapse-header-below">{headerBelow}</div>}
       {open && <div className="portal-collapse-body">{children}</div>}
     </div>
   );
@@ -351,6 +352,9 @@ function ProcessFlowPanel({ proc, label, actions, automationPct, darkTheme }) {
   const handleWrapToggle = () => setViewMode((v) => v === 'wrap' ? 'grid' : 'wrap');
   const [floatingOpen, setFloatingOpen] = useState(false);
   const [insightStepIndex, setInsightStepIndex] = useState(null);
+  const [flowNodePositions, setFlowNodePositions] = useState(() => proc.flowNodePositions || {});
+  const [customEdges, setCustomEdges] = useState(() => proc.flowCustomEdges || []);
+  const [deletedEdges, setDeletedEdges] = useState(() => proc.flowDeletedEdges || []);
   const steps = proc.steps || [];
   const autoClass = automationPct != null ? getAutomationReadinessClass(automationPct) : null;
   const processForFlow = {
@@ -384,6 +388,12 @@ function ProcessFlowPanel({ proc, label, actions, automationPct, darkTheme }) {
           onStepClick={(idx) => setInsightStepIndex(idx)}
           onWrapToggle={handleWrapToggle}
           isWrapped={isWrapped}
+          customEdges={customEdges}
+          deletedEdges={deletedEdges}
+          storedPositions={flowNodePositions[`${steps.length}`] || null}
+          onPositionsChange={(positions) => setFlowNodePositions((prev) => ({ ...prev, [`${steps.length}`]: positions }))}
+          onCustomEdgesChange={setCustomEdges}
+          onDeletedEdgesChange={setDeletedEdges}
         />
       </div>
       <div className="portal-flow-meta">
@@ -410,6 +420,13 @@ function ProcessFlowPanel({ proc, label, actions, automationPct, darkTheme }) {
           initialViewMode={viewMode}
           onStepClick={(idx) => setInsightStepIndex(idx)}
           darkTheme={darkTheme}
+          customEdges={customEdges}
+          onCustomEdgesChange={setCustomEdges}
+          deletedEdges={deletedEdges}
+          onDeletedEdgesChange={setDeletedEdges}
+          flowNodePositions={flowNodePositions}
+          onPositionsChange={(positions) => setFlowNodePositions((prev) => ({ ...prev, [`${steps.length}`]: positions }))}
+          stepsLength={steps.length}
         />
       )}
     </div>
@@ -829,19 +846,9 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
                   {costLinkCopiedId === r.id ? 'Copied!' : 'Send link to manager'}
                 </button>
               )}
-              {showConfirm ? (
-                <span className="portal-delete-confirm-inline">
-                  <span className="portal-delete-confirm-label">Delete?</span>
-                  <button type="button" className="portal-flow-btn danger compact" onClick={() => handleDeleteConfirm(r.id)} disabled={isDeleting}>
-                    {isDeleting ? 'Deleting...' : 'Confirm'}
-                  </button>
-                  <button type="button" className="portal-flow-btn compact" onClick={() => setConfirmDeleteId(null)}>Cancel</button>
-                </span>
-              ) : (
-                <button type="button" className="portal-flow-btn danger compact" onClick={() => handleDeleteClick(r.id)} disabled={isDeleting}>
+              <button type="button" className="portal-flow-btn danger compact" onClick={() => handleDeleteClick(r.id)} disabled={isDeleting}>
                   {isDeleting ? 'Deleting...' : 'Delete'}
-                </button>
-              )}
+              </button>
             </span>
           )}
         </span>
@@ -861,7 +868,20 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
 
     return (
       <div key={r.id}>
-        <PortalCollapsible title={parentTitle} level={0} headerActions={parentActions}>
+        <PortalCollapsible
+          title={parentTitle}
+          level={0}
+          headerActions={parentActions}
+          headerBelow={showConfirm ? (
+            <span className="portal-delete-confirm-inline">
+              <span className="portal-delete-confirm-label">Are you sure you want to delete this report?</span>
+              <button type="button" className="portal-flow-btn danger compact" onClick={() => handleDeleteConfirm(r.id)} disabled={isDeleting}>
+                {isDeleting ? 'Deleting...' : 'Yes, delete'}
+              </button>
+              <button type="button" className="portal-flow-btn compact" onClick={() => setConfirmDeleteId(null)}>Cancel</button>
+            </span>
+          ) : null}
+        >
           {isAccepted && (() => {
             const acceptedVersion = redesignVersions.find((v) => v.status === 'accepted');
             return acceptedVersion ? (
