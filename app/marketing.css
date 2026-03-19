@@ -175,7 +175,7 @@
    
    .section-title {
      font-family: var(--font-display);
-     font-size: 2.8rem; font-weight: 400;
+     font-size: clamp(1.5rem, 5.5vw, 2.8rem); font-weight: 400;
      letter-spacing: -0.5px; line-height: 1.15;
      color: var(--text-primary); margin-bottom: 1.25rem; text-wrap: pretty;
    }
@@ -351,7 +351,7 @@
    }
    .hero h1 {
      font-family: var(--font-display);
-     font-size: 4.32rem; margin-bottom: 1.5rem; line-height: 1.25;
+     font-size: clamp(1.1rem, 6vw, 4.08rem); margin-bottom: 1.5rem; line-height: 1.25;
      letter-spacing: -0.75px; font-weight: 400; color: var(--text-primary);
    }
    .hero h1 .hero-line { display: block; white-space: nowrap; }
@@ -458,7 +458,7 @@
    }
    .signals-sidebar { position: sticky; top: 7rem; }
    .signals-sidebar-title {
-     font-family: var(--font-display); font-size: 1.9rem; font-weight: 400;
+     font-family: var(--font-display); font-size: clamp(1.3rem, 3.8vw, 1.9rem); font-weight: 400;
      line-height: 1.2; color: var(--text-primary); margin-bottom: 1.25rem; letter-spacing: -0.3px;
    }
    .signals-sidebar-title em { font-style: italic; color: var(--accent-mid); }
@@ -709,7 +709,7 @@
      letter-spacing: 4px; color: rgba(245,240,232,0.45); font-weight: 500; margin-bottom: 1.25rem;
    }
    .diagnostic-cta h2 {
-     font-family: var(--font-display); font-size: 3rem; font-weight: 400;
+     font-family: var(--font-display); font-size: clamp(1.6rem, 5vw, 3rem); font-weight: 400;
      color: #f5f0e8; line-height: 1.1; margin-bottom: 1.25rem; letter-spacing: -0.5px;
    }
    .diagnostic-cta h2 strong { font-weight: 700; }
@@ -739,7 +739,7 @@
      display: flex; justify-content: space-between; align-items: center; gap: 2rem;
    }
    .bottom-cta-text {
-     font-family: var(--font-display); font-size: 1.6rem; font-weight: 400;
+     font-family: var(--font-display); font-size: clamp(1.1rem, 3.5vw, 1.6rem); font-weight: 400;
      color: var(--text-primary); letter-spacing: -0.3px;
    }
    .bottom-cta-text em { font-style: italic; color: var(--accent-mid); }
@@ -790,8 +790,6 @@
    @media (max-width: 768px) {
      .mkt section { padding: 5rem 1.5rem; }
      .hero-inner { padding: 0 1.5rem; }
-     .hero h1 { font-size: 3.84rem; }
-     .hero h1 .hero-line { white-space: normal; }
      .hero-aside { display: none; }
      .hero-main .hero-inner { grid-template-columns: 1fr; }
      .hero-cta-row { flex-direction: column; align-items: flex-start; }
@@ -807,7 +805,6 @@
      .bottom-cta .container { flex-direction: column; align-items: flex-start; }
      .cta-buttons { flex-direction: column; align-items: flex-start; }
      .comp-grid { grid-template-columns: 1fr; }
-     .section-title { font-size: 2rem; }
      .footer-content { grid-template-columns: 1fr; gap: 2rem; }
      .nav-toggle { display: block; }
      .mkt-nav ul {
@@ -868,7 +865,7 @@
    
    .hero-content { text-align: left; max-width: 560px; }
    .hero-aside { display: none !important; }
-   .hero h1 { font-size: 4.08rem !important; }
+   .hero h1 { font-size: clamp(1.1rem, 6vw, 4.08rem); }
    .hero h1 em { display: inline; }
    
    /* Responsive stat bar */
@@ -890,9 +887,23 @@
      .hero-stat-bar-inner { grid-template-columns: 1fr; }
      .hero-stat-item { border-right: none; border-bottom: 1px solid var(--border-subtle); }
      .hero-stat-item:last-child { border-bottom: none; }
-     .hero h1 { font-size: 3.84rem !important; }
-     .hero h1 .hero-line { white-space: normal; }
      .comp-grid { grid-template-columns: 1fr; }
+   }
+
+   @media (max-width: 480px) {
+     .mkt section { padding: 4rem 1.25rem; }
+     .hero-inner { padding: 0 1.25rem; }
+     .hero-content { max-width: 100%; }
+     .hero-desc { font-size: 0.82rem; }
+     .section-label { font-size: 0.52rem; letter-spacing: 3px; }
+     .section-desc { font-size: 0.84rem; }
+     .comp-panel { padding: 1.75rem 1.25rem; }
+     .comp-panel h3 { font-size: 1.05rem; }
+     .diagnostic-cta .container { gap: 2rem; }
+     .diagnostic-cta p { font-size: 0.82rem; }
+     .hero-stat-item .hero-stat-num { font-size: 1.05rem; }
+     .hero-stat-item .hero-stat-label { font-size: 0.64rem; }
+     .bottom-cta .container { gap: 1.5rem; }
    }
    
    /* ═══════════════════════════════════════════════════
