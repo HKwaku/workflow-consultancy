@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/useAuth';
-import HeroCanvas from '@/components/marketing/HeroCanvas';
+import HeroVideo from '@/components/marketing/HeroVideo';
 import './marketing.css';
 
 const ArrowIcon = () => (
@@ -12,7 +12,7 @@ const ArrowIcon = () => (
   </svg>
 );
 
-/* ── "Sound Familiar?" pain-point recognition section ── */
+/* ── Signals ── */
 const signals = [
   {
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l3 3" /><circle cx="12" cy="12" r="10" /></svg>,
@@ -27,12 +27,12 @@ const signals = [
   {
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>,
     headline: 'New tools bought but never fully adopted',
-    detail: 'The software was meant to fix everything. Instead, the team built workarounds on top of workarounds. You\'re paying for licenses nobody uses properly.',
+    detail: 'The software was meant to fix everything. Instead, the team built workarounds on top of workarounds. You\'re paying for licences nobody uses properly.',
   },
   {
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></svg>,
     headline: 'Growing headcount but not growing output',
-    detail: 'You keep hiring, but throughput barely shifts. The bottleneck isn\'t people. It\'s the process underneath them.',
+    detail: 'You keep hiring, but throughput barely shifts. The bottleneck isn\'t people — it\'s the process underneath them.',
   },
   {
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>,
@@ -42,124 +42,39 @@ const signals = [
   {
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></svg>,
     headline: 'Decisions made by email chain instead of data',
-    detail: 'Information is scattered across inboxes and chat threads. By the time it\'s gathered, the moment, and the margin, has passed.',
+    detail: 'Information is scattered across inboxes and chat threads. By the time it\'s gathered, the moment — and the margin — has passed.',
   },
 ];
 
-function SignalsCarousel({ scrollTo }) {
-  const pairs = [
-    [signals[0], signals[1]],
-    [signals[2], signals[3]],
-    [signals[4], signals[5]],
-  ];
-  const [active, setActive] = useState(0);
-  const [exiting, setExiting] = useState(-1);
-  const timerRef = useRef(null);
-
-  const startTimer = () => {
-    clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      setActive((prev) => {
-        const next = (prev + 1) % pairs.length;
-        setExiting(prev);
-        setTimeout(() => setExiting(-1), 500);
-        return next;
-      });
-    }, 4000);
-  };
-
-  const goTo = (idx) => {
-    if (idx === active) return;
-    clearInterval(timerRef.current);
-    setExiting(active);
-    setTimeout(() => { setActive(idx); setExiting(-1); }, 500);
-  };
-
-  useEffect(() => {
-    startTimer();
-    return () => clearInterval(timerRef.current);
-  }, [pairs.length]);
-
-  const accentColors = ['var(--accent)', 'var(--gold)'];
-
-  return (
-    <section className="signals-section">
-      <div className="container">
-        <div className="section-header scroll-reveal">
-          <div className="section-label">Sound familiar?</div>
-          <h2 className="section-title">The Problems That Quietly Drain <strong>Your Profitability</strong></h2>
-        </div>
-
-        <div className="signals-carousel">
-          {pairs.map((pair, pIdx) => (
-            <div
-              key={pIdx}
-              className={`signal-pair${pIdx === active ? ' active' : ''}${pIdx === exiting ? ' exiting' : ''}`}
-            >
-              {pair.map((s, sIdx) => (
-                <div key={s.headline} className="signal-card">
-                  <div className="signal-card-accent" style={{ background: accentColors[sIdx % 2] }} />
-                  <div className="signal-card-inner">
-                    <div className="signal-icon-wrap" style={{ '--accent-c': accentColors[sIdx % 2] }}>
-                      {s.icon}
-                    </div>
-                    <h3 className="signal-headline">{s.headline}</h3>
-                    <p className="signal-detail">{s.detail}</p>
-                    <a href="#approach" className="signal-cta" onClick={scrollTo('approach')}>
-                      See how we solve this
-                      <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10m0 0L9.5 4.5M13 8l-3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-
-        <div className="signals-dots">
-          {pairs.map((_, i) => (
-            <button
-              key={i}
-              className={`signals-dot${i === active ? ' active' : ''}`}
-              onClick={() => goTo(i)}
-              aria-label={`Show problems ${i * 2 + 1} and ${i * 2 + 2}`}
-            />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ── Services segments component ── */
+/* ── Services segments ── */
 const segments = [
   {
-    color: 'teal',
+    color: 'teal', num: '01',
     label: 'Scaling Mid-Market',
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></svg>,
     tagline: 'Growing companies, breaking processes',
-    outcome: 'We surface exactly where your operations are slowing you down, and what fixing them is worth.',
+    outcome: 'We surface exactly where your operations are slowing you down — and what fixing them is worth.',
   },
   {
-    color: 'indigo',
+    color: 'indigo', num: '02',
     label: 'M&A Integration',
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="18" r="3" /><circle cx="16" cy="6" r="3" /><path d="M8 15V9a6 6 0 016-6" /><path d="M16 9v6a6 6 0 01-6 6" /></svg>,
     tagline: 'Structure from Day 1, not Day 100',
-    outcome: 'We bring operational clarity to post-merger complexity before it compounds into something harder to fix.',
+    outcome: 'Operational clarity to post-merger complexity before it compounds into something harder to fix.',
   },
   {
-    color: 'purple',
-    label: 'Private Equity Value Creation',
+    color: 'purple', num: '03',
+    label: 'Private Equity',
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" /><line x1="12" y1="12" x2="12" y2="16" /><line x1="10" y1="14" x2="14" y2="14" /></svg>,
     tagline: 'From acquisition baseline to exit-ready',
-    outcome: 'Operational excellence that shows up in the multiple, from Day 1 post-acquisition to the data room.',
+    outcome: 'Operational excellence that shows up in the multiple — from Day 1 post-acquisition to the data room.',
   },
   {
-    color: 'gold',
-    label: 'High-stakes Operational Events',
+    color: 'gold', num: '04',
+    label: 'High-stakes Events',
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>,
     tagline: 'Carve-outs, ERP, VC-backed scale-ups',
-    outcome: 'High-stakes operational moments with hard deadlines. We provide the structure when there is no time to improvise.',
+    outcome: 'Hard deadlines, no room to improvise. We provide the structure when the stakes are highest.',
   },
 ];
 
@@ -168,6 +83,7 @@ function ServicesSegments() {
     <div className="seg-grid">
       {segments.map((s) => (
         <div key={s.label} className={`seg-card seg-card--${s.color} scroll-reveal`}>
+          <div className="seg-card-number">{s.num}</div>
           <div className={`seg-card-icon seg-card-icon--${s.color}`}>{s.icon}</div>
           <div className={`seg-card-label seg-card-label--${s.color}`}>{s.label}</div>
           <p className="seg-card-tagline">{s.tagline}</p>
@@ -181,6 +97,21 @@ function ServicesSegments() {
   );
 }
 
+/* ── Process flow ── */
+const flowOutputs = [
+  { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>, label: 'Every process mapped', sub: 'Steps, owners, volumes, hand-offs' },
+  { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>, label: 'Bottlenecks quantified', sub: 'Cost to nearest £1,000 p/a' },
+  { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>, label: 'Prioritised roadmap', sub: 'Highest ROI fixes first' },
+  { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>, label: 'Freed capacity redirected', sub: 'Into revenue-generating work' },
+];
+
+const flowBenefits = [
+  { title: 'Evidence-based', desc: 'Findings anchored to real process data, not interviews' },
+  { title: 'Financially quantified', desc: 'Every bottleneck has a £ number attached' },
+  { title: 'Same day', desc: 'Full diagnostic delivered in under a working day' },
+  { title: 'Fix-first', desc: 'Repair processes before any automation is applied' },
+];
+
 export default function MarketingClient() {
   const navRef = useRef(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -191,6 +122,7 @@ export default function MarketingClient() {
       if (!navRef.current) return;
       navRef.current.classList.toggle('scrolled', window.scrollY > 80);
     };
+    handleScroll(); // run on mount in case page loads scrolled
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -204,19 +136,66 @@ export default function MarketingClient() {
       el.style.transitionDelay = `${(i % 4) * 0.1}s`;
       observer.observe(el);
     });
-    return () => observer.disconnect();
+
+    // Continuous stagger loop for comparison panels
+    const stopFns = [];
+
+    const animObserver = new IntersectionObserver(
+      (entries) => entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        animObserver.unobserve(e.target);
+        if (e.target.classList.contains('legacy') || e.target.classList.contains('ai') || e.target.classList.contains('new')) {
+          e.target.classList.add('anim-triggered');
+        }
+        if (e.target.classList.contains('new')) {
+          const slides = Array.from(e.target.querySelectorAll('.portal-slide'));
+          const dotEls = Array.from(e.target.querySelectorAll('.ps-dot-ind'));
+          if (!slides.length) return;
+
+          function triggerMapAnim(slide) {
+            const nodes = Array.from(slide.querySelectorAll('[data-map-node]'));
+            const edges = Array.from(slide.querySelectorAll('[data-map-edge]'));
+            if (!nodes.length) return;
+            nodes.forEach(n => n.classList.remove('pm-step--vis'));
+            edges.forEach(ed => ed.classList.remove('pm-arrow--vis'));
+            nodes.forEach((n, i) => {
+              setTimeout(() => n.classList.add('pm-step--vis'), 600 + i * 520);
+              if (edges[i]) setTimeout(() => edges[i].classList.add('pm-arrow--vis'), 600 + i * 520 + 280);
+            });
+          }
+
+          let idx = 0;
+          slides[0].classList.add('active');
+          triggerMapAnim(slides[0]);
+          const id = setInterval(() => {
+            const prev = slides[idx];
+            idx = (idx + 1) % slides.length;
+            const next = slides[idx];
+            prev.classList.add('exiting');
+            next.classList.add('active');
+            dotEls.forEach((d, i) => d.classList.toggle('ps-dot-ind--active', i === idx));
+            triggerMapAnim(next);
+            setTimeout(() => prev.classList.remove('active', 'exiting'), 700);
+          }, 3600);
+          stopFns.push(() => { clearInterval(id); slides.forEach(s => s.classList.remove('active', 'exiting')); });
+        }
+      }),
+      { threshold: 0.18 }
+    );
+    document.querySelectorAll('.comp-panel').forEach((el) => animObserver.observe(el));
+
+    return () => { observer.disconnect(); animObserver.disconnect(); stopFns.forEach(fn => fn()); };
   }, []);
 
   const closeMenu = () => setMenuOpen(false);
-
   const scrollTo = (id) => (e) => {
-    e.preventDefault();
-    closeMenu();
+    e.preventDefault(); closeMenu();
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   return (
     <div className="mkt">
+
       {/* Nav */}
       <nav ref={navRef} className="mkt-nav">
         <div className="nav-inner">
@@ -243,128 +222,137 @@ export default function MarketingClient() {
         </div>
       </nav>
 
-      {/* Hero */}
+      {/* Hero — full-width headline, stat bar below */}
       <section className="hero">
-        <HeroCanvas />
+        <HeroVideo />
         <div className="hero-overlay" />
-
         <div className="hero-main">
-          <div className="container">
+          <div className="hero-inner">
             <div className="hero-content">
-              <div className="hero-label">Unlock Operating Leverage</div>
-              <h1>Do More.<br /><strong>With Less Friction.</strong></h1>
+              <h1>
+                <span className="hero-line">Operational friction costs</span>
+                <span className="hero-line">more than you think.</span>
+              </h1>
+              <p className="hero-desc">
+              We find the hidden capacity in your operations, fixing broken processes and deploying the right technology so your team delivers more.
+              </p>
               <div className="hero-cta-row">
                 <Link href="/diagnostic" className="btn-primary" target="_blank" rel="noopener noreferrer">
                   Start Free Diagnostic <ArrowIcon />
                 </Link>
                 <a href="#comparison" className="btn-secondary" onClick={scrollTo('comparison')}>
-                  See How We&apos;re Different
+                  See how we&apos;re different
                 </a>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Stat bar — OffDeal style, full-width inside hero, at the bottom */}
+        <div className="hero-stat-bar">
+          <div className="hero-inner hero-stat-bar-inner">
+            <div className="hero-stat-item">
+              <span className="hero-stat-num">Process-first</span>
+              <span className="hero-stat-label">Anchored to real steps, dates, and volumes — not interviews</span>
+            </div>
+            <div className="hero-stat-divider" />
+            <div className="hero-stat-item">
+              <span className="hero-stat-num">Days</span>
+              <span className="hero-stat-label">From diagnostic start to full report in your hands</span>
+            </div>
+            <div className="hero-stat-divider" />
+            <div className="hero-stat-item">
+              <span className="hero-stat-num">Human + AI</span>
+              <span className="hero-stat-label">Expert-led analysis, accelerated by diagnostic tooling</span>
+            </div>
+            <div className="hero-stat-divider" />
+            <div className="hero-stat-item">
+              <span className="hero-stat-num">£0 upfront</span>
+              <span className="hero-stat-label">Diagnostic is free — no retainer, no commitment</span>
+            </div>
+          </div>
+        </div>
       </section>
 
-      {/* Services  -  immediately below hero */}
-      <section className="services-section" id="services">
+      {/* Services */}
+      <section className="services-section section--light" id="services">
         <div className="container">
-          <div className="section-header scroll-reveal">
+          <div className="section-header section-header--center scroll-reveal">
+            <div className="section-rule" />
             <div className="section-label">What We Do</div>
-            <h2 className="section-title">Wherever the Complexity Lives,<br /><strong>We Work There</strong></h2>
-            <p className="section-desc">We find the hidden capacity in your operations by fixing broken processes and deploying the right technology so your team delivers more.</p>
+            <h2 className="section-title">Wherever the complexity lives,<br /><em>we work there</em></h2>
+            <p className="section-desc"></p>
           </div>
           <ServicesSegments />
         </div>
       </section>
 
-      {/* Sound Familiar - Sliding carousel */}
-      <SignalsCarousel scrollTo={scrollTo} />
-      <section className="comparison-section" id="comparison">
+      {/* Comparison */}
+      <section className="comparison-section section--light" id="comparison">
         <div className="container">
-          <div className="section-header">
+          <div className="section-header section-header--center scroll-reveal">
+            <div className="section-rule" />
             <div className="section-label">The Difference</div>
-            <h2 className="section-title">Don&apos;t Automate the Chaos. <strong>Eliminate It.</strong></h2>
-            <p className="section-desc">Most digital transformations fail because they digitise broken processes. We fix the process first.</p>
+            <h2 className="section-title">Three approaches.<br /><em>One that actually works.</em></h2>
           </div>
 
-          <div className="comp-panels">
-            {/* Old Way */}
-            <div className="comp-panel old scroll-reveal">
-              <div className="comp-panel-label">The Old Way</div>
-              <h3>Technology-First Approach</h3>
+          <div className="comp-grid">
+            {/* Legacy consulting — Sound familiar */}
+            <div className="comp-panel legacy">
+              <div className="comp-panel-label">The Legacy Trap</div>
+              <h3>Sounds familiar?</h3>
               <div className="mockup">
                 <div className="mockup-bar">
                   <div className="mockup-dot r" /><div className="mockup-dot y" /><div className="mockup-dot g" />
-                  <div className="mockup-bar-title">operations-tools.xlsx</div>
+                  <div className="mockup-bar-title">Sound familiar?</div>
                 </div>
                 <div className="mockup-body">
                   <div className="chaos-stack">
-                    <div className="chaos-card" style={{ top: 0, left: 0, transform: 'rotate(-2deg)', zIndex: 3, width: '85%' }}>
-                      <div className="cc-icon">&#128231;</div>
-                      <div className="cc-title">47 unread threads</div>
-                      <div className="cc-sub">RE: RE: RE: Process update</div>
-                      <div className="chaos-badge warn">3 days old</div>
-                    </div>
-                    <div className="chaos-card" style={{ top: 55, left: '8%', transform: 'rotate(1.5deg)', zIndex: 4, width: '88%' }}>
-                      <div className="cc-icon">&#128202;</div>
-                      <div className="cc-title">Q3 tracker.xlsx</div>
-                      <div className="cc-sub">Last edited: 6 weeks ago</div>
-                      <div className="chaos-badge stale">Version 14</div>
-                    </div>
-                    <div className="chaos-card" style={{ top: 110, left: '2%', transform: 'rotate(1deg)', zIndex: 5, width: '82%' }}>
-                      <div className="cc-icon">&#9888;&#65039;</div>
-                      <div className="cc-title">CRM sync failed</div>
-                      <div className="cc-sub">Salesforce &rarr; SAP pipeline</div>
-                      <div className="chaos-badge err">Error</div>
-                    </div>
-                    <div className="chaos-card" style={{ top: 165, left: '5%', transform: 'rotate(-1.5deg)', zIndex: 2, width: '90%' }}>
-                      <div className="cc-icon">&#128176;</div>
-                      <div className="cc-title">Costly platform lock-in</div>
-                      <div className="cc-sub">Multi-year contract, rising fees</div>
-                      <div className="chaos-badge warn">Lock-in: 2 yrs</div>
-                    </div>
-                    <div className="chaos-card" style={{ top: 220, left: '4%', transform: 'rotate(0.5deg)', zIndex: 6, width: '86%' }}>
-                      <div className="cc-icon">&#128260;</div>
-                      <div className="cc-title">Migration blocked</div>
-                      <div className="cc-sub">Vendor dependency on 4 APIs</div>
-                      <div className="chaos-badge err">Overdue</div>
-                    </div>
+                    {signals.map((s, i) => (
+                      <div key={i} className="chaos-card chaos-card--anim" data-delay={i % 6}>
+                        <div className="cc-icon">{s.icon}</div>
+                        <div style={{ flex: 1 }}>
+                          <div className="cc-title">{s.headline}</div>
+                        </div>
+                        <div className={`chaos-badge ${['warn', 'stale', 'err', 'warn', 'stale', 'err'][i]}`}>
+                          {['Common', 'Typical', 'Frequent', 'Common', 'Typical', 'Frequent'][i]}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* AI-First */}
-            <div className="comp-panel ai scroll-reveal">
+            {/* AI-first */}
+            <div className="comp-panel ai">
               <div className="comp-panel-label">The Hype Trap</div>
-              <h3>&quot;How Can We Deploy AI?&quot;</h3>
+              <h3>&ldquo;How can we deploy AI?&rdquo;</h3>
               <div className="mockup">
                 <div className="mockup-bar">
                   <div className="mockup-dot r" /><div className="mockup-dot y" /><div className="mockup-dot g" />
-                  <div className="mockup-bar-title">ai-strategy-meeting.slack</div>
+                  <div className="mockup-bar-title">ai-strategy.slack</div>
                 </div>
                 <div className="mockup-body">
                   <div className="ai-chat-mock">
                     <div className="ai-chat-bubble user">
                       <div className="bubble-tag">Executive</div>
-                      &quot;We need to deploy AI across the business. Our competitors are doing it.&quot;
+                      &ldquo;We need to deploy AI. Our competitors are doing it.&rdquo;
                     </div>
                     <div className="ai-chat-bubble bot">
                       <div className="bubble-tag">AI Vendor</div>
-                      &quot;Great! Our platform can automate everything. Just connect your data and...&quot;
+                      &ldquo;Our platform automates everything. Connect your data and...&rdquo;
                     </div>
                     <div className="ai-chat-bubble user">
                       <div className="bubble-tag">Executive</div>
-                      &quot;What processes should we start with?&quot;
+                      &ldquo;Which processes do we start with?&rdquo;
                     </div>
                     <div className="ai-chat-bubble bot">
                       <div className="bubble-tag">AI Vendor</div>
-                      &quot;All of them! Our AI handles it all. ROI in 3 months guaranteed.&quot;
+                      &ldquo;All of them! ROI in 3 months, guaranteed.&rdquo;
                     </div>
                     <div className="ai-warn-row">
-                      <span className="warn-icon">&#9888;&#65039;</span>
+                      <span className="warn-icon">⚠️</span>
                       No process mapping. No baseline metrics. No understanding of what&apos;s actually broken.
                     </div>
                   </div>
@@ -372,57 +360,156 @@ export default function MarketingClient() {
               </div>
             </div>
 
-            {/* The Right Way */}
-            <div className="comp-panel new scroll-reveal">
+            {/* Sharpin */}
+            <div className="comp-panel new">
               <div className="comp-panel-label">The Sharpin Way</div>
-              <h3>Process-First Strategy</h3>
-              <div className="mockup">
-                <div className="mockup-bar">
-                  <div className="mockup-dot r" /><div className="mockup-dot y" /><div className="mockup-dot g" />
-                  <div className="mockup-bar-title">Sharpin Client Login</div>
+              <h3>Process-first strategy</h3>
+
+              <div className="portal-carousel">
+
+                {/* Slide 1 — Diagnostic report */}
+                <div className="portal-slide">
+                  <div className="ps-bar">
+                    <span className="ps-dot r"/><span className="ps-dot y"/><span className="ps-dot g"/>
+                    <span className="ps-bar-title">Diagnostic Report · Meridian Group</span>
+                    <span className="ps-bar-grade">B+</span>
+                  </div>
+                  <div className="ps-body">
+                    <div className="ps-d-top">
+                      <div className="ps-ring-wrap">
+                        <svg viewBox="0 0 52 52" width="52" height="52" style={{flexShrink:0}}>
+                          <circle cx="26" cy="26" r="20" fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth="3.5"/>
+                          <circle cx="26" cy="26" r="20" fill="none" stroke="#0d9488" strokeWidth="3.5"
+                            strokeDasharray="125.7" strokeDashoffset="83.8" strokeLinecap="round"
+                            transform="rotate(-90 26 26)"/>
+                        </svg>
+                        <div className="ps-ring-label">34%<span>auto</span></div>
+                      </div>
+                      <div className="ps-kpis">
+                        <div className="ps-kpi"><span className="ps-kpi-v">8</span><span className="ps-kpi-l">Processes</span></div>
+                        <div className="ps-kpi"><span className="ps-kpi-v">47</span><span className="ps-kpi-l">Steps mapped</span></div>
+                        <div className="ps-kpi ps-kpi--warn"><span className="ps-kpi-v">5</span><span className="ps-kpi-l">Bottlenecks</span></div>
+                      </div>
+                    </div>
+                    <div className="ps-proc-list">
+                      <div className="ps-proc">
+                        <span className="ps-proc-dot" style={{background:'#0d9488'}}/>
+                        <span className="ps-proc-name">Invoice Approval</span>
+                        <div className="ps-proc-bar"><div style={{width:'72%',background:'#0d9488'}} className="ps-proc-fill"/></div>
+                        <span className="ps-proc-pct">72%</span>
+                      </div>
+                      <div className="ps-proc">
+                        <span className="ps-proc-dot" style={{background:'#d97706'}}/>
+                        <span className="ps-proc-name">Client Onboarding</span>
+                        <div className="ps-proc-bar"><div style={{width:'38%',background:'#d97706'}} className="ps-proc-fill"/></div>
+                        <span className="ps-proc-pct">38%</span>
+                      </div>
+                      <div className="ps-proc">
+                        <span className="ps-proc-dot" style={{background:'#dc2626'}}/>
+                        <span className="ps-proc-name">Staff Induction</span>
+                        <div className="ps-proc-bar"><div style={{width:'18%',background:'#dc2626'}} className="ps-proc-fill"/></div>
+                        <span className="ps-proc-pct">18%</span>
+                      </div>
+                    </div>
+                    <div className="ps-d-footer">
+                      <span className="ps-d-total">£142,400/yr total cost</span>
+                      <span className="ps-d-opp">Est. £89k automatable</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="mockup-body">
-                  <div className="dash-tabs">
-                    <div className="dash-tab active">Overview</div>
-                    <div className="dash-tab">Processes</div>
-                    <div className="dash-tab">Roadmap</div>
+
+                {/* Slide 2 — Cost analysis */}
+                <div className="portal-slide">
+                  <div className="ps-bar">
+                    <span className="ps-dot r"/><span className="ps-dot y"/><span className="ps-dot g"/>
+                    <span className="ps-bar-title">Cost Analysis · Meridian Group</span>
                   </div>
-                  <div className="dash-metrics">
-                    <div className="dash-metric">
-                      <span className="dash-metric-val">47 &rarr; 14</span>
-                      <span className="dash-metric-lbl">Cycle days</span>
+                  <div className="ps-body">
+                    <div className="ps-cost-head">
+                      <div className="ps-cost-true">
+                        <span className="ps-cost-val">£142,400</span>
+                        <span className="ps-cost-lbl">true annual cost</span>
+                      </div>
+                      <div className="ps-cost-chips">
+                        <span className="ps-chip ps-chip--warn">+£18k rework</span>
+                        <span className="ps-chip ps-chip--muted">+£16k idle time</span>
+                      </div>
                     </div>
-                    <div className="dash-metric">
-                      <span className="dash-metric-val">&pound;127K</span>
-                      <span className="dash-metric-lbl">Annual savings</span>
+                    <div className="ps-sc-tabs">
+                      <span className="ps-sc-tab">Conservative</span>
+                      <span className="ps-sc-tab ps-sc-tab--active">Base Case</span>
+                      <span className="ps-sc-tab">Optimistic</span>
                     </div>
-                    <div className="dash-metric">
-                      <span className="dash-metric-val">82%</span>
-                      <span className="dash-metric-lbl">Automation ready</span>
+                    <div className="ps-sc-body">
+                      <div className="ps-sc-saving">
+                        <span className="ps-sc-amt">£62,000</span>
+                        <span className="ps-sc-sub">saved per year · 44% reduction</span>
+                      </div>
+                      <div className="ps-sc-bar-wrap">
+                        <div className="ps-sc-bar-track">
+                          <div className="ps-sc-bar-fill" style={{width:'44%'}}/>
+                        </div>
+                        <span className="ps-sc-bar-label">of £142k base cost</span>
+                      </div>
+                    </div>
+                    <div className="ps-roi-row">
+                      <div className="ps-roi-m"><span className="ps-roi-v">14mo</span><span className="ps-roi-l">Payback</span></div>
+                      <div className="ps-roi-m"><span className="ps-roi-v">180%</span><span className="ps-roi-l">3yr ROI</span></div>
+                      <div className="ps-roi-m"><span className="ps-roi-v">2.4</span><span className="ps-roi-l">FTE freed</span></div>
                     </div>
                   </div>
-                  <div className="dash-row">
-                    <span className="dash-dot green" />
-                    <span className="dash-row-name">Invoice processing</span>
-                    <span className="dash-tag">Optimised</span>
-                    <span className="dash-row-val">-70% time</span>
+                </div>
+
+                {/* Slide 3 — Flow Canvas (animated process mapping) */}
+                <div className="portal-slide">
+                  <div className="ps-bar">
+                    <span className="ps-dot r"/><span className="ps-dot y"/><span className="ps-dot g"/>
+                    <span className="ps-bar-title">Flow Canvas · Invoice Approval</span>
+                    <span className="ps-bar-chip">Finance · Management</span>
                   </div>
-                  <div className="dash-row">
-                    <span className="dash-dot green" />
-                    <span className="dash-row-name">Client onboarding</span>
-                    <span className="dash-tag">Optimised</span>
-                    <span className="dash-row-val">-55% time</span>
+                  <div className="ps-body ps-body--map">
+                    <div className="pm-lane-bg pm-lane-bg--a" aria-hidden="true"/>
+                    <div className="pm-lane-bg pm-lane-bg--b" aria-hidden="true"/>
+                    <div className="pm-lane-bg pm-lane-bg--c" aria-hidden="true"/>
+                    <div className="pm-flow">
+                      <div className="pm-step" data-map-node="0">
+                        <span className="pm-step-bar" style={{background:'#0d9488'}}/>
+                        <span className="pm-step-num">01</span>
+                        <span className="pm-step-name">Request<br/>Raised</span>
+                        <span className="pm-step-dept">Finance</span>
+                        <span className="pm-step-ghost">A</span>
+                      </div>
+                      <div className="pm-arrow" data-map-edge="0"/>
+                      <div className="pm-step pm-step--bot" data-map-node="1">
+                        <span className="pm-step-bar" style={{background:'#dc2626'}}/>
+                        <span className="pm-step-num">02</span>
+                        <span className="pm-step-name">Manager<br/>Review</span>
+                        <span className="pm-step-dept">Management</span>
+                        <span className="pm-step-ghost">R</span>
+                        <span className="pm-step-warn">⚠</span>
+                      </div>
+                      <div className="pm-arrow" data-map-edge="1"/>
+                      <div className="pm-step" data-map-node="2">
+                        <span className="pm-step-bar" style={{background:'#0d9488'}}/>
+                        <span className="pm-step-num">03</span>
+                        <span className="pm-step-name">Payment<br/>Released</span>
+                        <span className="pm-step-dept">Finance</span>
+                        <span className="pm-step-ghost">P</span>
+                      </div>
+                    </div>
+                    <div className="pm-footer-strip">
+                      <span className="pm-fs-badge pm-fs-badge--bot">⚠ 1 bottleneck</span>
+                      <span className="pm-fs-badge pm-fs-badge--auto">2 automatable</span>
+                      <span className="pm-fs-badge pm-fs-badge--time">~4h avg</span>
+                    </div>
                   </div>
-                  <div className="dash-row">
-                    <span className="dash-dot amber" />
-                    <span className="dash-row-name">Vendor approvals</span>
-                    <span className="dash-row-val">In progress</span>
-                  </div>
-                  <div className="dash-row">
-                    <span className="dash-dot red" />
-                    <span className="dash-row-name">Quarterly reporting</span>
-                    <span className="dash-row-val">3 bottlenecks</span>
-                  </div>
+                </div>
+
+                {/* Dots indicator */}
+                <div className="ps-dots">
+                  <span className="ps-dot-ind ps-dot-ind--active"/>
+                  <span className="ps-dot-ind"/>
+                  <span className="ps-dot-ind"/>
                 </div>
               </div>
             </div>
@@ -430,120 +517,148 @@ export default function MarketingClient() {
         </div>
       </section>
 
-      {/* Approach */}
+      {/* Approach — flow diagram */}
       <section className="approach-section" id="approach">
         <div className="container">
-          <div className="section-header scroll-reveal">
+          <div className="section-header section-header--center scroll-reveal">
+            <div className="section-rule" />
             <div className="section-label">Our Approach</div>
-            <h2 className="section-title">How We <strong>Transform Operations</strong></h2>
-            <p className="section-desc">Every engagement is structured to free up capacity &ndash; so your team does more, not more of the same.</p>
+            <h2 className="section-title">The modern approach to<br /><em>fixing operations</em></h2>
+            <p className="section-desc">A diagnostic built around your real processes — not interviews. Every finding is financially quantified before a single change is made.</p>
           </div>
 
-          <div className="flow-grid scroll-reveal">
-            <div className="flow-node teal" onClick={() => scrollTo('diagnostic')}>
-              <div className="flow-node-accent" />
-              <div className="flow-node-icon teal">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
+          <div className="flow-diagram scroll-reveal">
+            {/* Left — client input card */}
+            <div className="flow-input-card">
+              <div className="flow-input-avatar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="22" height="22"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </div>
-              <h4>Discover</h4>
-              <p>Map every process, measure friction, surface hidden costs</p>
-              <span className="flow-node-tag">Full Visibility</span>
-              <span className="flow-node-tag">AI-Assisted Analysis</span>
-            </div>
-
-            <div className="flow-node-connector conn-dr">
-              <svg className="conn-h" viewBox="0 0 60 20"><path d="M0,10 L50,10" className="flow-path" stroke="#3d8ea6" strokeWidth="2" fill="none" /><polygon points="50,5 60,10 50,15" fill="#3d8ea6" /><circle r="3" fill="#3d8ea6" opacity="0.85"><animateMotion dur="1.2s" repeatCount="indefinite" path="M0,10 L60,10" /></circle></svg>
-              <svg className="conn-v" viewBox="0 0 20 40"><path d="M10,0 L10,30" className="flow-path" stroke="#3d8ea6" strokeWidth="2" fill="none" /><polygon points="5,30 10,40 15,30" fill="#3d8ea6" /><circle r="3" fill="#3d8ea6" opacity="0.85"><animateMotion dur="1.2s" repeatCount="indefinite" path="M10,0 L10,40" /></circle></svg>
-            </div>
-
-            <div className="flow-node purple" onClick={() => scrollTo('diagnostic')}>
-              <div className="flow-node-accent" />
-              <div className="flow-node-icon purple">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" /></svg>
+              <div className="flow-input-name">You</div>
+              <div className="flow-input-org">Complete the diagnostic</div>
+              <div className="flow-input-fields">
+                <div className="flow-input-row">
+                  <span className="flow-input-key">Your processes</span>
+                  <span className="flow-input-val">Real steps</span>
+                </div>
+                <div className="flow-input-row">
+                  <span className="flow-input-key">Your data</span>
+                  <span className="flow-input-val">Real volumes</span>
+                </div>
+                <div className="flow-input-row">
+                  <span className="flow-input-key">Your team</span>
+                  <span className="flow-input-val">Real owners</span>
+                </div>
               </div>
-              <h4>Repair</h4>
-              <p>Eliminate waste and fix broken processes before automating</p>
-              <span className="flow-node-tag">Clean Processes</span>
+              <div className="flow-input-tag">Self-serve · Free</div>
             </div>
 
-            <div className="flow-node-connector conn-rr">
-              <svg className="conn-h-horiz" viewBox="0 0 60 20"><path d="M0,10 L50,10" className="flow-path" stroke="#7c3aed" strokeWidth="2" fill="none" /><polygon points="50,5 60,10 50,15" fill="#7c3aed" /><circle r="3" fill="#7c3aed" opacity="0.85"><animateMotion dur="1.2s" repeatCount="indefinite" path="M0,10 L60,10" /></circle></svg>
-              <svg className="conn-h-vert" viewBox="0 0 20 60"><path d="M10,0 L10,50" className="flow-path" stroke="#7c3aed" strokeWidth="2" fill="none" /><polygon points="5,50 10,60 15,50" fill="#7c3aed" /><circle r="3" fill="#7c3aed" opacity="0.85"><animateMotion dur="1.2s" repeatCount="indefinite" path="M10,0 L10,60" /></circle></svg>
-              <svg className="conn-v" viewBox="0 0 20 40"><path d="M10,0 L10,30" className="flow-path" stroke="#7c3aed" strokeWidth="2" fill="none" /><polygon points="5,30 10,40 15,30" fill="#7c3aed" /><circle r="3" fill="#7c3aed" opacity="0.85"><animateMotion dur="1.2s" repeatCount="indefinite" path="M10,0 L10,40" /></circle></svg>
-            </div>
-
-            <div className="flow-node gold" onClick={() => scrollTo('diagnostic')}>
-              <div className="flow-node-accent" />
-              <div className="flow-node-icon gold">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
-              </div>
-              <h4>Redirect</h4>
-              <p>Channel freed capacity into the work that moves the needle</p>
-              <span className="flow-node-tag">Freed Capacity</span>
-            </div>
-
-            <div className="flow-node-connector conn-rc">
-              <svg className="conn-h-horiz" viewBox="0 0 60 20"><path d="M0,10 L50,10" className="flow-path" stroke="#b8976a" strokeWidth="2" fill="none" /><polygon points="50,5 60,10 50,15" fill="#b8976a" /><circle r="3" fill="#b8976a" opacity="0.85"><animateMotion dur="1.2s" repeatCount="indefinite" path="M0,10 L60,10" /></circle></svg>
-              <svg className="conn-h-vert" viewBox="0 0 60 20"><path d="M60,10 L10,10" className="flow-path" stroke="#b8976a" strokeWidth="2" fill="none" /><polygon points="10,5 0,10 10,15" fill="#b8976a" /><circle r="3" fill="#b8976a" opacity="0.85"><animateMotion dur="1.2s" repeatCount="indefinite" path="M60,10 L0,10" /></circle></svg>
-              <svg className="conn-v" viewBox="0 0 20 40"><path d="M10,0 L10,30" className="flow-path" stroke="#b8976a" strokeWidth="2" fill="none" /><polygon points="5,30 10,40 15,30" fill="#b8976a" /><circle r="3" fill="#b8976a" opacity="0.85"><animateMotion dur="1.2s" repeatCount="indefinite" path="M10,0 L10,40" /></circle></svg>
-            </div>
-
-            <div className="flow-node green" onClick={() => scrollTo('diagnostic')}>
-              <div className="flow-node-accent" />
-              <div className="flow-node-icon green">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" /><circle cx="12" cy="12" r="4" /></svg>
-              </div>
-              <h4>Compound</h4>
-              <p>Implement, track real impact. Every fix fuels the next</p>
-              <span className="flow-node-tag">Compounding Gains</span>
-            </div>
-
-            <div className="flow-node-connector conn-cd">
-              <svg className="conn-h" viewBox="0 0 20 60"><path d="M10,60 L10,10" className="flow-path" stroke="#16a34a" strokeWidth="2" fill="none" /><polygon points="5,10 10,0 15,10" fill="#16a34a" /><circle r="3" fill="#16a34a" opacity="0.85"><animateMotion dur="1.2s" repeatCount="indefinite" path="M10,60 L10,0" /></circle></svg>
-              <svg className="conn-v" viewBox="0 0 20 40"><path d="M10,0 L10,30" className="flow-path" stroke="#16a34a" strokeWidth="2" fill="none" /><polygon points="5,30 10,40 15,30" fill="#16a34a" /><circle r="3" fill="#16a34a" opacity="0.85"><animateMotion dur="1.2s" repeatCount="indefinite" path="M10,40 L10,0" /></circle></svg>
-            </div>
-
-            <div className="flow-return-line">
-              <svg viewBox="0 0 800 120" preserveAspectRatio="none">
-                <path d="M700,0 L700,100 L100,100 L100,0" className="flow-path" stroke="#86efac" strokeWidth="1.2" fill="none" />
-                <polygon points="96,5 100,0 104,5" fill="#86efac" opacity="0.8" />
-                <circle r="3" fill="#86efac" opacity="0.9"><animateMotion dur="3s" repeatCount="indefinite" path="M700,0 L700,100 L100,100 L100,0" /></circle>
+            {/* Arrow in */}
+            <div className="flow-arrow flow-arrow--in">
+              <svg viewBox="0 0 60 20" fill="none" width="60" height="20">
+                <path d="M0 10 L50 10" stroke="currentColor" strokeWidth="1" strokeDasharray="4 3"/>
+                <path d="M44 5 L54 10 L44 15" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
               </svg>
-              <span className="flow-return-tag">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 4v6h6" /><path d="M3.51 15a9 9 0 105.64-11.36L1 10" /></svg>
-                Continuous Cycle
-              </span>
             </div>
 
-            <div className="flow-return-label-mobile">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 4v6h6" /><path d="M3.51 15a9 9 0 105.64-11.36L1 10" /></svg>
-              <span>Back to Discover</span>
+            {/* Centre — Sharpin engine */}
+            <div className="flow-engine">
+              <div className="flow-engine-logo">Sharpin<span>.</span></div>
+              <div className="flow-engine-modules">
+                <div className="flow-engine-module flow-engine-module--ai">
+                  <div className="flow-engine-module-avatar flow-engine-module-avatar--ai">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="13" height="13"><path d="M12 2a2 2 0 012 2v2a2 2 0 01-2 2 2 2 0 01-2-2V4a2 2 0 012-2z"/><path d="M12 16a2 2 0 012 2v2a2 2 0 01-2 2 2 2 0 01-2-2v-2a2 2 0 012-2z"/><path d="M2 12a2 2 0 012-2h2a2 2 0 012 2 2 2 0 01-2 2H4a2 2 0 01-2-2z"/><path d="M16 12a2 2 0 012-2h2a2 2 0 012 2 2 2 0 01-2 2h-2a2 2 0 01-2-2z"/><circle cx="12" cy="12" r="2"/></svg>
+                  </div>
+                  <div className="flow-engine-module-text">
+                    <div className="flow-engine-module-label">Diagnostic Engine</div>
+                    <div className="flow-engine-module-sub">Maps processes, surfaces waste, quantifies cost</div>
+                  </div>
+                  <div className="flow-engine-module-tag flow-engine-module-tag--ai">AI</div>
+                </div>
+                <div className="flow-engine-module flow-engine-module--human">
+                  <div className="flow-engine-module-avatar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="13" height="13"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  </div>
+                  <div className="flow-engine-module-text">
+                    <div className="flow-engine-module-label">Operations Consultant</div>
+                    <div className="flow-engine-module-sub">Reviews findings &amp; advises on priorities</div>
+                  </div>
+                  <div className="flow-engine-module-tag">Human</div>
+                </div>
+              </div>
+              <div className="flow-engine-done">
+                <svg viewBox="0 0 16 16" fill="none" width="12" height="12"><circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.2"/><path d="M5 8.5l2 2 4-4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                Report delivered in days
+              </div>
+            </div>
+
+            {/* Arrow out */}
+            <div className="flow-arrow flow-arrow--out">
+              <svg viewBox="0 0 60 20" fill="none" width="60" height="20">
+                <path d="M0 10 L50 10" stroke="currentColor" strokeWidth="1" strokeDasharray="4 3"/>
+                <path d="M44 5 L54 10 L44 15" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+              </svg>
+            </div>
+
+            {/* Right — outputs */}
+            <div className="flow-outputs">
+              {flowOutputs.map((o, i) => (
+                <div key={i} className="flow-output-chip">
+                  <div className="flow-output-icon">{o.icon}</div>
+                  <div>
+                    <div className="flow-output-label">{o.label}</div>
+                    <div className="flow-output-sub">{o.sub}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
+          {/* Bottom benefit labels */}
+          <div className="flow-benefits scroll-reveal">
+            {flowBenefits.map((b, i) => (
+              <div key={i} className="flow-benefit">
+                <div className="flow-benefit-title">{b.title}</div>
+                <div className="flow-benefit-desc">{b.desc}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* Diagnostic CTA */}
-      <section className="diagnostic-cta" id="diagnostic">
+      <section className="diagnostic-cta section--light" id="diagnostic">
         <div className="container">
-          <div className="diagnostic-badge">Evidence-Based Analysis</div>
-          <h2>Discover What&apos;s <strong>Actually Broken</strong></h2>
-          <p>Walk through your real processes with real examples. Our diagnostic reveals the rework, bottlenecks, and manual workarounds that are quietly consuming your team&apos;s capacity.</p>
-          <div className="diagnostic-stats">
-            <div className="diagnostic-stat scroll-reveal"><span className="diagnostic-stat-number">Hours</span><span className="diagnostic-stat-label">Not months</span></div>
-            <div className="diagnostic-stat scroll-reveal"><span className="diagnostic-stat-number">Evidence-led</span><span className="diagnostic-stat-label">Real data, real costs</span></div>
-            <div className="diagnostic-stat scroll-reveal"><span className="diagnostic-stat-number">Free</span><span className="diagnostic-stat-label">Full report included</span></div>
+          <div className="diagnostic-cta-content">
+            <div className="diagnostic-badge">Free · No commitment · Report in days</div>
+            <h2>See exactly where your<br /><strong>operations are leaking</strong></h2>
+            <p>Walk through your real processes with real examples. The diagnostic surfaces every bottleneck, rework loop, and manual workaround — with the financial impact of each one made explicit.</p>
+            <Link href="/diagnostic" className="btn-white" target="_blank" rel="noopener noreferrer">
+              Start Process Diagnostic <ArrowIcon />
+            </Link>
           </div>
-          <Link href="/diagnostic" className="btn-white" target="_blank" rel="noopener noreferrer">
-            Start Process Diagnostic <ArrowIcon />
-          </Link>
+          <div className="diagnostic-stats">
+            <div className="diagnostic-stat scroll-reveal">
+              <span className="diagnostic-stat-number">Process-first</span>
+              <span className="diagnostic-stat-label">Evidence, not opinion</span>
+            </div>
+            <div className="diagnostic-stat scroll-reveal">
+              <span className="diagnostic-stat-number">Days</span>
+              <span className="diagnostic-stat-label">To your full report</span>
+            </div>
+            <div className="diagnostic-stat scroll-reveal">
+              <span className="diagnostic-stat-number">£0</span>
+              <span className="diagnostic-stat-label">No retainer, no commitment</span>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Bottom CTA */}
       <section className="bottom-cta" id="contact">
         <div className="container">
+          <p className="bottom-cta-text">
+            Ready to see what&apos;s <em>really</em> slowing you down?
+          </p>
           <div className="cta-buttons">
             <a href="mailto:hopektettey@gmail.com" className="btn-primary">Book Discovery Call</a>
             <a href="#services" className="btn-outline" onClick={scrollTo('services')}>Explore Services</a>
@@ -555,23 +670,23 @@ export default function MarketingClient() {
       <footer className="mkt-footer">
         <div className="footer-content">
           <div>
-            <div className="footer-brand">Sharpin</div>
-            <p className="footer-tagline">Evidence-based process diagnostics and operations transformation. We work across scaling companies, M&amp;A integration, private equity portfolios, and high-stakes operational events.</p>
+            <div className="footer-brand">Sharpin<span style={{ fontStyle: 'italic', color: 'var(--accent-mid)' }}>.</span></div>
+            <p className="footer-tagline">Evidence-based process diagnostics and operations transformation — for scaling companies, M&amp;A integration, and private equity portfolios.</p>
           </div>
           <div>
             <h4>Services</h4>
             <ul>
               <li><a href="#services" onClick={scrollTo('services')}>Scaling Mid-Market</a></li>
               <li><a href="#services" onClick={scrollTo('services')}>M&amp;A Integration</a></li>
-              <li><a href="#services" onClick={scrollTo('services')}>Private Equity Value Creation</a></li>
-              <li><a href="#services" onClick={scrollTo('services')}>High-stakes Operational Events</a></li>
-
+              <li><a href="#services" onClick={scrollTo('services')}>Private Equity</a></li>
+              <li><a href="#services" onClick={scrollTo('services')}>High-stakes Events</a></li>
             </ul>
           </div>
           <div>
             <h4>Company</h4>
             <ul>
               <li><a href="#approach" onClick={scrollTo('approach')}>Approach</a></li>
+              <li><a href="#diagnostic" onClick={scrollTo('diagnostic')}>Diagnostic</a></li>
               <li><a href="#contact" onClick={scrollTo('contact')}>Contact</a></li>
             </ul>
           </div>
@@ -587,6 +702,7 @@ export default function MarketingClient() {
           <p suppressHydrationWarning>&copy; {new Date().getFullYear()} Sharpin. All rights reserved.</p>
         </div>
       </footer>
+
     </div>
   );
 }

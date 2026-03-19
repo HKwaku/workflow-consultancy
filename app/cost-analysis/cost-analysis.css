@@ -809,3 +809,642 @@
 
 /* Dark: summary sub-label */
 [data-theme="dark"] .cost-summary-sublabel { color: var(--text-mid); }
+
+/* ── Scenario selector bar ─────────────────────────────────────────────── */
+.cost-scenario-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 1rem;
+  padding: 6px 8px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: fit-content;
+}
+.cost-scenario-bar-label {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin-right: 6px;
+  white-space: nowrap;
+}
+.cost-scenario-btn {
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 5px 14px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--text-mid);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.cost-scenario-btn:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+.cost-scenario-btn.active {
+  background: #fff;
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+[data-theme="dark"] .cost-scenario-bar { background: var(--bg); border-color: var(--border); }
+[data-theme="dark"] .cost-scenario-btn.active { background: var(--primary-light); color: var(--text); }
+
+/* ── Live financial summary ─────────────────────────────────────────────── */
+.cost-financial-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 1.5rem;
+}
+.cost-fin-metric {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.cost-fin-metric-green { border-left: 3px solid #059669; }
+.cost-fin-metric-prompt { display: flex; flex-direction: column; justify-content: center; }
+.cost-fin-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-light);
+  margin-bottom: 4px;
+}
+.cost-fin-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+.cost-fin-metric-green .cost-fin-value { color: #059669; }
+.cost-fin-sub {
+  font-size: 0.7rem;
+  color: var(--text-light);
+  margin-top: 2px;
+}
+.cost-fin-prompt {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  line-height: 1.4;
+  margin-top: 4px;
+}
+[data-theme="dark"] .cost-fin-metric { background: var(--bg-alt); border-color: var(--border); }
+[data-theme="dark"] .cost-fin-value { color: var(--text); }
+[data-theme="dark"] .cost-fin-metric-green .cost-fin-value { color: #6ee7b7; }
+[data-theme="dark"] .cost-fin-metric-green { border-left-color: #059669; }
+
+/* ── Section header with AI button ─────────────────────────────────────── */
+.cost-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 1.5rem 0 0.75rem;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.cost-section-title-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ── Process cost card ──────────────────────────────────────────────────── */
+.cost-process-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+.cost-process-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+.cost-process-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.cost-process-card-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.cost-automation-approach {
+  font-size: 0.78rem;
+  color: var(--text-mid);
+  line-height: 1.4;
+}
+.cost-complexity-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.cost-process-card-cost {
+  text-align: right;
+  flex-shrink: 0;
+}
+.cost-process-card-total {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.cost-process-card-unit {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-light);
+}
+
+/* Hidden cost flags */
+.cost-hidden-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+.cost-hidden-flag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.25);
+  color: #92400e;
+}
+[data-theme="dark"] .cost-hidden-flag { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.25); color: #fcd34d; }
+
+/* Cost breakdown within process card */
+.cost-breakdown-grid {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  background: var(--bg-alt);
+}
+.cost-breakdown-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 0.82rem;
+}
+.cost-breakdown-row.cost-breakdown-hidden { padding-top: 2px; }
+.cost-breakdown-label { color: var(--text-mid); flex: 1; min-width: 0; }
+.cost-breakdown-amount { font-weight: 600; color: var(--text); white-space: nowrap; }
+.cost-breakdown-hidden-val { color: #d97706; }
+.cost-breakdown-bar-wrap {
+  flex: 1;
+  max-width: 100px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.cost-breakdown-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+.cost-breakdown-meta {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+/* Scenario savings grid */
+.cost-savings-scenarios {
+  margin-bottom: 10px;
+}
+.cost-savings-scenarios-label {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-light);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.cost-savings-scenarios-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.cost-scenario-cell {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--bg-alt);
+  transition: border-color 0.15s, background 0.15s;
+}
+.cost-scenario-cell.active {
+  border-color: var(--accent);
+  background: rgba(20,184,166,0.05);
+}
+.cost-scenario-cell-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-light);
+  margin-bottom: 5px;
+}
+.cost-scenario-cell.active .cost-scenario-cell-label { color: var(--accent); }
+.cost-scenario-cell-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.cost-scenario-cell-input input {
+  width: 52px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  background: #fff;
+  color: var(--text);
+}
+.cost-scenario-cell-input input:focus { outline: none; border-color: var(--accent); }
+.cost-scenario-cell-savings {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #059669;
+}
+.cost-scenario-cell.active .cost-scenario-cell-savings { color: #059669; }
+
+/* Drivers toggle + grid */
+.cost-drivers-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.75rem;
+  font-family: inherit;
+  color: var(--text-light);
+  cursor: pointer;
+  margin-top: 6px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.cost-drivers-toggle:hover { color: var(--text-mid); }
+.cost-drivers-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+@media (max-width: 600px) { .cost-drivers-grid { grid-template-columns: 1fr; } }
+
+/* ── Collapsible section ────────────────────────────────────────────────── */
+.cost-collapsible {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.cost-collapsible-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.15s;
+}
+.cost-collapsible-header:hover { background: var(--bg-alt); }
+.cost-collapsible-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+.cost-collapsible-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.cost-collapsible-badge {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(20,184,166,0.1);
+  border: 1px solid rgba(20,184,166,0.2);
+  color: var(--accent);
+  font-weight: 500;
+}
+.cost-collapsible-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin-left: auto;
+  margin-right: 8px;
+}
+.cost-collapsible-chevron {
+  flex-shrink: 0;
+  color: var(--text-light);
+  transition: transform 0.2s;
+}
+.cost-collapsible-chevron.rotated { transform: rotate(180deg); }
+.cost-collapsible-body {
+  padding: 0 18px 18px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+[data-theme="dark"] .cost-collapsible { border-color: var(--border); }
+[data-theme="dark"] .cost-collapsible-header:hover { background: var(--bg); }
+
+/* ── Implementation cost section ────────────────────────────────────────── */
+.cost-impl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 1.25rem;
+}
+.cost-impl-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  padding: 14px;
+  background: rgba(5,150,105,0.05);
+  border: 1px solid rgba(5,150,105,0.2);
+  border-radius: 10px;
+}
+.cost-impl-metric {}
+.cost-impl-metric-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-light);
+  margin-bottom: 3px;
+}
+.cost-impl-metric-val {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.cost-impl-metric-highlight .cost-impl-metric-val { color: #059669; }
+.cost-impl-metric-val.negative { color: #dc2626; }
+[data-theme="dark"] .cost-impl-metrics { background: rgba(5,150,105,0.08); border-color: rgba(5,150,105,0.2); }
+[data-theme="dark"] .cost-impl-metric-highlight .cost-impl-metric-val { color: #6ee7b7; }
+[data-theme="dark"] .cost-impl-metric-val.negative { color: var(--red); }
+
+/* ── Post-save headline metrics ─────────────────────────────────────────── */
+.cost-save-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin: 0 0 1.5rem;
+}
+.cost-save-metric {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #fff;
+}
+.cost-save-metric-green { border-left: 3px solid #059669; }
+.cost-save-metric-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-light);
+  margin-bottom: 4px;
+}
+.cost-save-metric-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.cost-save-metric-green .cost-save-metric-value { color: #059669; }
+[data-theme="dark"] .cost-save-metric { background: var(--bg-alt); border-color: var(--border); }
+[data-theme="dark"] .cost-save-metric-value { color: var(--text); }
+[data-theme="dark"] .cost-save-metric-green .cost-save-metric-value { color: #6ee7b7; }
+
+/* ── Business case review screen ────────────────────────────────────────── */
+.cost-bc-section {
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.cost-bc-section-title {
+  padding: 10px 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--bg-alt);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-mid);
+}
+.cost-bc-process-row {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.cost-bc-process-row:last-of-type { border-bottom: none; }
+.cost-bc-process-name { font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; }
+.cost-bc-process-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 0.78rem;
+  color: var(--text-light);
+}
+.cost-bc-process-true { color: var(--text); font-weight: 600; }
+.cost-bc-subtotal-rows {
+  border-top: 1px solid var(--border);
+}
+.cost-bc-subtotal-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  color: var(--text-mid);
+  border-bottom: 1px solid var(--border);
+}
+.cost-bc-subtotal-hidden { color: #d97706; }
+.cost-bc-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-top: 1px solid var(--border);
+}
+.cost-bc-total-val { font-size: 1.15rem; font-weight: 700; }
+.cost-bc-total-green { background: rgba(5,150,105,0.05); }
+.cost-bc-total-green .cost-bc-total-val { color: #059669; }
+.cost-bc-savings-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.cost-bc-savings-name { font-weight: 600; flex: 1; min-width: 120px; }
+.cost-bc-savings-pct { color: var(--text-mid); }
+.cost-bc-savings-val { font-weight: 600; color: #059669; }
+.cost-bc-approach { font-size: 0.75rem; color: var(--text-light); width: 100%; }
+.cost-bc-fte-row {
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  color: var(--text-mid);
+  border-top: 1px solid var(--border);
+}
+.cost-bc-fte-note { color: var(--text-light); }
+.cost-bc-residual {
+  padding: 8px 16px 12px;
+  font-size: 0.82rem;
+  color: var(--text-light);
+}
+.cost-bc-impl-rows { padding: 0 0 4px; }
+.cost-bc-impl-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-mid);
+}
+.cost-bc-impl-total { font-weight: 600; color: var(--text); }
+.cost-bc-returns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0;
+  border-top: 1px solid var(--border);
+}
+.cost-bc-return-metric {
+  padding: 12px 16px;
+  border-right: 1px solid var(--border);
+}
+.cost-bc-return-metric:last-child { border-right: none; }
+.cost-bc-return-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-light);
+  margin-bottom: 4px;
+}
+.cost-bc-return-val { font-size: 1.2rem; font-weight: 700; color: var(--text); }
+.cost-bc-return-highlight .cost-bc-return-val { color: #059669; }
+.cost-bc-projection {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+}
+.cost-bc-projection-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-light);
+  margin-bottom: 10px;
+}
+.cost-bc-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+}
+.cost-bc-bar-label { width: 180px; flex-shrink: 0; color: var(--text-mid); }
+.cost-bc-bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.cost-bc-bar-fill {
+  height: 100%;
+  background: #059669;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.cost-bc-bar-fill.negative { background: #dc2626; }
+.cost-bc-bar-val { width: 70px; text-align: right; font-weight: 600; color: #059669; flex-shrink: 0; }
+.cost-bc-bar-val.negative { color: #dc2626; }
+
+/* Dark: process card */
+[data-theme="dark"] .cost-process-card { background: var(--bg-alt); border-color: var(--border); }
+[data-theme="dark"] .cost-process-card-name { color: var(--text); }
+[data-theme="dark"] .cost-process-card-total { color: var(--text); }
+[data-theme="dark"] .cost-breakdown-grid { background: var(--bg); border-color: var(--border); }
+[data-theme="dark"] .cost-breakdown-label { color: var(--text-mid); }
+[data-theme="dark"] .cost-breakdown-amount { color: var(--text); }
+[data-theme="dark"] .cost-breakdown-hidden-val { color: #fbbf24; }
+[data-theme="dark"] .cost-breakdown-bar-wrap { background: var(--border); }
+[data-theme="dark"] .cost-savings-scenarios-label { color: var(--text-mid); }
+[data-theme="dark"] .cost-scenario-cell { background: var(--bg); border-color: var(--border); }
+[data-theme="dark"] .cost-scenario-cell.active { background: rgba(20,184,166,0.08); border-color: var(--accent); }
+[data-theme="dark"] .cost-scenario-cell-input input { background: var(--bg-alt); border-color: var(--border); color: var(--text); }
+[data-theme="dark"] .cost-scenario-cell-savings { color: #6ee7b7; }
+[data-theme="dark"] .cost-drivers-toggle { color: var(--text-mid); }
+[data-theme="dark"] .cost-drivers-grid { background: var(--bg); border-color: var(--border); }
+
+/* Dark: business case */
+[data-theme="dark"] .cost-bc-section { border-color: var(--border); }
+[data-theme="dark"] .cost-bc-section-title { background: var(--bg); color: var(--text-mid); border-bottom-color: var(--border); }
+[data-theme="dark"] .cost-bc-process-row { border-bottom-color: var(--border); }
+[data-theme="dark"] .cost-bc-process-detail { color: var(--text-mid); }
+[data-theme="dark"] .cost-bc-process-true { color: var(--text); }
+[data-theme="dark"] .cost-bc-subtotal-row { border-bottom-color: var(--border); color: var(--text-mid); }
+[data-theme="dark"] .cost-bc-subtotal-hidden { color: #fbbf24; }
+[data-theme="dark"] .cost-bc-total-row { border-top-color: var(--border); color: var(--text); }
+[data-theme="dark"] .cost-bc-total-green { background: rgba(5,150,105,0.1); }
+[data-theme="dark"] .cost-bc-total-green .cost-bc-total-val { color: #6ee7b7; }
+[data-theme="dark"] .cost-bc-savings-row { border-bottom-color: var(--border); }
+[data-theme="dark"] .cost-bc-savings-val { color: #6ee7b7; }
+[data-theme="dark"] .cost-bc-approach { color: var(--text-mid); }
+[data-theme="dark"] .cost-bc-fte-row { border-top-color: var(--border); color: var(--text-mid); }
+[data-theme="dark"] .cost-bc-impl-row { border-bottom-color: var(--border); color: var(--text-mid); }
+[data-theme="dark"] .cost-bc-impl-total { color: var(--text); }
+[data-theme="dark"] .cost-bc-returns { border-top-color: var(--border); }
+[data-theme="dark"] .cost-bc-return-metric { border-right-color: var(--border); }
+[data-theme="dark"] .cost-bc-return-val { color: var(--text); }
+[data-theme="dark"] .cost-bc-return-highlight .cost-bc-return-val { color: #6ee7b7; }
+[data-theme="dark"] .cost-bc-projection { border-top-color: var(--border); }
+[data-theme="dark"] .cost-bc-bar-track { background: var(--border); }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .cost-savings-scenarios-grid { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .cost-scenario-cell-input input { width: 44px; }
+  .cost-bc-bar-label { width: 110px; font-size: 0.73rem; }
+  .cost-bc-bar-val { width: 60px; }
+  .cost-bc-returns { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 520px) {
+  .cost-savings-scenarios-grid { grid-template-columns: 1fr; }
+  .cost-financial-summary { grid-template-columns: 1fr 1fr; }
+  .cost-process-card-header { flex-direction: column; }
+  .cost-process-card-cost { text-align: left; }
+  .cost-scenario-bar { flex-wrap: wrap; width: auto; }
+}

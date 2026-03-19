@@ -62,27 +62,56 @@ export async function POST(request) {
     const totalWork = steps.reduce((sum, s) => sum + (s.workMinutes ?? 0), 0);
     const totalWait = steps.reduce((sum, s) => sum + (s.waitMinutes ?? 0), 0);
     const waitRatio = totalWork > 0 ? Math.round(totalWait / totalWork * 100) : 0;
+    const costs = raw.costs || {};
+    const hoursPerInstance = costs.hoursPerInstance ?? 4;
+    const annual = costs.annual ?? (raw.frequency?.annual ?? 12);
+    const teamSize = costs.teamSize ?? 1;
+    const bottleneckReason = raw.bottleneck?.reason || '';
     return `Process ${i}: "${name}"
-- Steps: ${total} total, ${manualSteps} manual (${Math.round(manualSteps/Math.max(total,1)*100)}%)
+- Steps: ${total} total, ${manualSteps} manual (${Math.round(manualSteps / Math.max(total, 1) * 100)}%)
 - Approvals: ${approvals}, Decision points: ${decisions}, Bottlenecks flagged: ${bottlenecks}
-- Multi-system steps (re-entry risk): ${multiSystemSteps}
-- Systems: ${systems.join(', ') || 'none listed'}
-- Departments: ${depts.join(', ') || 'unspecified'}
-- Wait/work ratio: ${waitRatio}% (higher = more idle time, more automation opportunity)`;
+- Multi-system re-entry steps: ${multiSystemSteps}
+- Systems: ${systems.join(', ') || 'none'}
+- Departments: ${depts.join(', ') || 'unspecified'} (${depts.length} team${depts.length !== 1 ? 's' : ''})
+- Wait/work ratio: ${waitRatio}% (higher = more idle time = more automation opportunity)
+- Volume: ${hoursPerInstance}h/instance × ${annual}/yr × ${teamSize} people
+- Primary bottleneck: ${bottleneckReason || 'unspecified'}`;
   }).join('\n\n');
 
-  const systemPrompt = `You are an operations consultant estimating what percentage of labour cost can be eliminated through process automation. Be specific, realistic, and conservative. Consider:
-- Manual steps vs automated steps
-- Approval gates (often hard to fully automate)
-- Decision points (require human judgment — partial automation only)
-- Multi-system re-entry (strong automation candidate)
-- High wait/work ratios (scheduling/notification automation)
-- Industry norms: simple data entry processes 40-60%, approval-heavy processes 20-35%, complex decision processes 10-25%
+  const systemPrompt = `You are a senior operations consultant specialising in process automation ROI. Analyse each process and provide realistic savings estimates across three scenarios.
 
-Respond ONLY with a JSON array, no markdown, no explanation outside JSON:
-[{"processIndex":0,"savingsPct":35,"reasoning":"One sentence explaining the key drivers","confidence":"high|medium|low"}]`;
+Scenario definitions:
+- Conservative: high-confidence floor — achievable even if scope is reduced or execution faces delays
+- Base: expected outcome for a well-scoped, competently executed automation project
+- Optimistic: achievable with full commitment, clean data, modern tooling, and no major surprises
 
-  const userPrompt = `Estimate automation labour savings % for each process:\n\n${processDescriptions}`;
+Benchmark ranges by process type (% of total process cost eliminable):
+- Simple data entry / form routing: conservative 30%, base 48%, optimistic 65%
+- Approval workflows (rule-based criteria): conservative 25%, base 38%, optimistic 55%
+- Multi-system re-entry (no existing APIs): conservative 28%, base 44%, optimistic 60%
+- Complex decision / exception-heavy processes: conservative 8%, base 18%, optimistic 28%
+- Notification / scheduling / reminder processes: conservative 40%, base 60%, optimistic 75%
+- Compliance / audit / reporting processes: conservative 15%, base 25%, optimistic 38%
+
+Hidden cost flags to identify (these inflate true process cost beyond direct labour):
+- "high wait ratio" — idle time in queue represents real cost not captured in step duration
+- "multi-system re-entry" — manual transcription creates error/rework cost
+- "cross-department handoffs" — coordination overhead and delay cost
+- "approval bottleneck" — SLA risk and exception-handling overhead
+- "manual reconciliation" — error correction cost is significant
+- "unclear ownership" — rework and delay from ambiguity add hidden cost
+
+automationApproach: write one specific, technical description of the primary automation method (e.g. "Power Automate + SharePoint approval workflow replacing email chain", "Zapier integration between CRM and accounting system with auto-notifications", "Custom API integration + rules engine + automated status updates")
+
+implementationComplexity:
+- "low": achievable in weeks with off-the-shelf tools, no custom development required
+- "medium": 1–3 months, configuration-heavy, possibly one custom integration build
+- "high": 3+ months, custom development required, multiple system integrations, significant change management
+
+Respond ONLY with a valid JSON array — no markdown, no text outside the array:
+[{"processIndex":0,"conservativePct":22,"savingsPct":35,"optimisticPct":52,"reasoning":"One sentence on the primary savings driver and key constraint","confidence":"high|medium|low","automationApproach":"Specific technical description","implementationComplexity":"low|medium|high","hiddenCostFlags":["flag1","flag2"]}]`;
+
+  const userPrompt = `Estimate automation savings across three scenarios for each process:\n\n${processDescriptions}`;
 
   try {
     const model = getFastModel({ temperature: 0 });
@@ -93,19 +122,25 @@ Respond ONLY with a JSON array, no markdown, no explanation outside JSON:
     }
     const text = String(content || '').trim();
 
-    // Extract JSON array from response
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) throw new Error('No JSON array in response');
     const suggestions = JSON.parse(jsonMatch[0]);
-
     if (!Array.isArray(suggestions)) throw new Error('Invalid response format');
 
-    const validated = suggestions.map(s => ({
-      processIndex: typeof s.processIndex === 'number' ? s.processIndex : 0,
-      savingsPct: Math.min(80, Math.max(5, Math.round(s.savingsPct || 25))),
-      reasoning: typeof s.reasoning === 'string' ? s.reasoning.slice(0, 300) : '',
-      confidence: ['high', 'medium', 'low'].includes(s.confidence) ? s.confidence : 'medium',
-    }));
+    const validated = suggestions.map(s => {
+      const base = Math.min(80, Math.max(5, Math.round(s.savingsPct || 25)));
+      return {
+        processIndex: typeof s.processIndex === 'number' ? s.processIndex : 0,
+        conservativePct: Math.min(75, Math.max(5, Math.round(s.conservativePct || Math.round(base * 0.65)))),
+        savingsPct: base,
+        optimisticPct: Math.min(90, Math.max(10, Math.round(s.optimisticPct || Math.round(base * 1.4)))),
+        reasoning: typeof s.reasoning === 'string' ? s.reasoning.slice(0, 400) : '',
+        confidence: ['high', 'medium', 'low'].includes(s.confidence) ? s.confidence : 'medium',
+        automationApproach: typeof s.automationApproach === 'string' ? s.automationApproach.slice(0, 250) : '',
+        implementationComplexity: ['low', 'medium', 'high'].includes(s.implementationComplexity) ? s.implementationComplexity : 'medium',
+        hiddenCostFlags: Array.isArray(s.hiddenCostFlags) ? s.hiddenCostFlags.slice(0, 4).map(f => String(f).slice(0, 80)) : [],
+      };
+    });
 
     return NextResponse.json({ success: true, suggestions: validated });
   } catch (e) {
