@@ -230,7 +230,7 @@ export default function MarketingClient() {
           <div className="hero-inner">
             <div className="hero-content">
               <h1>
-                <span className="hero-line">Operational friction costs</span>
+                <span className="hero-line">Operational friction costs</span>{' '}
                 <span className="hero-line">more than you think.</span>
               </h1>
               <p className="hero-desc">

@@ -109,7 +109,7 @@
    .section--light .signal-detail,
    .section--light .flow-benefit-desc { color: rgba(26,22,16,0.65); }
    
-   .section--light .seg-card-number { color: rgba(26,22,16,0.25); }
+   .section--light .seg-card-number { color: rgba(26,22,16,0.5); }
    
    .section--light .seg-grid,
    .section--light .comp-grid,
@@ -175,7 +175,7 @@
    
    .section-title {
      font-family: var(--font-display);
-     font-size: clamp(1.5rem, 5.5vw, 2.8rem); font-weight: 400;
+     font-size: clamp(1.8rem, 5.5vw, 2.8rem); font-weight: 400;
      letter-spacing: -0.5px; line-height: 1.15;
      color: var(--text-primary); margin-bottom: 1.25rem; text-wrap: pretty;
    }
@@ -351,7 +351,7 @@
    }
    .hero h1 {
      font-family: var(--font-display);
-     font-size: clamp(1.1rem, 6vw, 4.08rem); margin-bottom: 1.5rem; line-height: 1.25;
+     font-size: clamp(2.2rem, 8vw, 4.08rem); margin-bottom: 1.5rem; line-height: 1.25;
      letter-spacing: -0.75px; font-weight: 400; color: var(--text-primary);
    }
    .hero h1 .hero-line { display: block; white-space: nowrap; }
@@ -406,7 +406,7 @@
    .seg-card--purple::before { background: #9b7fd4; }
    .seg-card--gold::before   { background: var(--accent-mid); }
    .seg-card-number {
-     font-family: var(--font-display); font-size: 0.65rem; color: var(--text-muted);
+     font-family: var(--font-display); font-size: 0.65rem; color: var(--text-secondary);
      letter-spacing: 2px; margin-bottom: 2rem; font-style: italic;
    }
    .seg-card-icon { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; }
@@ -423,7 +423,7 @@
    .seg-card-label--purple { color: #9b7fd4; }
    .seg-card-label--gold   { color: var(--accent-mid); }
    .seg-card-tagline {
-     font-family: var(--font-display); font-size: 1.0rem; font-weight: 400;
+     font-family: var(--font-display); font-size: 1.0rem; font-weight: 500;
      color: var(--text-primary); line-height: 1.35; margin: 0 0 1rem; letter-spacing: -0.1px;
    }
    .seg-card-outcome {
@@ -739,7 +739,7 @@
      display: flex; justify-content: space-between; align-items: center; gap: 2rem;
    }
    .bottom-cta-text {
-     font-family: var(--font-display); font-size: clamp(1.1rem, 3.5vw, 1.6rem); font-weight: 400;
+     font-family: var(--font-display); font-size: clamp(1.3rem, 3.5vw, 1.6rem); font-weight: 400;
      color: var(--text-primary); letter-spacing: -0.3px;
    }
    .bottom-cta-text em { font-style: italic; color: var(--accent-mid); }
@@ -790,12 +790,17 @@
    @media (max-width: 768px) {
      .mkt section { padding: 5rem 1.5rem; }
      .hero-inner { padding: 0 1.5rem; }
+     .hero h1 { text-wrap: balance; }
+     .hero h1 .hero-line { display: inline; white-space: normal; }
      .hero-aside { display: none; }
      .hero-main .hero-inner { grid-template-columns: 1fr; }
      .hero-cta-row { flex-direction: column; align-items: flex-start; }
      .seg-grid { grid-template-columns: 1fr; }
      .seg-card { border-right: none; border-bottom: 1px solid var(--border-subtle); }
      .seg-card:last-child { border-bottom: none; }
+     .seg-card-tagline { font-size: 1.2rem; }
+     .seg-card-outcome { font-size: 0.95rem; }
+     .seg-card-cta { font-size: 0.85rem; }
      .signal-pair { grid-template-columns: 1fr; min-height: auto; }
      .approach-steps { grid-template-columns: 1fr; }
      .approach-step { border-right: none; border-bottom: 1px solid var(--border-subtle); }
@@ -865,7 +870,7 @@
    
    .hero-content { text-align: left; max-width: 560px; }
    .hero-aside { display: none !important; }
-   .hero h1 { font-size: clamp(1.1rem, 6vw, 4.08rem); }
+   .hero h1 { font-size: clamp(2.2rem, 8vw, 4.08rem); }
    .hero h1 em { display: inline; }
    
    /* Responsive stat bar */
@@ -894,15 +899,7 @@
      .mkt section { padding: 4rem 1.25rem; }
      .hero-inner { padding: 0 1.25rem; }
      .hero-content { max-width: 100%; }
-     .hero-desc { font-size: 0.82rem; }
-     .section-label { font-size: 0.52rem; letter-spacing: 3px; }
-     .section-desc { font-size: 0.84rem; }
      .comp-panel { padding: 1.75rem 1.25rem; }
-     .comp-panel h3 { font-size: 1.05rem; }
-     .diagnostic-cta .container { gap: 2rem; }
-     .diagnostic-cta p { font-size: 0.82rem; }
-     .hero-stat-item .hero-stat-num { font-size: 1.05rem; }
-     .hero-stat-item .hero-stat-label { font-size: 0.64rem; }
      .bottom-cta .container { gap: 1.5rem; }
    }
    
@@ -1223,6 +1220,12 @@
    /* Signals section stays fully dark — explicit */
    .signals-section { background: var(--bg-base); }
    
+   /* Seg card label colour on light */
+   .section--light .seg-card-label--teal   { color: #1a7068; }
+   .section--light .seg-card-label--indigo { color: #3a4ea8; }
+   .section--light .seg-card-label--purple { color: #5a38a8; }
+   .section--light .seg-card-label--gold   { color: #7a5e2a; }
+
    /* Seg card CTA colour on light */
    .section--light .seg-card-cta--teal   { color: #2a8a78; }
    .section--light .seg-card-cta--indigo { color: #4a5ab0; }
