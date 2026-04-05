@@ -120,7 +120,7 @@ export default function GuidedChatScreen() {
         {messages.map((m, i) => (
           <div key={i} className={`s7-msg s7-msg-${m.role}`}>
             {m.role === 'assistant' && (
-              <div className="sharp-avatar" title="Sharp">S</div>
+              <div className="sharp-avatar" title="Afi">A</div>
             )}
             <div className="s7-msg-bubble">{m.content}</div>
           </div>

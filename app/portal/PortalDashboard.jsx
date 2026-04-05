@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useTheme } from '@/components/ThemeProvider';
 import ThemeToggle from '@/components/ThemeToggle';
 import { apiFetch } from '@/lib/api-fetch';
+import { useFlowLayoutSave } from '@/lib/useFlowLayoutSave';
 import { calculateAutomationScore } from '@/lib/diagnostic/buildLocalResults';
 import { getAutomationReadinessColor, getAutomationReadinessClass } from '@/lib/diagnostic/automationReadiness';
 import InteractiveFlowCanvas from '@/components/flow/InteractiveFlowCanvas';
@@ -84,10 +85,8 @@ function PortalComparisonTab({ processes, redesignVersions = [], totalAnnualCost
 
   const metrics = [
     { key: 'automation', label: 'Automation readiness', values: automationValues, color: '#0d9488', suffix: '%', desc: 'Share of process steps that can be automated' },
-    { key: 'cost', label: 'Cost savings', values: costValues, color: '#ea580c', suffix: '%', desc: 'Estimated reduction in labour cost' },
-    { key: 'time', label: 'Time savings', values: timeValues, color: '#7c3aed', suffix: '%', desc: 'Estimated reduction in process duration' },
     { key: 'stepsRemoved', label: 'Steps removed', values: stepsRemovedValues, color: '#d97706', suffix: '', desc: 'Steps eliminated from the process' },
-    { key: 'stepsAutomated', label: 'Steps automated', values: stepsAutomatedValues, color: '#000000', suffix: '', desc: 'Steps converted to automated execution' },
+    { key: 'stepsAutomated', label: 'Steps automated', values: stepsAutomatedValues, color: '#a78bfa', suffix: '', desc: 'Steps converted to automated execution' },
   ].filter(m => m.values.some(v => v > 0));
 
   useEffect(() => {
@@ -98,14 +97,12 @@ function PortalComparisonTab({ processes, redesignVersions = [], totalAnnualCost
     const draw = () => {
       const rect = container.getBoundingClientRect();
       const chartW = Math.max(280, Math.floor(rect.width || 360));
-      const chartH = 380;
+      const chartH = 220;
       const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-      const pad = { top: 24, right: 24, bottom: 40, left: 48 };
+      const pad = { top: 20, right: 20, bottom: 36, left: 48 };
       const plotH = chartH - pad.top - pad.bottom;
       const plotW = chartW - pad.left - pad.right;
       const maxVal = Math.max(1, ...metrics.flatMap(m => m.values));
-      const hasPct = metrics.some(m => m.suffix === '%');
-      const yLabel = hasPct ? maxVal + '%' : String(maxVal);
 
       canvas.width = chartW * dpr;
       canvas.height = chartH * dpr;
@@ -121,23 +118,43 @@ function PortalComparisonTab({ processes, redesignVersions = [], totalAnnualCost
       const baselineY = pad.top + plotH;
       const toX = (i) => pad.left + (numPoints === 1 ? 0.5 : i / (numPoints - 1)) * plotW;
 
-      ctx.strokeStyle = '#e2e8f0';
+      // Grid lines (dashed, dark-mode)
+      const gridSteps = 4;
+      ctx.font = '10px system-ui, sans-serif';
+      ctx.textAlign = 'right';
+      for (let g = 0; g <= gridSteps; g++) {
+        const v = maxVal * g / gridSteps;
+        const y = toY(v);
+        ctx.strokeStyle = 'rgba(148,163,184,0.12)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 6]);
+        ctx.beginPath();
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(pad.left + plotW, y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(148,163,184,0.55)';
+        const hasPct = metrics.some(m => m.suffix === '%');
+        ctx.fillText(hasPct ? v.toFixed(0) + '%' : v.toFixed(0), pad.left - 6, y + 4);
+      }
+
+      // Axes
+      ctx.strokeStyle = 'rgba(148,163,184,0.2)';
       ctx.lineWidth = 1;
+      ctx.setLineDash([]);
       ctx.beginPath();
       ctx.moveTo(pad.left, pad.top);
-      ctx.lineTo(pad.left, pad.top + plotH);
-      ctx.lineTo(pad.left + plotW, pad.top + plotH);
+      ctx.lineTo(pad.left, baselineY);
+      ctx.lineTo(pad.left + plotW, baselineY);
       ctx.stroke();
 
-      ctx.font = '11px system-ui, sans-serif';
-      ctx.fillStyle = '#94a3b8';
-      ctx.textAlign = 'right';
-      ctx.fillText('0', pad.left - 8, pad.top + plotH + 4);
-      ctx.fillText(yLabel, pad.left - 8, pad.top + 4);
+      // X labels
       ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(148,163,184,0.7)';
+      ctx.font = '10px system-ui, sans-serif';
       for (let i = 0; i < numPoints; i++) {
         const t = numPoints === 1 ? 0.5 : i / (numPoints - 1);
-        ctx.fillText(labels[i] || `R${i}`, pad.left + t * plotW, chartH - 10);
+        ctx.fillText(labels[i] || `R${i}`, pad.left + t * plotW, chartH - 8);
       }
 
       metrics.forEach((m) => {
@@ -146,7 +163,7 @@ function PortalComparisonTab({ processes, redesignVersions = [], totalAnnualCost
         const r = parseInt(m.color.slice(1, 3), 16);
         const g = parseInt(m.color.slice(3, 5), 16);
         const b = parseInt(m.color.slice(5, 7), 16);
-        ctx.fillStyle = `rgba(${r},${g},${b},0.25)`;
+        ctx.fillStyle = `rgba(${r},${g},${b},0.18)`;
         ctx.beginPath();
         ctx.moveTo(toX(0), baselineY);
         for (let i = 0; i < vals.length; i++) ctx.lineTo(toX(i), toY(vals[i]));
@@ -173,12 +190,12 @@ function PortalComparisonTab({ processes, redesignVersions = [], totalAnnualCost
 
       if (chartHover != null && chartHover.xIndex >= 0 && chartHover.xIndex < numPoints) {
         const x = toX(chartHover.xIndex);
-        ctx.strokeStyle = 'rgba(30,41,59,0.4)';
+        ctx.strokeStyle = 'rgba(148,163,184,0.35)';
         ctx.lineWidth = 1;
         ctx.setLineDash([4, 4]);
         ctx.beginPath();
         ctx.moveTo(x, pad.top);
-        ctx.lineTo(x, pad.top + plotH);
+        ctx.lineTo(x, baselineY);
         ctx.stroke();
         ctx.setLineDash([]);
       }
@@ -319,9 +336,13 @@ function PortalCollapsible({ title, children, defaultOpen = false, level = 0, ba
   );
 }
 
-function ProcessDetailTabs({ tabs, defaultTab }) {
+function ProcessDetailTabs({ tabs, defaultTab, onTabChange }) {
   const [activeTab, setActiveTab] = useState(defaultTab);
   const activeContent = tabs.find((t) => t.id === activeTab)?.content ?? tabs[0]?.content;
+  const handleTabClick = (id) => {
+    setActiveTab(id);
+    if (onTabChange) onTabChange(id);
+  };
   return (
     <div className="portal-process-tabs-wrap">
       <nav className="portal-process-tabs" role="tablist">
@@ -332,7 +353,7 @@ function ProcessDetailTabs({ tabs, defaultTab }) {
             role="tab"
             aria-selected={activeTab === t.id}
             className={`portal-process-tab ${activeTab === t.id ? 'active' : ''}`}
-            onClick={() => setActiveTab(t.id)}
+            onClick={() => handleTabClick(t.id)}
           >
             {t.label}
             {t.badge != null && t.badge !== '' && <span className="portal-process-tab-badge">{t.badge}</span>}
@@ -346,15 +367,21 @@ function ProcessDetailTabs({ tabs, defaultTab }) {
   );
 }
 
-function ProcessFlowPanel({ proc, label, actions, automationPct, darkTheme }) {
+function ProcessFlowPanel({ proc, label, actions, automationPct, darkTheme, reportId, processIndex, accessToken, redesignId }) {
   const [viewMode, setViewMode] = useState('grid');
   const isWrapped = viewMode === 'wrap';
   const handleWrapToggle = () => setViewMode((v) => v === 'wrap' ? 'grid' : 'wrap');
   const [floatingOpen, setFloatingOpen] = useState(false);
   const [insightStepIndex, setInsightStepIndex] = useState(null);
-  const [flowNodePositions, setFlowNodePositions] = useState(() => proc.flowNodePositions || {});
-  const [customEdges, setCustomEdges] = useState(() => proc.flowCustomEdges || []);
-  const [deletedEdges, setDeletedEdges] = useState(() => proc.flowDeletedEdges || []);
+  const { flowNodePositions, setFlowNodePositions, customEdges, setCustomEdges, deletedEdges, setDeletedEdges } = useFlowLayoutSave({
+    reportId,
+    processIndex,
+    accessToken,
+    redesignId,
+    initialPositions: proc.flowNodePositions || {},
+    initialCustomEdges: proc.flowCustomEdges || [],
+    initialDeletedEdges: proc.flowDeletedEdges || [],
+  });
   const steps = proc.steps || [];
   const autoClass = automationPct != null ? getAutomationReadinessClass(automationPct) : null;
   const processForFlow = {
@@ -390,8 +417,8 @@ function ProcessFlowPanel({ proc, label, actions, automationPct, darkTheme }) {
           isWrapped={isWrapped}
           customEdges={customEdges}
           deletedEdges={deletedEdges}
-          storedPositions={flowNodePositions[`${steps.length}`] || null}
-          onPositionsChange={(positions) => setFlowNodePositions((prev) => ({ ...prev, [`${steps.length}`]: positions }))}
+          storedPositions={flowNodePositions[`${steps.length}-${viewMode}`] || flowNodePositions[`${steps.length}`] || null}
+          onPositionsChange={(positions, layout) => setFlowNodePositions((prev) => ({ ...prev, [`${steps.length}-${layout}`]: positions }))}
           onCustomEdgesChange={setCustomEdges}
           onDeletedEdgesChange={setDeletedEdges}
         />
@@ -425,7 +452,7 @@ function ProcessFlowPanel({ proc, label, actions, automationPct, darkTheme }) {
           deletedEdges={deletedEdges}
           onDeletedEdgesChange={setDeletedEdges}
           flowNodePositions={flowNodePositions}
-          onPositionsChange={(positions) => setFlowNodePositions((prev) => ({ ...prev, [`${steps.length}`]: positions }))}
+          onPositionsChange={(positions, layout) => setFlowNodePositions((prev) => ({ ...prev, [`${steps.length}-${layout}`]: positions }))}
           stepsLength={steps.length}
         />
       )}
@@ -444,6 +471,9 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
   const [redesignProgress, setRedesignProgress] = useState('');
   const [redesignDone, setRedesignDone] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [redesignError, setRedesignError] = useState(null); // { reportId, message }
+  const [instanceData, setInstanceData] = useState(null);
+  const [instancesLoading, setInstancesLoading] = useState(false);
   const [auditTrailOpenId, setAuditTrailOpenId] = useState(null);
   const [metricDrill, setMetricDrill] = useState(null);
   const [redesignSaveModal, setRedesignSaveModal] = useState(null); // { reportId, redesign }
@@ -454,11 +484,10 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
   const [renameEditName, setRenameEditName] = useState('');
   const [renameSaving, setRenameSaving] = useState(false);
   const [renameError, setRenameError] = useState(null);
-  const [confirmDeleteTeamId, setConfirmDeleteTeamId] = useState(null);
-  const [deletingTeamId, setDeletingTeamId] = useState(null);
   const [costLinkCopiedId, setCostLinkCopiedId] = useState(null);
-  const [activeSection, setActiveSection] = useState('processes'); // 'team' | 'processes'
+  const [activeSection, setActiveSection] = useState('processes'); // 'processes' | 'analytics'
   const [processTypeFilter, setProcessTypeFilter] = useState('all'); // 'all' | 'process-only' | 'comprehensive'
+  const [segmentFilter, setSegmentFilter] = useState('all'); // 'all' | 'scaling' | 'ma' | 'pe' | 'highstakes'
   const [settingsOpenId, setSettingsOpenId] = useState(null);
   const [processPage, setProcessPage] = useState(1);
   const settingsOpenRef = useRef(null);
@@ -512,15 +541,21 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
     if (redesignSaveModal) setSaveModalName('');
   }, [redesignSaveModal]);
 
+  const SEGMENT_META = {
+    scaling: { label: 'Scaling', color: '#0d9488' },
+    ma: { label: 'M&A', color: '#6366f1' },
+    pe: { label: 'PE', color: '#8b5cf6' },
+    highstakes: { label: 'High-stakes', color: '#d97706' },
+  };
+
   const reportList = reports?.reports || [];
-  const filteredReportList = processTypeFilter === 'all'
-    ? reportList
-    : reportList.filter((r) => {
-        const mode = (r.diagnosticMode || 'comprehensive').toLowerCase();
-        if (processTypeFilter === 'process-only') return mode === 'map-only';
-        if (processTypeFilter === 'comprehensive') return mode === 'comprehensive';
-        return true;
-      });
+  const filteredReportList = reportList.filter((r) => {
+    const mode = (r.diagnosticMode || 'comprehensive').toLowerCase();
+    if (processTypeFilter === 'process-only' && mode !== 'map-only') return false;
+    if (processTypeFilter === 'comprehensive' && mode !== 'comprehensive') return false;
+    if (segmentFilter !== 'all' && r.segment !== segmentFilter) return false;
+    return true;
+  });
   const teamSessions = reports?.teamSessions || [];
   const totalProcessPages = Math.max(1, Math.ceil(filteredReportList.length / PROCESSES_PER_PAGE));
   const paginatedReports = filteredReportList.slice((processPage - 1) * PROCESSES_PER_PAGE, processPage * PROCESSES_PER_PAGE);
@@ -530,7 +565,7 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
 
   useEffect(() => {
     setProcessPage(1);
-  }, [processTypeFilter]);
+  }, [processTypeFilter, segmentFilter]);
 
   useEffect(() => {
     if (processPage > totalProcessPages && totalProcessPages > 0) {
@@ -545,36 +580,6 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
 
   const handleDeleteClick = (reportId) => {
     setConfirmDeleteId(confirmDeleteId === reportId ? null : reportId);
-  };
-
-  const handleDeleteTeamClick = (teamCode, e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setConfirmDeleteTeamId(confirmDeleteTeamId === teamCode ? null : teamCode);
-  };
-
-  const handleDeleteTeamConfirm = async (teamCode) => {
-    setDeletingTeamId(teamCode);
-    try {
-      const resp = await apiFetch('/api/team?action=delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamCode }),
-      }, accessToken);
-      const data = await resp.json();
-      if (resp.ok && data.success) {
-        setConfirmDeleteTeamId(null);
-        await refreshReports();
-      } else {
-        setErrorMsg(data.error || 'Failed to delete team session.');
-        setTimeout(() => setErrorMsg(null), 6000);
-      }
-    } catch {
-      setErrorMsg('Failed to delete team session. Please try again.');
-      setTimeout(() => setErrorMsg(null), 6000);
-    } finally {
-      setDeletingTeamId(null);
-    }
   };
 
   const handleRenameStart = useCallback((reportId, v) => {
@@ -636,9 +641,23 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
     }
   };
 
+  const fetchInstances = async (reportId) => {
+    setInstancesLoading(true);
+    try {
+      const resp = await apiFetch(`/api/process-instances?reportId=${reportId}`, {}, accessToken);
+      if (resp.ok) {
+        const data = await resp.json();
+        setInstanceData(data);
+      }
+    } catch { /* ignore */ } finally {
+      setInstancesLoading(false);
+    }
+  };
+
   const handleRedesign = async (reportId, { regenerate = false } = {}) => {
     setRedesigningId(reportId);
     setRedesignProgress('Starting redesign…');
+    setRedesignError(null);
     try {
       const resp = await apiFetch('/api/generate-redesign', {
         method: 'POST',
@@ -670,7 +689,11 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
             if (!data) continue;
             try {
               const parsed = JSON.parse(data);
-              if (event === 'progress') {
+              if (event === 'started') {
+                setRedesignProgress('Analysing your process…');
+              } else if (event === 'timeout') {
+                setRedesignError({ reportId, message: parsed.message || 'Redesign timed out. Please try again.' });
+              } else if (event === 'progress') {
                 setRedesignProgress(parsed.message || '');
               } else if (event === 'done') {
                 success = true;
@@ -682,8 +705,7 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
                   await refreshReports();
                 }
               } else if (event === 'error') {
-                setErrorMsg(parsed.error || 'Redesign failed.');
-                setTimeout(() => setErrorMsg(null), 6000);
+                setRedesignError({ reportId, message: parsed.error || 'Redesign failed.' });
               }
             } catch { /* skip malformed events */ }
           }
@@ -698,13 +720,11 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
           setTimeout(() => setRedesignDone(null), 8000);
           await refreshReports();
         } else {
-          setErrorMsg(data.error || 'Failed to generate redesign.');
-          setTimeout(() => setErrorMsg(null), 6000);
+          setRedesignError({ reportId, message: data.error || 'Failed to generate redesign.' });
         }
       }
     } catch {
-      setErrorMsg('Failed to generate redesign. Please try again.');
-      setTimeout(() => setErrorMsg(null), 6000);
+      setRedesignError({ reportId, message: 'Failed to generate redesign. Please try again.' });
     } finally {
       setRedesigningId(null);
       setRedesignProgress('');
@@ -740,7 +760,7 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
   const renderReportRow = (r) => {
     const createdDate = formatPortalDate(r.createdAt);
     const lastUpdated = formatRelativeTime(r.updatedAt || r.createdAt);
-    const procs = (r.processes || []).map(p => p.name).join(', ') || 'Process Diagnostic';
+    const procs = (r.processes || []).map(p => p.name).join(', ') || 'Process Audit';
     const s = getStatusInfo(r);
     const showConfirm = confirmDeleteId === r.id;
     const isDeleting = deletingId === r.id;
@@ -748,16 +768,31 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
     const hasRedesign = !!(redesignSource?.processes?.length);
     const isAccepted = r.redesignStatus === 'accepted';
     const rawProcs = r.rawProcesses || [];
+    const activeRedesignId = (() => {
+      const versions = r.redesignVersions || [];
+      const accepted = versions.find(v => v.status === 'accepted');
+      return (accepted || versions[versions.length - 1])?.id || null;
+    })();
 
     const costAnalysisPending = r.costAnalysisStatus === 'pending';
+    const costAnalysisComplete = r.costAnalysisStatus === 'complete';
     const hasCostToken = !!(r.costAnalysisToken);
+    // isCostAuthorized: get-dashboard nulls the token and zeros costs for unauthorized users
+    const isCostAuthorized = hasCostToken || (r.metrics?.totalAnnualCost || 0) > 0;
+    const costEditUrl = r.id ? `/cost-analysis?id=${r.id}` : null;
 
     const displayLabel = r.displayCode || (r.id?.length > 8 ? r.id.slice(0, 8) + '…' : r.id);
+    const segMeta = r.segment ? SEGMENT_META[r.segment] : null;
     const parentTitle = (
       <span className="portal-report-title-block">
         <span className="portal-report-title-row">
           <span className={'process-dot ' + s.dot} />
           <strong>{procs}</strong>
+          {segMeta && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 4, background: segMeta.color + '22', color: segMeta.color, letterSpacing: '0.03em', marginLeft: 6 }}>
+              {segMeta.label}
+            </span>
+          )}
         </span>
         <span className="portal-report-meta">
           #{displayLabel} · Created {createdDate} · Last updated {lastUpdated}
@@ -784,14 +819,11 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
         ) : (
           <Link href={'/report?id=' + reportId + '&portal=1'} className="portal-flow-btn portal-flow-btn-primary">View Full Report</Link>
         )}
-        {variant === 'redesigned' ? (
-          <Link href={`/diagnostic?edit=${encodeURIComponent(reportId)}&email=${encodeURIComponent(email)}&editRedesign=1`} className="portal-flow-btn">Human redesign</Link>
-        ) : (
-          <Link href={`/diagnostic?edit=${encodeURIComponent(reportId)}&email=${encodeURIComponent(email)}`} className="portal-flow-btn">Edit</Link>
-        )}
-        <button type="button" onClick={() => handleRedesign(reportId, { regenerate: variant === 'redesigned' })} className="portal-flow-btn portal-flow-btn-primary" disabled={redesigningId === reportId}>
-          {redesigningId === reportId ? (redesignProgress || 'Generating…') : variant === 'redesigned' ? 'Regenerate AI' : 'AI redesign'}
-        </button>
+        <Link href={`/process-audit?edit=${encodeURIComponent(reportId)}&email=${encodeURIComponent(email)}`} className="portal-flow-btn">Edit</Link>
+        <Link href={`/process-audit?reaudit=${encodeURIComponent(reportId)}`} className="portal-flow-btn" title="Run a new audit and compare results to this one">Re-audit</Link>
+        <Link href={`/process-audit?edit=${encodeURIComponent(reportId)}&email=${encodeURIComponent(email)}${variant === 'redesigned' ? '&editRedesign=1' : ''}&aiRedesign=1`} className="portal-flow-btn portal-flow-btn-primary">
+          {variant === 'redesigned' ? 'Redesign with AI' : 'AI redesign'}
+        </Link>
         {variant === 'redesigned' && isAccepted && (() => {
           const acceptedV = (r.redesignVersions || []).find((v) => v.status === 'accepted');
           return acceptedV ? (
@@ -818,8 +850,18 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
         <span className="portal-report-labels">
           <span className={'process-tag ' + s.tag}>{s.tagText}</span>
           {hasRedesign && <span className={`process-redesign-tag ${isAccepted ? '' : 'pending'}`}>{isAccepted ? 'Redesigned' : 'Redesign Pending'}</span>}
-          {costAnalysisPending && <span className="process-tag cost-analysis-pending-tag">Pending cost analysis</span>}
+          {hasRedesign && r.redesignVersions?.length > 0 && <span className="portal-version-badge">{r.redesignVersions.length} version{r.redesignVersions.length > 1 ? 's' : ''}</span>}
+          {costAnalysisPending && <span className="process-tag cost-analysis-pending-tag" title="A consultant is working on the cost model for this report">Pending cost analysis</span>}
         </span>
+        {costAnalysisComplete && costEditUrl && isCostAuthorized && (
+          <Link
+            href={costEditUrl}
+            className="portal-flow-btn portal-cost-edit-btn"
+            onClick={e => e.stopPropagation()}
+          >
+            View/Edit Costs
+          </Link>
+        )}
         <span className="portal-report-settings-wrap" ref={settingsOpenId === r.id ? settingsOpenRef : null}>
           <button
             type="button"
@@ -843,7 +885,7 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
                   onClick={handleCopyCostLink}
                   title="Copy cost analysis link to send to manager"
                 >
-                  {costLinkCopiedId === r.id ? 'Copied!' : 'Send link to manager'}
+                  {costLinkCopiedId === r.id ? 'Copied!' : 'Setup Costs'}
                 </button>
               )}
               <button type="button" className="portal-flow-btn danger compact" onClick={() => handleDeleteClick(r.id)} disabled={isDeleting}>
@@ -924,42 +966,18 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
             const costEditUrl = r.id ? (hasCostToken ? `/cost-analysis?id=${r.id}&token=${encodeURIComponent(r.costAnalysisToken)}` : `/cost-analysis?id=${r.id}`) : null;
 
             const tabs = [];
-            if (showCostData) {
-              tabs.push({
-                id: 'cost',
-                label: 'Cost summary',
-                badge: formatCurrency(procAnnualCost),
-                content: (
-                  <div className="portal-process-cost-section">
-                    <div className="portal-process-cost-cards">
-                      <div className="portal-process-cost-card">
-                        <div className="portal-process-cost-label">Annual cost</div>
-                        <div className="portal-process-cost-value">{formatCurrency(procAnnualCost)}</div>
-                      </div>
-                      <div className="portal-process-cost-card portal-process-cost-card-success">
-                        <div className="portal-process-cost-label">Potential savings</div>
-                        <div className="portal-process-cost-value">{formatCurrency(procPotentialSavings)}</div>
-                      </div>
-                    </div>
-                    <Link href={costEditUrl} className="portal-flow-btn portal-edit-costs-btn">
-                      Edit costs
-                    </Link>
-                  </div>
-                ),
-              });
-            }
             tabs.push({
               id: 'current',
               label: currentLabel,
               badge: `${stepCount} steps`,
-              content: <ProcessFlowPanel proc={rp} actions={buildFlowActions(r.id, 'current')} automationPct={currentAuto} darkTheme={darkTheme} />,
+              content: <ProcessFlowPanel proc={rp} actions={buildFlowActions(r.id, 'current')} automationPct={currentAuto} darkTheme={darkTheme} reportId={r.id} processIndex={rpi} accessToken={accessToken} />,
             });
             if (redesignedProc) {
               tabs.push({
                 id: 'redesigned',
                 label: redesignLabel,
                 badge: `${redesignStepCount} steps`,
-                content: <ProcessFlowPanel proc={redesignedProc} actions={buildFlowActions(r.id, 'redesigned')} automationPct={redesignAuto} darkTheme={darkTheme} />,
+                content: <ProcessFlowPanel proc={redesignedProc} actions={buildFlowActions(r.id, 'redesigned')} automationPct={redesignAuto} darkTheme={darkTheme} reportId={r.id} processIndex={rpi} redesignId={activeRedesignId} accessToken={accessToken} />,
               });
             }
             if (hasRedesign) {
@@ -979,18 +997,66 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
                 ),
               });
             }
+            tabs.push({
+              id: 'instances',
+              label: 'Instances',
+              badge: null,
+              content: (
+                <div className="portal-instances-tab">
+                  {instancesLoading ? (
+                    <div className="portal-loading-sm">Loading instance data…</div>
+                  ) : !instanceData || Object.keys(instanceData.processes || {}).length === 0 ? (
+                    <div className="portal-instances-empty">
+                      <p>No process instances logged yet.</p>
+                      <p className="portal-instances-hint">Use the tracking API to log process runs and measure real-world performance after implementation.</p>
+                    </div>
+                  ) : (
+                    <div className="portal-instances-grid">
+                      {Object.entries(instanceData.processes).map(([name, stats]) => (
+                        <div key={name} className="portal-instance-card">
+                          <div className="portal-instance-name">{name}</div>
+                          <div className="portal-instance-stats">
+                            <span className="portal-instance-stat"><strong>{stats.totalInstances}</strong> runs</span>
+                            <span className="portal-instance-stat portal-instance-stat--success"><strong>{stats.completed}</strong> done</span>
+                            {stats.stuck > 0 && <span className="portal-instance-stat portal-instance-stat--warn"><strong>{stats.stuck}</strong> stuck</span>}
+                            {instanceData.avgCompletionDays > 0 && <span className="portal-instance-stat"><strong>{instanceData.avgCompletionDays}d</strong> avg</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ),
+            });
 
             return (
               <div key={rpi} className="portal-process-detail-block">
                 {tabs.length > 0 ? (
-                  <ProcessDetailTabs tabs={tabs} defaultTab={tabs[0].id} />
+                  <ProcessDetailTabs
+                    tabs={tabs}
+                    defaultTab={tabs[0].id}
+                    onTabChange={(tabId) => { if (tabId === 'instances') fetchInstances(r.id); }}
+                  />
                 ) : null}
                 {!redesignedProc && !hasRedesign && (
                   <div className="portal-no-redesign-hint">
                     No redesigned flow yet.{' '}
                     <button type="button" className="portal-flow-btn portal-flow-btn-primary inline" onClick={() => handleRedesign(r.id)} disabled={redesigningId === r.id}>
-                      {redesigningId === r.id ? (redesignProgress || 'Generating…') : 'AI redesign'}
+                      {redesigningId === r.id ? 'Generating…' : 'AI redesign'}
                     </button>
+                    {redesigningId === r.id && (
+                      <div className="portal-redesign-progress">
+                        <div className="portal-redesign-progress-bar"><div className="portal-redesign-progress-fill" /></div>
+                        {redesignProgress && <span className="portal-redesign-progress-msg">{redesignProgress}</span>}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {redesignError?.reportId === r.id && (
+                  <div className="portal-redesign-error">
+                    <span>{redesignError.message}</span>
+                    <button type="button" onClick={() => { setRedesignError(null); handleRedesign(r.id); }}>Retry</button>
+                    <button type="button" onClick={() => setRedesignError(null)}>✕</button>
                   </div>
                 )}
               </div>
@@ -1000,17 +1066,47 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
           {hasRedesign && rawProcs.length === 0 && redesignSource.processes.map((ap, api) => {
             const label = redesignSource.processes.length > 1 ? `P${api + 1} Redesigned Flow \u2014 ${ap.processName || `Process ${api + 1}`}` : 'Redesigned Flow';
             const tabs = [
-              { id: 'redesigned', label, badge: `${(ap.steps || []).length} steps`, content: <ProcessFlowPanel proc={ap} actions={buildFlowActions(r.id, 'redesigned')} darkTheme={darkTheme} /> },
+              { id: 'redesigned', label, badge: `${(ap.steps || []).length} steps`, content: <ProcessFlowPanel proc={ap} actions={buildFlowActions(r.id, 'redesigned')} darkTheme={darkTheme} reportId={r.id} processIndex={api} redesignId={activeRedesignId} accessToken={accessToken} /> },
               { id: 'comparison', label: 'Redesign Comparison', badge: null, content: (
                 <div className="portal-redesign-comparison-content">
                   <p className="portal-comparison-hint">Metric progression: current design → redesigned</p>
                   <PortalComparisonTab processes={comparisonData} redesignVersions={redesignVersions} totalAnnualCost={r.metrics?.totalAnnualCost} />
                 </div>
               ) },
+              { id: 'instances', label: 'Instances', badge: null, content: (
+                <div className="portal-instances-tab">
+                  {instancesLoading ? (
+                    <div className="portal-loading-sm">Loading instance data…</div>
+                  ) : !instanceData || Object.keys(instanceData.processes || {}).length === 0 ? (
+                    <div className="portal-instances-empty">
+                      <p>No process instances logged yet.</p>
+                      <p className="portal-instances-hint">Use the tracking API to log process runs and measure real-world performance after implementation.</p>
+                    </div>
+                  ) : (
+                    <div className="portal-instances-grid">
+                      {Object.entries(instanceData.processes).map(([name, stats]) => (
+                        <div key={name} className="portal-instance-card">
+                          <div className="portal-instance-name">{name}</div>
+                          <div className="portal-instance-stats">
+                            <span className="portal-instance-stat"><strong>{stats.totalInstances}</strong> runs</span>
+                            <span className="portal-instance-stat portal-instance-stat--success"><strong>{stats.completed}</strong> done</span>
+                            {stats.stuck > 0 && <span className="portal-instance-stat portal-instance-stat--warn"><strong>{stats.stuck}</strong> stuck</span>}
+                            {instanceData.avgCompletionDays > 0 && <span className="portal-instance-stat"><strong>{instanceData.avgCompletionDays}d</strong> avg</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) },
             ];
             return (
               <div key={api} className="portal-process-detail-block">
-                <ProcessDetailTabs tabs={tabs} defaultTab="redesigned" />
+                <ProcessDetailTabs
+                  tabs={tabs}
+                  defaultTab="redesigned"
+                  onTabChange={(tabId) => { if (tabId === 'instances') fetchInstances(r.id); }}
+                />
               </div>
             );
           })}
@@ -1036,7 +1132,7 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
     <div className="portal-viewport">
       <header className="dashboard-header">
         <div className="header-left">
-          <Link href="/" className="header-logo">Sharpin<span className="header-logo-dot">.</span></Link>
+          <Link href="/" className="header-logo">Vesno<span className="header-logo-dot">.</span></Link>
           <div className="header-divider" />
           <span className="header-title">Client Portal</span>
         </div>
@@ -1064,16 +1160,6 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
             <button
               type="button"
               role="tab"
-              aria-selected={activeSection === 'team'}
-              className={`portal-section-tab ${activeSection === 'team' ? 'active' : ''}`}
-              onClick={() => setActiveSection('team')}
-            >
-              Team Alignment
-              {teamSessions.length > 0 && <span className="portal-section-tab-badge">{teamSessions.length}</span>}
-            </button>
-            <button
-              type="button"
-              role="tab"
               aria-selected={activeSection === 'processes'}
               className={`portal-section-tab ${activeSection === 'processes' ? 'active' : ''}`}
               onClick={() => setActiveSection('processes')}
@@ -1093,61 +1179,11 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
           </nav>
 
           <main className="portal-content">
-            {activeSection === 'team' && (
-              <div className="dash-card portal-content-card">
-                <div className="portal-content-header">
-                  <h2 className="portal-content-title">Team Alignment</h2>
-                  <Link href="/diagnostic" className="dash-card-action">+ New Team Session</Link>
-                </div>
-                <div className="portal-team-list">
-                  {teamSessions.length === 0 ? (
-                    <div className="portal-empty">
-                      <p>No team sessions yet.</p>
-                      <Link href="/diagnostic" className="portal-empty-cta">Start a team session &rarr;</Link>
-                    </div>
-                  ) : (
-                    teamSessions.map((t) => {
-                      const showConfirm = confirmDeleteTeamId === t.teamCode;
-                      const isDeleting = deletingTeamId === t.teamCode;
-                      return (
-                        <div key={t.id} className="portal-team-item-wrap">
-                          <Link href={`/team-results?code=${t.teamCode}`} className="portal-team-item">
-                            <span className="portal-team-dot process-dot green" />
-                            <span className="portal-team-detail">
-                              <strong>{t.processName}</strong>
-                              {t.company && <span className="portal-team-meta">  -  {t.company}</span>}
-                            </span>
-                            <span className="portal-team-code">{t.teamCode}</span>
-                            <span className="portal-team-arrow">→</span>
-                          </Link>
-                          <span className="portal-team-actions">
-                            {showConfirm ? (
-                              <>
-                                <span className="portal-delete-confirm-label">Delete this team session?</span>
-                                <button type="button" className="portal-flow-btn danger compact" onClick={() => handleDeleteTeamConfirm(t.teamCode)} disabled={isDeleting}>
-                                  {isDeleting ? 'Deleting...' : 'Yes, delete'}
-                                </button>
-                                <button type="button" className="portal-flow-btn compact" onClick={(e) => handleDeleteTeamClick(t.teamCode, e)}>Cancel</button>
-                              </>
-                            ) : (
-                              <button type="button" className="portal-flow-btn danger compact" onClick={(e) => handleDeleteTeamClick(t.teamCode, e)} disabled={isDeleting} title="Delete team session">
-                                Delete
-                              </button>
-                            )}
-                          </span>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            )}
-
             {activeSection === 'processes' && (
               <div className="dash-card portal-content-card">
                 <div className="portal-content-header">
                   <h2 className="portal-content-title">Your Processes</h2>
-                  <Link href="/diagnostic" className="dash-card-action">+ New Diagnostic</Link>
+                  <Link href="/process-audit" className="dash-card-action">+ New Process Audit</Link>
                 </div>
                 <nav className="portal-process-type-tabs" role="tablist">
                   <button
@@ -1178,21 +1214,45 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
                     Comprehensive ({comprehensiveCount})
                   </button>
                 </nav>
+                {reportList.some(r => r.segment) && (
+                  <nav className="portal-process-type-tabs" role="tablist" style={{ marginTop: 8 }}>
+                    {[
+                      { id: 'all', label: 'All contexts' },
+                      { id: 'scaling', label: 'Scaling', color: SEGMENT_META.scaling.color },
+                      { id: 'ma', label: 'M&A', color: SEGMENT_META.ma.color },
+                      { id: 'pe', label: 'PE', color: SEGMENT_META.pe.color },
+                      { id: 'highstakes', label: 'High-stakes', color: SEGMENT_META.highstakes.color },
+                    ].filter(t => t.id === 'all' || reportList.some(r => r.segment === t.id)).map(t => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={segmentFilter === t.id}
+                        className={`portal-process-type-tab ${segmentFilter === t.id ? 'active' : ''}`}
+                        onClick={() => setSegmentFilter(t.id)}
+                        style={t.color && segmentFilter === t.id ? { borderColor: t.color, color: t.color } : t.color ? { color: t.color } : {}}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </nav>
+                )}
                 <div className="portal-process-list-scroll">
                   {loading ? (
                     <div className="portal-loading"><div className="spinner" /><p>Loading your reports...</p></div>
                   ) : reportList.length === 0 ? (
                     <div className="portal-empty">
-                      <p>No diagnostics yet.</p>
-                      <Link href="/diagnostic" className="portal-empty-cta">Start your first diagnostic &rarr;</Link>
+                      <p>No process audits yet.</p>
+                      <Link href="/process-audit" className="portal-empty-cta">Start your first process audit &rarr;</Link>
                     </div>
                   ) : filteredReportList.length === 0 ? (
                     <div className="portal-empty">
                       <p>
-                        {processTypeFilter === 'process-only' && 'No process-only diagnostics.'}
-                        {processTypeFilter === 'comprehensive' && 'No comprehensive reviews.'}
+                        {processTypeFilter === 'process-only' && 'No process-only audits.'}
+                        {processTypeFilter === 'comprehensive' && 'No comprehensive audits.'}
+                        {segmentFilter !== 'all' && ` No ${SEGMENT_META[segmentFilter]?.label || segmentFilter} audits.`}
                       </p>
-                      <Link href="/diagnostic" className="portal-empty-cta">Start a diagnostic &rarr;</Link>
+                      <Link href="/process-audit" className="portal-empty-cta">Start a process audit &rarr;</Link>
                     </div>
                   ) : (
                     <>
@@ -1279,7 +1339,7 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
           </div>
         )}
       <footer className="portal-footer">
-        <Link href="/">Sharpin</Link> &middot; Technology-agnostic process optimisation
+        <Link href="/">Vesno</Link> &middot; Technology-agnostic process optimisation
       </footer>
     </div>
   );

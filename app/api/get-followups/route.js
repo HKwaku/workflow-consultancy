@@ -6,8 +6,8 @@ import { logger } from '@/lib/logger';
 
 const FOLLOWUP_CONFIG = {
   day3: {
-    subject: 'Quick check-in on your diagnostic results',
-    message: 'Hi {name}, it\'s been a few days since you completed your workflow diagnostic. Have you had a chance to review your results? Your report is still available and includes actionable insights you can start implementing today.',
+    subject: 'Quick check-in on your process audit results',
+    message: 'Hi {name}, it\'s been a few days since you completed your process audit. Have you had a chance to review your results? Your report is still available and includes actionable insights you can start implementing today.',
   },
   day14: {
     subject: 'Your quick wins are waiting  -  let\'s make them happen',
@@ -15,7 +15,7 @@ const FOLLOWUP_CONFIG = {
   },
   day30: {
     subject: 'Your 90-day roadmap  -  time to put it into action',
-    message: 'Hi {name}, a month has passed since your diagnostic. Your personalised 90-day transformation plan is designed to deliver measurable results within the first quarter. Let\'s schedule a strategy session to get started.',
+    message: 'Hi {name}, a month has passed since your process audit. Your personalised 90-day transformation plan is designed to deliver measurable results within the first quarter. Let\'s schedule a strategy session to get started.',
   },
 };
 
@@ -33,7 +33,7 @@ export async function GET(request) {
   const auth = requireFollowupAuth(request);
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: 401 });
 
-  const rl = checkRateLimit(getRateLimitKey(request));
+  const rl = await checkRateLimit(getRateLimitKey(request));
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
 
   try {
@@ -42,8 +42,9 @@ export async function GET(request) {
     const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
     const now = new Date().toISOString();
+    // Embed contact info from diagnostic_reports via FK rather than storing it on the row
     const resp = await fetchWithTimeout(
-      `${supabaseUrl}/rest/v1/followup_events?status=eq.pending&scheduled_for=lte.${encodeURIComponent(now)}&select=id,report_id,contact_email,contact_name,company,followup_type&order=scheduled_for.asc&limit=100`,
+      `${supabaseUrl}/rest/v1/followup_events?status=eq.pending&scheduled_for=lte.${encodeURIComponent(now)}&select=id,report_id,contact_email,followup_type,diagnostic_reports(contact_name,company)&order=scheduled_for.asc&limit=100`,
       { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
     );
     if (!resp.ok) return NextResponse.json({ error: 'Failed to fetch follow-ups.' }, { status: 502 });
@@ -56,13 +57,14 @@ export async function GET(request) {
 
     const followups = rows.map((row) => {
       const cfg = FOLLOWUP_CONFIG[row.followup_type] || FOLLOWUP_CONFIG.day3;
-      const name = row.contact_name || 'there';
+      const report = row.diagnostic_reports || {};
+      const name = report.contact_name || 'there';
       return {
         id: row.id,
         reportId: row.report_id,
         email: row.contact_email,
         name,
-        company: row.company || '',
+        company: report.company || '',
         followupType: row.followup_type,
         subject: cfg.subject,
         message: cfg.message.replace(/\{name\}/g, name),
@@ -82,7 +84,7 @@ export async function POST(request) {
   const auth = requireFollowupAuth(request);
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: 401 });
 
-  const rl = checkRateLimit(getRateLimitKey(request));
+  const rl = await checkRateLimit(getRateLimitKey(request));
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
 
   const contentLength = parseInt(request.headers.get('content-length') || '0', 10);

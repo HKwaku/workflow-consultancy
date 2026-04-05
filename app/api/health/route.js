@@ -4,7 +4,7 @@ import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 
 export async function GET(request) {
-  const rl = checkRateLimit(getRateLimitKey(request));
+  const rl = await checkRateLimit(getRateLimitKey(request));
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
   const requestId = getRequestId(request);
   const checks = { ok: true, timestamp: new Date().toISOString() };

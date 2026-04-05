@@ -17,6 +17,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { processToReactFlow, recomputeSwimlaneLanesFromNodes, SWIMLANE_CONSTANTS } from '@/lib/flows/processToReactFlow';
 import { AUTOMATION_CATEGORIES } from '@/lib/flows/automation';
+import { resolveBranchTarget } from '@/lib/flows/shared';
 import { StartNode, EndNode, StepNode, DecisionNode, MergeNode, LaneLabelNode, LaneSeparatorNode } from './FlowNodes';
 import DecisionBranchEdge from './DecisionBranchEdge';
 import DeletableEdge from './DeletableEdge';
@@ -110,7 +111,7 @@ function SwimlaneLabelsPanel({ lanes, layoutHeight, darkTheme }) {
               boxSizing: 'border-box',
             }}
           >
-            {lane.dept || 'Department'}
+            {lane.dept || 'Team'}
           </div>
         ))}
       </div>
@@ -214,8 +215,13 @@ function FlowCanvasInner({
     return recomputeSwimlaneLanesFromNodes(nodes, lanes);
   }, [isSwimlane, nodes, lanes, layoutHeight]);
 
-  const typeSignature = (process?.steps || []).map((s) => s.isMerge ? 'M' : s.isDecision ? (s.parallel ? 'P' : 'D') : 'S').join('');
-  const layoutKey = `${process?.steps?.length ?? 0}-${layout}-${maxCols}`;
+  const typeSignature = (process?.steps || []).map((s) => s.isMerge ? 'M' : s.isDecision ? (s.parallel ? 'P' : s.inclusive ? 'I' : 'D') : 'S').join('');
+  // In swimlane mode, include department assignments in layoutKey so that changing
+  // a step's team triggers a full re-layout placing the node in the correct lane.
+  const deptSignature = layout === 'swimlane'
+    ? (process?.steps || []).map((s) => s.department || '').join('\x01')
+    : '';
+  const layoutKey = `${process?.steps?.length ?? 0}-${layout}-${maxCols}${deptSignature ? '-' + deptSignature : ''}`;
   const structureKey = `${layoutKey}-${typeSignature}`;
   const structureKeyRef = useRef(structureKey);
   const layoutKeyRef = useRef(layoutKey);
@@ -267,6 +273,7 @@ function FlowCanvasInner({
       // Layout or step-count changed: apply stored offsets on top of the new
       // layout's initial positions so manual adjustments carry across views.
       const sp = storedPositionsRef.current;
+
       const withOffsets = initialNodesRef.current.map((initN) => {
         const stored = sp?.[initN.id];
         if (stored && (stored.dx != null || stored.dy != null)) {
@@ -274,15 +281,16 @@ function FlowCanvasInner({
             ...initN,
             position: {
               x: initN.position.x + (stored.dx ?? 0),
-              y: initN.position.y + (stored.dy ?? 0),
+              // In swimlane mode, lanes control vertical positioning — don't apply dy.
+              // Grid-mode Y offsets would push nodes above lane.y + LANE_PAD, causing
+              // recomputeSwimlaneLanesFromNodes to unnecessarily expand lane heights.
+              y: initN.position.y + (isSwimlaneRef.current ? 0 : (stored.dy ?? 0)),
             },
           };
         }
         return initN;
       });
-      // In swimlane mode, also recompute lane separators so nodes that land
-      // outside their lane bounds (due to offsets from another layout) expand
-      // the lane to contain them rather than appearing in the wrong row.
+      // In swimlane mode, recompute lane separators to match node positions.
       let nodesToSet;
       if (isSwimlaneRef.current && lanesRef.current?.length) {
         nodesToSet = applySwimlaneLayout(withOffsets, lanesRef.current);
@@ -291,13 +299,20 @@ function FlowCanvasInner({
       }
       setNodes(nodesToSet);
     } else {
-      // Only node-type changed (e.g. step→decision): keep current dragged positions.
-      setNodes((prev) =>
-        initialNodesRef.current.map((initN) => {
+      // Only node-type changed (e.g. step→decision, exclusive→parallel):
+      // keep current dragged positions but refresh node data.
+      setNodes((prev) => {
+        const next = initialNodesRef.current.map((initN) => {
           const cur = prev.find((p) => p.id === initN.id);
           return cur ? { ...initN, position: cur.position } : initN;
-        })
-      );
+        });
+        // In swimlane mode, re-fit lane separators to actual node positions so
+        // lanes don't desync from step positions after a type change.
+        if (isSwimlaneRef.current && lanesRef.current?.length) {
+          return applySwimlaneLayout(next, lanesRef.current);
+        }
+        return next;
+      });
     }
   }, [structureKey, setNodes]);
 
@@ -346,7 +361,7 @@ function FlowCanvasInner({
             const draggedNode = nextNodes.find((n) => n.id === activeDrag.id);
             const dept = draggedNode?.data?.department;
             if (draggedNode && dept != null) {
-              const nodeH = draggedNode.data?.isDecision ? SWIMLANE_CONSTANTS.DIAMOND_W : SWIMLANE_CONSTANTS.NODE_H;
+              const nodeH = draggedNode.type === 'decision' ? SWIMLANE_CONSTANTS.DIAMOND_W : draggedNode.type === 'merge' ? SWIMLANE_CONSTANTS.MERGE_H : SWIMLANE_CONSTANTS.NODE_H;
               const centerY = draggedNode.position.y + nodeH / 2;
               const inForeignLane = oldLanes.some((l) => l.dept !== dept && centerY >= l.y && centerY <= l.y + l.h);
               setOutsideLaneWarning(inForeignLane);
@@ -373,16 +388,25 @@ function FlowCanvasInner({
 
       const positionChanges = changes.filter((c) => c.type === 'position' && c.dragging === false);
       if (positionChanges.length > 0 && onPositionsChange) {
-        // Store offsets (dx/dy from initial position) so the same adjustment
-        // applies regardless of which layout is active.
-        const offsets = {};
+        // Only update offsets for nodes the user actually dragged.
+        // In swimlane mode, non-dragged nodes are cascade-shifted to track their lane —
+        // saving those shifted positions as offsets would cause lane heights to grow
+        // permanently on every drag, since the offsets would re-push nodes outside
+        // their lane bounds on the next load.
+        const draggedIds = new Set(positionChanges.map((c) => c.id));
+        const offsets = { ...(storedPositionsRef.current || {}) };
         effectiveNodes.forEach((n) => {
-          if (n.position && (n.type === 'step' || n.type === 'decision' || n.type === 'merge')) {
-            const initN = initialNodesRef.current.find((p) => p.id === n.id);
-            offsets[n.id] = initN
-              ? { dx: n.position.x - initN.position.x, dy: n.position.y - initN.position.y }
-              : { dx: 0, dy: 0 };
-          }
+          if (!n.position || !(n.type === 'step' || n.type === 'decision' || n.type === 'merge')) return;
+          if (!draggedIds.has(n.id)) return; // preserve existing offset for non-dragged nodes
+          const initN = initialNodesRef.current.find((p) => p.id === n.id);
+          offsets[n.id] = initN
+            ? {
+                dx: n.position.x - initN.position.x,
+                // Don't store dy in swimlane — lanes control Y, and stored dy would
+                // be ignored on re-apply anyway (see withOffsets above).
+                dy: isSwimlane ? 0 : n.position.y - initN.position.y,
+              }
+            : { dx: 0, dy: 0 };
         });
         onPositionsChange(offsets, layout);
       }
@@ -395,10 +419,6 @@ function FlowCanvasInner({
     [nodes, setNodes, isSwimlane, lanes, onPositionsChange, onDeleteNode]
   );
 
-  // Keep isValidConnection lightweight — only self-loops and exact duplicates are
-  // rejected here. This function runs during drag to show the green/red preview;
-  // heavy business-logic here would silently block every drag because auto-generated
-  // edges already fill all step slots.
   const isValidConnection = useCallback(
     (connection) => {
       if (!connection?.source || !connection?.target) return false;
@@ -410,9 +430,24 @@ function FlowCanvasInner({
                (e.sourceHandle || 'right') === (connection.sourceHandle || 'right') &&
                (e.targetHandle || 'left')  === (connection.targetHandle  || 'left')
       );
-      return !dup;
+      if (dup) return false;
+      // Non-decision source nodes may only have one outgoing edge,
+      // unless they are connecting to the end node (branch terminals can always point to end).
+      const srcNode = nodes.find((n) => n.id === connection.source);
+      const tgtIsEnd = connection.target === 'end';
+      if (srcNode?.type !== 'decision' && !tgtIsEnd) {
+        const outgoing = edges.filter((e) => e.source === connection.source).length;
+        if (outgoing >= 1) return false;
+      }
+      // Non-merge/end target nodes may only have one incoming edge
+      const tgtNode = nodes.find((n) => n.id === connection.target);
+      if (tgtNode?.type !== 'merge' && tgtNode?.type !== 'end') {
+        const incoming = edges.filter((e) => e.target === connection.target).length;
+        if (incoming >= 1) return false;
+      }
+      return true;
     },
-    [edges]
+    [edges, nodes]
   );
 
   const handleConnect = useCallback(
@@ -483,13 +518,16 @@ function FlowCanvasInner({
     [customEdges, onCustomEdgesChange, deletedEdges, onDeletedEdgesChange, setEdges]
   );
 
-  const canAddBetween = useCallback((sourceId, targetId) => {
+  const canAddBetween = useCallback((sourceId, targetId, isCustomEdge = false, isDecisionEdge = false) => {
     const m = sourceId?.match(/^step-(\d+)$/);
     const n = targetId?.match(/^step-(\d+)$/);
     if (!m || !n) return false;
     const si = parseInt(m[1], 10);
     const ti = parseInt(n[1], 10);
-    return si >= 0 && ti >= 0 && Math.abs(si - ti) === 1;
+    if (si < 0 || ti < 0) return false;
+    // Custom edges, decision branch edges, and merge edges can span non-consecutive
+    // indices — always allow insertion on them
+    return isCustomEdge || isDecisionEdge || Math.abs(si - ti) === 1;
   }, []);
 
   const handleAddNodeBetween = useCallback(
@@ -499,9 +537,18 @@ function FlowCanvasInner({
       if (!m || !n || !onAddNodeBetween) return;
       const si = parseInt(m[1], 10);
       const ti = parseInt(n[1], 10);
-      const insertIdx = Math.min(si, ti) + 1;
+      const srcNode = nodes.find((nd) => nd.id === sourceId);
+      const tgtNode = nodes.find((nd) => nd.id === targetId);
+      const isDecisionSource = srcNode?.type === 'decision';
+      // For decision branch and merge edges the source/target may not be consecutive.
+      // Insert at the target's index so the new node takes the target's position.
+      const isMergeTarget = tgtNode?.type === 'merge';
+      const insertIdx = isDecisionSource || isMergeTarget ? ti : Math.min(si, ti) + 1;
+
       const edgeId = edges.find((e) => e.source === sourceId && e.target === targetId)?.id;
-      if (edgeId) {
+      // Fix 3: don't touch edges when inserting after a decision/parallel node —
+      // branch connections must stay intact so the user can rewire manually.
+      if (edgeId && !isDecisionSource) {
         const isCustom = edgeId?.startsWith('e-custom-');
         if (isCustom && onCustomEdgesChange) {
           const toId = (c) => `e-custom-${c.source}-${c.target}-${c.sourceHandle || 'r'}-${c.targetHandle || 'l'}`;
@@ -511,22 +558,11 @@ function FlowCanvasInner({
         // regenerates e-seq-si-(si+1) pointing source→new step (same ID), so it must not be blocked.
         setEdges((eds) => eds.filter((e) => e.id !== edgeId));
       }
-      const srcNode = nodes.find((nd) => nd.id === sourceId);
-      const tgtNode = nodes.find((nd) => nd.id === targetId);
-      const NODE_W = 100;
-      let midPos = null;
-      if (srcNode?.position && tgtNode?.position) {
-        const srcRight = srcNode.position.x + NODE_W;
-        const tgtLeft = tgtNode.position.x;
-        const gapCenterX = (srcRight + tgtLeft) / 2;
-        const idealX = gapCenterX - NODE_W / 2;
-        const newX = Math.max(srcRight, Math.min(idealX, tgtLeft - NODE_W));
-        midPos = {
-          x: newX,
-          y: (srcNode.position.y + tgtNode.position.y) / 2,
-        };
-      }
-      onAddNodeBetween(insertIdx, midPos);
+
+      // processToReactFlow handles all layout automatically after insertion —
+      // the new node takes the target's former slot and subsequent nodes shift
+      // one position right. No position override or shiftX needed here.
+      onAddNodeBetween(insertIdx, isDecisionSource);
     },
     [nodes, edges, customEdges, onCustomEdgesChange, deletedEdges, onDeletedEdgesChange, onAddNodeBetween, setEdges]
   );
@@ -536,7 +572,9 @@ function FlowCanvasInner({
     return edges.map((e) => {
       const sourceId = e.source;
       const targetId = e.target;
-      const showAddBetween = onAddNodeBetween && canAddBetween(sourceId, targetId);
+      const isCustomEdge = e.id?.startsWith('e-custom-');
+      const isDecisionEdge = e.type === 'decisionBranch' || e.id?.startsWith('e-merge-');
+      const showAddBetween = onAddNodeBetween && canAddBetween(sourceId, targetId, isCustomEdge, isDecisionEdge);
       return {
         ...e,
         type: e.type === 'decisionBranch' ? 'decisionBranch' : e.type === 'wrapConnector' ? 'wrapConnector' : 'deletable',
@@ -592,6 +630,53 @@ function FlowCanvasInner({
       }
     },
     [onStepClick]
+  );
+
+  // When user starts dragging a decision node with nothing else selected,
+  // auto-select all nodes in that decision's section so they move as a group.
+  const handleSectionDragStart = useCallback(
+    (_, node) => {
+      if (node.type !== 'decision') return;
+      const selectedNodes = nodes.filter((n) => n.selected);
+      if (selectedNodes.length > 1) return; // user has a custom selection — don't override
+
+      const di = node.data?.stepIndex;
+      if (typeof di !== 'number') return;
+      const steps = process?.steps || [];
+      const decStep = steps[di];
+      if (!decStep?.isDecision || !decStep.branches?.length) return;
+
+      const sectionIds = new Set([`step-${di}`]);
+
+      const targets = decStep.branches
+        .map((b) => resolveBranchTarget(b.target || b.targetStep || '', steps))
+        .filter((t) => t >= 0 && t < steps.length);
+
+      const thisDecisionTargets = new Set(targets);
+
+      let maxTerminal = di;
+      targets.forEach((ti) => {
+        let cur = ti;
+        while (cur >= 0 && cur < steps.length) {
+          sectionIds.add(`step-${cur}`);
+          if (cur > maxTerminal) maxTerminal = cur;
+          const nxt = cur + 1;
+          if (nxt >= steps.length) break;
+          if (thisDecisionTargets.has(nxt)) break;
+          if (steps[nxt]?.isMerge) break;
+          cur = nxt;
+        }
+      });
+
+      // Include the merge or rejoin node immediately after the last branch node
+      const mergeOrRejoin = maxTerminal + 1;
+      if (mergeOrRejoin < steps.length) {
+        sectionIds.add(`step-${mergeOrRejoin}`);
+      }
+
+      setNodes((nds) => nds.map((n) => ({ ...n, selected: sectionIds.has(n.id) })));
+    },
+    [nodes, process, setNodes]
   );
 
   const handleResetPositions = useCallback(() => {
@@ -680,15 +765,19 @@ function FlowCanvasInner({
     <>
       <div className="flow-legend flow-legend-left" data-theme={darkTheme ? 'dark' : 'light'}>
         <span className="flow-legend-item">
-          <span className="flow-legend-symbol flow-legend-exclusive" title="Exclusive: one path chosen">◇</span>
+          <span className="flow-legend-symbol flow-legend-exclusive" title="Exclusive (XOR): exactly one path">◇</span>
           <span className="flow-legend-label">Exclusive</span>
         </span>
         <span className="flow-legend-item">
-          <span className="flow-legend-symbol flow-legend-parallel" title="Parallel: all paths run">⊕</span>
+          <span className="flow-legend-symbol flow-legend-parallel" title="Parallel (AND): all paths simultaneously">⊕</span>
           <span className="flow-legend-label">Parallel</span>
         </span>
         <span className="flow-legend-item">
-          <span className="flow-legend-symbol flow-legend-merge" title="Merge: parallel branches converge">⧉</span>
+          <span className="flow-legend-symbol flow-legend-inclusive" title="Inclusive (OR): one or more paths">◎</span>
+          <span className="flow-legend-label">Inclusive</span>
+        </span>
+        <span className="flow-legend-item">
+          <span className="flow-legend-symbol flow-legend-merge" title="Merge: branches converge">⧉</span>
           <span className="flow-legend-label">Merge</span>
         </span>
       </div>
@@ -735,6 +824,7 @@ function FlowCanvasInner({
       edgesReconnectable={!!onCustomEdgesChange}
       isValidConnection={isValidConnection}
       onNodeClick={onNodeClick}
+      onNodeDragStart={handleSectionDragStart}
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
       proOptions={proOptions}
@@ -748,6 +838,8 @@ function FlowCanvasInner({
       defaultEdgeOptions={{ type: 'default', zIndex: 1001 }}
       panOnScroll
       panOnScrollMode="free"
+      panOnDrag={[1, 2]}
+      selectionOnDrag={true}
       nodesConnectable={true}
       deleteKeyCode={onDeleteNode ? ['Backspace', 'Delete'] : []}
       connectionMode="loose"

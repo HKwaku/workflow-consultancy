@@ -3,6 +3,7 @@ import { getSupabaseHeaders, getSupabaseWriteHeaders, fetchWithTimeout, requireS
 import { verifySupabaseSession } from '@/lib/auth';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
+import { triggerWebhook } from '@/lib/triggerWebhook';
 
 export async function GET(request) {
   const originErr = checkOrigin(request);
@@ -18,23 +19,28 @@ export async function GET(request) {
   if (!sbConfig) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
   const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
-  const sbResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${id}&select=id,contact_email,diagnostic_data`, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
+  const sbResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${id}&select=id,contact_email,cost_analysis_status,cost_analysis_token,cost_analysis_token_expires_at,diagnostic_data`, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
   if (!sbResp.ok) return NextResponse.json({ error: 'Report not found.' }, { status: 404 });
   const rows = await sbResp.json();
   if (!rows?.length) return NextResponse.json({ error: 'Report not found.' }, { status: 404 });
 
   const report = rows[0];
   const dd = report.diagnostic_data || {};
-  const storedToken = dd.costAnalysisToken || '';
+  // Prefer promoted column; fall back to blob for rows predating the migration
+  const storedToken = report.cost_analysis_token || dd.costAnalysisToken || '';
+  const tokenExpiresAt = report.cost_analysis_token_expires_at ? new Date(report.cost_analysis_token_expires_at) : null;
+  const tokenExpired = tokenExpiresAt && tokenExpiresAt < new Date();
+  const costAnalysisStatus = report.cost_analysis_status || dd.costAnalysisStatus || 'pending';
   const session = await verifySupabaseSession(request);
-  const isOwner = session && report.contact_email && report.contact_email.toLowerCase() === session.email.toLowerCase();
-  const hasValidToken = token && storedToken && token === storedToken;
+  const costAuthorizedEmails = (dd.costAuthorizedEmails || []).map(e => e.toLowerCase());
+  const isCostAuthorized = session && costAuthorizedEmails.includes(session.email.toLowerCase());
+  const hasValidToken = token && storedToken && token === storedToken && !tokenExpired;
 
-  if (!isOwner && !hasValidToken) {
-    return NextResponse.json({ error: 'Access denied. Use the link assigned to you by the report owner.', needsAuth: !session }, { status: 403 });
+  if (!isCostAuthorized && !hasValidToken) {
+    return NextResponse.json({ error: 'Access denied. Use the link assigned to you by the cost analyst.', needsAuth: !session }, { status: 403 });
   }
 
-  if (dd.costAnalysisStatus === 'complete' && !hasValidToken && !isOwner) {
+  if (costAnalysisStatus === 'complete' && !hasValidToken && !isCostAuthorized) {
     return NextResponse.json({ success: true, report: { id, costAnalysisStatus: 'complete', diagnosticData: dd }, redirectToReport: true });
   }
 
@@ -44,27 +50,15 @@ export async function GET(request) {
     const raw = rawProcesses[i] || {};
     const costs = raw.costs || {};
     const steps = raw.steps || [];
-    const autoScore = typeof dd.automationScore?.percentage === 'number'
-      ? dd.automationScore.percentage
-      : (() => {
-          const total = steps.length;
-          if (total === 0) return 50;
-          const manual = steps.filter(s => !s.isAutomated && !s.isDecision).length;
-          return Math.round((1 - manual / total) * 100);
-        })();
-    const suggestedSavingsPct = autoScore >= 75 ? 55
-      : autoScore >= 60 ? 40
-      : autoScore >= 40 ? 28
-      : autoScore >= 20 ? 18
-      : 12;
+    const stepWorkMins = steps.reduce((sum, s) => sum + (s.workMinutes || 0), 0);
+    const hoursFromSteps = stepWorkMins > 0 ? stepWorkMins / 60 : null;
     return {
       name: p.name || raw.processName,
-      hoursPerInstance: costs.hoursPerInstance ?? 4,
-      teamSize: costs.teamSize ?? 1,
-      annual: costs.annual ?? (raw.frequency?.annual ?? 12),
+      hoursPerInstance: hoursFromSteps || costs.hoursPerInstance || raw.hoursPerInstance || 4,
+      teamSize: costs.teamSize || raw.teamSize || 1,
+      annual: costs.annual || raw.frequency?.annual || raw.annual || 12,
       departments: [...new Set(steps.map(s => s.department).filter(Boolean))],
       systems: [...new Set(steps.flatMap(s => s.systems || []).filter(Boolean))],
-      suggestedSavingsPct,
     };
   });
 
@@ -75,14 +69,24 @@ export async function GET(request) {
   const finalDepartments = departmentsList.length > 0 ? departmentsList : ['Default'];
   const allSystems = [...new Set(rawProcesses.flatMap(p => (p.steps || []).flatMap(s => s.systems || []).filter(Boolean)))];
 
+  // Fetch all redesigns for this report (chronological)
+  const rdResp = await fetchWithTimeout(
+    `${supabaseUrl}/rest/v1/report_redesigns?report_id=eq.${id}&order=updated_at.asc&limit=10&select=id,redesign_data,status,name,updated_at`,
+    { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
+  );
+  const rdRows = rdResp.ok ? await rdResp.json() : [];
+  const latestRedesign = rdRows[rdRows.length - 1] || null;
+
   return NextResponse.json({
     success: true,
-    report: { id, costAnalysisStatus: dd.costAnalysisStatus || 'pending', diagnosticData: dd },
+    report: { id, costAnalysisStatus, diagnosticData: dd },
     processes,
     departments: finalDepartments,
     allSystems,
     existingCostAnalysis: existingCost || undefined,
     financialModel: dd.financialModel || undefined,
+    redesign: latestRedesign || undefined,
+    allRedesigns: rdRows.length > 0 ? rdRows : undefined,
   });
 }
 
@@ -90,7 +94,7 @@ export async function POST(request) {
   const originErr = checkOrigin(request);
   if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
 
-  const rl = checkRateLimit(getRateLimitKey(request));
+  const rl = await checkRateLimit(getRateLimitKey(request));
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests.' }, { status: 429 });
 
   let body;
@@ -104,7 +108,7 @@ export async function POST(request) {
   if (!sbConfig) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
   const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
-  const readResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}&select=id,contact_email,diagnostic_data`, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
+  const readResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}&select=id,contact_email,cost_analysis_status,cost_analysis_token,cost_analysis_token_expires_at,diagnostic_data`, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
   if (!readResp.ok) return NextResponse.json({ error: 'Report not found.' }, { status: 404 });
   const rows = await readResp.json();
   if (!rows?.length) return NextResponse.json({ error: 'Report not found.' }, { status: 404 });
@@ -112,13 +116,16 @@ export async function POST(request) {
   const report = rows[0];
   const dd = JSON.parse(JSON.stringify(report.diagnostic_data || {}));
 
-  const storedToken = dd.costAnalysisToken || '';
+  const storedToken = report.cost_analysis_token || dd.costAnalysisToken || '';
+  const tokenExpiresAt = report.cost_analysis_token_expires_at ? new Date(report.cost_analysis_token_expires_at) : null;
+  const tokenExpired = tokenExpiresAt && tokenExpiresAt < new Date();
   const session = await verifySupabaseSession(request);
-  const isOwner = session && report.contact_email && report.contact_email.toLowerCase() === session.email.toLowerCase();
-  const hasValidToken = token && storedToken && token === storedToken;
+  const costAuthorizedEmails = (dd.costAuthorizedEmails || []).map(e => e.toLowerCase());
+  const isCostAuthorized = session && costAuthorizedEmails.includes(session.email.toLowerCase());
+  const hasValidToken = token && storedToken && token === storedToken && !tokenExpired;
 
-  if (!isOwner && !hasValidToken) {
-    return NextResponse.json({ error: 'Access denied. Use the link assigned to you by the report owner.' }, { status: 403 });
+  if (!isCostAuthorized && !hasValidToken) {
+    return NextResponse.json({ error: tokenExpired ? 'This cost analysis link has expired.' : 'Access denied. Use the link assigned to you by the cost analyst.' }, { status: 403 });
   }
 
   const {
@@ -126,21 +133,41 @@ export async function POST(request) {
     blendedRate,
     onCostMultiplier,
     nonLabour,
-    processSavings,           // backward compat: base scenario values
-    scenarios,               // { conservative: {[i]: pct}, base: {[i]: pct}, optimistic: {[i]: pct} }
-    activeScenario: activeScen,
+    processSavings,
     implementationCost: implCostInput,
-    processCostDrivers,      // { [i]: { errorRate, waitCostPct } }
+    processCostDrivers,
     growthRate: growthRateInput,
+    currency: currencyInput,
   } = costAnalysis;
 
   const growthRate = Math.min(0.5, Math.max(0, Number(growthRateInput) || 0.05));
-  const activeScenario = ['conservative', 'base', 'optimistic'].includes(activeScen) ? activeScen : 'base';
+  const G10 = ['GBP', 'USD', 'EUR', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD', 'SEK', 'NOK'];
+  const currency = G10.includes(currencyInput) ? currencyInput : 'GBP';
   const implCost = implCostInput || {};
   const implTotal = (Number(implCost.platform) || 0) + (Number(implCost.setup) || 0) + (Number(implCost.training) || 0);
   const implMaintenance = Number(implCost.maintenanceAnnual) || 0;
 
   const rawProcesses = dd.rawProcesses || dd.processes || [];
+
+  // Fetch latest redesign to use its per-process savings estimates as fallback
+  let redesignSavingsMap = {};
+  try {
+    const rdFetch = await fetchWithTimeout(`${supabaseUrl}/rest/v1/report_redesigns?report_id=eq.${reportId}&order=updated_at.desc&limit=1&select=redesign_data`, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
+    if (rdFetch.ok) {
+      const rdRows = await rdFetch.json();
+      const rdData = rdRows[0]?.redesign_data;
+      if (rdData?.costSummary?.estimatedCostSavedPercent > 0) {
+        const globalPct = rdData.costSummary.estimatedCostSavedPercent;
+        (rdData.changes || []).forEach((ch, idx) => {
+          if (!redesignSavingsMap[idx] && ch.estimatedCostSavedPercent > 0) {
+            redesignSavingsMap[idx] = ch.estimatedCostSavedPercent;
+          }
+        });
+        // Apply global estimate to processes without a specific entry
+        rawProcesses.forEach((_, i) => { if (!redesignSavingsMap[i]) redesignSavingsMap[i] = globalPct; });
+      }
+    }
+  } catch { /* non-fatal */ }
 
   const rateByDept = (labourRates || []).reduce((acc, r) => {
     if (r.department && r.hourlyRate > 0) acc[r.department] = (r.hourlyRate || 0) * (r.utilisation ?? 1);
@@ -155,10 +182,13 @@ export async function POST(request) {
   const updatedProcesses = (dd.processes || []).map((p, i) => {
     const raw = rawProcesses[i] || {};
     const costs = raw.costs || {};
-    const hoursPerInstance = costs.hoursPerInstance ?? 4;
-    const teamSize = costs.teamSize ?? 1;
-    const annual = costs.annual ?? (raw.frequency?.annual ?? 12);
-    const depts = (raw.steps || []).map(s => s.department).filter(Boolean);
+    const steps = raw.steps || [];
+    const stepWorkMins = steps.reduce((sum, s) => sum + (s.workMinutes || 0), 0);
+    const hoursFromSteps = stepWorkMins > 0 ? stepWorkMins / 60 : null;
+    const hoursPerInstance = hoursFromSteps || costs.hoursPerInstance || raw.hoursPerInstance || 4;
+    const teamSize = costs.teamSize || raw.teamSize || 1;
+    const annual = costs.annual || raw.frequency?.annual || raw.annual || 12;
+    const depts = steps.map(s => s.department).filter(Boolean);
     const avgRate = depts.length > 0
       ? depts.reduce((sum, d) => sum + (rateByDept[d] ?? defaultRate), 0) / depts.length
       : defaultRate;
@@ -172,14 +202,8 @@ export async function POST(request) {
     const waitCost = annualLabour * waitCostPct;
     const trueAnnualCost = annualLabour + errorCost + waitCost;
 
-    // Scenario-based savings (use active scenario; fall back to processSavings for compat)
-    const baseSavingsPct = scenarios?.base?.[i] ?? processSavings?.[i] ?? raw.savings?.percent ?? 30;
-    const conservativeSavingsPct = scenarios?.conservative?.[i] ?? Math.round(baseSavingsPct * 0.65);
-    const optimisticSavingsPct = scenarios?.optimistic?.[i] ?? Math.min(80, Math.round(baseSavingsPct * 1.4));
-    const activeSavingsPct = activeScenario === 'conservative' ? conservativeSavingsPct
-      : activeScenario === 'optimistic' ? optimisticSavingsPct
-      : baseSavingsPct;
-    const potentialSavings = trueAnnualCost * (activeSavingsPct / 100);
+    const savingsPct = processSavings?.[i] ?? raw.savings?.percent ?? redesignSavingsMap[i] ?? 30;
+    const potentialSavings = trueAnnualCost * (savingsPct / 100);
 
     totalTrueLabour += annualLabour;
     totalHiddenCost += errorCost + waitCost;
@@ -199,7 +223,7 @@ export async function POST(request) {
     const updatedRaw = {
       ...raw,
       costs: updatedCosts,
-      savings: { ...(raw.savings || {}), percent: baseSavingsPct, potential: trueAnnualCost * (baseSavingsPct / 100) },
+      savings: { ...(raw.savings || {}), percent: savingsPct, potential: potentialSavings },
     };
     if (rawProcesses[i]) rawProcesses[i] = updatedRaw;
 
@@ -207,7 +231,7 @@ export async function POST(request) {
   });
 
   // Fixed costs
-  const totalInstances = rawProcesses.reduce((sum, r) => sum + ((r.costs?.annual ?? r.frequency?.annual ?? 12) * (r.costs?.teamSize ?? 1)), 0);
+  const totalInstances = rawProcesses.reduce((sum, r) => sum + ((r.costs?.annual || r.frequency?.annual || r.annual || 12) * (r.costs?.teamSize || r.teamSize || 1)), 0);
   const systemCosts = nonLabour?.systemCosts || {};
   const systemsAnnual = Object.values(systemCosts).reduce((s, v) => s + (Number(v) || 0), 0) || (nonLabour?.systemsAnnual ?? 0) || 0;
   const externalAnnual = (nonLabour?.externalPerInstance ?? 0) * Math.max(totalInstances, 1);
@@ -252,16 +276,14 @@ export async function POST(request) {
     blendedRate,
     onCostMultiplier,
     nonLabour,
-    processSavings: processSavings || scenarios?.base || {},
-    scenarios: scenarios || {},
-    activeScenario,
+    processSavings: processSavings || {},
     implementationCost: implCost,
     processCostDrivers: processCostDrivers || {},
     growthRate,
+    currency,
     completedAt: new Date().toISOString(),
   };
   dd.financialModel = {
-    scenario: activeScenario,
     totalAnnualCost,
     totalLabour: totalTrueLabour,
     totalHiddenCost,
@@ -281,14 +303,20 @@ export async function POST(request) {
   };
   dd.costAnalysisHistory = [
     ...(dd.costAnalysisHistory || []),
-    { savedAt: new Date().toISOString(), savedBy: hasValidToken ? 'manager' : 'owner' },
+    { savedAt: new Date().toISOString(), savedBy: hasValidToken ? 'token' : 'authorized' },
   ];
-  dd.costCompletedByManager = !isOwner;
 
   const patchResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}`, {
     method: 'PATCH',
     headers: getSupabaseWriteHeaders(supabaseKey),
-    body: JSON.stringify({ diagnostic_data: dd, updated_at: new Date().toISOString() }),
+    body: JSON.stringify({
+      diagnostic_data: dd,
+      cost_analysis_status: 'complete',
+      cost_analysis: { ...dd.costAnalysis, financialModel: dd.financialModel },
+      total_annual_cost: totalAnnualCost,
+      potential_savings: totalPotentialSavings,
+      updated_at: new Date().toISOString(),
+    }),
   });
 
   if (!patchResp.ok) {
@@ -296,7 +324,25 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Failed to save cost analysis.' }, { status: 502 });
   }
 
+  const proto = request.headers.get('x-forwarded-proto') || 'https';
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'localhost:3000';
+  const baseUrl = `${proto}://${host}`;
   const reportUrl = token ? `/report?id=${reportId}&token=${encodeURIComponent(token)}` : `/report?id=${reportId}`;
+
+  // Fire webhook when cost analysis completes for the first time (pending → complete)
+  const wasCompleted = (report.cost_analysis_status || dd.costAnalysisStatus) !== 'pending';
+  if (!wasCompleted) {
+    triggerWebhook({
+      requestType: 'cost-analysis-complete',
+      reportId,
+      reportUrl: `${baseUrl}${reportUrl}`,
+      contactEmail: report.contact_email || '',
+      totalAnnualCost: dd.financialModel?.totalAnnualCost || 0,
+      potentialSavings: dd.financialModel?.potentialSavings || 0,
+      timestamp: new Date().toISOString(),
+    }, { envSuffix: 'COST_ANALYSIS', requestId: getRequestId(request) }).catch(() => {});
+  }
+
   return NextResponse.json({ success: true, reportId, reportUrl, financialModel: dd.financialModel });
 }
 
@@ -304,7 +350,7 @@ export async function PATCH(request) {
   const originErr = checkOrigin(request);
   if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
 
-  const rl = checkRateLimit(getRateLimitKey(request));
+  const rl = await checkRateLimit(getRateLimitKey(request));
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests.' }, { status: 429 });
 
   let body;
@@ -318,23 +364,27 @@ export async function PATCH(request) {
   if (!sbConfig) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
   const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
-  const readResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}&select=id,contact_email,diagnostic_data`, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
+  const readResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}&select=id,contact_email,cost_analysis_status,cost_analysis_token,cost_analysis_token_expires_at,diagnostic_data`, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
   if (!readResp.ok) return NextResponse.json({ error: 'Report not found.' }, { status: 404 });
   const rows = await readResp.json();
   if (!rows?.length) return NextResponse.json({ error: 'Report not found.' }, { status: 404 });
 
   const report = rows[0];
   const dd = JSON.parse(JSON.stringify(report.diagnostic_data || {}));
-  const storedToken = dd.costAnalysisToken || '';
+  const storedToken = report.cost_analysis_token || dd.costAnalysisToken || '';
+  const tokenExpiresAt = report.cost_analysis_token_expires_at ? new Date(report.cost_analysis_token_expires_at) : null;
+  const tokenExpired = tokenExpiresAt && tokenExpiresAt < new Date();
   const session = await verifySupabaseSession(request);
-  const hasValidToken = token && storedToken && token === storedToken;
-  const isOwner = session && report.contact_email && report.contact_email.toLowerCase() === session.email.toLowerCase();
+  const costAuthorizedEmails = (dd.costAuthorizedEmails || []).map(e => e.toLowerCase());
+  const isCostAuthorized = session && costAuthorizedEmails.includes(session.email.toLowerCase());
+  const hasValidToken = token && storedToken && token === storedToken && !tokenExpired;
 
-  if (!hasValidToken && !isOwner) {
+  if (!hasValidToken && !isCostAuthorized) {
     return NextResponse.json({ error: 'Access denied.' }, { status: 403 });
   }
 
-  if (dd.costAnalysisStatus !== 'complete') {
+  const costStatus = report.cost_analysis_status || dd.costAnalysisStatus || 'pending';
+  if (costStatus !== 'complete') {
     return NextResponse.json({ error: 'Cost analysis must be completed before sharing.' }, { status: 400 });
   }
 

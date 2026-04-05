@@ -27,7 +27,7 @@ const BOTTLENECK_REASONS = [
   { id: 'other', label: 'Other' },
 ];
 
-function estimateSavingsPercent(processData, bottleneckReason) {
+function estimateSavingsPercent(processData) {
   let pct = 15;
   const steps = processData.steps || [];
   const handoffs = processData.handoffs || [];
@@ -39,10 +39,6 @@ function estimateSavingsPercent(processData, bottleneckReason) {
   const unclearHandoffs = handoffs.filter((h) => !h.clarity || h.clarity === 'unclear' || h.clarity === 'confusing').length;
   if (unclearHandoffs > 2) pct += 8;
   else if (unclearHandoffs > 0) pct += 4;
-
-  if (['manual-work', 'rework', 'systems'].includes(bottleneckReason)) pct += 10;
-  else if (['waiting', 'approvals', 'handoffs'].includes(bottleneckReason)) pct += 7;
-  else if (bottleneckReason) pct += 3;
 
   const decisionSteps = steps.filter((s) => s.isDecision).length;
   if (decisionSteps > 2) pct += 5;
@@ -84,7 +80,7 @@ export default function Screen4Cost() {
   const annual = FREQ_MAP[freq] || 12;
 
   const savingsPct = useMemo(
-    () => estimateSavingsPercent(processData, bottleneckReason),
+    () => estimateSavingsPercent(processData),
     [processData, bottleneckReason]
   );
 
@@ -242,7 +238,7 @@ export default function Screen4Cost() {
               {hoursFromSteps
                 ? `Calculated from step durations (${computed.hoursPerInstance.toFixed(1)}h) — adjust if needed`
                 : hoursFromChat
-                  ? `Sharp estimated ${chatHours}h based on your answers — adjust if needed`
+                  ? `Afi estimated ${chatHours}h based on your answers — adjust if needed`
                   : 'Actual work time across everyone involved'}
             </span>
           </div>
@@ -251,7 +247,7 @@ export default function Screen4Cost() {
             <input type="number" id="teamSize" min={1} value={teamSize} onChange={(e) => setTeamSize(Math.max(1, parseInt(e.target.value, 10) || 1))} onBlur={(e) => addAuditEvent({ type: 'step_edit', detail: `Team size set to ${e.target.value} people` })} />
           </div>
           <p className="form-hint" style={{ marginTop: 8, fontSize: '0.85rem', color: 'var(--text-mid)' }}>
-            A manager will complete the cost analysis (rates, savings) after the diagnostic. You&apos;ll get a link to assign to them.
+            A manager will complete the cost analysis (rates, savings) after the audit. You&apos;ll get a link to assign to them.
           </p>
         </div>
       </div>

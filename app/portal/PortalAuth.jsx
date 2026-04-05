@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { getSessionSafe } from '@/lib/supabase';
 
 function PasswordField({ value, onChange, placeholder }) {
   const [visible, setVisible] = useState(false);
@@ -118,7 +119,7 @@ export default function PortalAuth({ supabase, onAuthenticated, mode: initialMod
       if (err) throw err;
       setSuccess('Password updated successfully! Redirecting...');
       setTimeout(async () => {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { session } = await getSessionSafe(supabase);
         if (session?.user) onAuthenticated(session.user);
       }, 1500);
     } catch (err) { showError(err.message || 'Failed to update password. The link may have expired.'); }
@@ -162,10 +163,10 @@ export default function PortalAuth({ supabase, onAuthenticated, mode: initialMod
   return (
     <div className="auth-card">
       <h2>{mode === 'signup' ? 'Create Account' : 'Sign In'}</h2>
-      <p className="auth-subtitle">
+      <p className={mode === 'login' ? 'auth-subtitle auth-subtitle--signin' : 'auth-subtitle'}>
         {mode === 'signup'
-          ? 'Sign up to access your client portal. Use the same email from your diagnostic.'
-          : 'Access your diagnostic reports and track implementation progress.'}
+          ? 'Sign up to access your client portal. Use the same email from your process audit.'
+          : 'Access your audit reports and track implementation progress.'}
       </p>
       {error && <div className="auth-error show">{error}</div>}
       {success && <div className="auth-success show">{success}</div>}

@@ -285,7 +285,7 @@ export default function ScreenTeam() {
                 className="button button-primary btn-team-start"
                 onClick={handleStartDiagnostic}
               >
-                Start My Diagnostic →
+                Start My Audit →
               </button>
             </div>
           </div>

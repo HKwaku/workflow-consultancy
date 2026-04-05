@@ -12,7 +12,7 @@ export async function POST(request) {
     const auth = await requireAuth(request);
     if (auth.error) return NextResponse.json(auth.error.body, { status: auth.error.status });
 
-    const rl = checkRateLimit(getRateLimitKey(request));
+    const rl = await checkRateLimit(getRateLimitKey(request));
     if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
 
     let body;

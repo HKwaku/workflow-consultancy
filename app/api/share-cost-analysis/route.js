@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { checkOrigin, getRequestId } from '@/lib/api-helpers';
+import { checkOrigin, getRequestId, requireSupabase, getSupabaseHeaders, getSupabaseWriteHeaders, fetchWithTimeout, isValidEmail } from '@/lib/api-helpers';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { triggerWebhook } from '@/lib/triggerWebhook';
 import { logger } from '@/lib/logger';
@@ -17,7 +17,7 @@ export async function POST(request) {
   const originErr = checkOrigin(request);
   if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
 
-  const rl = checkRateLimit(getRateLimitKey(request));
+  const rl = await checkRateLimit(getRateLimitKey(request));
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests.' }, { status: 429 });
 
   let body;
@@ -42,6 +42,51 @@ export async function POST(request) {
 
   if (!sent) {
     logger.warn('cost-analysis-share webhook not sent', { requestId: getRequestId(request), reportId });
+  }
+
+  // Add the manager as a contributor on the report so they can view it in their portal
+  const sbConfig = requireSupabase();
+  if (sbConfig && isValidEmail(managerEmail)) {
+    const managerEmailLower = managerEmail.toLowerCase();
+    const { url: supabaseUrl, key: supabaseKey } = sbConfig;
+    try {
+      // Fetch current contributor_emails and diagnostic_data
+      const readResp = await fetchWithTimeout(
+        `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${encodeURIComponent(reportId)}&select=contributor_emails,contact_email,diagnostic_data`,
+        { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
+      );
+      if (readResp.ok) {
+        const [row] = await readResp.json();
+        if (row && row.contact_email?.toLowerCase() !== managerEmailLower) {
+          const patch = {};
+
+          // Add to contributor_emails for portal access
+          const existing = row.contributor_emails || [];
+          if (!existing.includes(managerEmailLower)) {
+            patch.contributor_emails = [...existing, managerEmailLower];
+          }
+
+          // Add to costAuthorizedEmails so they can see cost data everywhere
+          const dd = row.diagnostic_data || {};
+          const authorized = (dd.costAuthorizedEmails || []).map(e => e.toLowerCase());
+          if (!authorized.includes(managerEmailLower)) {
+            patch.diagnostic_data = {
+              ...dd,
+              costAuthorizedEmails: [...authorized, managerEmailLower],
+            };
+          }
+
+          if (Object.keys(patch).length > 0) {
+            await fetchWithTimeout(
+              `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${encodeURIComponent(reportId)}`,
+              { method: 'PATCH', headers: getSupabaseWriteHeaders(supabaseKey), body: JSON.stringify(patch) }
+            );
+          }
+        }
+      }
+    } catch (err) {
+      logger.warn('cost-analysis-share: failed to add contributor', { requestId: getRequestId(request), error: err.message });
+    }
   }
 
   return NextResponse.json({ success: true, sent });

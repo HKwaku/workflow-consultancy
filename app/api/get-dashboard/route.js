@@ -5,7 +5,6 @@ import { createClient } from '@supabase/supabase-js';
 import { requireAuth } from '@/lib/auth';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
-import { calculateAutomationScore } from '@/lib/diagnostic/buildLocalResults';
 export async function GET(request) {
   try {
     const originErr = checkOrigin(request);
@@ -14,7 +13,7 @@ export async function GET(request) {
     if (auth.error) return NextResponse.json(auth.error.body, { status: auth.error.status });
     const email = auth.email;
 
-    const rl = checkRateLimit(getRateLimitKey(request));
+    const rl = await checkRateLimit(getRateLimitKey(request));
     if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
 
     const sbConfig = requireSupabase();
@@ -29,8 +28,8 @@ export async function GET(request) {
 
     const { data: rows, error: sbError } = await supabase
       .from('diagnostic_reports')
-      .select('id,display_code,contact_email,contact_name,company,lead_score,lead_grade,diagnostic_data,diagnostic_mode,created_at,updated_at')
-      .ilike('contact_email', emailLower)
+      .select('id,display_code,contact_email,contact_name,company,lead_score,lead_grade,diagnostic_mode,cost_analysis_status,cost_analysis_token,total_annual_cost,potential_savings,automation_percentage,automation_grade,diagnostic_data,contributor_emails,created_at,updated_at')
+      .or(`contact_email.ilike.${emailLower},contributor_emails.cs.{${emailLower}}`)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -98,9 +97,10 @@ export async function GET(request) {
       const summary = d.summary || {};
       const procs = d.processes || [];
       const rawProcs = d.rawProcesses || [];
-      const liveAuto = rawProcs.length > 0 ? calculateAutomationScore(rawProcs) : null;
-      const auto = liveAuto || d.automationScore || {};
-      const hideCostFromOwner = !!d.costCompletedByManager;
+      // auto is only needed for grade fallback; percentage comes from promoted column
+      const auto = d.automationScore || {};
+      const costAuthorizedEmails = (d.costAuthorizedEmails || []).map(e => e.toLowerCase());
+      const hideCostFromOwner = !costAuthorizedEmails.includes(emailLower);
 
       const allRedesigns = redesignsByReport[row.id] || [];
       const acceptedRd = allRedesigns.find(rd => rd.status === 'accepted');
@@ -118,9 +118,12 @@ export async function GET(request) {
         return src.map(op => ({
           processName: op.processName || op.name,
           steps: (op.steps || []).filter(s => s.status !== 'removed').map(s => ({
-            name: s.name, department: s.department, isDecision: s.isDecision || false, branches: s.branches || [],
+            name: s.name, department: s.department, isDecision: s.isDecision || false, isMerge: s.isMerge || false, parallel: s.parallel || false, inclusive: s.inclusive || false, branches: s.branches || [],
           })),
           handoffs: (op.handoffs || []).map(h => ({ method: h.method, clarity: h.clarity })),
+          flowNodePositions: op.flowNodePositions || undefined,
+          flowCustomEdges: op.flowCustomEdges || undefined,
+          flowDeletedEdges: op.flowDeletedEdges || undefined,
         }));
       };
 
@@ -128,28 +131,33 @@ export async function GET(request) {
       const activeProcesses = toProcesses(activeSource);
       const hasRedesignData = activeProcesses.length > 0;
 
-      const metricsTotalCost = hideCostFromOwner ? 0 : (summary.totalAnnualCost || 0);
-      const metricsSavings = hideCostFromOwner ? 0 : (summary.potentialSavings || 0);
+      const metricsTotalCost = hideCostFromOwner ? 0 : (row.total_annual_cost ?? summary.totalAnnualCost ?? 0);
+      const metricsSavings = hideCostFromOwner ? 0 : (row.potential_savings ?? summary.potentialSavings ?? 0);
+      const metricsAutoPerc = row.automation_percentage ?? auto.percentage ?? 0;
+      const metricsAutoGrade = row.automation_grade || auto.grade || 'N/A';
 
+      const isContributor = row.contact_email?.toLowerCase() !== emailLower;
       return {
         id: row.id, displayCode: row.display_code || null, company: row.company || d.contact?.company || '',
         contactName: row.contact_name || d.contact?.name || '',
         leadScore: row.lead_score, leadGrade: row.lead_grade,
         diagnosticMode: row.diagnostic_mode,
+        segment: d.contact?.segment || null,
+        isContributor,
         createdAt: row.created_at, updatedAt: row.updated_at,
         metrics: {
           totalProcesses: summary.totalProcesses || procs.length || 0,
           totalAnnualCost: metricsTotalCost,
           potentialSavings: metricsSavings,
-          automationPercentage: auto.percentage || 0,
-          automationGrade: auto.grade || 'N/A',
+          automationPercentage: metricsAutoPerc,
+          automationGrade: metricsAutoGrade,
           qualityScore: summary.qualityScore || 0,
           analysisType: summary.analysisType || 'rule-based'
         },
         processes: procs.map(p => ({ name: p.name || '', type: p.type || '', annualCost: hideCostFromOwner ? 0 : (p.annualCost || 0), elapsedDays: p.elapsedDays || 0, stepsCount: p.stepsCount || 0 })),
         rawProcesses: (d.rawProcesses || []).map(rp => ({
           processName: rp.processName,
-          steps: (rp.steps || []).map(s => ({ name: s.name, department: s.department, isDecision: s.isDecision || false, branches: s.branches || [] })),
+          steps: (rp.steps || []).map(s => ({ name: s.name, department: s.department, isDecision: s.isDecision || false, isMerge: s.isMerge || false, parallel: s.parallel || false, inclusive: s.inclusive || false, branches: s.branches || [] })),
           handoffs: (rp.handoffs || []).map(h => ({ method: h.method, clarity: h.clarity })),
           flowNodePositions: rp.flowNodePositions || undefined,
           flowCustomEdges: rp.flowCustomEdges || undefined,
@@ -178,8 +186,8 @@ export async function GET(request) {
         recommendations: (d.recommendations || []).slice(0, 5).map(r => ({ type: r.type || 'general', text: r.text || '' })),
         roadmap: d.roadmap ? { quickWins: d.roadmap.phases?.quick?.items?.length || 0, totalSavings: d.roadmap.totalSavings || 0 } : null,
         auditTrail: (d.auditTrail || []).slice(-50),
-        costAnalysisStatus: d.costAnalysisStatus || 'complete',
-        costAnalysisToken: hideCostFromOwner ? null : (d.costAnalysisToken || null),
+        costAnalysisStatus: row.cost_analysis_status || d.costAnalysisStatus || 'complete',
+        costAnalysisToken: hideCostFromOwner ? null : (row.cost_analysis_token || d.costAnalysisToken || null),
       };
     });
 
@@ -212,7 +220,7 @@ export async function DELETE(request) {
     if (auth.error) return NextResponse.json(auth.error.body, { status: auth.error.status });
     const email = auth.email;
 
-    const rl = checkRateLimit(getRateLimitKey(request));
+    const rl = await checkRateLimit(getRateLimitKey(request));
     if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
 
     const contentLength = parseInt(request.headers.get('content-length') || '0', 10);

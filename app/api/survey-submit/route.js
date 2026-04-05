@@ -16,7 +16,7 @@ export async function POST(request) {
   if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
 
   try {
-    const rl = checkRateLimit(getRateLimitKey(request));
+    const rl = await checkRateLimit(getRateLimitKey(request));
     if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
 
     const contentLength = parseInt(request.headers.get('content-length') || '0', 10);

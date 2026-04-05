@@ -17,8 +17,8 @@ const METRIC_EXPLANATIONS = {
   },
   teamsInvolved: {
     title: 'Teams involved',
-    description: 'The number of unique departments or teams assigned to steps in this process.',
-    formula: 'Count of distinct department values across all steps.',
+    description: 'The number of unique teams assigned to steps in this process.',
+    formula: 'Count of distinct team values across all steps.',
   },
   checklistItems: {
     title: 'Checklist items',
@@ -82,8 +82,8 @@ const METRIC_EXPLANATIONS = {
   },
   bottlenecks: {
     title: 'Bottlenecks',
-    description: 'Steps identified as bottlenecks — they slow down the overall process, often due to waiting time, limited resources, or dependency on a single person or system.',
-    formula: 'Count of steps where isBottleneck is true.',
+    description: 'Steps with recorded wait time that act as constraints on the process. The step with the highest wait time is the primary bottleneck. Severity is increased by approval gates, late-stage decisions, multi-system steps, and unclear handoffs.',
+    formula: 'Count of steps with wait time > 0 scoring medium or high risk. The highest-wait step is the key bottleneck.',
   },
   workWaitRatio: {
     title: 'Work / Wait ratio',
@@ -92,8 +92,13 @@ const METRIC_EXPLANATIONS = {
   },
   complexity: {
     title: 'Complexity score',
-    description: 'A composite score reflecting how complex this process is to manage and improve. Higher scores indicate more decision points, bottlenecks, cross-team handoffs, and parallel branches.',
-    formula: '(decision points × 2) + (bottlenecks × 2) + teams + (handoffs × 0.5). Ranges: Low 0–3, Medium 4–7, High 8–12, Very High 13+.',
+    description: 'A composite score reflecting how complex this process is to manage and improve. Higher scores indicate more decision points, bottlenecks, cross-team handoffs, and external dependencies.',
+    formula: '(decision points × 2) + (bottlenecks × 2) + teams + (handoffs × 0.5) + external steps. Ranges: Low 0–3, Medium 4–7, High 8–12, Very High 13+.',
+  },
+  externalDependencies: {
+    title: 'External dependencies',
+    description: 'Steps owned or performed by a party outside your organisation — suppliers, clients, regulators, or third-party services. These steps sit outside your direct control, making them harder to automate, schedule, or improve without vendor cooperation.',
+    formula: 'Count of steps where the owner is marked as external.',
   },
   timelineEstimate: {
     title: 'Timeline estimate',

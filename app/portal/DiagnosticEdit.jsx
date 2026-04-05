@@ -5,7 +5,7 @@ import Link from 'next/link';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/components/ThemeProvider';
 import InteractiveFlowCanvas from '@/components/flow/InteractiveFlowCanvas';
-import { getSupabaseClient } from '@/lib/supabase';
+import { getSupabaseClient, getSessionSafe } from '@/lib/supabase';
 
 const PHASES = [
   { key: 'define', label: 'Define', icon: '\u2699' },
@@ -119,6 +119,12 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
           teamSize: c.teamSize || '',
           industry: c.industry || '',
           phone: c.phone || '',
+          segment: c.segment || '',
+          maEntity: c.maEntity || '',
+          maTimeline: c.maTimeline || '',
+          peStage: c.peStage || '',
+          highStakesType: c.highStakesType || '',
+          highStakesDeadline: c.highStakesDeadline || '',
         });
 
         const builtProcesses = raw.length > 0
@@ -158,6 +164,13 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
         isDecision: !!s.isDecision,
         isExternal: !!s.isExternal,
         branches,
+        workMinutes: s.workMinutes,
+        waitMinutes: s.waitMinutes,
+        waitType: s.waitType,
+        waitNote: s.waitNote,
+        waitExternal: s.waitExternal,
+        capacity: s.capacity,
+        durationUnit: s.durationUnit,
       };
     });
 
@@ -210,6 +223,9 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
         learningMethod: hire.learningMethod || [],
         timeToCompetence: hire.timeToCompetence || '',
       },
+      flowNodePositions: rp.flowNodePositions || {},
+      flowCustomEdges: rp.flowCustomEdges || [],
+      flowDeletedEdges: rp.flowDeletedEdges || [],
       frequencyType: freq.type || 'monthly',
       annualInstances: freq.annual || 12,
       inFlight: freq.inFlight || 0,
@@ -262,6 +278,7 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
       newHire: { learningMethod: [], timeToCompetence: '' },
       frequencyType: 'monthly', annualInstances: 12, inFlight: 0, stuck: 0, waiting: 0,
       hourlyRate: 50, teamSize: 1, priority: '', priorityReason: '',
+      flowNodePositions: {}, flowCustomEdges: [], flowDeletedEdges: [],
     };
   }
 
@@ -482,7 +499,8 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
   const handleSave = useCallback(async () => {
     setSaving(true); setError(null); setSuccess(null);
     try {
-      const rawProcesses = processes.map(p => ({
+      const rawProcesses = processes.map((p) => {
+        return ({
         processName: p.processName,
         processType: p.processType,
         definition: { startsWhen: p.startsWhen, completesWhen: p.completesWhen, complexity: p.complexity, departments: p.departments },
@@ -505,6 +523,13 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
             isDecision: !!s.isDecision,
             isExternal: s.isExternal,
             branches,
+            workMinutes: s.workMinutes,
+            waitMinutes: s.waitMinutes,
+            waitType: s.waitType,
+            waitNote: s.waitNote,
+            waitExternal: s.waitExternal,
+            capacity: s.capacity,
+            durationUnit: s.durationUnit,
           };
         }),
         handoffs: (p.stepHandoffs || []).filter(Boolean).map((h, hi) => ({
@@ -520,7 +545,10 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
         frequency: { type: p.frequencyType, annual: p.annualInstances, inFlight: p.inFlight, stuck: p.stuck, waiting: p.waiting },
         costs: { hourlyRate: p.hourlyRate, teamSize: p.teamSize },
         priority: { level: p.priority, reason: p.priorityReason },
-      }));
+        flowCustomEdges: p.flowCustomEdges || [],
+        flowDeletedEdges: p.flowDeletedEdges || [],
+        flowNodePositions: p.flowNodePositions || {},
+      });});
 
       const summaryProcesses = processes.map(p => ({
         name: p.processName, type: p.processType, elapsedDays: p.elapsedDays,
@@ -543,7 +571,7 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
       };
 
       const sb = getSupabaseClient();
-      const { data: { session } } = await sb.auth.getSession();
+      const { session } = await getSessionSafe(sb);
       const headers = { 'Content-Type': 'application/json' };
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
 
@@ -570,7 +598,7 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
   if (loading) return (
     <div className="loading-state" style={{ padding: 60 }}>
       <div className="spinner" />
-      <p>Loading diagnostic data...</p>
+      <p>Loading audit data...</p>
     </div>
   );
 
@@ -578,9 +606,9 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
     <>
       <header className="dashboard-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <Link href="/" className="header-logo">Sharpin<span style={{ color: 'var(--gold)' }}>.</span></Link>
+          <Link href="/" className="header-logo">Vesno<span style={{ color: 'var(--gold)' }}>.</span></Link>
           <div className="header-divider" />
-          <span className="header-title">Edit Diagnostic</span>
+          <span className="header-title">Edit Process Audit</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <ThemeToggle className="header-theme-btn" />
@@ -637,6 +665,29 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
               </div>
             </div>
 
+            {contact.segment && (
+              <div className="edit-stage-card">
+                <h3 className="edit-stage-title">Audit Context</h3>
+                <p className="edit-stage-desc">Segment captured at sign-up — shapes AI recommendations.</p>
+                {(() => {
+                  const SEGMENT_LABELS = { scaling: 'Scaling Business', ma: 'M&A Integration', pe: 'Private Equity', highstakes: 'High-stakes Event' };
+                  const SEGMENT_COLORS = { scaling: '#0d9488', ma: '#6366f1', pe: '#8b5cf6', highstakes: '#d97706' };
+                  const seg = contact.segment;
+                  const color = SEGMENT_COLORS[seg] || 'var(--text-mid)';
+                  return (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-start' }}>
+                      <span style={{ display: 'inline-block', padding: '4px 10px', borderRadius: 4, background: color + '22', color, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{SEGMENT_LABELS[seg] || seg}</span>
+                      {contact.maEntity && <span style={{ fontSize: 12, color: 'var(--text-mid)' }}>Entity: <strong>{contact.maEntity}</strong></span>}
+                      {contact.maTimeline && <span style={{ fontSize: 12, color: 'var(--text-mid)' }}>Timeline: <strong>{contact.maTimeline}</strong></span>}
+                      {contact.peStage && <span style={{ fontSize: 12, color: 'var(--text-mid)' }}>PE Stage: <strong>{contact.peStage}</strong></span>}
+                      {contact.highStakesType && <span style={{ fontSize: 12, color: 'var(--text-mid)' }}>Type: <strong>{contact.highStakesType}</strong></span>}
+                      {contact.highStakesDeadline && <span style={{ fontSize: 12, color: 'var(--text-mid)' }}>Deadline: <strong>{contact.highStakesDeadline}</strong></span>}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
             <div className="edit-stage-card">
               <h3 className="edit-stage-title">Process Boundaries</h3>
               <p className="edit-stage-desc">Where does this process start and end?</p>
@@ -651,7 +702,7 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
                 </div>
               </div>
               <div className="edit-field" style={{ marginTop: 16 }}>
-                <label>Departments Involved</label>
+                <label>Teams Involved</label>
                 <div className="edit-chip-group">
                   {DEPARTMENTS.map(d => (
                     <button key={d} type="button" className={`edit-chip${(proc.departments || []).includes(d) ? ' active' : ''}`} onClick={() => toggleDept(d)}>{d}</button>
@@ -782,7 +833,7 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
                           <div className="edit-step-top-row">
                             <input type="text" value={step.name} onChange={e => updateStep(si, 'name', e.target.value)} placeholder="Step name" className="edit-step-name-input" />
                             <select value={step.department} onChange={e => updateStep(si, 'department', e.target.value)} className="edit-step-dept-select">
-                              <option value="">Department</option>
+                              <option value="">Team</option>
                               {[...DEPARTMENTS, ...(proc.departments || []).filter(d => !DEPARTMENTS.includes(d))].map(d => (
                                 <option key={d} value={d}>{d}</option>
                               ))}
@@ -875,6 +926,12 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
                         darkTheme={theme === 'dark'}
                         onWrapToggle={handleWrapToggle}
                         isWrapped={isWrapped}
+                        storedPositions={proc.flowNodePositions?.[`${proc.steps.length}-${flowView}`] || null}
+                        onPositionsChange={(positions, layout) => updateProc('flowNodePositions', { ...proc.flowNodePositions, [`${proc.steps.length}-${layout}`]: positions })}
+                        customEdges={proc.flowCustomEdges}
+                        onCustomEdgesChange={(edges) => updateProc('flowCustomEdges', edges)}
+                        deletedEdges={proc.flowDeletedEdges}
+                        onDeletedEdgesChange={(edges) => updateProc('flowDeletedEdges', edges)}
                       />
                     </div>
                   ) : (
@@ -1062,7 +1119,7 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
           <div className="edit-stage fade-in">
             <div className="edit-stage-card">
               <h3 className="edit-stage-title">Your Details</h3>
-              <p className="edit-stage-desc">Contact information for this diagnostic.</p>
+              <p className="edit-stage-desc">Contact information for this process audit.</p>
               <div className="edit-grid-2">
                 <div className="edit-field">
                   <label>Full Name</label>

@@ -156,6 +156,40 @@ body:has(.dashboard-header) {
   font-size: 0.68rem;
   color: var(--text-light);
 }
+
+/* Full-panel empty state (no reports at all) */
+.portal-analytics-empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+.portal-analytics-empty-state-msg {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-mid);
+  line-height: 1.5;
+}
+.portal-analytics-empty-cta {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 6px 14px;
+  border: 1.5px solid var(--accent);
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+}
+.portal-analytics-empty-cta:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
 .portal-analytics-loading {
   padding: 2rem;
   display: flex;
@@ -335,7 +369,6 @@ body:has(.dashboard-header) {
 }
 .portal-bar-label {
   color: var(--text);
-  word-break: break-word;
   min-width: 0;
 }
 .portal-bar-track {
@@ -358,7 +391,9 @@ body:has(.dashboard-header) {
 
 /* Cost by process – larger bars */
 .portal-cost-bar-chart {
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 .portal-cost-bar-chart .portal-bar-row {
   grid-template-columns: 1fr minmax(100px, 2fr) 72px;
@@ -620,6 +655,64 @@ body:has(.dashboard-header) {
 .portal-risk-more {
   font-size: 0.68rem;
   color: var(--text-mid);
+}
+
+/* Quick win item layout */
+.portal-quick-list-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.portal-quick-item-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.portal-quick-label {
+  font-size: 0.68rem;
+  color: var(--text);
+  word-break: break-word;
+  flex: 1;
+  min-width: 0;
+}
+.portal-quick-badge {
+  flex-shrink: 0;
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  color: #fff;
+  white-space: nowrap;
+}
+.portal-quick-badge--auto {
+  /* Automation-ready fallback badge — slightly muted */
+  opacity: 0.92;
+}
+.portal-quick-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 1px;
+}
+.portal-quick-action-link {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.portal-quick-action-link:hover {
+  text-decoration: underline;
+}
+.portal-quick-action-link--redesign {
+  color: #8b5cf6;
+}
+
+/* Cost by team / department bar chart */
+.portal-dept-bar-chart .portal-bar-fill,
+.portal-dept-bar-fill {
+  background: #6366f1;
 }
 
 /* Metrics as direct grid children for exact column alignment */
@@ -1279,6 +1372,33 @@ body:has(.dashboard-header) {
   color: var(--accent);
 }
 
+.portal-cost-edit-btn {
+  font-size: 0.75rem;
+  padding: 3px 10px;
+  background: rgba(13,148,136,0.08);
+  color: var(--accent);
+  border: 1px solid rgba(13,148,136,0.3);
+  border-radius: 6px;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.portal-cost-edit-btn:hover {
+  background: rgba(13,148,136,0.18);
+  border-color: var(--accent);
+}
+.portal-cost-edit-btn-pending {
+  background: rgba(217,119,6,0.08);
+  color: #b45309;
+  border-color: rgba(217,119,6,0.3);
+}
+.portal-cost-edit-btn-pending:hover {
+  background: rgba(217,119,6,0.18);
+  border-color: #b45309;
+  color: #b45309;
+}
+
 /* ── Portal Collapsible Hierarchy (+/- toggle) ── */
 .portal-collapse {
   border-bottom: 1px solid var(--border);
@@ -1479,7 +1599,7 @@ body:has(.dashboard-header) {
 .portal-collapse-header-below {
   padding: 8px 24px 10px;
   border-top: 1px solid var(--border);
-  background: #fff8f8;
+  background: rgba(248,113,113,0.08);
   animation: fadeIn 0.15s ease;
 }
 [data-theme="dark"] .portal-collapse-header-below { background: rgba(220,38,38,0.06); }
@@ -2334,7 +2454,7 @@ body:has(.dashboard-header) {
 /* ── Area chart (metric progression) ──────────── */
 .portal-area-chart-wrap {
   padding: 16px 0;
-  min-height: 280px;
+  min-height: 220px;
   width: 100%;
 }
 .portal-area-chart-wrap.portal-chart-interactive {
@@ -2431,7 +2551,7 @@ body:has(.dashboard-header) {
   text-align: center;
   gap: 2px;
   padding: 6px 10px;
-  background: var(--white);
+  background: var(--bg);
   border: 1px solid var(--border);
   border-left: 3px solid;
   border-radius: 6px;
@@ -2598,6 +2718,11 @@ body:has(.dashboard-header) {
   text-align: center;
   margin-bottom: 28px;
   line-height: 1.55;
+}
+
+/* Sign-in blurb: white on dark card (override diagnostic.css .auth-subtitle) */
+.auth-card .auth-subtitle--signin {
+  color: #ffffff !important;
 }
 
 .auth-input {
@@ -4101,3 +4226,84 @@ body:has(.dashboard-header) {
   background: var(--accent);
   color: var(--bg);
 }
+
+/* ── Version badge on report cards ── */
+.portal-version-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-mid);
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1px 7px;
+  margin-left: 6px;
+}
+
+/* ── Redesign error inline panel ── */
+.portal-redesign-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(248,113,113,0.1);
+  border: 1px solid rgba(248,113,113,0.25);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: var(--red);
+  margin-top: 8px;
+}
+.portal-redesign-error button {
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  color: inherit;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.portal-redesign-error button:hover { opacity: 0.8; }
+
+.portal-redesign-progress {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.portal-redesign-progress-bar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  width: 100%;
+}
+.portal-redesign-progress-fill {
+  height: 100%;
+  width: 40%;
+  background: var(--accent);
+  border-radius: 2px;
+  animation: portal-progress-slide 1.8s ease-in-out infinite;
+}
+@keyframes portal-progress-slide {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+.portal-redesign-progress-msg {
+  font-size: 0.72rem;
+  color: var(--text-mid);
+  font-style: italic;
+}
+
+/* ── Process instances tab ── */
+.portal-instances-tab { padding: 8px 0; }
+.portal-instances-empty { padding: 24px 0; text-align: center; color: var(--text-mid); font-size: 0.85rem; }
+.portal-instances-hint { font-size: 0.78rem; color: var(--text-light); margin-top: 6px; }
+.portal-instances-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.portal-instance-card { background: var(--bg-alt); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.portal-instance-name { font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+.portal-instance-stats { display: flex; flex-wrap: wrap; gap: 8px; }
+.portal-instance-stat { font-size: 0.78rem; color: var(--text-mid); }
+.portal-instance-stat--success strong { color: var(--green); }
+.portal-instance-stat--warn strong { color: var(--amber); }

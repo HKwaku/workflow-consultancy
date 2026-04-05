@@ -1,5 +1,5 @@
 {
-  "name": "Sharpin - Flow Diagram",
+  "name": "Vesno - Flow Diagram",
   "nodes": [
     {
       "parameters": {
@@ -17,7 +17,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const raw = $input.first().json;\nconst d = raw.body && typeof raw.body === 'object' ? raw.body : raw;\nconst mermaidCode = d.mermaidCode || '';\nconst processes = d.processes || [];\n\n// Placeholder: return diagramUrl. Replace with your diagram generation logic\n// (e.g. call Mermaid API, render to image, upload to storage, return URL)\nconst diagramUrl = '';\n\nreturn { json: { diagramUrl, mermaidCode, processCount: processes.length } };"
+        "jsCode": "const raw = $input.first().json;\nconst d = raw.body && typeof raw.body === 'object' ? raw.body : raw;\nconst mermaidCode = d.mermaidCode || '';\nconst processes = d.processes || [];\n\nif (!mermaidCode) {\n  return { json: { diagramUrl: '', error: 'No mermaidCode provided', processCount: processes.length } };\n}\n\n// Base64url-encode the Mermaid code for mermaid.ink\nconst encoded = Buffer.from(mermaidCode).toString('base64')\n  .replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=/g, '');\n\nconst inkPngUrl = `https://mermaid.ink/img/${encoded}`;\nconst inkSvgUrl = `https://mermaid.ink/svg/${encoded}`;\n\n// Supabase Storage config — set these as n8n environment variables\n// (n8n Settings → Variables: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)\nconst supabaseUrl = $env.SUPABASE_URL || '';\nconst supabaseKey = $env.SUPABASE_SERVICE_ROLE_KEY || '';\n\nif (!supabaseUrl || !supabaseKey) {\n  // No Supabase config — fall back to mermaid.ink SVG URL (no upload)\n  return { json: { diagramUrl: inkSvgUrl, source: 'mermaid.ink', processCount: processes.length } };\n}\n\n// Fetch PNG from mermaid.ink\nlet pngBuffer;\ntry {\n  const pngResponse = await $helpers.httpRequest({\n    method: 'GET',\n    url: inkPngUrl,\n    encoding: 'arraybuffer',\n    returnFullResponse: true,\n    timeout: 15000,\n  });\n  if (pngResponse.statusCode >= 200 && pngResponse.statusCode < 300 && pngResponse.body) {\n    pngBuffer = Buffer.from(pngResponse.body);\n  }\n} catch (fetchErr) {\n  // mermaid.ink unavailable — fall back to SVG URL\n  return { json: { diagramUrl: inkSvgUrl, source: 'mermaid.ink-fallback', processCount: processes.length, fetchError: fetchErr.message } };\n}\n\nif (!pngBuffer || pngBuffer.length === 0) {\n  return { json: { diagramUrl: inkSvgUrl, source: 'mermaid.ink-fallback', processCount: processes.length } };\n}\n\n// Upload PNG to Supabase Storage (diagrams bucket)\nconst objectName = `diagram-${Date.now()}-${Math.random().toString(36).slice(2)}.png`;\nconst uploadUrl = `${supabaseUrl}/storage/v1/object/diagrams/${objectName}`;\n\ntry {\n  const uploadResponse = await $helpers.httpRequest({\n    method: 'POST',\n    url: uploadUrl,\n    headers: {\n      Authorization: `Bearer ${supabaseKey}`,\n      'Content-Type': 'image/png',\n      'x-upsert': 'true',\n    },\n    body: pngBuffer,\n    returnFullResponse: true,\n    timeout: 15000,\n  });\n\n  if (uploadResponse.statusCode >= 200 && uploadResponse.statusCode < 300) {\n    const permanentUrl = `${supabaseUrl}/storage/v1/object/public/diagrams/${objectName}`;\n    return { json: { diagramUrl: permanentUrl, source: 'supabase-storage', processCount: processes.length } };\n  } else {\n    // Upload failed — fall back to mermaid.ink SVG\n    return { json: { diagramUrl: inkSvgUrl, source: 'mermaid.ink-fallback', processCount: processes.length, uploadStatus: uploadResponse.statusCode } };\n  }\n} catch (uploadErr) {\n  return { json: { diagramUrl: inkSvgUrl, source: 'mermaid.ink-fallback', processCount: processes.length, uploadError: uploadErr.message } };\n}"
       },
       "id": "e5f6a7b8-0002-4000-8000-000000000002",
       "name": "Process Diagram",
@@ -44,6 +44,6 @@
   },
   "active": false,
   "settings": { "executionOrder": "v1" },
-  "versionId": "1",
+  "versionId": "2",
   "meta": { "templateCredsSetupCompleted": false }
 }

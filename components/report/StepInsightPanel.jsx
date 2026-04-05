@@ -25,8 +25,9 @@ export default function StepInsightPanel({ stepIndex, process, onClose }) {
   const checklistDone = checklist.filter(c => c.checked).length;
   const checklistTotal = checklist.length;
 
-  const isBottleneck = process?.bottleneck?.longestStep != null &&
-    parseInt(String(process.bottleneck.longestStep).replace('step-', ''), 10) === stepIndex;
+  const allStepsForBottleneck = process?.steps || [];
+  const maxWait = Math.max(...allStepsForBottleneck.map(s => s.waitMinutes || 0), 0);
+  const isBottleneck = maxWait > 0 && (step?.waitMinutes || 0) === maxWait;
 
   return (
     <div className="step-insight-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -90,10 +91,10 @@ export default function StepInsightPanel({ stepIndex, process, onClose }) {
             </div>
           )}
 
-          {isBottleneck && stepIndex === parseInt(String(process.bottleneck.longestStep).replace('step-', ''), 10) && (
+          {isBottleneck && (
             <div className="step-insight-row step-insight-bottleneck">
               <span className="step-insight-label">Bottleneck</span>
-              <span className="step-insight-value">{process.bottleneck.reason || 'Longest step in cycle'}</span>
+              <span className="step-insight-value">Highest wait time — {step.waitMinutes}m</span>
             </div>
           )}
 

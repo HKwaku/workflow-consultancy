@@ -7,7 +7,7 @@ import { requireAuth } from '@/lib/auth';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 function sseStream(request, handler) {
   const encoder = new TextEncoder();
@@ -42,7 +42,7 @@ export async function POST(request) {
   if (auth.error) return NextResponse.json(auth.error.body, { status: auth.error.status });
   const email = auth.email;
 
-  const rl = checkRateLimit(getRateLimitKey(request));
+  const rl = await checkRateLimit(getRateLimitKey(request));
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
 
   const contentLength = parseInt(request.headers.get('content-length') || '0', 10);
@@ -89,17 +89,80 @@ export async function POST(request) {
   const rawProcesses = d.rawProcesses || [];
   const diagnosticContext = JSON.stringify({
     company: report.company || d.contact?.company || '',
+    segment: d.contact?.segment || '',
+    ...(d.contact?.maEntity && { maEntity: d.contact.maEntity }),
+    ...(d.contact?.maTimeline && { maTimeline: d.contact.maTimeline }),
+    ...(d.contact?.peStage && { peStage: d.contact.peStage }),
+    ...(d.contact?.highStakesType && { highStakesType: d.contact.highStakesType }),
+    ...(d.contact?.highStakesDeadline && { highStakesDeadline: d.contact.highStakesDeadline }),
     processes: (d.processes || []).map(p => ({ name: p.name, type: p.type, annualCost: p.annualCost, stepsCount: p.stepsCount, elapsedDays: p.elapsedDays, steps: (p.steps || []).map(s => ({ name: s.name, type: s.type, handoff: s.handoff, automatable: s.automatable, bottleneck: s.bottleneck, painPoints: s.painPoints })) })),
-    rawProcesses: rawProcesses.map(rp => ({
-      processName: rp.processName,
-      steps: (rp.steps || []).map(s => ({ number: s.number, name: s.name, department: s.department, isDecision: s.isDecision || false, isExternal: s.isExternal || false, branches: s.branches || [] })),
-      handoffs: (rp.handoffs || []).map(h => ({ from: h.from?.name, to: h.to?.name, method: h.method, clarity: h.clarity })),
-      bottleneck: rp.bottleneck, issues: rp.issues || [], biggestDelay: rp.biggestDelay,
-      costs: rp.costs ? { hoursPerInstance: rp.costs.hoursPerInstance, hourlyRate: rp.costs.hourlyRate, totalAnnualCost: rp.costs.totalAnnualCost, teamSize: rp.costs.teamSize } : null,
-      frequency: rp.frequency ? { type: rp.frequency.type, annual: rp.frequency.annual, inFlight: rp.frequency.inFlight } : null,
-      userTime: rp.userTime ? { execution: rp.userTime.execution, waiting: rp.userTime.waiting, total: rp.userTime.total } : null,
-      lastExample: rp.lastExample?.elapsedDays != null ? { elapsedDays: rp.lastExample.elapsedDays } : null,
-    })),
+    rawProcesses: rawProcesses.map(rp => {
+      const steps = rp.steps || [];
+
+      // Translate canvas edge state to step-name-based descriptions for the agent.
+      // Custom edges: user manually drew a connection between two steps.
+      const manualConnections = (rp.flowCustomEdges || [])
+        .map(e => {
+          const srcM = e.source?.match(/^step-(\d+)$/);
+          const tgtM = e.target?.match(/^step-(\d+)$/);
+          if (!srcM || !tgtM) return null;
+          const src = steps[parseInt(srcM[1])];
+          const tgt = steps[parseInt(tgtM[1])];
+          if (!src || !tgt) return null;
+          return { from: src.name || `Step ${parseInt(srcM[1]) + 1}`, to: tgt.name || `Step ${parseInt(tgtM[1]) + 1}` };
+        })
+        .filter(Boolean);
+
+      // Deleted edges: user explicitly removed a sequential connection between two steps.
+      const removedConnections = (rp.flowDeletedEdges || [])
+        .map(id => {
+          const m = id.match(/^e-seq-(\d+)-(\d+)$/);
+          if (!m) return null;
+          const src = steps[parseInt(m[1])];
+          const tgt = steps[parseInt(m[2])];
+          if (!src || !tgt) return null;
+          return { from: src.name || `Step ${parseInt(m[1]) + 1}`, to: tgt.name || `Step ${parseInt(m[2]) + 1}` };
+        })
+        .filter(Boolean);
+
+      // Derive per-step cost for easy reference by the analysis model
+      const hourlyRate = rp.costs?.hourlyRate || 0;
+      const annualRuns = rp.frequency?.annual || 0;
+
+      return {
+        processName: rp.processName,
+        // Cost summary surfaced prominently so the agent can use real numbers
+        costSummary: rp.costs ? {
+          totalAnnualCost: rp.costs.totalAnnualCost,
+          hoursPerInstance: rp.costs.hoursPerInstance,
+          hourlyRate: rp.costs.hourlyRate,
+          teamSize: rp.costs.teamSize,
+          annualRuns,
+          costPerHourFormula: `${rp.costs.hoursPerInstance}h × £${hourlyRate}/hr × ${annualRuns} runs/yr × ${rp.costs.teamSize} people`,
+        } : null,
+        steps: steps.map((s, si) => ({
+          number: s.number ?? si + 1,
+          name: s.name,
+          department: s.department,
+          isDecision: s.isDecision || false,
+          isExternal: s.isExternal || false,
+          branches: s.branches || [],
+          ...(s.systems?.length && { systems: s.systems }),
+          ...(s.workMinutes != null && { workMinutes: s.workMinutes }),
+          ...(s.waitMinutes != null && { waitMinutes: s.waitMinutes }),
+          ...(s.parallel && { parallel: true }),
+          // Cost per step for reference
+          ...(hourlyRate && s.workMinutes ? { estimatedStepCost: Math.round((s.workMinutes / 60) * hourlyRate * annualRuns) } : {}),
+        })),
+        handoffs: (rp.handoffs || []).map(h => ({ from: h.from?.name, to: h.to?.name, method: h.method, clarity: h.clarity })),
+        ...(manualConnections.length > 0 && { manualConnections }),
+        ...(removedConnections.length > 0 && { removedConnections }),
+        bottleneck: rp.bottleneck, issues: rp.issues || [], biggestDelay: rp.biggestDelay,
+        frequency: rp.frequency ? { type: rp.frequency.type, annual: rp.frequency.annual, inFlight: rp.frequency.inFlight } : null,
+        userTime: rp.userTime ? { execution: rp.userTime.execution, waiting: rp.userTime.waiting, total: rp.userTime.total } : null,
+        lastExample: rp.lastExample?.elapsedDays != null ? { elapsedDays: rp.lastExample.elapsedDays } : null,
+      };
+    }),
     summary: { totalProcesses: (d.summary || {}).totalProcesses, totalAnnualCost: (d.summary || {}).totalAnnualCost, potentialSavings: (d.summary || {}).potentialSavings, automationPercentage: d.automationScore?.percentage },
     recommendations: (d.recommendations || []).slice(0, 10).map(r => r.text),
     roadmapPhases: d.roadmap?.phases ? Object.keys(d.roadmap.phases) : []
@@ -113,7 +176,14 @@ export async function POST(request) {
   }
 
   return sseStream(request, async (send) => {
+    send('started', { message: 'Analysis started' });
     send('progress', { message: 'Loading your diagnostic data…' });
+
+    const timeoutId = setTimeout(() => {
+      try {
+        send('timeout', { message: 'Taking longer than expected — please try again if this does not complete.' });
+      } catch {}
+    }, 110000);
 
     let redesign;
     try {
@@ -123,6 +193,7 @@ export async function POST(request) {
         }, getRequestId(request))
       );
     } catch (agentErr) {
+      clearTimeout(timeoutId);
       const errMsg = agentErr?.message || String(agentErr);
       logger.error('Redesign agent error', { requestId: getRequestId(request), error: errMsg, stack: agentErr?.stack });
       send('error', { error: `AI redesign agent failed: ${errMsg.slice(0, 200)}` });
@@ -158,6 +229,7 @@ export async function POST(request) {
       } catch (cacheErr) { logger.error('Failed to cache redesign', { requestId: getRequestId(request), error: cacheErr?.message }); }
     }
 
+    clearTimeout(timeoutId);
     send('done', { success: true, reportId, redesign, needsSaveChoice: !!regenerate });
   });
 }

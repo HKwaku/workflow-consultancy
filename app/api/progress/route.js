@@ -12,7 +12,7 @@ export async function POST(request) {
   const originErr = checkOrigin(request);
   if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
 
-  const rl = checkRateLimit(getRateLimitKey(request));
+  const rl = await checkRateLimit(getRateLimitKey(request));
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
 
   const contentLength = parseInt(request.headers.get('content-length') || '0', 10);
@@ -39,7 +39,7 @@ export async function POST(request) {
     const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'localhost:3000';
     const teamCode = progressData?.teamMode?.code;
     const step = body.step != null ? body.step : null;
-    let resumeUrl = `${proto}://${host}/diagnostic?resume=${progressId}`;
+    let resumeUrl = `${proto}://${host}/process-audit?resume=${progressId}`;
     if (teamCode) resumeUrl += `&team=${teamCode}`;
     if (step != null) resumeUrl += `&step=${step}`;
 
@@ -104,7 +104,7 @@ export async function POST(request) {
 export async function GET(request) {
   const originErr = checkOrigin(request);
   if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
-  const rl = checkRateLimit(getRateLimitKey(request));
+  const rl = await checkRateLimit(getRateLimitKey(request));
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
 
   try {

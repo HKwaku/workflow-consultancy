@@ -286,7 +286,7 @@ export default function ChatPanel() {
       <div className="s7-chat-input-area">
         <input type="file" ref={fileInputRef} className="s7-chat-file-input" accept="*" onChange={handleFileSelect} />
         <button type="button" className="s7-chat-attach" onClick={() => fileInputRef.current?.click()} title="Attach file" disabled={loading}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" aria-hidden><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
         </button>
         <input
           type="text"

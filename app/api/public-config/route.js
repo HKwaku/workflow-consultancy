@@ -6,7 +6,7 @@ import { logger } from '@/lib/logger';
 export async function GET(request) {
   const originErr = checkOrigin(request);
   if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
-  const rl = checkRateLimit(getRateLimitKey(request));
+  const rl = await checkRateLimit(getRateLimitKey(request));
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
 
   // Optional: set PUBLIC_CONFIG_RESTRICTED=true to disable in production (e.g. if not using monitor)

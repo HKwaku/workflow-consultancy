@@ -1,7 +1,7 @@
 # Diagnostics Flow — Capabilities Document
 
-> **Last updated:** 2026-03-02
-> This document describes the current diagnostic tool: screens, features, and client experience. The diagnostic is implemented as React components in `components/diagnostic/` and `app/diagnostic/`. Update this doc when making changes.
+> **Last updated:** 2026-04-05
+> This document describes the current diagnostic tool: screens, features, and client experience. The diagnostic is implemented as React components in `components/diagnostic/` and served from `app/process-audit/`. Update this doc when making changes.
 
 ---
 
@@ -101,9 +101,9 @@ The diagnostic tool has three primary paths, all beginning from a single chat-fi
 | 1 | **Map Only** | No | 0 → 2 → 5 → 6 → /report | `diagnostic_progress`, `diagnostic_reports` |
 | 2 | **Comprehensive** | Yes (Supabase) | 0 → auth → 2 → 4 → 5 → 6 → /report | `diagnostic_progress`, `diagnostic_reports` |
 | 3 | **Team Alignment** | Yes (Supabase) | 0 → auth → -2 → 1 → 2 → 5 → 6 → /team-results | `team_diagnostics`, `team_responses` |
-| 4 | **Resume** | No | /diagnostic?resume=ID → last screen → continue | `diagnostic_progress` |
-| 5 | **Handover** | No | /diagnostic?resume=ID&step=N → video landing → screen 2 | `diagnostic_progress` |
-| 6 | **Team Join** | Yes (Supabase) | /diagnostic?team=CODE → auth → -2 → 1 → 2 → ... | `team_responses` |
+| 4 | **Resume** | No | /process-audit?resume=ID → last screen → continue | `diagnostic_progress` |
+| 5 | **Handover** | No | /process-audit?resume=ID&step=N → video landing → screen 2 | `diagnostic_progress` |
+| 6 | **Team Join** | Yes (Supabase) | /process-audit?team=CODE → auth → -2 → 1 → 2 → ... | `team_responses` |
 
 ---
 
@@ -358,7 +358,7 @@ Clicking any node in the flow preview:
 
 Each expanded step has a "Save & get link" button that:
 1. Saves progress to cloud with the current step index.
-2. Generates a resume URL: `/diagnostic?resume=ID&step=N`.
+2. Generates a resume URL: `/process-audit?resume=ID&step=N`.
 3. Allows the user (or a colleague) to continue from that exact step.
 
 ### Intelligent Time & Cost Collection
@@ -406,7 +406,7 @@ When a recipient opens a handover link:
 
 - **Save:** `POST /api/progress` with email, full state, optional step index, sender name, comments → returns `progressId` and `resumeUrl`.
 - **Resume:** `GET /api/progress?id=<progressId>` → restores full state.
-- Deep-links include `&step=N` to jump to a specific step in screen 2.
+- Deep-links include `&step=N` to jump to a specific step in screen 2. URL format: `/process-audit?resume=ID&step=N`.
 
 ### Report Persistence (via `/api/send-diagnostic-report`)
 
@@ -491,7 +491,7 @@ Factory functions `getFastModel(overrides)` and `getDeepModel(overrides)` create
 All system prompts share a common identity defined in `lib/prompts.js`:
 
 ```
-You are Sharpin's AI operating-model consultant — concise, expert, and actionable.
+You are Vesno's AI operating-model consultant — concise, expert, and actionable.
 ```
 
 The chat agent uses a separate persona: "Sharp, a friendly process mapping assistant."
@@ -551,7 +551,7 @@ User request
 **System prompt (Planner):**
 
 ```
-You are Sharpin's AI operating-model consultant. You redesign business processes
+You are Vesno's AI operating-model consultant. You redesign business processes
 by analyzing diagnostic data and producing optimised process flows.
 
 You have tools to build the redesign. In a SINGLE response, make ALL required tool calls:
@@ -572,7 +572,7 @@ Rules:
 **System prompt (Summarizer):**
 
 ```
-You are Sharpin's AI operating-model consultant. Given a completed redesign, produce:
+You are Vesno's AI operating-model consultant. Given a completed redesign, produce:
 1. An executive summary (2-3 sentences covering the key improvements)
 2. An implementation priority list (3-6 concrete actions, ordered by impact)
 
@@ -811,7 +811,7 @@ Formerly "Team Diagnostics" — renamed throughout the application.
 1. User clicks "Handover" in the nav bar on screen 2 (Map Steps) or screen 4 (Cost & Impact).
 2. Modal opens: recipient email, sender name, comments.
 3. Saves progress to cloud with current step index and handover metadata.
-4. Generates URL: `/diagnostic?resume=ID&step=N`.
+4. Generates URL: `/process-audit?resume=ID&step=N`.
 5. Optionally sends email via n8n webhook.
 6. Recipient opens link → sees full-screen video landing page with sender info.
 7. Accepts → resumes at the exact step where handover was initiated.
@@ -911,8 +911,8 @@ User starts diagnostic
 
 | File | Purpose |
 |------|---------|
-| `app/diagnostic/page.jsx` | Route entry point |
-| `app/diagnostic/layout.jsx` | Layout + diagnostic CSS import |
+| `app/process-audit/page.jsx` | Route entry point (`/process-audit`) |
+| `app/process-audit/layout.jsx` | Layout + diagnostic CSS import |
 | `components/diagnostic/DiagnosticClient.jsx` | Top-level client component, resume logic, auth gate for `?team=` URLs |
 | `components/diagnostic/DiagnosticContext.jsx` | Central state: reducer, save/restore, cloud save, authUser |
 | `components/diagnostic/IntroChatScreen.jsx` | Screen 0: Sharp chat, path/mode selection, auth gate triggers |

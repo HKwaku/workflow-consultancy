@@ -17,6 +17,8 @@
     "@langchain/core": "^1.1.29",
     "@langchain/langgraph": "^1.2.0",
     "@supabase/supabase-js": "^2.45.0",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.37.0",
     "@xyflow/react": "^12.10.1",
     "next": "^15.1.0",
     "react": "^19.0.0",

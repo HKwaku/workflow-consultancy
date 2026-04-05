@@ -25,7 +25,7 @@ export async function PUT(request) {
     if (auth.error) return NextResponse.json(auth.error.body, { status: auth.error.status });
     const email = auth.email;
 
-    const rl = checkRateLimit(getRateLimitKey(request));
+    const rl = await checkRateLimit(getRateLimitKey(request));
     if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
 
     const contentLength = parseInt(request.headers.get('content-length') || '0', 10);
@@ -48,7 +48,7 @@ export async function PUT(request) {
       return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
     const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
-    const readUrl = `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportIdTrimmed}&select=id,contact_email,diagnostic_data`;
+    const readUrl = `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportIdTrimmed}&select=id,contact_email,diagnostic_data,implementation_status`;
     const readResp = await fetchWithTimeout(readUrl, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
     if (!readResp.ok)
       return NextResponse.json({ error: 'Failed to read report.' }, { status: 502 });
@@ -76,9 +76,30 @@ export async function PUT(request) {
     if (updates.automationScore) dd.automationScore = { ...(dd.automationScore || {}), ...updates.automationScore };
     if (updates.processes && Array.isArray(updates.processes)) dd.processes = updates.processes;
     if (updates.rawProcesses && Array.isArray(updates.rawProcesses)) dd.rawProcesses = updates.rawProcesses;
+    if (updates.flowLayouts && Array.isArray(updates.flowLayouts)) {
+      const rp = Array.isArray(dd.rawProcesses) ? [...dd.rawProcesses] : [];
+      for (const fl of updates.flowLayouts) {
+        if (typeof fl.processIndex !== 'number' || fl.processIndex < 0) continue;
+        // Ensure the target process entry exists — create a stub if rawProcesses
+        // doesn't have one yet (e.g. older reports or summary-only diagnostics)
+        if (!rp[fl.processIndex]) {
+          const summaryProc = Array.isArray(dd.processes) ? dd.processes[fl.processIndex] : null;
+          rp[fl.processIndex] = summaryProc ? { processName: summaryProc.name || 'Process', steps: [] } : { processName: 'Process', steps: [] };
+        }
+        const entry = { ...rp[fl.processIndex] };
+        if (fl.flowNodePositions !== undefined) entry.flowNodePositions = fl.flowNodePositions;
+        if (fl.flowCustomEdges !== undefined) entry.flowCustomEdges = fl.flowCustomEdges;
+        if (fl.flowDeletedEdges !== undefined) entry.flowDeletedEdges = fl.flowDeletedEdges;
+        rp[fl.processIndex] = entry;
+      }
+      dd.rawProcesses = rp;
+    }
     if (updates.recommendations && Array.isArray(updates.recommendations)) dd.recommendations = updates.recommendations;
     if (updates.roadmap) dd.roadmap = updates.roadmap;
     if (updates.customDepartments && Array.isArray(updates.customDepartments)) dd.customDepartments = updates.customDepartments;
+    if (updates.implementationStatus && typeof updates.implementationStatus === 'object') {
+      topLevelPatch.implementation_status = { ...(existing.implementation_status || {}), ...updates.implementationStatus };
+    }
 
     // Redesign updates go to the report_redesigns table
     if (updates.redesign && typeof updates.redesign === 'object') {
@@ -163,6 +184,39 @@ export async function PUT(request) {
 
       // Keep backward compatibility: also store in diagnostic_data
       dd.redesign = { ...(dd.redesign || {}), ...sanitizeForJson(updates.redesign) };
+    }
+
+    // Redesign flow layout saves — patch only the flow fields on processes within report_redesigns
+    if (updates.redesignFlowLayouts && Array.isArray(updates.redesignFlowLayouts)) {
+      for (const fl of updates.redesignFlowLayouts) {
+        const { redesignId: flRedesignId, processIndex: flIdx, flowNodePositions, flowCustomEdges, flowDeletedEdges } = fl;
+        if (!flRedesignId || typeof flIdx !== 'number' || flIdx < 0) continue;
+        try {
+          const rdUrl = `${supabaseUrl}/rest/v1/report_redesigns?id=eq.${flRedesignId}&report_id=eq.${reportIdTrimmed}&select=id,redesign_data`;
+          const rdResp = await fetchWithTimeout(rdUrl, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
+          if (!rdResp.ok) continue;
+          const rdRows = await rdResp.json().catch(() => []);
+          if (!rdRows?.length) continue;
+          const rdData = sanitizeForJson(rdRows[0].redesign_data || {});
+          const updateProcs = (arr) => {
+            if (!Array.isArray(arr) || !arr[flIdx]) return arr;
+            const updated = [...arr];
+            updated[flIdx] = {
+              ...updated[flIdx],
+              ...(flowNodePositions !== undefined && { flowNodePositions }),
+              ...(flowCustomEdges !== undefined && { flowCustomEdges }),
+              ...(flowDeletedEdges !== undefined && { flowDeletedEdges }),
+            };
+            return updated;
+          };
+          if (rdData.acceptedProcesses) rdData.acceptedProcesses = updateProcs(rdData.acceptedProcesses);
+          if (rdData.optimisedProcesses) rdData.optimisedProcesses = updateProcs(rdData.optimisedProcesses);
+          await fetchWithTimeout(`${supabaseUrl}/rest/v1/report_redesigns?id=eq.${flRedesignId}`, {
+            method: 'PATCH', headers: getSupabaseWriteHeaders(supabaseKey),
+            body: JSON.stringify({ redesign_data: rdData, updated_at: new Date().toISOString() }),
+          });
+        } catch (flErr) { logger.warn('Redesign flow layout update error', { requestId: getRequestId(request), message: flErr.message }); }
+      }
     }
 
     const patchBody = { ...topLevelPatch, diagnostic_data: sanitizeForJson(dd) };

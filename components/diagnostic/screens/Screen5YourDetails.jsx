@@ -11,6 +11,7 @@ export default function Screen5YourDetails() {
   const [company, setCompany] = useState('');
   const [title, setTitle] = useState('');
   const [department, setDepartment] = useState('');
+  const [costAnalystEmail, setCostAnalystEmail] = useState('');
   const teamSize = processData?.teamSize || '';
   const industry = processData?.industry || '';
   const [error, setError] = useState('');
@@ -40,7 +41,7 @@ export default function Screen5YourDetails() {
       clearTimeout(confirmTimeoutRef.current);
       confirmTimeoutRef.current = null;
     }
-    setContact({ name: name.trim(), email: email.trim(), company: company.trim(), title: title.trim(), department: department.trim(), teamSize, industry });
+    setContact({ name: name.trim(), email: email.trim(), company: company.trim(), title: title.trim(), department: department.trim(), teamSize, industry, costAnalystEmail: costAnalystEmail.trim() || null });
     addAuditEvent({ type: 'submit', detail: `Contact details confirmed — ${name.trim()}${company.trim() ? ` (${company.trim()})` : ''}${title.trim() ? `, ${title.trim()}` : ''}` });
     goToScreen(6);
   }, [name, email, company, title, department, teamSize, industry, confirmStep, setContact, goToScreen]);
@@ -71,6 +72,11 @@ export default function Screen5YourDetails() {
       <div className="screen-card">
         <h2 className="screen-title">Your Details</h2>
         <p className="screen-subtitle">Where should we send your report?</p>
+        {(authUser?.name || authUser?.email) && (
+          <p style={{ fontSize: 13, color: 'var(--text-mid)', margin: '0 0 16px', padding: '8px 12px', background: 'var(--bg-2, #1e293b)', borderRadius: 6, border: '1px solid var(--border, #334155)' }}>
+            Name and email pre-filled from sign-up — update if needed.
+          </p>
+        )}
 
         {processesToSubmit.length > 0 && (
           <div className="process-submit-box">
@@ -97,7 +103,7 @@ export default function Screen5YourDetails() {
         </div>
         {isTeam && (
           <div className="form-group">
-            <label htmlFor="contactDepartment">Department (optional)</label>
+            <label htmlFor="contactDepartment">Team (optional)</label>
             <input type="text" id="contactDepartment" value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="e.g., Sales, Operations" />
           </div>
         )}
@@ -105,6 +111,22 @@ export default function Screen5YourDetails() {
           <label htmlFor="contactTitle">Job title (optional)</label>
           <input type="text" id="contactTitle" value={title} onChange={(e) => setTitle(e.target.value)} />
         </div>
+
+        {diagnosticMode === 'comprehensive' && (
+          <div className="form-group">
+            <label htmlFor="costAnalystEmail">Cost analyst email (optional)</label>
+            <p className="screen-subtitle" style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '0.82rem' }}>
+              Who should complete the financial model? They&apos;ll get a link to fill in costs and will be able to view the report.
+            </p>
+            <input
+              type="email"
+              id="costAnalystEmail"
+              value={costAnalystEmail}
+              onChange={(e) => setCostAnalystEmail(e.target.value)}
+              placeholder="manager@company.com"
+            />
+          </div>
+        )}
 
         {error && (
           <div className="error-box">

@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useSearchParams } from 'next/navigation';
-import { getSupabaseClient } from '@/lib/supabase';
+import { getSupabaseClient, getSessionSafe } from '@/lib/supabase';
 import PortalAuth from './PortalAuth';
 import PortalDashboard from './PortalDashboard';
 import '../../public/styles/diagnostic.css';
@@ -21,7 +21,7 @@ function PortalContent() {
 
   useEffect(() => {
     if (editFromUrl && user?.email && typeof window !== 'undefined') {
-      window.location.href = `/diagnostic?edit=${encodeURIComponent(editFromUrl)}&email=${encodeURIComponent(user.email)}`;
+      window.location.href = `/process-audit?edit=${encodeURIComponent(editFromUrl)}&email=${encodeURIComponent(user.email)}`;
     }
   }, [editFromUrl, user]);
 
@@ -33,7 +33,7 @@ function PortalContent() {
         if (!mounted) return;
         setSupabase(sb);
 
-        const { data: { session: s } } = await sb.auth.getSession();
+        const { session: s } = await getSessionSafe(sb);
         if (mounted) {
           setSession(s);
           setUser(s?.user ?? null);
@@ -77,7 +77,7 @@ function PortalContent() {
       <>
         <header className="dashboard-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <Link href="/" className="header-logo">Sharpin<span style={{ color: 'var(--gold)' }}>.</span></Link>
+            <Link href="/" className="header-logo">Vesno<span style={{ color: 'var(--gold)' }}>.</span></Link>
             <div className="header-divider" />
             <span className="header-title">Client Login</span>
           </div>
@@ -97,7 +97,7 @@ function PortalContent() {
       <>
         <header className="dashboard-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <Link href="/" className="header-logo">Sharpin<span style={{ color: 'var(--gold)' }}>.</span></Link>
+            <Link href="/" className="header-logo">Vesno<span style={{ color: 'var(--gold)' }}>.</span></Link>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <ThemeToggle className="header-theme-btn" />

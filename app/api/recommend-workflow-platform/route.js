@@ -17,7 +17,7 @@ export async function POST(request) {
   const auth = await requireAuth(request);
   if (auth.error) return NextResponse.json(auth.error.body, { status: auth.error.status });
 
-  const rl = checkRateLimit(getRateLimitKey(request));
+  const rl = await checkRateLimit(getRateLimitKey(request));
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
 
   const contentLength = parseInt(request.headers.get('content-length') || '0', 10);
@@ -54,6 +54,14 @@ export async function POST(request) {
     const rdRow = rdRows[0];
     const redesign = rdRow.redesign_data || {};
 
+    // Fetch segment from diagnostic report for context-aware ranking
+    let reportSegment = '';
+    try {
+      const segResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}&select=diagnostic_data`, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
+      const segRows = segResp.ok ? await segResp.json() : [];
+      reportSegment = segRows[0]?.diagnostic_data?.contact?.segment || '';
+    } catch { /* non-fatal */ }
+
     // Return cached recommendations if available
     const cached = redesign.recommended_top3;
     if (Array.isArray(cached) && cached.length >= 3 && cached.every((id) => VALID_IDS.includes(id))) {
@@ -82,7 +90,15 @@ export async function POST(request) {
       })
       .join('\n');
 
-    const systemPrompt = `You recommend workflow automation platforms based on a process redesign. Reply with exactly 3 platform ids from this list, in order of best fit first: ${PLATFORM_IDS}. Format: id1, id2, id3 (comma-separated, no other text).`;
+    const SEGMENT_PLATFORM_HINTS = {
+      ma: 'This is an M&A integration context — prioritise platforms with strong governance, audit trails, and multi-entity support.',
+      pe: 'This is a private equity context — prioritise platforms with rapid ROI, minimal IT overhead, and clear cost tracking.',
+      highstakes: 'This is a high-stakes event context — prioritise platforms with reliability, rollback support, and fast onboarding.',
+      scaling: 'This is a scaling business context — prioritise platforms that handle high volume, support delegation, and integrate with existing tools.',
+    };
+    const segmentHint = reportSegment && SEGMENT_PLATFORM_HINTS[reportSegment] ? `\n${SEGMENT_PLATFORM_HINTS[reportSegment]}` : '';
+
+    const systemPrompt = `You recommend workflow automation platforms based on a process redesign. Reply with exactly 3 platform ids from this list, in order of best fit first: ${PLATFORM_IDS}. Format: id1, id2, id3 (comma-separated, no other text).${segmentHint}`;
     const userPrompt = `Process redesign summary:\n${processDesc || 'No process details.'}\n\nWhich 3 platforms are the best fit, in order? Reply with exactly 3 ids, comma-separated.`;
 
     const model = getFastModel({ temperature: 0 });

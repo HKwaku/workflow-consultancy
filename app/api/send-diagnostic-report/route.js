@@ -11,7 +11,7 @@ export async function POST(request) {
   const originErr = checkOrigin(request);
   if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
 
-  const rl = checkRateLimit(getRateLimitKey(request));
+  const rl = await checkRateLimit(getRateLimitKey(request));
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
 
   const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024; // 2MB
@@ -27,7 +27,7 @@ export async function POST(request) {
       const msg = err.formErrors?.join?.(' ') || err.errors?.[0]?.message || 'Invalid request.';
       return NextResponse.json({ error: msg, details: err }, { status: 400 });
     }
-    let { editingReportId, contact, fallbackEmail, authToken, summary, recommendations, automationScore, roadmap, processes, rawProcesses, customDepartments, diagnosticMode, timestamp, userId, auditTrail } = parsed.data;
+    let { editingReportId, contact, fallbackEmail, authToken, summary, recommendations, automationScore, roadmap, processes, rawProcesses, customDepartments, diagnosticMode, timestamp, userId, progressId, auditTrail, costAnalystEmail, parentReportId } = parsed.data;
     let resolvedEmail = (contact?.email || '').trim() || (fallbackEmail || '').trim() || '';
     if (!resolvedEmail || !isValidEmail(resolvedEmail)) {
       const token = authToken || request.headers.get('Authorization')?.replace(/^Bearer\s+/i, '')?.trim();
@@ -39,6 +39,7 @@ export async function POST(request) {
     }
     if (!resolvedEmail || !isValidEmail(resolvedEmail)) return NextResponse.json({ error: 'Invalid request. Contact email required.' }, { status: 400 });
     contact = { ...(contact || {}), email: resolvedEmail, name: contact?.name ?? '', company: contact?.company ?? '' };
+    const resolvedEmailLower = resolvedEmail.toLowerCase();
 
     const reportId = editingReportId || crypto.randomUUID();
     const isUpdate = !!editingReportId;
@@ -53,6 +54,29 @@ export async function POST(request) {
 
     const sbConfig = requireSupabase();
     let storedInSupabase = false;
+
+    // Collect contributor emails automatically from sharing events
+    const autoContributors = new Set();
+    // Cost analyst is always a contributor
+    if (costAnalystEmail) {
+      const ca = (costAnalystEmail || '').trim().toLowerCase();
+      if (ca && isValidEmail(ca) && ca !== resolvedEmailLower) autoContributors.add(ca);
+    }
+    // Fetch the progress record to see if the link was forwarded to someone
+    if (sbConfig && progressId && !isUpdate) {
+      try {
+        const { url: supabaseUrl, key: supabaseKey } = sbConfig;
+        const pgResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_progress?id=eq.${progressId}&select=email`, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
+        if (pgResp.ok) {
+          const [pgRow] = await pgResp.json();
+          const pgEmail = (pgRow?.email || '').trim().toLowerCase();
+          if (pgEmail && isValidEmail(pgEmail) && pgEmail !== resolvedEmailLower) {
+            autoContributors.add(pgEmail);
+          }
+        }
+      } catch { /* non-fatal */ }
+    }
+    const contributorEmailsToSave = [...autoContributors];
 
     if (sbConfig) {
       const { url: supabaseUrl, key: supabaseKey } = sbConfig;
@@ -83,16 +107,29 @@ export async function POST(request) {
           contact_email: contact.email || '',
           contact_name: contact.name || '',
           company: contact.company || '',
+          contributor_emails: contributorEmailsToSave,
           lead_score: leadScore.score,
           lead_grade: leadScore.grade,
           diagnostic_mode: diagnosticMode || 'comprehensive',
+          segment: contact.segment || null,
+          cost_analysis_status: costStatus,
+          cost_analysis_token: costToken || null,
+          cost_analysis_token_expires_at: costToken ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null,
+          total_annual_cost: summary?.totalAnnualCost || null,
+          potential_savings: summary?.potentialSavings || null,
+          automation_percentage: automationScore?.percentage || null,
+          automation_grade: automationScore?.grade || null,
           diagnostic_data: {
             contact, summary, recommendations, automationScore, roadmap, processes, rawProcesses: rawProcesses || null, customDepartments: customDepartments || [], leadScore, diagnosticMode: diagnosticMode || 'comprehensive', auditTrail: (auditTrail || []).slice(-50),
             costAnalysisStatus: costStatus,
             ...(costToken ? { costAnalysisToken: costToken } : {}),
+            // Seed the cost-authorized list with the cost analyst's email.
+            // Only users in this list (or holders of the cost_analysis_token) can see cost data.
+            costAuthorizedEmails: costAnalystEmail ? [(costAnalystEmail).trim().toLowerCase()] : [],
           },
           updated_at: now,
           ...(userId ? { user_id: userId } : {}),
+          ...(parentReportId && !isUpdate ? { parent_report_id: parentReportId } : {}),
         };
         if (!isUpdate) reportPayload.created_at = timestamp || now;
 
@@ -108,6 +145,7 @@ export async function POST(request) {
 
         if (storedInSupabase && !isUpdate) {
           scheduleFollowups(supabaseUrl, supabaseKey, reportId, contact, now, getRequestId(request));
+          linkProgressRecord(supabaseUrl, supabaseKey, progressId, reportId, getRequestId(request));
         }
       } catch (sbErr) { logger.warn('Supabase error', { requestId: getRequestId(request), message: sbErr.message }); }
     }
@@ -122,6 +160,7 @@ export async function POST(request) {
         name: contact.name || '',
         email: contact.email || '',
         company: contact.company || '',
+        segment: contact.segment || '',
       },
       leadScore: { score: leadScore.score, grade: leadScore.grade },
       summary: {
@@ -135,6 +174,7 @@ export async function POST(request) {
       },
       notification: notif,
       timestamp: timestamp || now,
+      contributorEmails: contributorEmailsToSave,
     };
 
     const { sent: webhookConfigured, body: webhookResponse } = await triggerWebhook(n8nPayload, { envSuffix: 'DIAGNOSTIC_COMPLETE', requestId: getRequestId(request) });
@@ -167,8 +207,7 @@ async function scheduleFollowups(supabaseUrl, supabaseKey, reportId, contact, no
       id: crypto.randomUUID(),
       report_id: reportId,
       contact_email: contact.email,
-      contact_name: contact.name || null,
-      company: contact.company || null,
+      // contact_name and company are sourced via FK join on report; not duplicated here
       ...r,
       status: 'pending',
       created_at: now,
@@ -181,6 +220,19 @@ async function scheduleFollowups(supabaseUrl, supabaseKey, reportId, contact, no
     });
   } catch (err) {
     logger.warn('Failed to schedule follow-ups', { requestId, message: err.message });
+  }
+}
+
+async function linkProgressRecord(supabaseUrl, supabaseKey, progressId, reportId, requestId) {
+  if (!progressId) return;
+  try {
+    await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_progress?id=eq.${encodeURIComponent(progressId)}`, {
+      method: 'PATCH',
+      headers: getSupabaseWriteHeaders(supabaseKey),
+      body: JSON.stringify({ report_id: reportId }),
+    });
+  } catch (err) {
+    logger.warn('Failed to link progress record to report', { requestId, message: err.message });
   }
 }
 
@@ -208,7 +260,7 @@ function calculateLeadScore(contact, summary, automationScore, processes) {
 
 function buildNotificationSummary(contact, summary, leadScore, automationScore) {
   const cost = summary?.totalAnnualCost || 0;
-  const headline = `New Diagnostic Completed: ${contact.company || 'Unknown Company'}`;
-  const subject = `[${leadScore.grade}] New Diagnostic: ${contact.company || 'Unknown'} - £${(cost / 1000).toFixed(0)}K annual cost`;
+  const headline = `New Process Audit Completed: ${contact.company || 'Unknown Company'}`;
+  const subject = `[${leadScore.grade}] New Process Audit: ${contact.company || 'Unknown'} - £${(cost / 1000).toFixed(0)}K annual cost`;
   return { headline, subject, priority: leadScore.grade === 'Hot' ? 'high' : leadScore.grade === 'Warm' ? 'medium' : 'low' };
 }

@@ -5,7 +5,7 @@ import { useRef, useEffect } from 'react';
 /**
  * Hero canvas — animated process-flow diagram.
  *
- * Tells Sharpin's story visually:
+ * Tells Vesno's story visually:
  *   1. CHAOS   — a multi-lane business-process pipeline with bottleneck nodes
  *                pulsing amber, particles queueing up before blocked steps.
  *   2. SCAN    — a diagnostic sweep moves left → right, "discovering" the issues.

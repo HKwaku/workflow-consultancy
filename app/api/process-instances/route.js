@@ -12,7 +12,7 @@ export async function POST(request) {
   const auth = await requireAuth(request);
   if (auth.error) return NextResponse.json(auth.error.body, { status: auth.error.status });
 
-  const rl = checkRateLimit(getRateLimitKey(request));
+  const rl = await checkRateLimit(getRateLimitKey(request));
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
 
   const contentLength = parseInt(request.headers.get('content-length') || '0', 10);
@@ -27,7 +27,7 @@ export async function POST(request) {
     try { body = await request.json(); } catch { return NextResponse.json({ error: 'Invalid JSON.' }, { status: 400 }); }
     const parsed = ProcessInstanceInputSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: 'Invalid input. processName (max 200 chars) and status are required.' }, { status: 400 });
-    const { reportId, processName, instanceName, status, notes, userId, email } = parsed.data;
+    const { reportId, processName, instanceName, status, notes, email } = parsed.data;
 
     const userEmail = auth.email.toLowerCase();
     const payloadEmail = (email || userEmail).toString().toLowerCase();
@@ -37,7 +37,7 @@ export async function POST(request) {
       id: crypto.randomUUID(), report_id: reportId || null, email: userEmail,
       process_name: processName, instance_name: instanceName || null,
       status, notes: notes || null, logged_at: new Date().toISOString(),
-      ...(userId ? { user_id: userId } : {}),
+      user_id: auth.userId || null,
     };
 
     const sbResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/process_instances`, {
@@ -60,7 +60,7 @@ export async function GET(request) {
   const auth = await requireAuth(request);
   if (auth.error) return NextResponse.json(auth.error.body, { status: auth.error.status });
 
-  const rl = checkRateLimit(getRateLimitKey(request));
+  const rl = await checkRateLimit(getRateLimitKey(request));
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
 
   const sbConfig = requireSupabase();

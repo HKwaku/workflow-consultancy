@@ -10,16 +10,26 @@ import { apiFetch } from '@/lib/api-fetch';
 import InteractiveFlowCanvas from '@/components/flow/InteractiveFlowCanvas';
 import { HANDOFF_METHODS, CLARITY_OPTIONS } from '@/lib/diagnostic/handoffOptions';
 import { DEPT_INTERNAL, DEPT_EXTERNAL } from '@/lib/diagnostic/stepConstants';
-import { COMMON_SYSTEMS } from '@/lib/diagnostic/constants';
+import { COMMON_SYSTEMS, WAIT_TYPE_OPTIONS } from '@/lib/diagnostic/constants';
 import { getFriendlyChatError, isRetryableError } from '@/lib/chat-utils';
 import { STEP_SUGGESTIONS } from '@/lib/diagnostic/stepSuggestions';
 import { resolveBranchTarget } from '@/lib/flows/shared';
+import { loadSnippets, saveSnippet, deleteSnippet } from '@/lib/diagnostic/savedSnippets';
+import { getWaitProfile } from '@/lib/flows/flowModel';
 import { repairFlow } from '@/lib/flows/normalizer';
 import { reconcileDecisionBranches } from '@/lib/flows/reconcileEdges';
 import FloatingFlowViewer from '../FloatingFlowViewer';
 
 const MIN_STEPS = 3;
 const MAX_STEPS = 50;
+const DEP_TYPE_LABELS = {
+  feeds_into: '→ Feeds into',
+  receives_from: '← Receives from',
+  triggers: '⚡ Triggers',
+  triggered_by: '⚡ Triggered by',
+  shares_data: '⇄ Shares data with',
+  waits_for: '⏳ Waits for',
+};
 const PREDEFINED_DEPTS = new Set([...DEPT_INTERNAL, ...DEPT_EXTERNAL]);
 
 function SectionHint({ text }) {
@@ -45,15 +55,17 @@ function SectionHint({ text }) {
 }
 
 const NODE_TYPE_OPTIONS = [
-  { id: 'step',      label: 'Step',     icon: '▭', desc: 'Regular process step',    isDecision: false, parallel: false, isMerge: false },
-  { id: 'exclusive', label: 'Decision', icon: '◇', desc: 'Branch: one path chosen', isDecision: true,  parallel: false, isMerge: false },
-  { id: 'parallel',  label: 'Parallel', icon: '⊕', desc: 'Branch: all paths run',   isDecision: true,  parallel: true,  isMerge: false },
-  { id: 'merge',     label: 'Merge',    icon: '⧉', desc: 'Convergence point',       isDecision: false, parallel: false, isMerge: true  },
+  { id: 'step',      label: 'Step',      icon: '▭', desc: 'Regular process step',             isDecision: false, parallel: false, inclusive: false, isMerge: false },
+  { id: 'exclusive', label: 'Exclusive', icon: '◇', desc: 'XOR: exactly one path is taken',   isDecision: true,  parallel: false, inclusive: false, isMerge: false },
+  { id: 'parallel',  label: 'Parallel',  icon: '⊕', desc: 'AND: all paths run simultaneously', isDecision: true,  parallel: true,  inclusive: false, isMerge: false },
+  { id: 'inclusive', label: 'Inclusive', icon: '◎', desc: 'OR: one or more paths are taken',  isDecision: true,  parallel: false, inclusive: true,  isMerge: false },
+  { id: 'merge',     label: 'Merge',     icon: '⧉', desc: 'Convergence point for branches',   isDecision: false, parallel: false, inclusive: false, isMerge: true  },
 ];
 
 function getActiveNodeType(s) {
   if (s.isMerge) return 'merge';
   if (s.isDecision && s.parallel) return 'parallel';
+  if (s.isDecision && s.inclusive) return 'inclusive';
   if (s.isDecision) return 'exclusive';
   return 'step';
 }
@@ -71,22 +83,22 @@ function ensureHandoffs(steps, handoffs) {
 }
 
 
-export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) {
+export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, onAuditTrailToggle, auditTrailOpen }) {
   const {
     processData, updateProcessData, goToScreen,
     customDepartments, addCustomDepartment,
     diagnosticMode, teamMode, chatMessages, addChatMessage,
-    saveProgressToCloud, editingReportId, editingRedesign, contact, authUser,
+    saveProgressToCloud, editingReportId, editingRedesign, aiRedesignMode, contact, authUser,
     addAuditEvent,
   } = useDiagnostic();
-  const { accessToken } = useAuth();
+  const { accessToken, user: sessionUser } = useAuth();
   const { theme } = useTheme();
 
   /* ═══════ Step state ═══════ */
   const initialSteps = useMemo(() => {
     return (processData.steps?.length
       ? processData.steps
-      : [{ number: 1, name: '', department: '', isDecision: false, isMerge: false, isExternal: false, branches: [], systems: [], contributor: '', checklist: [] }]
+      : []
     ).map((s) => ({ ...s, isMerge: s.isMerge ?? false, systems: s.systems || [], branches: s.branches || [], contributor: s.contributor || '', checklist: s.checklist || [] }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -95,6 +107,14 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
   const [handoffs, setHandoffs] = useState(() => ensureHandoffs(initialSteps, processData.handoffs));
   const [activeIdx, setActiveIdx] = useState(0);
   const [error, setError] = useState('');
+  const [validationToast, setValidationToast] = useState('');
+  const validationToastTimerRef = useRef(null);
+
+  const showValidationToast = useCallback((msg) => {
+    setValidationToast(msg);
+    if (validationToastTimerRef.current) clearTimeout(validationToastTimerRef.current);
+    validationToastTimerRef.current = setTimeout(() => setValidationToast(''), 4000);
+  }, []);
   const [customDeptInput, setCustomDeptInput] = useState({});
   const [systemInputs, setSystemInputs] = useState({});
   const [handoffInputs, setHandoffInputs] = useState({});
@@ -112,18 +132,53 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
   const [expandedStepIdx, setExpandedStepIdx] = useState(initialStepIdxProp ?? null);
   const [checklistInputs, setChecklistInputs] = useState({});
   const [showFloatingFlow, setShowFloatingFlow] = useState(false);
+  const [snippets, setSnippets] = useState(() => { try { return loadSnippets(null); } catch { return []; } });
+  const [showSnippetPicker, setShowSnippetPicker] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadMsg, setUploadMsg] = useState('');
+  const describeFileRef = useRef(null);
+  const [describeDragOver, setDescribeDragOver] = useState(false);
+  const [describeText, setDescribeText] = useState('');
+  const [describeLoading, setDescribeLoading] = useState(false);
+  const [describeError, setDescribeError] = useState('');
+  const [showDepsModal, setShowDepsModal] = useState(false);
+  const [depsLinks, setDepsLinks] = useState(() => processData.processDependencies || []);
+  const [depsNewProcess, setDepsNewProcess] = useState('');
+  const [depsNewType, setDepsNewType] = useState('feeds_into');
+  const [pendingNavAfterDeps, setPendingNavAfterDeps] = useState(false);
   const [previewViewMode, setPreviewViewMode] = useState('grid');
   const [flowNodePositions, setFlowNodePositions] = useState(() => processData.flowNodePositions || {});
   const [flowCustomEdges, setFlowCustomEdges] = useState(() => processData.flowCustomEdges || []);
   const [flowDeletedEdges, setFlowDeletedEdges] = useState(() => processData.flowDeletedEdges || []);
 
-  /* ═══════ Layout state (floating panels; both start closed) ═══════ */
+  /* ═══════ Layout state (floating panels) ═══════ */
   const [floatingPanel, setFloatingPanel] = useState(null); // null | 'steps' | 'chat'
+
+  /* ═══════ AI redesign generation state ═══════ */
+  const [redesignPhase, setRedesignPhase] = useState('idle'); // 'idle' | 'loading' | 'ready' | 'error'
+  const [redesignProgress, setRedesignProgress] = useState('');
+  const triggerRedesignRef = useRef(false);
+  const redesignContextRef = useRef(null); // holds serialised redesign context for the chat prompt
+
+  // On first arrival with no steps: seed Afi's opening message (used as context for AI, not shown as chat panel)
+  const hasSeededChatRef = useRef(false);
+  useEffect(() => {
+    if (hasSeededChatRef.current || editingRedesign) return;
+    if (chatMessages.length === 0 && initialSteps.length === 0) {
+      hasSeededChatRef.current = true;
+      const name = processData.processName || 'this process';
+      addChatMessage({
+        role: 'assistant',
+        content: `Let's map "${name}" together. What's the very first thing that happens — what triggers it, and who kicks it off?`,
+      });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [detailTab, setDetailTab] = useState('type'); // active tab in node inspector
 
   const focusNameRef = useRef({});
   const chatEndRef = useRef(null);
   const chatFileRef = useRef(null);
+  const chatTextareaRef = useRef(null);
   const lastFailedChatPayloadRef = useRef(null);
   const previewCanvasRef = useRef(null);
   const stepsSyncTimerRef = useRef(null);
@@ -131,6 +186,8 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
   // Refs hold the LATEST canvas edge state synchronously — no stale closures
   const flowCustomEdgesRef = useRef(flowCustomEdges);
   const flowDeletedEdgesRef = useRef(flowDeletedEdges);
+  const flowNodePositionsRef = useRef(flowNodePositions);
+  flowNodePositionsRef.current = flowNodePositions; // keep in sync every render
 
   /* ═══════ Sync local steps → global processData (debounced) ═════
    * processActions updates local state via setSteps but not global state.
@@ -150,18 +207,8 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
     return () => clearTimeout(stepsSyncTimerRef.current);
   }, [steps, handoffs]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* ═══════ Canvas edges always win ═══════════════════════════════
-   * When AI/chat rewrites steps, re-apply any manual canvas overrides so
-   * they are never silently lost. Refs always hold the latest edge state
-   * (updated synchronously in the callbacks below), so no stale closure risk.
-   * The fast-path guard makes this a no-op when no canvas overrides exist. */
-  useEffect(() => {
-    if (!flowCustomEdgesRef.current?.length && !flowDeletedEdgesRef.current?.length) return;
-    setSteps((prev) => {
-      const reconciled = reconcileDecisionBranches(prev, flowCustomEdgesRef.current, flowDeletedEdgesRef.current);
-      return reconciled.every((s, i) => s === prev[i]) ? prev : reconciled;
-    });
-  }, [steps]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => { if (validationToastTimerRef.current) clearTimeout(validationToastTimerRef.current); }, []);
+
 
   /* ═══════ Step helpers ═══════ */
   const syncHandoffs = useCallback((s) => setHandoffs((p) => ensureHandoffs(s, p)), []);
@@ -205,6 +252,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
       const isDecision = !!opt.isDecision;
       const isMerge = !!opt.isMerge;
       const parallel = !!opt.parallel;
+      const inclusive = !!opt.inclusive;
       let branches = s.branches || [];
       if (isDecision) {
         if (branches.length < 2) branches = [{ label: '', target: '' }, { label: '', target: '' }];
@@ -216,6 +264,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
         isDecision,
         isMerge,
         parallel,
+        inclusive,
         branches,
         // Default team to "Automated" when switching to a decision node with no team set
         department: isDecision && !s.department ? 'Automated' : s.department,
@@ -384,6 +433,48 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
     }
   }, [steps, addAuditEvent]);
 
+  /**
+   * Insert a blank step at position `insertIdx` (0-based) and remap all
+   * decision branch targets that point at or after that index.
+   * Returns the new step count so callers can do position/edge remapping.
+   */
+  const insertStepWithRemap = useCallback((insertIdx, isDecisionEdgeInsert = false) => {
+    const insertAfter = insertIdx - 1; // addStep convention: insert after this index
+    setSteps((prev) => {
+      if (prev.length >= MAX_STEPS) return prev;
+      const blank = { number: 0, name: '', department: '', isDecision: false, isMerge: false, isExternal: false, durationMinutes: undefined, durationUnit: 'hours', branches: [], systems: [], contributor: '', checklist: [] };
+      const next = insertAfter === -2
+        ? [blank, ...prev]
+        : insertAfter >= 0 && insertAfter < prev.length
+          ? [...prev.slice(0, insertAfter + 1), blank, ...prev.slice(insertAfter + 1)]
+          : [...prev, blank];
+      const withNumbers = next.map((s, i) => ({ ...s, number: i + 1 }));
+      const oldSteps = prev.map((s, i) => ({ ...s, idx: i }));
+      const bumpTarget = (t) => {
+        const idx = resolveBranchTarget(t, oldSteps);
+        // For decision-edge inserts the new node becomes the branch start (takes
+        // the slot at insertIdx), so the original target at exactly insertIdx must
+        // NOT be bumped — it now correctly points to the new node.
+        // For sequential inserts the node at insertIdx shifted to insertIdx+1, so
+        // any branch pointing there must be bumped.
+        const shouldBump = isDecisionEdgeInsert ? idx > insertIdx : idx >= insertIdx;
+        if (shouldBump) {
+          const m = String(t).match(/^(.*?)(\d+)(.*)$/);
+          return m ? `${m[1]}${parseInt(m[2], 10) + 1}${m[3]}` : t;
+        }
+        return t;
+      };
+      const updated = withNumbers.map((s) => {
+        if (!s.isDecision || !(s.branches || []).length) return s;
+        return { ...s, branches: s.branches.map((b) => ({ ...b, target: bumpTarget(b.target || b.targetStep || '') })) };
+      });
+      setHandoffs((h) => ensureHandoffs(updated, h));
+      setActiveIdx(insertAfter === -2 ? 0 : insertAfter >= 0 ? insertAfter + 1 : updated.length - 1);
+      queueMicrotask(() => addAuditEvent({ type: 'step_add', detail: `Added step at position ${insertIdx + 1}` }));
+      return updated;
+    });
+  }, [addAuditEvent]);
+
   const handleAddCustomDept = (stepIdx, val) => {
     const t = (val || '').trim();
     if (!t) return;
@@ -399,22 +490,32 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
     syncHandoffs(next);
     setSuggestionUsed((p) => new Set([...p, suggestion]));
     setActiveIdx(next.length - 1);
+    addAuditEvent({ type: 'step_add', detail: `Added suggested step "${suggestion}"` });
   };
 
-  const handleContinue = useCallback(() => {
+  const commitAndNavigate = useCallback((deps) => {
     const valid = steps.filter((s) => s.name.trim());
-    if (valid.length < MIN_STEPS) { setError(`Add at least ${MIN_STEPS} steps.`); return; }
-    // Apply canvas edge overrides before repairing — ensures manual reconnections
-    // are preserved even if the async reconciliation effect hasn't fired yet.
     const reconciled = reconcileDecisionBranches(valid, flowCustomEdgesRef.current, flowDeletedEdgesRef.current);
     const { steps: repairedValid } = repairFlow(reconciled);
     const h = ensureHandoffs(repairedValid, handoffs);
     const allSys = [...new Set(repairedValid.flatMap((s) => s.systems || []).filter(Boolean))];
-    updateProcessData({ steps: repairedValid, handoffs: h, systems: allSys.length > 0 ? allSys : processData.systems });
+    updateProcessData({ steps: repairedValid, handoffs: h, systems: allSys.length > 0 ? allSys : processData.systems, processDependencies: deps });
     setError('');
     addAuditEvent({ type: 'navigate', detail: `Completed step mapping with ${valid.length} steps` });
     goToScreen(5);
-  }, [steps, handoffs, processData.systems, updateProcessData, goToScreen, diagnosticMode, addAuditEvent]);
+  }, [steps, handoffs, processData.systems, updateProcessData, goToScreen, addAuditEvent]);
+
+  const handleContinue = useCallback(() => {
+    const valid = steps.filter((s) => s.name.trim());
+    if (valid.length < MIN_STEPS) {
+      const missing = MIN_STEPS - valid.length;
+      showValidationToast(`Add at least ${missing} more step${missing > 1 ? 's' : ''} before continuing — you need ${MIN_STEPS} named steps minimum.`);
+      return;
+    }
+    // Show dependency mapping modal before navigating away
+    setShowDepsModal(true);
+    setPendingNavAfterDeps(true);
+  }, [steps, showValidationToast]);
 
   const goStep = (dir) => {
     const n = activeIdx + dir;
@@ -432,6 +533,143 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
     updateProcessData({ steps: repairedValid, handoffs: h, systems: pd.systems });
     return pd;
   }, [steps, handoffs, processData, updateProcessData]);
+
+  /* ═══════ AI redesign — apply output to canvas ═══════ */
+  const applyRedesign = useCallback((redesign) => {
+    const proc = redesign.optimisedProcesses?.[0];
+    if (!proc?.steps?.length) return;
+    const newSteps = (proc.steps || [])
+      .filter((s) => s.status !== 'removed')
+      .map((s, si) => ({
+        number: si + 1,
+        name: s.name || '',
+        department: s.department || '',
+        isDecision: !!s.isDecision,
+        isMerge: !!s.isMerge,
+        isExternal: !!s.isExternal,
+        parallel: !!s.parallel,
+        inclusive: !!s.inclusive,
+        branches: s.branches || [],
+        systems: s.systems || [],
+        contributor: s.contributor || '',
+        checklist: s.checklist || [],
+      }));
+    const newHandoffs = ensureHandoffs(newSteps, proc.handoffs || []);
+    setSteps(newSteps);
+    setHandoffs(newHandoffs);
+    // Clear canvas customisations — this is a new layout
+    setFlowCustomEdges([]);
+    setFlowDeletedEdges([]);
+    flowCustomEdgesRef.current = [];
+    flowDeletedEdgesRef.current = [];
+    setFlowNodePositions({});
+    // Post a summary chat message with contextual suggestion chips
+    const cs = redesign.costSummary || {};
+    const changes = redesign.changes || [];
+
+    // Count findings
+    const bottleneckChanges = changes.filter((c) =>
+      (c.estimatedTimeSavedMinutes > 0) || ['removed', 'merged', 'reordered', 'automated'].includes(c.type)
+    );
+    const bottleneckCount = bottleneckChanges.length;
+    const costSavedPct = cs.estimatedCostSavedPercent || 0;
+    const timeSavedPct = cs.estimatedTimeSavedPercent || 0;
+
+    // Build a concise ready message (the opening question was already shown on load)
+    const statsLine = [
+      cs.stepsRemoved > 0 && `${cs.stepsRemoved} step${cs.stepsRemoved > 1 ? 's' : ''} removed`,
+      cs.stepsAutomated > 0 && `${cs.stepsAutomated} automated`,
+      timeSavedPct > 0 && `~${timeSavedPct}% time saving`,
+      costSavedPct > 0 && `~${costSavedPct}% cost saving`,
+    ].filter(Boolean).join(', ');
+
+    const msg = statsLine
+      ? `Your optimised process is ready — ${statsLine}. Where would you like to start?`
+      : `Your optimised process is ready. Where would you like to start?`;
+
+    // Build contextual suggestions
+    const hasRemovals = (cs.stepsRemoved || 0) > 0 || changes.some((c) => c.type === 'removed');
+    const hasAutomation = (cs.stepsAutomated || 0) > 0 || changes.some((c) => c.type === 'automated');
+    const hasMerges = changes.some((c) => c.type === 'merged');
+
+    const suggestions = [
+      'Start with the biggest bottleneck',
+      'Focus on highest cost savings',
+    ];
+    if (hasAutomation) suggestions.push('What can be automated?');
+    if (hasRemovals) suggestions.push('What was cut and why?');
+    if (hasMerges) suggestions.push('Walk me through the merges');
+    if (suggestions.length < 4) suggestions.push('Walk me through all changes');
+
+    // Store redesign context so the chat AI can reference specific changes
+    redesignContextRef.current = JSON.stringify({
+      executiveSummary: redesign.executiveSummary,
+      changes: redesign.changes || [],
+      costSummary: redesign.costSummary || {},
+      implementationPriority: redesign.implementationPriority || [],
+    }, null, 2);
+
+    addChatMessage({ role: 'assistant', content: msg, suggestions: suggestions.slice(0, 5) });
+  }, [addChatMessage]);
+
+  const triggerAiRedesign = useCallback(async () => {
+    if (!editingReportId || !accessToken) return;
+    setRedesignPhase('loading');
+    setRedesignProgress('Preparing your redesign…');
+    try {
+      const resp = await fetch('/api/generate-redesign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+        body: JSON.stringify({ reportId: editingReportId }),
+      });
+      const contentType = resp.headers.get('content-type') || '';
+      if (contentType.includes('text/event-stream')) {
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        let redesignResult = null;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          let idx;
+          while ((idx = buf.indexOf('\n\n')) !== -1) {
+            const chunk = buf.slice(0, idx);
+            buf = buf.slice(idx + 2);
+            let event = 'message', raw = '';
+            for (const line of chunk.split('\n')) {
+              if (line.startsWith('event: ')) event = line.slice(7).trim();
+              else if (line.startsWith('data: ')) raw = line.slice(6);
+            }
+            if (!raw) continue;
+            try {
+              const parsed = JSON.parse(raw);
+              if (event === 'progress') setRedesignProgress(parsed.message || '');
+              else if (event === 'done') redesignResult = parsed.redesign;
+              else if (event === 'error') throw new Error(parsed.error || 'Redesign failed');
+            } catch (e) { if (!e.message?.startsWith('Redesign')) continue; throw e; }
+          }
+        }
+        if (redesignResult) { applyRedesign(redesignResult); setRedesignPhase('ready'); }
+        else { setRedesignPhase('error'); setRedesignProgress('No redesign data received. Please try again.'); }
+      } else {
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Redesign failed');
+        if (data.redesign) { applyRedesign(data.redesign); setRedesignPhase('ready'); }
+        else { setRedesignPhase('error'); setRedesignProgress('No redesign data received.'); }
+      }
+    } catch (err) {
+      setRedesignPhase('error');
+      setRedesignProgress(err.message || 'Failed to generate redesign. Please try again.');
+    }
+  }, [editingReportId, accessToken, applyRedesign]);
+
+  // Auto-trigger redesign agent when entering AI redesign mode
+  useEffect(() => {
+    if (!aiRedesignMode || !editingReportId || !accessToken || triggerRedesignRef.current) return;
+    triggerRedesignRef.current = true;
+    triggerAiRedesign();
+  }, [aiRedesignMode, editingReportId, accessToken, triggerAiRedesign]);
 
   /* ═══════ Handover modal ═══════ */
   const [handoverModalOpen, setHandoverModalOpen] = useState(false);
@@ -493,6 +731,9 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
     setStepSaving((p) => ({ ...p, [stepIdx]: false }));
   }, [buildFreshProcessData, saveProgressToCloud]);
 
+  /* ═══════ Flow model — predicted wait times ═══════ */
+  const waitProfile = useMemo(() => getWaitProfile({ steps }), [steps]);
+
   /* ═══════ Step warnings ═══════ */
   const stepWarnings = useMemo(() => {
     return steps.map((s, i) => {
@@ -541,15 +782,17 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
           flowDeletedEdgesRef.current = [];
           setFlowCustomEdges([]);
           setFlowDeletedEdges([]);
-          queueMicrotask(() => updateProcessData({ flowCustomEdges: [], flowDeletedEdges: [] }));
+          setFlowNodePositions({});
+          queueMicrotask(() => updateProcessData({ flowCustomEdges: [], flowDeletedEdges: [], flowNodePositions: {} }));
           setActiveIdx(0);
           setExpandedStepIdx(null);
           setFloatingPanel('steps');
           addedNames.push(...newSteps.map((s) => s.name));
+          queueMicrotask(() => addAuditEvent({ type: 'step_edit', detail: `AI rebuilt all steps (${newSteps.length} steps)` }));
           break;
         }
         case 'add_step': {
-          const { name, department, isExternal, isDecision, isMerge, parallel, workMinutes, waitMinutes, systems, branches, owner, checklist, afterStep } = action.input;
+          const { name, department, isExternal, isDecision, isMerge, parallel, inclusive, workMinutes, waitMinutes, systems, branches, owner, checklist, afterStep } = action.input;
           if (isCustomDepartment(department)) addCustomDepartment(department.trim());
           const init = {
             name: name || '',
@@ -558,6 +801,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
             isDecision: !!isDecision,
             isMerge: !!isMerge,
             parallel: !!parallel,
+            inclusive: !!inclusive,
             workMinutes: workMinutes ?? undefined,
             waitMinutes: waitMinutes ?? undefined,
             durationUnit: 'hours',
@@ -566,7 +810,9 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
             contributor: owner || '',
             checklist: (checklist || []).map((t) => ({ text: t, checked: false })),
           };
-          const idx = typeof afterStep === 'number' ? afterStep - 1 : -1;
+          const idx = typeof afterStep === 'number'
+            ? afterStep === 0 ? -2 : afterStep - 1
+            : -1;
           addStep(idx, init);
           flowCustomEdgesRef.current = [];
           flowDeletedEdgesRef.current = [];
@@ -594,11 +840,13 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
             if (updates.systems !== undefined) s.systems = updates.systems;
             if (updates.branches !== undefined) s.branches = updates.branches;
             if (updates.parallel !== undefined) s.parallel = !!updates.parallel;
+            if (updates.inclusive !== undefined) s.inclusive = !!updates.inclusive;
             if (updates.owner !== undefined) s.contributor = updates.owner;
             if (updates.checklist !== undefined) s.checklist = updates.checklist.map((t) => typeof t === 'string' ? { text: t, checked: false } : t);
             return prev.map((p, i) => (i === idx ? s : p));
           });
           setActiveIdx(idx >= 0 ? idx : 0);
+          queueMicrotask(() => addAuditEvent({ type: 'step_edit', detail: `AI updated step ${stepNumber}${action.input.name ? ` "${action.input.name}"` : ''}` }));
           break;
         }
         case 'remove_step': {
@@ -621,6 +869,9 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
             if (clarity) updated.clarity = clarity;
             return updated;
           }));
+          if (method || clarity) {
+            queueMicrotask(() => addAuditEvent({ type: 'step_edit', detail: `AI set handoff ${fromStep}→${fromStep + 1}${method ? ` to "${method}"` : ''}` }));
+          }
           break;
         }
         case 'add_custom_department': {
@@ -633,7 +884,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
       }
     }
     return addedNames;
-  }, [addStep, removeStep, addCustomDepartment, updateProcessData]);
+  }, [addStep, removeStep, addCustomDepartment, updateProcessData, addAuditEvent]);
 
   const processFiles = useCallback((files) => {
     if (!files.length) return;
@@ -689,9 +940,11 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
   }, []);
 
   /* ═══════ Chat ═══════ */
-  const sendChat = async (systemMessage, isRetry = false) => {
-    const isSystem = !!systemMessage;
-    const msg = isRetry ? (lastFailedChatPayloadRef.current?.userContent || '') : (isSystem ? systemMessage : chatInput.trim());
+  const sendChat = async (systemMessage, isRetry = false, userMsgOverride = null) => {
+    const isSystem = !!systemMessage && !userMsgOverride;
+    const msg = isRetry
+      ? (lastFailedChatPayloadRef.current?.userContent || '')
+      : userMsgOverride || (isSystem ? systemMessage : chatInput.trim());
     const attachmentsToSend = isRetry ? (lastFailedChatPayloadRef.current?.attachments || []) : (isSystem ? [] : [...chatAttachments]);
     if (!isRetry && !isSystem && (!msg && chatAttachments.length === 0)) return;
     if (!isRetry && chatLoading) return;
@@ -701,6 +954,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
     if (!isSystem && !isRetry) {
       addChatMessage({ role: 'user', content: userContent });
       setChatInput('');
+      if (chatTextareaRef.current) { chatTextareaRef.current.style.height = 'auto'; }
       setChatAttachments([]);
       lastFailedChatPayloadRef.current = { userContent, attachments: attachmentsToSend };
     }
@@ -728,6 +982,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
       attachments: attachmentsToSend.length > 0 ? attachmentsToSend : undefined,
       editingReportId: editingReportId || undefined,
       editingRedesign: editingRedesign || undefined,
+      redesignContext: redesignContextRef.current || undefined,
     });
 
     const maxAttempts = 3;
@@ -833,9 +1088,6 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Add step
         </button>
-        <button type="button" className="s7-steps-merge-btn" onClick={() => addStep(-1, { name: 'Merge', department: steps[steps.length - 1]?.department || '', isDecision: false, isMerge: true, isExternal: false, branches: [], systems: [] })} disabled={steps.length >= MAX_STEPS} title="Add merge node">
-          ⧉
-        </button>
         {totalWarnings > 0 && <span className="s7-steps-warn-count" title={`${totalWarnings} fields missing`}>⚠ {totalWarnings}</span>}
       </div>
 
@@ -844,7 +1096,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
           const isSelected = expandedStepIdx === i;
           const warn = (stepWarnings[i] || []).length > 0 && s.name.trim();
           const nodeType = getActiveNodeType(s);
-          const typeIcon = { step: null, exclusive: '◇', parallel: '⊕', merge: '⧉' }[nodeType];
+          const typeIcon = { step: null, exclusive: '◇', parallel: '⊕', inclusive: '◎', merge: '⧉' }[nodeType];
           return (
             <div
               key={i}
@@ -974,7 +1226,12 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
               onFocus={(e) => { focusNameRef.current[i] = e.target.value; }}
               onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== (focusNameRef.current[i] || '').trim()) addAuditEvent({ type: 'step_edit', detail: `Renamed step ${i + 1} to "${v}"` }); }}
             />
-            <button type="button" className="s7-detail-del-btn" onClick={() => { removeStep(i); setExpandedStepIdx(null); }} disabled={steps.length <= 1} title="Delete step">
+            {s.name.trim() && (
+              <button type="button" className="s7-detail-del-btn" title="Save as snippet" onClick={() => { const next = saveSnippet(null, s); setSnippets(next); }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              </button>
+            )}
+            <button type="button" className="s7-detail-del-btn" onClick={() => { handleDeleteNode(i); setExpandedStepIdx(null); }} disabled={steps.length <= 1} title="Delete step">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
             </button>
           </div>
@@ -1003,12 +1260,13 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
                 {/* TYPE tab */}
                 {detailTab === 'type' && (
                   <div className="s7-ni-tab-pane">
-                    <div className="s7-detail-section-label">Node type <SectionHint text="How this step behaves in the flow. Step = a regular action. Decision = a branch point (Exclusive or Parallel). Merge = where parallel branches rejoin." /></div>
+                    <div className="s7-detail-section-label">Node type <SectionHint text="How this step behaves in the flow. Step = action. Exclusive (XOR) = one path. Parallel (AND) = all paths simultaneously. Inclusive (OR) = one or more paths. Merge = where branches rejoin." /></div>
                     <div className="s7-node-type-grid">
                       {NODE_TYPE_OPTIONS.map((opt) => (
-                        <button key={opt.id} type="button" className={`s7-node-type-btn${activeNodeType === opt.id ? ' active' : ''}`} onClick={() => changeNodeType(i, opt)} title={opt.desc}>
+                        <button key={opt.id} type="button" className={`s7-node-type-btn${activeNodeType === opt.id ? ' active' : ''}`} onClick={() => changeNodeType(i, opt)}>
                           <span className="s7-node-type-icon">{opt.icon}</span>
-                          <span className="s7-node-type-label">{opt.label}</span>
+                          <span className="s7-node-type-label">{opt.isDecision ? `Decision: ${opt.label}` : opt.label}</span>
+                          <span onClick={(e) => e.stopPropagation()}><SectionHint text={opt.desc} /></span>
                         </button>
                       ))}
                     </div>
@@ -1022,6 +1280,9 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
                               <option value="">— unlinked —</option>
                               {steps.map((st, si) => si !== i ? <option key={si} value={`Step ${st.number}`}>Step {st.number}{st.name ? `: ${st.name.slice(0, 22)}` : ''}</option> : null)}
                             </select>
+                            {!s.parallel && (
+                              <input type="number" className="s7-input s7-branch-prob" placeholder="%" min={0} max={100} step={1} title="Probability % — used to weight wait time predictions for this branch" value={br.probability ?? ''} onChange={(e) => { const v = e.target.value; updateBranch(i, bi, 'probability', v === '' ? undefined : Math.max(0, Math.min(100, parseFloat(v) || 0))); }} />
+                            )}
                             <button type="button" className="s7-branch-add-step-btn" onClick={() => addStepInBranch(i, bi)} disabled={steps.length >= MAX_STEPS} title="Add step in branch">+</button>
                             <button type="button" className="s7-branch-del" onClick={() => removeBranch(i, bi)}>×</button>
                           </div>
@@ -1038,10 +1299,10 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
                 {/* OWNER tab */}
                 {detailTab === 'owner' && (
                   <div className="s7-ni-tab-pane">
-                    <div className="s7-detail-section-label">Department</div>
+                    <div className="s7-detail-section-label">Team</div>
                     <div className="s7-detail-row">
                       <select className="s7-select s7-dept-select" value={s.department} onChange={(e) => { const v = e.target.value; updateStep(i, 'department', v); if (v !== 'Other') { setCustomDeptInput((p) => ({ ...p, [i]: '' })); addAuditEvent({ type: 'step_edit', detail: `Set step ${i + 1} owner to "${v}"` }); } }}>
-                        <option value="">Department...</option>
+                        <option value="">Team...</option>
                         <optgroup label="Internal">{DEPT_INTERNAL.map((d) => <option key={d} value={d}>{d}</option>)}</optgroup>
                         <optgroup label="External">{DEPT_EXTERNAL.map((d) => <option key={d} value={d}>{d}</option>)}</optgroup>
                         {customDepartments?.length > 0 && <optgroup label="Custom">{customDepartments.map((d) => <option key={d} value={d}>{d}</option>)}</optgroup>}
@@ -1062,22 +1323,61 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
                 )}
 
                 {/* TIMING tab */}
-                {detailTab === 'timing' && (
-                  <div className="s7-ni-tab-pane">
-                    <div className="s7-detail-section-label">Duration</div>
-                    <div className="s7-detail-row s7-timing-row">
-                      <input type="number" className="s7-input s7-input-work" placeholder={`Work (${(s.durationUnit || 'hours') === 'hours' ? 'h' : 'd'})`} min={0} step={0.25} title="Active work time" value={(() => { const unit = s.durationUnit || 'hours'; const m = s.workMinutes ?? null; if (m == null) return ''; return (unit === 'hours' ? m / 60 : m / 1440).toFixed(2).replace(/\.?0+$/, ''); })()} onChange={(e) => { const v = e.target.value; const unit = s.durationUnit || 'hours'; const mult = unit === 'hours' ? 60 : 1440; updateStep(i, 'workMinutes', v === '' ? undefined : Math.max(0, parseFloat(v) || 0) * mult); }} onBlur={(e) => { const v = e.target.value; if (v !== '') addAuditEvent({ type: 'step_edit', detail: `Set step ${i + 1}${s.name ? ` "${s.name}"` : ''} work time to ${v} ${s.durationUnit || 'hours'}` }); }} />
-                      <input type="number" className="s7-input s7-input-wait" placeholder={`Wait (${(s.durationUnit || 'hours') === 'hours' ? 'h' : 'd'})`} min={0} step={0.25} title="Wait time" value={(() => { const unit = s.durationUnit || 'hours'; const m = s.waitMinutes ?? null; if (m == null) return ''; return (unit === 'hours' ? m / 60 : m / 1440).toFixed(2).replace(/\.?0+$/, ''); })()} onChange={(e) => { const v = e.target.value; const unit = s.durationUnit || 'hours'; const mult = unit === 'hours' ? 60 : 1440; updateStep(i, 'waitMinutes', v === '' ? undefined : Math.max(0, parseFloat(v) || 0) * mult); }} onBlur={(e) => { const v = e.target.value; if (v !== '') addAuditEvent({ type: 'step_edit', detail: `Set step ${i + 1}${s.name ? ` "${s.name}"` : ''} wait time to ${v} ${s.durationUnit || 'hours'}` }); }} />
-                      <div className="s7-toggle-group">
-                        <button type="button" className={`s7-toggle-btn${(s.durationUnit || 'hours') === 'hours' ? ' active' : ''}`} onClick={() => updateStep(i, 'durationUnit', 'hours')}>h</button>
-                        <button type="button" className={`s7-toggle-btn${(s.durationUnit || 'hours') === 'days' ? ' active' : ''}`} onClick={() => updateStep(i, 'durationUnit', 'days')}>d</button>
+                {detailTab === 'timing' && (() => {
+                  const unit = s.durationUnit || 'hours';
+                  const mult = unit === 'hours' ? 60 : 1440;
+                  const unitLabel = unit === 'hours' ? 'hrs' : 'days';
+                  const toDisplay = (m) => m == null ? '' : (unit === 'hours' ? m / 60 : m / 1440).toFixed(2).replace(/\.?0+$/, '');
+                  const wp = waitProfile[i];
+                  const waitPlaceholder = wp?.predicted != null && s.waitMinutes == null
+                    ? `~${toDisplay(wp.predicted)} (est.)`
+                    : '';
+                  const hasWait = (s.waitMinutes ?? 0) > 0 || wp?.predicted != null;
+                  const total = (s.workMinutes ?? 0) + (s.waitMinutes ?? 0);
+                  return (
+                    <div className="s7-ni-tab-pane s7-timing-pane">
+                      <div className="s7-timing-simple-grid">
+                        <label className="s7-timing-simple-label">Active work</label>
+                        <input type="number" className="s7-input s7-timing-simple-input" min={0} step={0.25} placeholder="0" value={toDisplay(s.workMinutes ?? null)} onChange={(e) => { const v = e.target.value; updateStep(i, 'workMinutes', v === '' ? undefined : Math.max(0, parseFloat(v) || 0) * mult); }} onBlur={(e) => { if (e.target.value !== '') addAuditEvent({ type: 'step_edit', detail: `Set step ${i + 1} work time to ${e.target.value} ${unit}` }); }} />
+                        <span className="s7-timing-simple-unit">{unitLabel}</span>
+
+                        <label className="s7-timing-simple-label">Wait time</label>
+                        <input type="number" className="s7-input s7-timing-simple-input" min={0} step={0.25} placeholder={waitPlaceholder || '0'} value={toDisplay(s.waitMinutes ?? null)} onChange={(e) => { const v = e.target.value; updateStep(i, 'waitMinutes', v === '' ? undefined : Math.max(0, parseFloat(v) || 0) * mult); }} onBlur={(e) => { if (e.target.value !== '') addAuditEvent({ type: 'step_edit', detail: `Set step ${i + 1} wait time to ${e.target.value} ${unit}` }); }} />
+                        <span className="s7-timing-simple-unit">{unitLabel}</span>
                       </div>
+
+                      <div className="s7-timing-unit-switch">
+                        <button type="button" className={`s7-toggle-btn${unit === 'hours' ? ' active' : ''}`} onClick={() => updateStep(i, 'durationUnit', 'hours')}>Hours</button>
+                        <button type="button" className={`s7-toggle-btn${unit === 'days' ? ' active' : ''}`} onClick={() => updateStep(i, 'durationUnit', 'days')}>Days</button>
+                      </div>
+
+                      {hasWait && (
+                        <div className="s7-timing-reason-row">
+                          <label className="s7-timing-simple-label">Why it waits</label>
+                          <select className="s7-input s7-timing-reason-select" value={s.waitType || ''} onChange={(e) => { updateStep(i, 'waitType', e.target.value || undefined); addAuditEvent({ type: 'step_edit', detail: `Set step ${i + 1} wait reason to ${e.target.value}` }); }}>
+                            <option value="">—</option>
+                            <option value="dependency">Waiting on someone</option>
+                            <option value="blocked">Blocked — missing info</option>
+                            <option value="capacity">Person unavailable</option>
+                            <option value="wip">In queue</option>
+                          </select>
+                        </div>
+                      )}
+
+                      {hasWait && s.waitType && s.waitType !== 'wip' && (
+                        <input type="text" className="s7-input s7-timing-reason-note" placeholder={
+                          s.waitType === 'dependency' ? 'Waiting for what or who? e.g. Legal review, client sign-off' :
+                          s.waitType === 'blocked' ? 'What is missing or unclear?' :
+                          'Which role or team?'
+                        } value={s.waitNote || ''} onChange={(e) => updateStep(i, 'waitNote', e.target.value)} onBlur={(e) => { if (e.target.value) addAuditEvent({ type: 'step_edit', detail: `Step ${i + 1} wait note: ${e.target.value}` }); }} />
+                      )}
+
+                      {total > 0 && (
+                        <div className="s7-timing-total">Total: {unit === 'hours' ? (total / 60).toFixed(2).replace(/\.?0+$/, '') + ' h' : (total / 1440).toFixed(2).replace(/\.?0+$/, '') + ' d'}</div>
+                      )}
                     </div>
-                    {((s.workMinutes ?? 0) + (s.waitMinutes ?? 0)) > 0 && (
-                      <div className="s7-timing-total">Total: {(s.durationUnit || 'hours') === 'hours' ? (((s.workMinutes ?? 0) + (s.waitMinutes ?? 0)) / 60).toFixed(2).replace(/\.?0+$/, '') + ' h' : (((s.workMinutes ?? 0) + (s.waitMinutes ?? 0)) / 1440).toFixed(2).replace(/\.?0+$/, '') + ' d'}</div>
-                    )}
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* SYSTEMS tab */}
                 {detailTab === 'systems' && (
@@ -1180,13 +1480,28 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
         </div>
       )}
       <div className="s7-chat-messages">
-        {chatMessages.map((m, i) => (
-          <div key={i} className={`s7-msg s7-msg-${m.role}`}>
-            {m.role === 'assistant' && <div className="sharp-avatar sharp-avatar-sm" title="Sharp">S</div>}
-            <div className="s7-msg-bubble">{m.content}</div>
-          </div>
-        ))}
-        {chatLoading && <div className="s7-msg s7-msg-assistant"><div className="sharp-avatar sharp-avatar-sm" title="Sharp">S</div><div className={`s7-msg-bubble ${chatStreamedText ? '' : 's7-typing'}`}>{chatStreamedText ? <span className="s7-typing-text">{chatStreamedText}</span> : chatProgress ? <span className="s7-typing-text">{chatProgress}</span> : <><span /><span /><span /></>}</div></div>}
+        {chatMessages.map((m, i) => {
+          const isLast = i === chatMessages.length - 1;
+          const showSuggestions = isLast && m.role === 'assistant' && m.suggestions?.length > 0 && !chatLoading;
+          return (
+            <div key={i} className={`s7-msg s7-msg-${m.role}`}>
+              {m.role === 'assistant' && <div className="sharp-avatar sharp-avatar-sm" title="Afi">A</div>}
+              <div className="s7-msg-content">
+                <div className="s7-msg-bubble">{m.content}</div>
+                {showSuggestions && (
+                  <div className="s7-redesign-suggestions">
+                    {m.suggestions.map((s, si) => (
+                      <button key={si} type="button" className="s7-redesign-suggestion-chip" onClick={() => sendChat(null, false, s)}>
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        {chatLoading && <div className="s7-msg s7-msg-assistant"><div className="sharp-avatar sharp-avatar-sm" title="Afi">A</div><div className={`s7-msg-bubble ${chatStreamedText ? '' : 's7-typing'}`}>{chatStreamedText ? <span className="s7-typing-text">{chatStreamedText}</span> : chatProgress ? <span className="s7-typing-text">{chatProgress}</span> : <><span /><span /><span /></>}</div></div>}
         <div ref={chatEndRef} />
       </div>
       {chatError && (
@@ -1209,13 +1524,59 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
       )}
       <div className="s7-chat-input-area">
         <input type="file" ref={chatFileRef} className="s7-chat-file-input" multiple accept="image/*,.pdf,.xlsx,.xls,.csv,.doc,.docx,.txt,.json" onChange={handleChatFileSelect} />
-        <button type="button" className="s7-chat-attach" onClick={() => chatFileRef.current?.click()} title="Attach files (images, Excel, PDF, etc.)" disabled={chatLoading}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
-        </button>
-        <input type="text" className="s7-chat-input" placeholder="Describe your process flow..." value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } }} disabled={chatLoading} />
-        <button type="button" className="s7-chat-send" onClick={() => sendChat()} disabled={(!chatInput.trim() && chatAttachments.length === 0) || chatLoading}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
-        </button>
+        <div className="s7-chat-composer">
+          <div className="s7-chat-composer-field">
+            <textarea
+              ref={chatTextareaRef}
+              className="s7-chat-textarea"
+              placeholder={editingRedesign ? 'Ask about changes or request modifications…' : 'Describe your process flow...'}
+              value={chatInput}
+              rows={1}
+              onChange={(e) => {
+                setChatInput(e.target.value);
+                e.target.style.height = 'auto';
+                e.target.style.height = e.target.scrollHeight + 'px';
+              }}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter') return;
+                // Alt+Enter: new line (insert manually so behavior is consistent across browsers)
+                if (e.altKey) {
+                  e.preventDefault();
+                  const el = e.currentTarget;
+                  const start = el.selectionStart ?? 0;
+                  const end = el.selectionEnd ?? 0;
+                  const v = chatInput;
+                  const next = `${v.slice(0, start)}\n${v.slice(end)}`;
+                  setChatInput(next);
+                  queueMicrotask(() => {
+                    const pos = start + 1;
+                    el.selectionStart = el.selectionEnd = pos;
+                    el.style.height = 'auto';
+                    el.style.height = `${el.scrollHeight}px`;
+                  });
+                  return;
+                }
+                // Shift+Enter: default new line in textarea
+                if (e.shiftKey) return;
+                // Enter: send
+                e.preventDefault();
+                sendChat();
+              }}
+              disabled={chatLoading}
+            />
+          </div>
+          <div className="s7-chat-input-actions">
+            <button type="button" className="s7-chat-attach" onClick={() => chatFileRef.current?.click()} title="Attach files (images, Excel, PDF, etc.)" disabled={chatLoading}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" aria-hidden><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            </button>
+            <div className="s7-chat-input-actions-end">
+              <span className="s7-chat-input-hint">Enter to send · Alt+Enter new line</span>
+              <button type="button" className="s7-chat-send" onClick={() => sendChat()} disabled={(!chatInput.trim() && chatAttachments.length === 0) || chatLoading}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1266,6 +1627,72 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
     queueMicrotask(() => updateProcessData({ flowDeletedEdges: ids }));
   }, [updateProcessData]);
 
+  const handleDeleteNode = useCallback((idx) => {
+    const prevLen = steps.length;
+    if (prevLen <= 1) return;
+    const oldKey = `${prevLen}`;
+    const newKey = `${prevLen - 1}`;
+    const oldOffsets = flowNodePositions[oldKey] || {};
+    // Remap offsets: drop the deleted step, shift indices after it down by 1.
+    const merged = {};
+    for (let j = 0; j < prevLen; j++) {
+      if (j === idx) continue;
+      const o = oldOffsets[`step-${j}`];
+      if (o) merged[`step-${j < idx ? j : j - 1}`] = o;
+    }
+    if (Object.keys(merged).length > 0) {
+      setFlowNodePositions((p) => {
+        const next = { ...p, [newKey]: merged };
+        queueMicrotask(() => updateProcessData({ flowNodePositions: next }));
+        return next;
+      });
+    }
+    const shiftIdx = (n) => (n > idx ? n - 1 : n);
+    const remapStepId = (id) => {
+      const mm = id?.match(/^step-(\d+)$/);
+      if (!mm) return id;
+      const n = parseInt(mm[1]);
+      if (n === idx) return null; // edge touching deleted node — drop it
+      return `step-${shiftIdx(n)}`;
+    };
+    const remappedCustom = (flowCustomEdgesRef.current || [])
+      .map((ce) => {
+        const src = remapStepId(ce.source);
+        const tgt = remapStepId(ce.target);
+        if (!src || !tgt) return null;
+        return { ...ce, source: src, target: tgt };
+      })
+      .filter(Boolean);
+    const remappedDeleted = (flowDeletedEdgesRef.current || [])
+      .map((id) => {
+        const seqM = id.match(/^e-seq-(\d+)-(\d+)$/);
+        if (seqM) {
+          const a = parseInt(seqM[1]), b = parseInt(seqM[2]);
+          if (a === idx || b === idx) return null;
+          return `e-seq-${shiftIdx(a)}-${shiftIdx(b)}`;
+        }
+        const decM = id.match(/^e-dec-(\d+)-(\d+)-(\d+)$/);
+        if (decM) {
+          const a = parseInt(decM[1]), b = parseInt(decM[2]);
+          if (a === idx || b === idx) return null;
+          return `e-dec-${shiftIdx(a)}-${shiftIdx(b)}-${decM[3]}`;
+        }
+        const mergeM = id.match(/^e-merge-(\d+)-(\d+)$/);
+        if (mergeM) {
+          const a = parseInt(mergeM[1]), b = parseInt(mergeM[2]);
+          if (a === idx || b === idx) return null;
+          return `e-merge-${shiftIdx(a)}-${shiftIdx(b)}`;
+        }
+        return id;
+      })
+      .filter(Boolean);
+    const newDeleted = [...new Set(remappedDeleted)];
+    flowCustomEdgesRef.current = remappedCustom; setFlowCustomEdges(remappedCustom);
+    flowDeletedEdgesRef.current = newDeleted; setFlowDeletedEdges(newDeleted);
+    queueMicrotask(() => updateProcessData({ flowCustomEdges: remappedCustom, flowDeletedEdges: newDeleted }));
+    removeStep(idx);
+  }, [steps.length, flowNodePositions, removeStep, updateProcessData]);
+
   const previewContent = (
     <div ref={previewCanvasRef} className="s7-preview-canvas s7-preview-canvas-interactive">
       {namedSteps.length > 0 && (
@@ -1281,18 +1708,25 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
           onCustomEdgesChange={onFlowCustomEdgesChange}
           deletedEdges={flowDeletedEdges}
           onDeletedEdgesChange={onFlowDeletedEdgesChange}
-          onDeleteNode={removeStep}
-          onAddNodeBetween={(insertIdx) => {
+          onDeleteNode={handleDeleteNode}
+          onAddNodeBetween={(insertIdx, isDecisionEdgeInsert) => {
             const prevLen = steps.length;
             const oldKey = `${prevLen}`;
-            addStep(insertIdx - 1);
+            insertStepWithRemap(insertIdx, isDecisionEdgeInsert);
             const newKey = `${prevLen + 1}`;
             const oldOffsets = flowNodePositions[oldKey] || {};
-            // Preserve existing offsets, remapping step IDs around the inserted node.
-            // The new node gets no offset (starts at its computed initial position).
+            // Remap stored position offsets: nodes before insertIdx keep their offset,
+            // nodes at or after shift to the next index. processToReactFlow handles
+            // the actual layout — we just preserve any manual drag adjustments.
             const merged = {};
-            for (let j = 0; j < insertIdx; j++) { const o = oldOffsets[`step-${j}`]; if (o) merged[`step-${j}`] = o; }
-            for (let j = insertIdx; j < prevLen; j++) { const o = oldOffsets[`step-${j}`]; if (o) merged[`step-${j + 1}`] = o; }
+            for (let j = 0; j < insertIdx; j++) {
+              const o = oldOffsets[`step-${j}`];
+              if (o) merged[`step-${j}`] = o;
+            }
+            for (let j = insertIdx; j < prevLen; j++) {
+              const o = oldOffsets[`step-${j}`];
+              if (o) merged[`step-${j + 1}`] = o;
+            }
             if (Object.keys(merged).length > 0) {
               setFlowNodePositions((p) => {
                 const next = { ...p, [newKey]: merged };
@@ -1300,8 +1734,43 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
                 return next;
               });
             }
-            setExpandedStepIdx(insertIdx);
-            setActiveIdx(insertIdx);
+            // Helper: bump a step index if at or after the insertion point
+            const bumpIdx = (n) => n >= insertIdx ? n + 1 : n;
+
+            // Remap custom edges: update step-N source/target IDs for the shift
+            const remappedCustom = (flowCustomEdgesRef.current || []).map((ce) => {
+              const remapStepId = (id) => {
+                const mm = id?.match(/^step-(\d+)$/);
+                return mm ? `step-${bumpIdx(parseInt(mm[1]))}` : id;
+              };
+              return { ...ce, source: remapStepId(ce.source), target: remapStepId(ce.target) };
+            });
+
+            // Remap all deleted edge IDs for the shift (handles seq, dec, and merge formats)
+            const remappedDeleted = (flowDeletedEdgesRef.current || []).map((id) => {
+              const seqM = id.match(/^e-seq-(\d+)-(\d+)$/);
+              if (seqM) {
+                const a = bumpIdx(parseInt(seqM[1])), b = bumpIdx(parseInt(seqM[2]));
+                return `e-seq-${a}-${b}`;
+              }
+              const decM = id.match(/^e-dec-(\d+)-(\d+)-(\d+)$/);
+              if (decM) return `e-dec-${bumpIdx(parseInt(decM[1]))}-${bumpIdx(parseInt(decM[2]))}-${decM[3]}`;
+              const mergeM = id.match(/^e-merge-(\d+)-(\d+)$/);
+              if (mergeM) return `e-merge-${bumpIdx(parseInt(mergeM[1]))}-${bumpIdx(parseInt(mergeM[2]))}`;
+              return id;
+            });
+
+            // Only carry forward remapped deletions — don't suppress the new
+            // auto-generated edges touching the inserted node. processToReactFlow
+            // skips sequential edges where the source is a decision or the target
+            // is a branch target, so the correct in/out edges are always produced.
+            const newDeleted = [...new Set(remappedDeleted)];
+
+            flowCustomEdgesRef.current = remappedCustom;
+            setFlowCustomEdges(remappedCustom);
+            flowDeletedEdgesRef.current = newDeleted;
+            setFlowDeletedEdges(newDeleted);
+            queueMicrotask(() => updateProcessData({ flowCustomEdges: remappedCustom, flowDeletedEdges: newDeleted }));
           }}
         />
       )}
@@ -1436,6 +1905,9 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
         priority: freshPd.priority,
         bottleneck: freshPd.bottleneck,
         savings: freshPd.savings,
+        flowCustomEdges: flowCustomEdgesRef.current || [],
+        flowDeletedEdges: flowDeletedEdgesRef.current || [],
+        flowNodePositions: flowNodePositionsRef.current || {},
       }];
       const acceptedProcesses = rawProcesses.map(p => ({
         processName: p.processName,
@@ -1505,27 +1977,174 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
       onContinue: editingReportId ? undefined : handleContinue,
       onSaveToReport: editingReportId ? handleSaveToReport : undefined,
       savingToReport,
+      saveLabel: editingRedesign ? 'Save Redesign' : undefined,
     });
     return () => registerNav(null);
   }, [registerNav, teamMode, openHandoverModal, handleContinue, goToScreen, editingReportId, handleSaveToReport, savingToReport]);
+
+  // Mobile block — show message only at the canvas screen, not earlier in the flow
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+
+  if (isMobile) {
+    return (
+      <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', textAlign: 'center', gap: 16, color: 'var(--text)' }}>
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        <div style={{ maxWidth: 300 }}>
+          <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Desktop required for this step</p>
+          <p style={{ fontSize: 13, color: 'var(--text-mid)', lineHeight: 1.6 }}>The process mapping canvas needs a larger screen. Please switch to a desktop or laptop to continue.</p>
+        </div>
+        <button type="button" onClick={() => goToScreen(1)} style={{ marginTop: 8, padding: '10px 24px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-mid)', cursor: 'pointer', fontSize: 13 }}>← Go back</button>
+      </div>
+    );
+  }
+
+  const handleDescribeExtract = async () => {
+    const text = describeText.trim();
+    if (!text) return;
+    // Add user message and open the floating chat panel
+    addChatMessage({ role: 'user', content: text });
+    setFloatingPanel('chat');
+    setDescribeText('');
+    setDescribeLoading(true);
+    setDescribeError('');
+    try {
+      const resp = await apiFetch('/api/extract-steps', { method: 'POST', body: JSON.stringify({ textContent: text }) });
+      const data = await resp.json();
+      if (resp.ok && data.steps?.length) {
+        const merged = data.steps.map((s, i) => ({ ...s, number: i + 1 }));
+        setSteps(merged);
+        setHandoffs(ensureHandoffs(merged, []));
+        addAuditEvent({ type: 'step_import', detail: `Extracted ${merged.length} steps from description` });
+        addChatMessage({ role: 'assistant', content: `I've pulled out ${merged.length} steps from your description. Take a look at the canvas — click any step to edit the details, and let me know if anything needs adjusting.` });
+      } else {
+        setDescribeError(data.error || 'Couldn\'t extract steps — try adding more detail.');
+      }
+    } catch {
+      setDescribeError('Something went wrong. Please try again.');
+    } finally {
+      setDescribeLoading(false);
+    }
+  };
+
+  const handleUploadForExtraction = async (file) => {
+    if (!file) return;
+    setUploadLoading(true);
+    setUploadMsg('');
+    try {
+      let body;
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        const base64 = await new Promise((resolve, reject) => {
+          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        body = JSON.stringify({ imageBase64: base64, mediaType: file.type });
+      } else {
+        const text = await file.text();
+        body = JSON.stringify({ textContent: text });
+      }
+      const resp = await apiFetch('/api/extract-steps', { method: 'POST', body });
+      const data = await resp.json();
+      if (resp.ok && data.steps?.length) {
+        setSteps((prev) => {
+          const merged = [...data.steps.map((s, i) => ({ ...s, number: i + 1 }))];
+          setHandoffs(ensureHandoffs(merged, []));
+          return merged;
+        });
+        setUploadMsg(`${data.steps.length} steps pre-filled — review and edit below`);
+        addAuditEvent({ type: 'step_import', detail: `Imported ${data.steps.length} steps from uploaded file` });
+      } else {
+        setUploadMsg(data.error || 'Could not extract steps from this file.');
+      }
+    } catch {
+      setUploadMsg('Upload failed. Please try again.');
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
+  const onDescribeFileChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    files.forEach((file) => {
+      void handleUploadForExtraction(file);
+    });
+  };
+
+  const onDescribeDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDescribeDragOver(false);
+    const files = Array.from(e.dataTransfer?.files || []);
+    files.forEach((file) => {
+      void handleUploadForExtraction(file);
+    });
+  };
+
+  const onDescribeDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDescribeDragOver(true);
+  };
+
+  const onDescribeDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDescribeDragOver(false);
+  };
 
   return (
     <>
       <div className="s7-workspace" data-theme={theme}>
 
+        {/* ── Redesign mode banner ── */}
+        {editingRedesign && (
+          <div className="s7-redesign-mode-bar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            <span className="s7-redesign-mode-label">Redesign Mode</span>
+            {processData.processName && <span className="s7-redesign-mode-name">{processData.processName}</span>}
+          </div>
+        )}
+
+        {/* ── Redesign error state ── */}
+        {aiRedesignMode && redesignPhase === 'error' && (
+          <div className="s7-redesign-error-bar">
+            <span>{redesignProgress || 'Failed to generate redesign.'}</span>
+            <button type="button" onClick={() => { triggerRedesignRef.current = false; setRedesignPhase('idle'); triggerAiRedesign(); }}>Retry</button>
+          </div>
+        )}
+
+        {/* ── Validation toast ── */}
+        {validationToast && (
+          <div className="s7-validation-toast" role="alert">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            {validationToast}
+            <button type="button" onClick={() => setValidationToast('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', lineHeight: 1 }}>&times;</button>
+          </div>
+        )}
+
+        {/* ── Main row: canvas + detail panel ── */}
+        <div className="s7-workspace-main">
+
+        {/* ── AI redesign loading overlay ── */}
+        {aiRedesignMode && redesignPhase === 'loading' && (
+          <div className="s7-redesign-overlay">
+            <div className="s7-redesign-overlay-card">
+              <div className="s7-redesign-spinner" />
+              <p className="s7-redesign-overlay-title">Generating your optimised process</p>
+              <p className="s7-redesign-overlay-progress">{redesignProgress}</p>
+            </div>
+          </div>
+        )}
+
         {/* ── Canvas (full width) with floating icons overlay ── */}
         <div className="s7-canvas-area">
-          {/* Floating icons — Chat, Steps — overlay canvas, don't cover legend */}
-          <div className="s7-floating-icons">
-            <button type="button" className={`s7-floating-icon-btn${floatingPanel === 'chat' ? ' active' : ''}`} onClick={() => setFloatingPanel((p) => (p === 'chat' ? null : 'chat'))} title="AI Chat">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></svg>
-              {chatLoading && <span className="s7-chat-dot" />}
-            </button>
-            <button type="button" className={`s7-floating-icon-btn${floatingPanel === 'steps' ? ' active' : ''}`} onClick={() => setFloatingPanel((p) => (p === 'steps' ? null : 'steps'))} title="Steps">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg>
-              {steps.length > 0 && <span className="s7-floating-icon-count">{steps.length}</span>}
-            </button>
-          </div>
           <div className="s7-canvas-topbar">
             {namedSteps.length > 0 && (
               <div className="s7-view-toggle">
@@ -1536,11 +2155,33 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
                 ))}
               </div>
             )}
-            <button type="button" className="s7-canvas-float-btn" onClick={() => setShowFloatingFlow(true)} title="Open in floating view">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/><path d="M10 5H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-5"/></svg>
-            </button>
+            {snippets.length > 0 && (
+              <button type="button" className="s7-canvas-float-btn s7-canvas-topbar-snippets" onClick={() => setShowSnippetPicker(true)} title="Load a saved step snippet">Snippets</button>
+            )}
           </div>
           <div ref={previewCanvasRef} className="s7-canvas">
+            <div className="s7-floating-icons">
+              <button type="button" className="s7-floating-icon-btn" onClick={() => setShowFloatingFlow(true)} title="Open in floating view">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/><path d="M10 5H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-5"/></svg>
+              </button>
+              <button type="button" className={`s7-floating-icon-btn${floatingPanel === 'chat' ? ' active' : ''}`} onClick={() => setFloatingPanel((p) => (p === 'chat' ? null : 'chat'))} title="AI Assistant">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              </button>
+              <button type="button" className={`s7-floating-icon-btn${floatingPanel === 'steps' ? ' active' : ''}`} onClick={() => setFloatingPanel((p) => (p === 'steps' ? null : 'steps'))} title="Steps">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg>
+                {steps.length > 0 && <span className="s7-floating-icon-count">{steps.length}</span>}
+              </button>
+              {sessionUser && typeof onAuditTrailToggle === 'function' && (
+                <button
+                  type="button"
+                  className={`s7-floating-icon-btn${auditTrailOpen ? ' active' : ''}`}
+                  onClick={onAuditTrailToggle}
+                  title="Activity log"
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </button>
+              )}
+            </div>
             {namedSteps.length > 0 ? (
               <InteractiveFlowCanvas
                 process={{ ...processData, steps, handoffs: ensureHandoffs(steps, handoffs) }}
@@ -1554,26 +2195,98 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
                 onCustomEdgesChange={onFlowCustomEdgesChange}
                 deletedEdges={flowDeletedEdges}
                 onDeletedEdgesChange={onFlowDeletedEdgesChange}
-                onDeleteNode={removeStep}
-                onAddNodeBetween={(insertIdx) => {
+                onDeleteNode={handleDeleteNode}
+                onAddNodeBetween={(insertIdx, isDecisionEdgeInsert) => {
                   const prevLen = steps.length;
                   const oldKey = `${prevLen}`;
-                  addStep(insertIdx - 1);
+                  insertStepWithRemap(insertIdx, isDecisionEdgeInsert);
                   const newKey = `${prevLen + 1}`;
                   const oldOffsets = flowNodePositions[oldKey] || {};
                   const merged = {};
                   for (let j = 0; j < insertIdx; j++) { const o = oldOffsets[`step-${j}`]; if (o) merged[`step-${j}`] = o; }
                   for (let j = insertIdx; j < prevLen; j++) { const o = oldOffsets[`step-${j}`]; if (o) merged[`step-${j + 1}`] = o; }
                   if (Object.keys(merged).length > 0) { setFlowNodePositions((p) => { const next = { ...p, [newKey]: merged }; queueMicrotask(() => updateProcessData({ flowNodePositions: next })); return next; }); }
-                  setExpandedStepIdx(insertIdx);
-                  setActiveIdx(insertIdx);
+                  const bumpIdx = (n) => n >= insertIdx ? n + 1 : n;
+                  const remappedCustom = (flowCustomEdgesRef.current || []).map((ce) => {
+                    const remapStepId = (id) => { const mm = id?.match(/^step-(\d+)$/); return mm ? `step-${bumpIdx(parseInt(mm[1]))}` : id; };
+                    return { ...ce, source: remapStepId(ce.source), target: remapStepId(ce.target) };
+                  });
+                  const remappedDeleted = (flowDeletedEdgesRef.current || []).map((id) => {
+                    const seqM = id.match(/^e-seq-(\d+)-(\d+)$/);
+                    if (seqM) { const a = bumpIdx(parseInt(seqM[1])), b = bumpIdx(parseInt(seqM[2])); return `e-seq-${a}-${b}`; }
+                    const decM = id.match(/^e-dec-(\d+)-(\d+)-(\d+)$/);
+                    if (decM) return `e-dec-${bumpIdx(parseInt(decM[1]))}-${bumpIdx(parseInt(decM[2]))}-${decM[3]}`;
+                    const mergeM = id.match(/^e-merge-(\d+)-(\d+)$/);
+                    if (mergeM) return `e-merge-${bumpIdx(parseInt(mergeM[1]))}-${bumpIdx(parseInt(mergeM[2]))}`;
+                    return id;
+                  });
+                  const newDeleted = [...new Set(remappedDeleted)];
+                  flowCustomEdgesRef.current = remappedCustom;
+                  setFlowCustomEdges(remappedCustom);
+                  flowDeletedEdgesRef.current = newDeleted;
+                  setFlowDeletedEdges(newDeleted);
+                  queueMicrotask(() => updateProcessData({ flowCustomEdges: remappedCustom, flowDeletedEdges: newDeleted }));
                 }}
               />
             ) : (
               <div className="s7-canvas-empty">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.25"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="8.5" y="14" width="7" height="7" rx="1"/><line x1="6.5" y1="10" x2="6.5" y2="14"/><line x1="17.5" y1="10" x2="17.5" y2="14"/></svg>
-                <p>Add steps to see your flow diagram</p>
-                <p className="s7-canvas-empty-hint">Click any node to edit it</p>
+                <div className="s7-describe-box">
+                  <h2 className="s7-describe-heading">
+                    <span className="s7-describe-kicker" aria-hidden="true">✦</span>
+                    <span className="s7-describe-heading-inner">
+                      <span className="s7-describe-heading-muted">How does </span>
+                      <span className="s7-describe-name">{processData.processName || 'this process'}</span>
+                      <span className="s7-describe-heading-muted"> work?</span>
+                    </span>
+                  </h2>
+                  <div
+                    className={`s7-describe-field${describeDragOver ? ' s7-describe-drop-active' : ''}`}
+                    onDrop={onDescribeDrop}
+                    onDragOver={onDescribeDragOver}
+                    onDragLeave={onDescribeDragLeave}
+                  >
+                    {describeDragOver && (
+                      <div className="s7-describe-drop-overlay" aria-hidden>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
+                        <span>Drop files here</span>
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      ref={describeFileRef}
+                      className="s7-chat-file-input"
+                      multiple
+                      accept="image/*,.pdf,.xlsx,.xls,.csv,.doc,.docx,.txt,.json"
+                      onChange={onDescribeFileChange}
+                    />
+                    <textarea
+                      className="s7-describe-textarea"
+                      placeholder="Describe it step by step in plain English — who does what, what triggers it, how it ends..."
+                      value={describeText}
+                      onChange={(e) => setDescribeText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key !== 'Enter') return;
+                        if (e.altKey) return;
+                        if (e.shiftKey) return;
+                        e.preventDefault();
+                        if (!describeLoading && describeText.trim()) handleDescribeExtract();
+                      }}
+                    />
+                    <div className="s7-describe-field-actions">
+                      <button
+                        type="button"
+                        className="s7-chat-attach"
+                        onClick={() => describeFileRef.current?.click()}
+                        title="Attach files (images, Excel, PDF, etc.)"
+                        disabled={uploadLoading}
+                      >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" aria-hidden><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                      </button>
+                    </div>
+                  </div>
+                  {describeError && <p className="s7-describe-error">{describeError}</p>}
+                  <button type="button" className="s7-describe-manual" onClick={() => { addStep(); setFloatingPanel('steps'); }}>Add steps manually</button>
+                </div>
               </div>
             )}
           </div>
@@ -1584,27 +2297,33 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
           {stepDetailContent}
         </div>
 
+        </div>{/* /s7-workspace-main */}
       </div>
 
       {/* Floating panels (Steps / AI Chat) — portal to body */}
-      {floatingPanel && createPortal(
+      {floatingPanel === 'chat' && createPortal(
         <div className="s7-floating-panel" data-theme={theme}>
           <div className="s7-floating-panel-header">
-            {floatingPanel === 'chat' ? (
-              <>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></svg>
-                <span>AI Chat</span>
-              </>
-            ) : (
-              <>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg>
-                <span>Steps {steps.length > 0 ? `(${steps.length})` : ''}</span>
-              </>
-            )}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            <span>AI Assistant</span>
             <button type="button" className="s7-floating-panel-close" onClick={() => setFloatingPanel(null)} title="Close">&times;</button>
           </div>
           <div className="s7-floating-panel-body">
-            {floatingPanel === 'steps' ? stepListContent : chatContent}
+            {chatContent}
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {floatingPanel === 'steps' && createPortal(
+        <div className="s7-floating-panel" data-theme={theme}>
+          <div className="s7-floating-panel-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg>
+            <span>Steps {steps.length > 0 ? `(${steps.length})` : ''}</span>
+            <button type="button" className="s7-floating-panel-close" onClick={() => setFloatingPanel(null)} title="Close">&times;</button>
+          </div>
+          <div className="s7-floating-panel-body">
+            {stepListContent}
           </div>
         </div>,
         document.body
@@ -1624,15 +2343,15 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
           deletedEdges={flowDeletedEdges}
           onDeletedEdgesChange={onFlowDeletedEdgesChange}
           stepsLength={steps.length}
-          onDeleteNode={removeStep}
+          onDeleteNode={handleDeleteNode}
           stepListContent={stepListContent}
           chatContent={chatContent}
           chatLoading={chatLoading}
           stepDetailContent={stepDetailContent}
-          onAddNodeBetween={(insertIdx) => {
+          onAddNodeBetween={(insertIdx, isDecisionEdgeInsert) => {
             const prevLen = steps.length;
             const oldKey = `${prevLen}`;
-            addStep(insertIdx - 1);
+            insertStepWithRemap(insertIdx, isDecisionEdgeInsert);
             const newKey = `${prevLen + 1}`;
             const oldOffsets = flowNodePositions[oldKey] || {};
             const merged = {};
@@ -1645,11 +2364,137 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp }) 
                 return next;
               });
             }
-            setExpandedStepIdx(insertIdx);
-            setActiveIdx(insertIdx);
-            setShowFloatingFlow(false);
+            const bumpIdx = (n) => n >= insertIdx ? n + 1 : n;
+            const remappedCustom = (flowCustomEdgesRef.current || []).map((ce) => {
+              const remapStepId = (id) => { const mm = id?.match(/^step-(\d+)$/); return mm ? `step-${bumpIdx(parseInt(mm[1]))}` : id; };
+              return { ...ce, source: remapStepId(ce.source), target: remapStepId(ce.target) };
+            });
+            const remappedDeleted = (flowDeletedEdgesRef.current || []).map((id) => {
+              const seqM = id.match(/^e-seq-(\d+)-(\d+)$/);
+              if (seqM) { const a = bumpIdx(parseInt(seqM[1])), b = bumpIdx(parseInt(seqM[2])); return `e-seq-${a}-${b}`; }
+              const decM = id.match(/^e-dec-(\d+)-(\d+)-(\d+)$/);
+              if (decM) return `e-dec-${bumpIdx(parseInt(decM[1]))}-${bumpIdx(parseInt(decM[2]))}-${decM[3]}`;
+              const mergeM = id.match(/^e-merge-(\d+)-(\d+)$/);
+              if (mergeM) return `e-merge-${bumpIdx(parseInt(mergeM[1]))}-${bumpIdx(parseInt(mergeM[2]))}`;
+              return id;
+            });
+            const newDeleted = [...new Set(remappedDeleted)];
+            flowCustomEdgesRef.current = remappedCustom;
+            setFlowCustomEdges(remappedCustom);
+            flowDeletedEdgesRef.current = newDeleted;
+            setFlowDeletedEdges(newDeleted);
+            queueMicrotask(() => updateProcessData({ flowCustomEdges: remappedCustom, flowDeletedEdges: newDeleted }));
           }}
         />
+      )}
+
+      {/* Snippet picker modal */}
+      {showSnippetPicker && createPortal(
+        <div className="s7-snippet-overlay" onClick={() => setShowSnippetPicker(false)}>
+          <div className="s7-snippet-modal" data-theme={theme} onClick={(e) => e.stopPropagation()}>
+            <div className="s7-snippet-modal-header">
+              <span>Saved snippets</span>
+              <button type="button" className="s7-floating-panel-close" onClick={() => setShowSnippetPicker(false)}>&times;</button>
+            </div>
+            <div className="s7-snippet-modal-body">
+              {snippets.length === 0 ? (
+                <p style={{ fontSize: 13, color: 'var(--fg-muted)', textAlign: 'center', padding: '24px 0' }}>No snippets saved yet. Save a step using the floppy disk icon.</p>
+              ) : snippets.map((sn, idx) => (
+                <div key={idx} className="s7-snippet-row">
+                  <button
+                    type="button"
+                    className="s7-snippet-load-btn"
+                    onClick={() => {
+                      if (activeStep !== null) {
+                        setSteps((prev) => prev.map((s, i) => i === activeStep ? { ...s, name: sn.name || s.name, department: sn.department || s.department, systems: sn.systems || s.systems, workMinutes: sn.workMinutes ?? s.workMinutes, waitMinutes: sn.waitMinutes ?? s.waitMinutes } : s));
+                      } else {
+                        setSteps((prev) => [...prev, { number: prev.length + 1, name: sn.name || '', department: sn.department || '', systems: sn.systems || '', workMinutes: sn.workMinutes || 0, waitMinutes: sn.waitMinutes || 0 }]);
+                      }
+                      setShowSnippetPicker(false);
+                    }}
+                  >
+                    <span className="s7-snippet-name">{sn.name || '(unnamed)'}</span>
+                    {sn.department && <span className="s7-snippet-dept">{sn.department}</span>}
+                    {(sn.workMinutes || sn.waitMinutes) ? <span className="s7-snippet-time">{(sn.workMinutes || 0) + (sn.waitMinutes || 0)} min</span> : null}
+                  </button>
+                  <button
+                    type="button"
+                    className="s7-detail-del-btn"
+                    title="Delete snippet"
+                    onClick={() => { const next = deleteSnippet(null, idx); setSnippets(next); }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Cross-process dependency mapping modal */}
+      {showDepsModal && createPortal(
+        <div className="s7-snippet-overlay" onClick={() => { if (!pendingNavAfterDeps) setShowDepsModal(false); }}>
+          <div className="s7-deps-modal" data-theme={theme} onClick={(e) => e.stopPropagation()}>
+            <div className="s7-snippet-modal-header">
+              <span>Does this process connect to others?</span>
+              <button type="button" className="s7-floating-panel-close" onClick={() => { setShowDepsModal(false); if (pendingNavAfterDeps) { setPendingNavAfterDeps(false); commitAndNavigate(depsLinks); } }}>&times;</button>
+            </div>
+            <div className="s7-deps-modal-body">
+              <p className="s7-deps-modal-hint">Add any processes that feed into, or receive output from, <strong>{processData.processName || 'this process'}</strong>. This helps map your end-to-end workflow.</p>
+
+              {depsLinks.length > 0 && (
+                <div className="s7-deps-list">
+                  {depsLinks.map((d, i) => (
+                    <div key={i} className="s7-deps-item">
+                      <span className="s7-deps-badge">{DEP_TYPE_LABELS[d.type] || d.type}</span>
+                      <span className="s7-deps-process">{d.toProcess}</span>
+                      <button type="button" className="s7-detail-del-btn" onClick={() => setDepsLinks((prev) => prev.filter((_, j) => j !== i))} title="Remove">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="s7-deps-add-row">
+                <select className="s7-deps-type-select" value={depsNewType} onChange={(e) => setDepsNewType(e.target.value)}>
+                  {Object.entries(DEP_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+                <input
+                  className="s7-deps-input"
+                  type="text"
+                  placeholder="Process name, e.g. Purchase Order"
+                  value={depsNewProcess}
+                  onChange={(e) => setDepsNewProcess(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && depsNewProcess.trim()) {
+                      setDepsLinks((prev) => [...prev, { fromProcess: processData.processName || '', toProcess: depsNewProcess.trim(), type: depsNewType }]);
+                      setDepsNewProcess('');
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="s7-deps-add-btn"
+                  disabled={!depsNewProcess.trim()}
+                  onClick={() => {
+                    if (!depsNewProcess.trim()) return;
+                    setDepsLinks((prev) => [...prev, { fromProcess: processData.processName || '', toProcess: depsNewProcess.trim(), type: depsNewType }]);
+                    setDepsNewProcess('');
+                  }}
+                >Add</button>
+              </div>
+            </div>
+            <div className="s7-deps-modal-footer">
+              <button type="button" className="s7-deps-skip-btn" onClick={() => { setShowDepsModal(false); setPendingNavAfterDeps(false); commitAndNavigate(depsLinks); }}>
+                {depsLinks.length === 0 ? 'No dependencies — Continue' : 'Done — Continue →'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* Save redesign modal (Overwrite vs Save as new) */}

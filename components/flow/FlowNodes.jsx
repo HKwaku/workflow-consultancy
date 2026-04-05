@@ -97,7 +97,9 @@ export function EndNode({ data }) {
         }}
       >
         ■
-        <Handle id="top" type="target" position={Position.Top} className="flow-handle" />
+        <Handle id="top"    type="target" position={Position.Top}    className="flow-handle" />
+        <Handle id="left"   type="target" position={Position.Left}   className="flow-handle" />
+        <Handle id="bottom" type="target" position={Position.Bottom} className="flow-handle" />
       </div>
       <NodeLabel label={label} darkTheme={darkTheme} width={TERM_W} />
     </div>
@@ -110,7 +112,17 @@ export function StepNode({ data, selected }) {
     label, stepIndex = 0,
     deptColor, showDept, darkTheme,
     isBottleneck, auto, durationLabel, isApproval,
+    workMinutes, waitMinutes,
   } = data;
+
+  const fmtMin = (m) => {
+    if (!m || m <= 0) return null;
+    if (m < 60) return `${m}m`;
+    const h = Math.floor(m / 60), r = m % 60;
+    return r ? `${h}h ${r}m` : `${h}h`;
+  };
+  const workLabel = fmtMin(workMinutes);
+  const waitLabel = fmtMin(waitMinutes);
 
   const bg     = deptColor?.bg  || (darkTheme ? '#2d2d2d' : '#ffffff');
   const stroke = isBottleneck
@@ -160,14 +172,33 @@ export function StepNode({ data, selected }) {
           </div>
         )}
 
-        {/* Corner badges — approval check + duration */}
-        {(isApproval || durationLabel) && (
-          <div style={{ position: 'absolute', top: 5, right: 6, display: 'flex', alignItems: 'center', gap: 3 }}>
+        {/* Corner badges — approval + timing */}
+        {(isApproval || workLabel || waitLabel) && (
+          <div style={{ position: 'absolute', top: 5, right: 6, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
             {isApproval && (
-              <span style={{ fontSize: 9, color: darkTheme ? '#86efac' : '#16a34a' }}>✓</span>
+              <span style={{ fontSize: 8, color: darkTheme ? '#86efac' : '#16a34a', lineHeight: 1 }}>✓ approval</span>
             )}
-            {durationLabel && (
-              <span style={{ fontSize: 9, color: darkTheme ? '#a0a0a0' : '#64748b' }}>{durationLabel}</span>
+            {(workLabel || waitLabel) && (
+              <div style={{ display: 'flex', gap: 3 }}>
+                {workLabel && (
+                  <span style={{
+                    fontSize: 8, lineHeight: 1, padding: '1px 4px',
+                    borderRadius: 4,
+                    background: darkTheme ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.1)',
+                    color: darkTheme ? '#a5b4fc' : '#6366f1',
+                    fontWeight: 600,
+                  }} title="Active work time">⚡ {workLabel}</span>
+                )}
+                {waitLabel && (
+                  <span style={{
+                    fontSize: 8, lineHeight: 1, padding: '1px 4px',
+                    borderRadius: 4,
+                    background: darkTheme ? 'rgba(245,158,11,0.18)' : 'rgba(245,158,11,0.1)',
+                    color: darkTheme ? '#fcd34d' : '#b45309',
+                    fontWeight: 600,
+                  }} title="Wait / idle time">⏳ {waitLabel}</span>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -181,7 +212,7 @@ export function StepNode({ data, selected }) {
 
 /* ── Decision (diamond) ─────────────────────────────────────────────────── */
 export function DecisionNode({ data, selected }) {
-  const { label, stepIndex = 0, isParallel, darkTheme, deptColor, showDept } = data;
+  const { label, stepIndex = 0, isParallel, isInclusive, darkTheme, deptColor, showDept } = data;
   const stroke = deptColor?.stroke || (darkTheme ? '#94a3b8' : '#94a3b8');
   const bg     = deptColor?.bg ? deptColor.bg : (darkTheme ? '#2d2d2d' : '#ffffff');
 
@@ -199,6 +230,9 @@ export function DecisionNode({ data, selected }) {
           {isParallel && (
             <span className="flow-node-decision-parallel" style={{ fontSize: 13 }}>⊕</span>
           )}
+          {isInclusive && (
+            <span className="flow-node-decision-parallel" style={{ fontSize: 13 }}>◎</span>
+          )}
         </div>
         <NodeHandles />
       </div>
@@ -207,24 +241,33 @@ export function DecisionNode({ data, selected }) {
   );
 }
 
-/* ── Merge ──────────────────────────────────────────────────────────────── */
+/* ── Merge (circle join gateway) ───────────────────────────────────────── */
+const MERGE_SZ = 120; // merge circle diameter
+
 export function MergeNode({ data, selected }) {
   const { label = 'Merge', darkTheme } = data;
   return (
-    <div style={{ position: 'relative', width: NODE_W, overflow: 'visible' }}>
+    <div style={{ position: 'relative', width: MERGE_SZ, overflow: 'visible' }}>
       <div
-        className={`flow-node flow-node-step flow-node-merge flow-node-merge-wrapper${selected ? ' selected' : ''}`}
-        style={{ width: NODE_W, height: NODE_H, position: 'relative' }}
+        className={`flow-node flow-node-merge-wrapper${selected ? ' selected' : ''}`}
+        style={{
+          width: MERGE_SZ,
+          height: MERGE_SZ,
+          borderRadius: '50%',
+          background: '#0d9488',
+          boxShadow: selected
+            ? '0 0 0 3px #fff, 0 0 0 5px #0d9488'
+            : '0 2px 6px rgba(13,148,136,0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          cursor: 'default',
+        }}
       >
-        <div
-          className="flow-node-step-content"
-          style={{ alignItems: 'center', justifyContent: 'center' }}
-        >
-          <span className="flow-node-type-chip">MERGE</span>
-        </div>
         <NodeHandles />
       </div>
-      <NodeLabel label={label} darkTheme={darkTheme} width={NODE_W} />
+      <NodeLabel label={label} darkTheme={darkTheme} width={MERGE_SZ} />
     </div>
   );
 }
@@ -254,7 +297,7 @@ export function LaneLabelNode({ data }) {
         pointerEvents: 'none',
       }}
     >
-      {label || 'Department'}
+      {label || 'Team'}
     </div>
   );
 }

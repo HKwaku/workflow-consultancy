@@ -107,6 +107,7 @@ const initialState = {
   stepCount: 0,
   editingReportId: null,
   editingRedesign: false,
+  aiRedesignMode: false,
   editingProcessIndex: null,
   diagnosticMode: 'comprehensive',
   pendingPath: 'individual',
@@ -114,7 +115,7 @@ const initialState = {
   authUser: null,
   contact: null,
   chatMessages: [
-    { role: 'assistant', content: "Hi! I'm your process mapping assistant. Describe your workflow and I'll help build the steps, or ask me anything about process diagnostics." },
+    { role: 'assistant', content: "Hi! I'm your process mapping assistant. Describe your workflow and I'll help build the steps, or ask me anything about process audits." },
   ],
   chatOpen: false,
   auditTrail: [],
@@ -389,7 +390,7 @@ export function DiagnosticProvider({ children }) {
     try { data = await resp.json(); } catch (e) { throw new Error('Invalid response from server'); }
     if (!resp.ok) throw new Error(data.error || 'Failed to send report');
     if (state.authUser || state.contact?.email) {
-      dispatch({ type: 'ADD_AUDIT_EVENT', payload: { id: Math.random().toString(36).slice(2, 10), type: 'submit', timestamp: new Date().toISOString(), detail: state.editingReportId ? 'Report updated' : 'Diagnostic report submitted' } });
+      dispatch({ type: 'ADD_AUDIT_EVENT', payload: { id: Math.random().toString(36).slice(2, 10), type: 'submit', timestamp: new Date().toISOString(), detail: state.editingReportId ? 'Report updated' : 'Process audit submitted' } });
     }
     return data;
   }, [state.customDepartments, state.editingReportId]);

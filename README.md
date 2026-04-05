@@ -1,4 +1,4 @@
-# Workflow Consultancy (Sharpin)
+# Workflow Consultancy (Vesno)
 
 Technology-agnostic workflow optimization and process mapping. Next.js app with AI-powered diagnostics, Supabase backend, and n8n webhooks.
 

@@ -4,7 +4,37 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDiagnostic } from '../DiagnosticContext';
 import { useAuth } from '@/lib/useAuth';
-import { buildLocalResults } from '@/lib/diagnostic';
+import { buildLocalResults, computeDurationFromSteps } from '@/lib/diagnostic';
+
+/** Infer the primary bottleneck type from empirical step + handoff data. */
+function inferBottleneck(steps, handoffs) {
+  const approvals  = steps.filter(s => s.isApproval || s.isDecision).length;
+  const multiSys   = steps.filter(s => (s.systems || []).length >= 2).length;
+  const external   = steps.filter(s => s.isExternal).length;
+  const flagged    = steps.filter(s => s.isBottleneck).length;
+  const poorHoffs  = (handoffs || []).filter(h => ['yes-multiple','yes-major','confusing','unclear'].includes(h.clarity)).length;
+  const scores = { approvals, systems: multiSys * 2, handoffs: external + poorHoffs * 2, 'manual-work': flagged * 2 };
+  const top = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
+  return top && top[1] > 0 ? top[0] : 'manual-work';
+}
+
+/** Auto-populate cost fields from process mapping data so the cost analysis page has full context. */
+function enrichProcessCosts(p) {
+  const steps    = p.steps || [];
+  const handoffs = p.handoffs || [];
+  const computed = computeDurationFromSteps(steps);
+  const depts    = new Set(steps.filter(s => !s.isExternal && s.department).map(s => s.department));
+  const teamSize = depts.size > 0 ? depts.size : (p.costs?.teamSize ?? 1);
+  const hoursPerInstance = (computed?.hoursPerInstance > 0 ? computed.hoursPerInstance : null) ?? p.costs?.hoursPerInstance ?? 4;
+  const annual   = p.frequency?.annual ?? p.costs?.annual ?? 12;
+  const bottleneckReason = p.bottleneck?.reason || inferBottleneck(steps, handoffs);
+  return {
+    ...p,
+    costs: { ...p.costs, hoursPerInstance, teamSize, annual },
+    bottleneck: { ...p.bottleneck, reason: bottleneckReason },
+    savings: p.savings?.percent ? p.savings : { percent: 20 },
+  };
+}
 
 /* ── SSE stream reader ────────────────────────────────────────── */
 
@@ -86,10 +116,12 @@ export default function Screen6Complete() {
     setContact,
   } = useDiagnostic();
 
-  const [status, setStatus] = useState('loading'); // loading | success | error
+  const [status, setStatus] = useState('loading'); // loading | done | error
   const [reportId, setReportId] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [progressMessage, setProgressMessage] = useState('Starting analysis…');
+  const [findings, setFindings] = useState([]);
+  const [pendingUrl, setPendingUrl] = useState(null);
 
   const processes = completedProcesses.length > 0 ? completedProcesses : [processData];
 
@@ -114,6 +146,12 @@ export default function Screen6Complete() {
     title: contact?.title || '',
     industry: contact?.industry || '',
     teamSize: contact?.teamSize || '',
+    segment: processData?.segment || '',
+    ...(processData?.maEntity && { maEntity: processData.maEntity }),
+    ...(processData?.maTimeline && { maTimeline: processData.maTimeline }),
+    ...(processData?.peStage && { peStage: processData.peStage }),
+    ...(processData?.highStakesType && { highStakesType: processData.highStakesType }),
+    ...(processData?.highStakesDeadline && { highStakesDeadline: processData.highStakesDeadline }),
   };
 
   useEffect(() => {
@@ -164,23 +202,27 @@ export default function Screen6Complete() {
             throw new Error(errData.error || 'Failed to submit team response');
           }
           if (cancelled) return;
-          setStatus('success');
-          router.push(`/team-results?code=${encodeURIComponent(teamCode)}`);
+          setPendingUrl(`/team-results?code=${encodeURIComponent(teamCode)}`);
+          setStatus('done');
           return;
         }
 
-        const sanitizedProcesses = processes.filter(Boolean).map((p) => ({
-          processName: p.processName || p.name || 'Process',
-          processType: p.processType || p.type || 'other',
-          steps: p.steps || [],
-          handoffs: p.handoffs || [],
-          definition: p.definition,
-          lastExample: p.lastExample,
-          costs: p.costs,
-          frequency: p.frequency,
-          bottleneck: p.bottleneck,
-          userTime: p.userTime,
-        }));
+        const sanitizedProcesses = processes.filter(Boolean).map((p) => {
+          const enriched = enrichProcessCosts(p);
+          return {
+            processName: enriched.processName || enriched.name || 'Process',
+            processType: enriched.processType || enriched.type || 'other',
+            steps: enriched.steps || [],
+            handoffs: enriched.handoffs || [],
+            definition: enriched.definition,
+            lastExample: enriched.lastExample,
+            costs: enriched.costs,
+            frequency: enriched.frequency,
+            bottleneck: enriched.bottleneck,
+            savings: enriched.savings,
+            userTime: enriched.userTime,
+          };
+        });
         if (sanitizedProcesses.length === 0) throw new Error('No process data to analyse.');
 
         const payload = {
@@ -238,21 +280,50 @@ export default function Screen6Complete() {
           rawProcesses: JSON.parse(JSON.stringify(processes)),
           customDepartments: customDepartments || [],
           auditTrail: (auditTrail || []).slice(-50),
+          costAnalystEmail: contact?.costAnalystEmail || null,
         };
 
         const reportData = await sendDiagnosticReport(reportPayload, { accessToken: accessToken || undefined });
         if (cancelled) return;
 
         setReportId(reportData.reportId);
-        setStatus('success');
 
         if (reportData.costAnalysisUrl && typeof window !== 'undefined') {
-          try { sessionStorage.setItem('costAnalysisUrl_' + reportData.reportId, reportData.costAnalysisUrl); } catch { /* ignore */ }
+          try {
+            sessionStorage.setItem('costAnalysisUrl_' + reportData.reportId, reportData.costAnalysisUrl);
+            localStorage.setItem('costAnalysisUrl_' + reportData.reportId, reportData.costAnalysisUrl);
+          } catch { /* ignore */ }
         }
 
-        if (reportData.reportUrl || reportData.reportId) {
-          router.push(`/report?id=${reportData.reportId}`);
+        // Auto-send cost analysis link to the nominated analyst
+        const analystEmail = contact?.costAnalystEmail;
+        if (analystEmail && reportData.costAnalysisUrl && reportData.reportId) {
+          try {
+            await fetch('/api/share-cost-analysis', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                reportId: reportData.reportId,
+                managerEmail: analystEmail,
+                costUrl: reportData.costAnalysisUrl,
+                contactName: effectiveContact.name || '',
+                company: effectiveContact.company || '',
+              }),
+            });
+          } catch { /* non-fatal */ }
         }
+
+        // Extract top 3 findings for the intermediate screen
+        const recs = result.recommendations || [];
+        const topFindings = recs.slice(0, 3).map(r =>
+          typeof r === 'string' ? r : (r.title || r.description || r.text || JSON.stringify(r))
+        ).filter(Boolean);
+        setFindings(topFindings);
+
+        if (reportData.reportUrl || reportData.reportId) {
+          setPendingUrl(`/report?id=${reportData.reportId}`);
+        }
+        setStatus('done');
       } catch (err) {
         if (!cancelled) {
           setStatus('error');
@@ -265,16 +336,66 @@ export default function Screen6Complete() {
     return () => { cancelled = true; };
   }, [effectiveEmail, teamMode?.code, authLoading, contact?.email]);
 
+  // Auto-redirect after 4 seconds once in the 'done' intermediate state
+  useEffect(() => {
+    if (status !== 'done' || !pendingUrl) return;
+    const timer = setTimeout(() => {
+      router.push(pendingUrl);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [status, pendingUrl, router]);
+
+  function handleViewReport() {
+    if (pendingUrl) router.push(pendingUrl);
+  }
+
   return (
     <div className="screen active">
       <div className="screen-card">
-        {(status === 'loading' || status === 'success') && (
+        {status === 'loading' && (
           <>
             <h1 className="screen-title">Generating your report…</h1>
             <div className="loading-state loading-fallback">
               <div className="loading-spinner" />
               <p className="sc6-progress-message">{progressMessage}</p>
             </div>
+          </>
+        )}
+
+        {status === 'done' && (
+          <>
+            <div className="sc6-done-header">
+              <span className="sc6-done-check">✓</span>
+              <h1 className="screen-title" style={{ margin: 0 }}>Process audit complete</h1>
+            </div>
+
+            {findings.length > 0 && (
+              <>
+                <p className="screen-subtitle" style={{ marginBottom: 14 }}>
+                  Top findings from your process analysis:
+                </p>
+                <ul className="sc6-findings">
+                  {findings.map((f, i) => (
+                    <li key={i} className="sc6-finding-item">
+                      <span className="sc6-finding-bullet">▶</span>
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+
+            {pendingUrl && (
+              <button
+                type="button"
+                className="button button-primary"
+                onClick={handleViewReport}
+              >
+                View your report →
+              </button>
+            )}
+
+            <p className="sc6-redirect-hint">Redirecting automatically in a few seconds…</p>
           </>
         )}
 
@@ -290,7 +411,7 @@ export default function Screen6Complete() {
                   if (typeof window !== 'undefined') {
                     try { localStorage.removeItem('processDiagnosticProgress'); } catch {}
                   }
-                  window.location.href = '/diagnostic';
+                  window.location.href = '/process-audit';
                 }}
               >
                 Start fresh

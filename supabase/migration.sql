@@ -1,5 +1,5 @@
 -- ============================================================
--- Sharpin Schema Migration
+-- Vesno Schema Migration
 -- Run this in the Supabase SQL Editor (Dashboard → SQL Editor)
 -- ============================================================
 

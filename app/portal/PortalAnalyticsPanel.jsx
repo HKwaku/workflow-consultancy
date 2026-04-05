@@ -29,6 +29,38 @@ export default function PortalAnalyticsPanel({
   const [showAllActivity, setShowAllActivity] = useState(false);
   const { totalProcs, avgAuto, autoColor, redesignedCount, totalCost } = metrics;
 
+  // ── Cost by department ────────────────────────────────────────
+  const costByDept = useMemo(() => {
+    const deptMap = {};
+    let hasDeptData = false;
+    reportList.forEach((r) => {
+      // Prefer pre-computed costByDept on metrics
+      if (r.metrics?.costByDept && typeof r.metrics.costByDept === 'object') {
+        hasDeptData = true;
+        Object.entries(r.metrics.costByDept).forEach(([dept, cost]) => {
+          if (dept && typeof cost === 'number' && cost > 0) {
+            deptMap[dept] = (deptMap[dept] || 0) + cost;
+          }
+        });
+      } else if (Array.isArray(r.metrics?.processes)) {
+        // Compute from process-level data if departments are present
+        r.metrics.processes.forEach((proc) => {
+          const dept = proc.department;
+          const cost = proc.annualCost ?? proc.totalCost ?? proc.cost ?? 0;
+          if (dept && typeof cost === 'number' && cost > 0) {
+            hasDeptData = true;
+            deptMap[dept] = (deptMap[dept] || 0) + cost;
+          }
+        });
+      }
+    });
+    if (!hasDeptData) return null;
+    return Object.entries(deptMap)
+      .map(([dept, cost]) => ({ dept, cost }))
+      .sort((a, b) => b.cost - a.cost)
+      .slice(0, 6);
+  }, [reportList]);
+
   const statusCounts = useMemo(() => {
     const counts = { automationReady: 0, redesigned: 0, requiresRedesign: 0 };
     reportList.forEach((r) => {
@@ -45,6 +77,23 @@ export default function PortalAnalyticsPanel({
   const automationReadyPct = Math.round((statusCounts.automationReady / total) * 100);
   const redesignedPct = Math.round((statusCounts.redesigned / total) * 100);
   const requiresRedesignPct = Math.round((statusCounts.requiresRedesign / total) * 100);
+
+  // ── Segment breakdown ────────────────────────────────────────
+  const segmentBreakdown = useMemo(() => {
+    const SEGMENT_META = {
+      scaling: { label: 'Scaling', color: '#0d9488' },
+      ma: { label: 'M&A', color: '#6366f1' },
+      pe: { label: 'PE', color: '#8b5cf6' },
+      highstakes: { label: 'High-stakes', color: '#d97706' },
+    };
+    const counts = {};
+    reportList.forEach((r) => {
+      if (r.segment) counts[r.segment] = (counts[r.segment] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([seg, n]) => ({ seg, n, ...SEGMENT_META[seg] }))
+      .sort((a, b) => b.n - a.n);
+  }, [reportList]);
 
   // ── Redesign funnel ───────────────────────────────────────────
   const funnelData = useMemo(() => {
@@ -68,7 +117,7 @@ export default function PortalAnalyticsPanel({
         label: (r.processes || []).map(p => p.name).join(', ') || r.displayCode || r.id?.slice(0, 8) || 'Process',
         what: r.redesignStatus === 'accepted' ? 'Redesign accepted'
             : r.redesignStatus === 'pending'  ? 'AI redesign generated'
-            : 'Diagnostic updated',
+            : 'Audit updated',
         at: r.updatedAt || r.createdAt,
       }))
       .sort((a, b) => new Date(b.at) - new Date(a.at));
@@ -93,6 +142,7 @@ export default function PortalAnalyticsPanel({
     // 1. Collect quick-win recommendations from all reports
     reportList.forEach(r => {
       const recs = r.recommendations || r.results?.recommendations || [];
+      const hasRedesign = (r.redesignVersions || []).length > 0 || r.redesignStatus === 'pending' || r.redesignStatus === 'accepted';
       recs
         .filter(rec => rec.effortLevel === 'quick-win' || rec.effort === 'quick-win')
         .slice(0, 2)
@@ -104,10 +154,11 @@ export default function PortalAnalyticsPanel({
             type: 'recommendation',
             badge: 'Quick win',
             badgeColor: '#0d9488',
+            hasRedesign,
           });
         });
     });
-    // 2. Fall back to close-to-optimised processes if no real recommendations
+    // 2. Fall back to close-to-optimised (automation-ready) processes if no real recommendations
     if (items.length === 0) {
       reportList
         .filter(r => {
@@ -118,13 +169,15 @@ export default function PortalAnalyticsPanel({
         .slice(0, 5)
         .forEach(r => {
           const pct = r.metrics?.automationPercentage ?? 0;
+          const hasRedesign = (r.redesignVersions || []).length > 0 || r.redesignStatus === 'pending' || r.redesignStatus === 'accepted';
           items.push({
             id: r.id,
             label: (r.processes || []).map(p => p.name).join(', ') || r.displayCode || r.id?.slice(0, 8),
             action: `${pct}% automation readiness — ${70 - pct}% from optimised threshold`,
             type: 'process',
-            badge: `${pct}%`,
+            badge: 'Automation-ready',
             badgeColor: '#3b82f6',
+            hasRedesign,
           });
         });
     }
@@ -140,6 +193,22 @@ export default function PortalAnalyticsPanel({
       <div className="portal-analytics-panel">
         <div className="portal-analytics-loading">
           <div className="spinner" />
+        </div>
+      </div>
+    );
+  }
+
+  if (reportList.length === 0) {
+    return (
+      <div className="portal-analytics-panel">
+        <h2 className="portal-analytics-title">Analytics</h2>
+        <div className="portal-analytics-empty-state">
+          <p className="portal-analytics-empty-state-msg">
+            Complete your first process audit to see analytics here.
+          </p>
+          <Link href="/process-audit" className="portal-analytics-empty-cta">
+            Start a process audit &rarr;
+          </Link>
         </div>
       </div>
     );
@@ -209,9 +278,7 @@ export default function PortalAnalyticsPanel({
               </div>
             </div>
 
-            {reportList.length === 0 ? (
-              <p className="portal-analytics-empty">No processes yet. Run a diagnostic to see analytics.</p>
-            ) : chartType === 'pie' ? (
+            {chartType === 'pie' ? (
               <div className="portal-donut-row">
                 <div className="portal-donut-wrap">
                   <svg className="portal-donut" viewBox="0 0 36 36">
@@ -303,13 +370,13 @@ export default function PortalAnalyticsPanel({
           </section>
 
           {/* ── Redesign Funnel (right of Process Status) ────── */}
-          {reportList.length > 0 && (() => {
+          {(() => {
             const n = funnelData.length;
             // Fixed shape: top stage = full width, bottom stage narrows to ~20%
             // Each boundary between segments steps evenly from 100 → 20
             const W = 100;
             const gap = 3;
-            const segH = 26;
+            const segH = 22;
             const totalH = n * segH + (n - 1) * gap;
             // Width at each boundary (n+1 values): 100 at top, 20 at bottom
             const widthAt = (boundary) => W - (boundary / n) * (W - 20);
@@ -357,7 +424,27 @@ export default function PortalAnalyticsPanel({
           })()}
           </div>
 
-          {reportList.length > 0 && totalCost > 0 && (
+          {segmentBreakdown.length > 0 && (
+            <section className="portal-analytics-section">
+              <span className="portal-analytics-section-title">Audits by segment</span>
+              <div className="portal-cost-bar-chart">
+                {segmentBreakdown.map(({ seg, n, label, color }) => {
+                  const pct = Math.round((n / reportList.length) * 100);
+                  return (
+                    <div key={seg} className="portal-bar-row">
+                      <span className="portal-bar-label" style={{ color }}>{label || seg}</span>
+                      <div className="portal-bar-track">
+                        <div className="portal-bar-fill" style={{ width: `${Math.max(2, pct)}%`, background: color }} />
+                      </div>
+                      <span className="portal-bar-val">{n} ({pct}%)</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {totalCost > 0 && (
             <section className="portal-analytics-section">
               <span className="portal-analytics-section-title">Cost by process</span>
               <div className="portal-cost-bar-chart">
@@ -370,7 +457,7 @@ export default function PortalAnalyticsPanel({
                     const label = (r.processes || []).map((p) => p.name).join(', ') || r.displayCode || r.id?.slice(0, 8) || 'Process';
                     return (
                       <div key={r.id} className="portal-bar-row">
-                        <span className="portal-bar-label">{label.length > 30 ? label.slice(0, 30) + '…' : label}</span>
+                        <span className="portal-bar-label">{label}</span>
                         <div className="portal-bar-track">
                           <div className="portal-bar-fill" style={{ width: `${Math.max(2, pct)}%` }} />
                         </div>
@@ -382,31 +469,73 @@ export default function PortalAnalyticsPanel({
             </section>
           )}
 
+          {/* ── Cost by team / department ─────────────────────────── */}
+          <section className="portal-analytics-section">
+            <span className="portal-analytics-section-title">Cost by team</span>
+            {costByDept === null ? (
+              <p className="portal-analytics-empty">
+                Add team rates in Cost Analysis to see team-level breakdown.
+              </p>
+            ) : costByDept.length === 0 ? (
+              <p className="portal-analytics-empty">
+                No team cost data available yet.
+              </p>
+            ) : (() => {
+              const deptTotal = costByDept.reduce((sum, d) => sum + d.cost, 0);
+              return (
+                <div className="portal-cost-bar-chart portal-dept-bar-chart">
+                  {costByDept.map(({ dept, cost }) => {
+                    const pct = deptTotal > 0 ? Math.round((cost / deptTotal) * 100) : 0;
+                    return (
+                      <div key={dept} className="portal-bar-row">
+                        <span className="portal-bar-label">{dept}</span>
+                        <div className="portal-bar-track">
+                          <div
+                            className="portal-bar-fill portal-dept-bar-fill"
+                            style={{ width: `${Math.max(2, pct)}%` }}
+                          />
+                        </div>
+                        <span className="portal-bar-val">{formatCurrency(cost)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </section>
+
           {/* ── Quick Wins · High Risk · Recent Activity (3 columns) ── */}
           <div className="portal-three-col-row">
 
             <section className="portal-analytics-section portal-three-col-section">
               <span className="portal-analytics-section-title">Quick Wins</span>
               {quickWins.length === 0 ? (
-                <p className="portal-analytics-empty">
-                  {reportList.length === 0 ? 'Run a diagnostic to surface quick wins.' : 'No quick wins identified yet.'}
-                </p>
+                <p className="portal-analytics-empty">No quick wins identified yet.</p>
               ) : (
                 <>
                   <ul className="portal-quick-list">
                     {(showAllQuickWins ? quickWins : quickWins.slice(0, 3)).map((item, i) => (
-                      <li key={`${item.id}-${i}`}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{
-                            fontSize: '0.6rem', fontWeight: 700, padding: '1px 6px',
-                            borderRadius: 10, background: item.badgeColor,
-                            color: '#fff', flexShrink: 0,
-                          }}>{item.badge}</span>
-                          <Link href={`/report?id=${item.id}&portal=1`} className="portal-quick-link">
-                            {item.label}
-                          </Link>
+                      <li key={`${item.id}-${i}`} className="portal-quick-list-item">
+                        <div className="portal-quick-item-header">
+                          <span
+                            className={`portal-quick-badge${item.type === 'process' ? ' portal-quick-badge--auto' : ''}`}
+                            style={{ background: item.badgeColor }}
+                          >
+                            {item.badge}
+                          </span>
+                          <span className="portal-quick-label">{item.label}</span>
                         </div>
                         {item.action && <span className="portal-quick-why">{item.action}</span>}
+                        <div className="portal-quick-actions">
+                          <Link href={`/report?id=${item.id}&portal=1`} className="portal-quick-action-link">
+                            Review &rarr;
+                          </Link>
+                          {item.hasRedesign && (
+                            <Link href={`/report?id=${item.id}&portal=1&tab=redesign`} className="portal-quick-action-link portal-quick-action-link--redesign">
+                              View redesign &rarr;
+                            </Link>
+                          )}
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -422,7 +551,7 @@ export default function PortalAnalyticsPanel({
             <section className="portal-analytics-section portal-three-col-section">
               <span className="portal-analytics-section-title">High Risk Processes</span>
               {highRisk.length === 0 ? (
-                <p className="portal-analytics-empty">No high risk processes.</p>
+                <p className="portal-analytics-empty">No high-risk processes — all processes are on track.</p>
               ) : (
                 <>
                   <ul className="portal-risk-list">
@@ -449,7 +578,7 @@ export default function PortalAnalyticsPanel({
             <section className="portal-analytics-section portal-three-col-section">
               <span className="portal-analytics-section-title">Recent Activity</span>
               {recentActivity.length === 0 ? (
-                <p className="portal-analytics-empty">No activity yet.</p>
+                <p className="portal-analytics-empty">No activity yet. Updates will appear here as process audits are completed.</p>
               ) : (
                 <>
                   <ul className="portal-recent-list">

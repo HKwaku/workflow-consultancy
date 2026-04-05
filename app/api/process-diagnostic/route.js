@@ -3,7 +3,7 @@ import { logger } from '@/lib/logger';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { ProcessDiagnosticInputSchema } from '@/lib/ai-schemas';
 import { generateMermaidCode } from '@/lib/mermaid-helper';
-import { calculateAutomationScore, generateRuleBasedRecommendations } from '@/lib/diagnostic/buildLocalResults';
+import { calculateAutomationScore, generateRuleBasedRecommendations, calculateProcessQuality } from '@/lib/diagnostic/buildLocalResults';
 import { withRetry } from '@/lib/ai-retry';
 import { runRecommendationsAgent } from '@/lib/agents/recommendations/graph';
 import { runFlowConsistencyAgent } from '@/lib/agents/flow/graph';
@@ -15,7 +15,7 @@ export async function POST(request) {
   const originErr = checkOrigin(request);
   if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
 
-  const rl = checkRateLimit(getRateLimitKey(request));
+  const rl = await checkRateLimit(getRateLimitKey(request));
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
 
   const contentLength = parseInt(request.headers.get('content-length') || '0', 10);
@@ -154,7 +154,7 @@ export async function POST(request) {
 }
 
 async function triggerN8nFlowDiagram(processes, contact) {
-  const webhookUrl = process.env.N8N_FLOW_DIAGRAM_WEBHOOK_URL || process.env.N8N_DIAGNOSTIC_WEBHOOK_URL || process.env.N8N_WEBHOOK_URL;
+  const webhookUrl = process.env.N8N_FLOW_DIAGRAM_WEBHOOK_URL;
   if (!webhookUrl || (!webhookUrl.startsWith('http://') && !webhookUrl.startsWith('https://'))) return null;
   const mermaidCode = generateMermaidCode(processes);
   const flowData = processes.map(p => ({ processName: p.processName, processType: p.processType, startsWhen: p.definition?.startsWhen || '', completesWhen: p.definition?.completesWhen || '', steps: (p.steps || []).map(s => { const step = { number: s.number, name: s.name, department: s.department }; if (s.isDecision && s.branches?.length > 0) { step.isDecision = true; step.branches = s.branches; } if (s.isExternal) step.isExternal = true; return step; }), handoffs: (p.handoffs || []).map(h => ({ from: { name: h.from?.name, department: h.from?.department }, to: { name: h.to?.name, department: h.to?.department }, method: h.method, clarity: h.clarity })), approvals: (p.approvals || []).map(a => ({ name: a.name, who: a.who, assessment: a.assessment })), systems: (p.systems || []).map(s => ({ name: s.name, purpose: s.purpose, actions: s.actions || [] })), bottleneck: p.bottleneck || {}, costs: { totalAnnualCost: p.costs?.totalAnnualCost || 0, instanceCost: p.costs?.instanceCost || 0, elapsedDays: p.lastExample?.elapsedDays || 0, annualInstances: p.frequency?.annual || 0, teamSize: p.costs?.teamSize || 1 } }));
@@ -165,23 +165,3 @@ async function triggerN8nFlowDiagram(processes, contact) {
   return result?.diagramUrl || null;
 }
 
-function calculateProcessQuality(p) {
-  let score = 50;
-  const flags = [];
-  const steps = p.steps || [];
-  const handoffs = p.handoffs || [];
-  if (steps.length >= 8) score += 15;
-  else if (steps.length >= 5) score += 10;
-  else if (steps.length >= 3) score += 5;
-  else flags.push('Limited step detail');
-  const depts = new Set(steps.map((s) => s.department).filter(Boolean));
-  if (depts.size > 0) score += 10;
-  if (handoffs.length > 0) score += 5;
-  if (steps.some((s) => s.systems?.length > 0)) score += 5;
-  if (p.costs?.totalAnnualCost > 0) score += 5;
-  if (p.costs?.cycleDays > 0) score += 5;
-  if (p.bottleneck?.reason) score += 5;
-  if (p.lastExample?.name) score += 5;
-  score = Math.max(0, Math.min(100, score));
-  return { score, grade: score > 85 ? 'HIGH' : score > 65 ? 'MEDIUM' : 'LOW', flags };
-}

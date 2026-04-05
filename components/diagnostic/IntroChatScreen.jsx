@@ -3,10 +3,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useDiagnostic } from './DiagnosticContext';
 import { useDiagnosticNav } from './DiagnosticNavContext';
-import TeamAuthGate from './TeamAuthGate';
 import { PROCESSES } from '@/lib/diagnostic';
 import {
-  INTRO_PROMPTS,
   COMPREHENSIVE_PROMPTS,
 } from '@/lib/diagnostic/guidedPrompts';
 
@@ -31,12 +29,9 @@ export default function IntroChatScreen() {
     goToScreen,
     setPendingPath,
     setDiagnosticMode,
-    setTeamMode,
-    setAuthUser,
   } = useDiagnostic();
 
-  const [phase, setPhase] = useState('intro'); // 'intro' | 'process'
-  const [showTeamAuth, setShowTeamAuth] = useState(false);
+  const [phase, setPhase] = useState('mode'); // 'mode' | 'process'
   const [processIndex, setProcessIndex] = useState(0);
   const [messages, setMessages] = useState([]);
   const [collectedData, setCollectedData] = useState(() => ({ ...processData }));
@@ -44,21 +39,25 @@ export default function IntroChatScreen() {
   const endRef = useRef(null);
   const { registerNav } = useDiagnosticNav();
 
-  const introPrompts = INTRO_PROMPTS;
   const processPrompts = COMPREHENSIVE_PROMPTS;
-  const currentIntroPrompt = introPrompts[0];
   const currentProcessPrompt = processPrompts[processIndex];
   const processComplete = processIndex >= processPrompts.length;
 
   const isComplete = phase === 'process' && processComplete;
 
-  // Initial message
+  const segmentGreetings = {
+    ma: "Hello, I'm Afi! I'll help you build your Day 1 integration baseline — mapping the target company's processes and surfacing where complexity will compound if left unaddressed. How deep would you like to go?",
+    pe: "Hello, I'm Afi! I'll help you identify value creation opportunities across your portfolio company's operations — quantifying the cost of bottlenecks and prioritising the highest-ROI fixes. How deep would you like to go?",
+    highstakes: "Hello, I'm Afi! With high-stakes timelines in mind, I'll help you map and prioritise the processes that matter most before your deadline. How deep would you like to go?",
+    scaling: "Hello, I'm Afi! I'll help you find exactly where your operations are slowing you down as you scale, and what fixing them is worth. How deep would you like to go?",
+  };
+
+  // Initial message — start directly with mode selection
   useEffect(() => {
-    if (messages.length === 0 && currentIntroPrompt) {
-      const q = typeof currentIntroPrompt.question === 'function'
-        ? currentIntroPrompt.question(collectedData)
-        : currentIntroPrompt.question;
-      setMessages([{ role: 'assistant', content: q, promptId: currentIntroPrompt.id }]);
+    if (messages.length === 0) {
+      setPendingPath('individual');
+      const greeting = segmentGreetings[processData?.segment] || "Hello, I'm Afi! I'll help you map your process and find where time and money are leaking. How deep would you like to go?";
+      setMessages([{ role: 'assistant', content: greeting, promptId: 'mode' }]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -67,36 +66,19 @@ export default function IntroChatScreen() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleIntroAnswer = useCallback((text) => {
-    const trimmed = (text || '').trim();
-    if (!trimmed || !currentIntroPrompt) return;
-
-    const partial = currentIntroPrompt.extract(trimmed, currentIntroPrompt);
-    const merged = deepMerge(collectedData, partial);
-
-    setMessages((prev) => [...prev, { role: 'user', content: trimmed }]);
-    setCollectedData(merged);
-
-    if (currentIntroPrompt.id === 'path') {
-      if (merged.path === 'team') {
-        setPendingPath('team');
-        setTeamMode(true);
-        setDiagnosticMode('process');
-        setShowTeamAuth(true);
-        return;
-      }
-      setPendingPath('individual');
-      setDiagnosticMode('process');
-      setPhase('process');
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: "Great. Let's define your process.", promptId: 'transition' },
-      ]);
-      const first = processPrompts[0];
-      const q = typeof first.question === 'function' ? first.question(merged) : first.question;
-      setMessages((prev) => [...prev, { role: 'assistant', content: q, promptId: first.id }]);
-    }
-  }, [currentIntroPrompt, collectedData, processPrompts, setPendingPath, setTeamMode, setDiagnosticMode]);
+  const handleModeAnswer = useCallback((mode) => {
+    setDiagnosticMode(mode);
+    const label = mode === 'comprehensive' ? 'Full Audit' : 'Map Process Only';
+    setMessages((prev) => [
+      ...prev,
+      { role: 'user', content: label },
+      { role: 'assistant', content: "Great. Let's define your process.", promptId: 'transition' },
+    ]);
+    setPhase('process');
+    const first = processPrompts[0];
+    const q = typeof first.question === 'function' ? first.question(collectedData) : first.question;
+    setMessages((prev) => [...prev, { role: 'assistant', content: q, promptId: first.id }]);
+  }, [setDiagnosticMode, processPrompts, collectedData]);
 
   const handleProcessAnswer = useCallback((text) => {
     const trimmed = (text || '').trim();
@@ -119,19 +101,25 @@ export default function IntroChatScreen() {
     setCollectedData(merged);
     updateProcessData(merged);
     setInput('');
-    setProcessIndex((i) => i + 1);
 
-    if (processIndex + 1 < processPrompts.length) {
-      const next = processPrompts[processIndex + 1];
+    // Advance index, skipping prompts hidden for this segment
+    let nextIndex = processIndex + 1;
+    while (nextIndex < processPrompts.length && processPrompts[nextIndex].shouldShow && !processPrompts[nextIndex].shouldShow(merged)) {
+      nextIndex++;
+    }
+    setProcessIndex(nextIndex);
+
+    if (nextIndex < processPrompts.length) {
+      const next = processPrompts[nextIndex];
       const q = typeof next.question === 'function' ? next.question(merged) : next.question;
       setMessages((prev) => [...prev, { role: 'assistant', content: q, promptId: next.id }]);
     }
   }, [currentProcessPrompt, processIndex, processPrompts, collectedData, updateProcessData]);
 
   const handleAnswer = useCallback((text) => {
-    if (phase === 'intro') handleIntroAnswer(text);
+    if (phase === 'mode') { /* handled by renderModeVisual buttons */ }
     else handleProcessAnswer(text);
-  }, [phase, handleIntroAnswer, handleProcessAnswer]);
+  }, [phase, handleProcessAnswer]);
 
   const goToMapSteps = useCallback(() => {
     updateProcessData(collectedData);
@@ -140,10 +128,9 @@ export default function IntroChatScreen() {
 
   const onBack = useCallback(() => {
     if (phase === 'process' && processIndex === 0) {
-      setPhase('intro');
+      setPhase('mode');
       setProcessIndex(0);
-      setCollectedData((d) => ({ ...d, path: undefined }));
-      setMessages((prev) => prev.slice(0, 1));
+      setMessages((prev) => prev.slice(0, 1)); // keep opening mode question
     } else if (phase === 'process' && processIndex > 0) {
       setProcessIndex((i) => i - 1);
       setMessages((prev) => prev.slice(0, -2));
@@ -157,62 +144,57 @@ export default function IntroChatScreen() {
     return () => registerNav(null);
   }, [registerNav, showBack, onBack]);
 
-  const currentPrompt = phase === 'intro' ? currentIntroPrompt : (processComplete ? null : currentProcessPrompt);
+  const currentPrompt = processComplete ? null : currentProcessPrompt;
 
-  // Path selection: welcome-path cards (original Screen0Intro visuals)
-  const renderPathVisual = () => (
+  const renderModeVisual = () => (
     <>
-    <div className="welcome-paths">
-      <button type="button" className="welcome-path-btn welcome-path-btn-individual" onClick={() => handleAnswer('Process Map')}>
-        <span className="welcome-path-btn-label">Process Map</span>
-        <span className="welcome-path-btn-meta">Map and measure a process flow. One person leads — hand off to colleagues to fill in steps they know.</span>
-        <span className="welcome-path-btn-cta">Start →</span>
-      </button>
-      <button type="button" className="welcome-path-btn welcome-path-btn-team" onClick={() => handleAnswer('Team Alignment')}>
-        <span className="welcome-path-btn-label">Team Alignment</span>
-        <span className="welcome-path-btn-meta team-meta-italic">Do we all see this process the same way?</span>
-        <span className="welcome-path-btn-meta team-meta-extra">Each person maps the process independently. The AI compares responses to reveal where your team&apos;s understanding diverges.</span>
-        <span className="welcome-path-btn-cta">Start →</span>
-      </button>
-    </div>
-    <div className="welcome-need">
-      <span className="welcome-need-item">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="2 8 6 12 14 4" />
-        </svg>
-        Last week&apos;s calendar
-      </span>
-      <span className="welcome-need-item">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="2 8 6 12 14 4" />
-        </svg>
-        A recent example to reference
-      </span>
-      <span className="welcome-need-item">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="2 8 6 12 14 4" />
-        </svg>
-        12–15 minutes
-      </span>
-    </div>
+      <div className="welcome-paths">
+        <button type="button" className="welcome-path-btn welcome-path-btn-individual" onClick={() => handleModeAnswer('comprehensive')}>
+          <span className="welcome-path-btn-label">Full Audit</span>
+          <span className="welcome-path-btn-meta">Map the process steps and size the cost &amp; impact. A manager completes the financial model afterwards — you&apos;ll get a shareable link.</span>
+          <span className="welcome-path-btn-cta">Start →</span>
+        </button>
+        <button type="button" className="welcome-path-btn welcome-path-btn-team" onClick={() => handleModeAnswer('map-only')}>
+          <span className="welcome-path-btn-label">Map Process Only</span>
+          <span className="welcome-path-btn-meta">Map the process steps without cost sizing. Good for a quick visual of how work flows.</span>
+          <span className="welcome-path-btn-cta">Start →</span>
+        </button>
+      </div>
+      <div className="welcome-need">
+        <span className="welcome-need-item">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="2 8 6 12 14 4" />
+          </svg>
+          Last week&apos;s calendar
+        </span>
+        <span className="welcome-need-item">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="2 8 6 12 14 4" />
+          </svg>
+          A recent example to reference
+        </span>
+        <span className="welcome-need-item">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="2 8 6 12 14 4" />
+          </svg>
+          12–15 minutes
+        </span>
+      </div>
     </>
   );
 
   const renderProcessVisual = () => (
     <>
-      <div className="process-grid">
+      <div className="process-list">
         {PROCESSES.map((p) => (
-          <div
+          <button
             key={p.id}
-            className={`process-card ${collectedData.processType === p.id ? 'selected' : ''}`}
+            type="button"
+            className={`process-list-item${collectedData.processType === p.id ? ' selected' : ''}`}
             onClick={() => handleAnswer(p.name)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAnswer(p.name)}
-            role="button"
-            tabIndex={0}
           >
-            <div className="process-icon" dangerouslySetInnerHTML={{ __html: p.icon }} />
-            <div className="process-name">{p.name}</div>
-          </div>
+            {p.name}
+          </button>
         ))}
       </div>
       <div className="form-group guided-chat-custom-process form-group-mt-md">
@@ -242,17 +224,8 @@ export default function IntroChatScreen() {
     </>
   );
 
-  const handleTeamAuth = useCallback((user) => {
-    setAuthUser(user);
-    goToScreen(-2);
-  }, [setAuthUser, goToScreen]);
-
-  const showPathVisual = phase === 'intro' && currentIntroPrompt?.id === 'path';
+  const showModeVisual = phase === 'mode';
   const showProcessVisual = phase === 'process' && currentProcessPrompt?.id === 'process';
-
-  if (showTeamAuth) {
-    return <TeamAuthGate onAuthenticated={handleTeamAuth} onBack={() => setShowTeamAuth(false)} />;
-  }
 
   return (
     <div className="guided-chat-screen intro-chat-screen">
@@ -260,12 +233,12 @@ export default function IntroChatScreen() {
         {messages.map((m, i) => (
           <div key={i} className={`s7-msg s7-msg-${m.role}`}>
             {m.role === 'assistant' && (
-              <div className="sharp-avatar" title="Sharp">S</div>
+              <div className="sharp-avatar" title="Afi">A</div>
             )}
             <div className="s7-msg-bubble">{m.content}</div>
           </div>
         ))}
-        {showPathVisual && renderPathVisual()}
+        {showModeVisual && renderModeVisual()}
         {showProcessVisual && renderProcessVisual()}
         {isComplete && (
           <div className="guided-chat-cta-wrap">
@@ -278,7 +251,7 @@ export default function IntroChatScreen() {
         <div ref={endRef} />
       </div>
 
-      {!isComplete && currentPrompt && !showPathVisual && !showProcessVisual && (
+      {!isComplete && currentPrompt && !showModeVisual && !showProcessVisual && (
         <div className="guided-chat-input-area">
           {currentPrompt.chips && (
             <div className="guided-chat-chips">

@@ -1,5 +1,5 @@
 /**
- * Sharpin - Global styles
+ * Vesno - Global styles
  * Combines base.css tokens + app-level overrides.
  */
 
@@ -19,6 +19,8 @@
     --text-light: #475569;
     --bg: #0a0a0a;
     --bg-alt: #141414;
+    /* Elevated surfaces — barely above --bg for subtle, low-contrast panels */
+    --bg-panel: #18181a;
     --white: #171717;
     --border: #262626;
     --border-strong: #404040;
@@ -26,6 +28,8 @@
     --red: #f87171;
     --amber: #fbbf24;
     --purple: #a78bfa;
+    --surface: #141414;
+    --surface-alt: rgba(255,255,255,0.05);
     --radius-sm: 12px;
     --radius-md: 16px;
     --radius-lg: 24px;
@@ -37,6 +41,7 @@
 /* ── Body ────────────────────────────────────────── */
 html {
     overflow-x: hidden;
+    background: var(--bg);
 }
 
 body {

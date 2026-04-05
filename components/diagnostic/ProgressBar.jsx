@@ -72,7 +72,7 @@ export default function ProgressBar({ onSaveClick, currentScreen: screenProp }) 
       {text && <div className="progress-text">{text}</div>}
       {showHealthScore && (
         <div className="health-score-bar">
-          <span>Diagnostic Depth</span>
+          <span>Audit Depth</span>
           <div className="health-score-track">
             <div className={`health-score-fill ${healthScore >= 70 ? 'health-score-fill-green' : healthScore >= 50 ? 'health-score-fill-amber' : 'health-score-fill-red'}`} style={{ width: `${healthScore}%` }} />
           </div>

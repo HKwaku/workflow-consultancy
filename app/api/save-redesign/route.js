@@ -4,6 +4,13 @@ import { getSupabaseWriteHeaders, fetchWithTimeout, requireSupabase, getRequestI
 import { requireAuth } from '@/lib/auth';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
+import { computeRedesignCostProfile } from '@/lib/computeRedesignCostProfile';
+
+// PostgREST returns HTTP 409 or embeds Postgres error code 23505 in the body
+function isUniqueViolation(status, body) {
+  if (status === 409) return true;
+  try { const j = JSON.parse(body); return j?.code === '23505'; } catch { return false; }
+}
 
 export async function POST(request) {
   const originErr = checkOrigin(request);
@@ -12,7 +19,7 @@ export async function POST(request) {
   if (auth.error) return NextResponse.json(auth.error.body, { status: auth.error.status });
   const email = auth.email;
 
-  const rl = checkRateLimit(getRateLimitKey(request));
+  const rl = await checkRateLimit(getRateLimitKey(request));
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests.' }, { status: 429 });
 
   let body;
@@ -44,11 +51,17 @@ export async function POST(request) {
   const rdResp = await fetchWithTimeout(rdUrl, { method: 'GET', headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, Accept: 'application/json' } });
   const rdRows = rdResp.ok ? await rdResp.json() : [];
 
+  const d = reportRows[0].diagnostic_data || {};
+  const costProfile = d.costAnalysis ? (() => {
+    try { return computeRedesignCostProfile(d, redesign); } catch { return null; }
+  })() : null;
+
   try {
     if (mode === 'overwrite' && rdRows.length > 0) {
       const latestId = rdRows[0].id;
       const patchData = { ...redesign };
       if (source != null) patchData.source = source;
+      if (costProfile) patchData.costProfile = costProfile;
       const patchBody = {
         redesign_data: patchData,
         decisions: {},
@@ -63,12 +76,16 @@ export async function POST(request) {
       });
       if (!patchResp.ok) {
         const errText = await patchResp.text();
+        if (isUniqueViolation(patchResp.status, errText)) {
+          return NextResponse.json({ error: 'Only one redesign can be accepted at a time. Reject the current accepted redesign first.', code: 'REDESIGN_ALREADY_ACCEPTED' }, { status: 409 });
+        }
         logger.error('Save redesign: report_redesigns PATCH failed', { requestId: getRequestId(request), status: patchResp.status, body: errText?.slice(0, 500) });
         throw new Error('Redesign update failed: ' + (errText || patchResp.statusText));
       }
     } else {
       const postData = { ...redesign };
       if (source != null) postData.source = source;
+      if (costProfile) postData.costProfile = costProfile;
       const postBody = {
         id: crypto.randomUUID(),
         report_id: reportId,
@@ -86,12 +103,14 @@ export async function POST(request) {
       });
       if (!postResp.ok) {
         const errText = await postResp.text();
+        if (isUniqueViolation(postResp.status, errText)) {
+          return NextResponse.json({ error: 'Only one redesign can be accepted at a time. Reject the current accepted redesign first.', code: 'REDESIGN_ALREADY_ACCEPTED' }, { status: 409 });
+        }
         logger.error('Save redesign: report_redesigns POST failed', { requestId: getRequestId(request), status: postResp.status, body: errText?.slice(0, 500) });
         throw new Error('Redesign save failed: ' + (errText || postResp.statusText));
       }
     }
 
-    const d = reportRows[0].diagnostic_data || {};
     const auditEvent = {
       type: 'redesign_save',
       detail: mode === 'overwrite' ? 'Overwrote existing redesign' : 'Saved redesign as new version',

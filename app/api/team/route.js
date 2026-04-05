@@ -18,7 +18,7 @@ export async function POST(request) {
   const originErr = checkOrigin(request);
   if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
 
-  const rl = checkRateLimit(getRateLimitKey(request));
+  const rl = await checkRateLimit(getRateLimitKey(request));
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
 
   const contentLength = parseInt(request.headers.get('content-length') || '0', 10);
@@ -43,7 +43,7 @@ export async function POST(request) {
 export async function GET(request) {
   const originErr = checkOrigin(request);
   if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
-  const rl = checkRateLimit(getRateLimitKey(request));
+  const rl = await checkRateLimit(getRateLimitKey(request));
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
   const sp = request.nextUrl.searchParams;
   const action = sp.get('action') || 'results';
@@ -97,7 +97,7 @@ async function createTeam(body, request) {
     const teamId = crypto.randomUUID();
     const teamCode = crypto.randomBytes(5).toString('hex').toUpperCase();
     const baseUrl = buildBaseUrl(request);
-    const joinUrl = `${baseUrl}/diagnostic?team=${teamCode}`;
+    const joinUrl = `${baseUrl}/process-audit?team=${teamCode}`;
     const resultsUrl = `${baseUrl}/team-results?code=${teamCode}`;
 
     const payload = { id: teamId, team_code: teamCode, created_by_email: createdByEmail || null, created_by_name: createdByName || null, process_name: processName, company: company || null, description: description || null, status: 'open', created_at: new Date().toISOString() };
@@ -132,7 +132,7 @@ async function inviteMembers(body, request) {
     if (team.status === 'closed') return NextResponse.json({ error: 'This session is closed.' }, { status: 400 });
 
     const baseUrl = buildBaseUrl(request);
-    const joinUrl = `${baseUrl}/diagnostic?team=${teamCode}`;
+    const joinUrl = `${baseUrl}/process-audit?team=${teamCode}`;
     const results = [];
 
     for (const inv of invitees.slice(0, 50)) {
@@ -464,7 +464,7 @@ async function analyzeGaps(body, request) {
         getFastModel({ temperature: 0.4 }),
         [
           new SystemMessage(teamAnalysisSystemPrompt()),
-          new HumanMessage(teamAnalysisUserPrompt({ processName: team.processName, responseCount: responses.length, consensusScore: aggregation.consensusScore, respondentSummaries })),
+          new HumanMessage(teamAnalysisUserPrompt({ processName: team.processName, responseCount: responses.length, consensusScore: aggregation.consensusScore, respondentSummaries, segment: team.segment || '' })),
         ],
         TeamGapAnalysisSchema,
         fallback

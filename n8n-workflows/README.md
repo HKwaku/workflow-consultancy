@@ -1,4 +1,4 @@
-# Sharpin N8N Workflows
+# Vesno N8N Workflows
 
 Separate workflow JSON files for each email/notification type. Import into n8n and configure your Gmail credentials.
 

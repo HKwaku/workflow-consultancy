@@ -46,7 +46,7 @@ export function DiagnosticNavBar({ currentScreen }) {
   const config = navConfigRef?.current;
   if (!config) return null;
 
-  const { onBack, onHandover, onContinue, onSaveToReport, savingToReport, disabled, continueLabel } = config;
+  const { onBack, onHandover, onContinue, onSaveToReport, savingToReport, disabled, continueLabel, saveLabel } = config;
 
   return (
     <div className="diagnostic-screen-nav">
@@ -60,7 +60,7 @@ export function DiagnosticNavBar({ currentScreen }) {
         )}
         {onSaveToReport && (
           <button type="button" className="button button-save-report" onClick={onSaveToReport} disabled={savingToReport}>
-            {savingToReport ? 'Saving...' : 'Save to Report'}
+            {savingToReport ? 'Saving...' : (saveLabel || 'Save to Report')}
           </button>
         )}
         {onContinue && (

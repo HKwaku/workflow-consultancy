@@ -2,8 +2,11 @@ import './globals.css';
 import { ThemeProvider } from '@/components/ThemeProvider';
 
 export const metadata = {
-  title: 'Sharpin | Process Diagnostic',
-  description: 'Evidence-based process diagnostic. Analyse your processes with real data.',
+  title: 'Vesno | Process Audit',
+  description: 'Evidence-based process audit. Analyse your processes with real data.',
+  icons: {
+    icon: [{ url: '/favicon.svg?v=4', type: 'image/svg+xml' }],
+  },
 };
 
 export default function RootLayout({ children }) {
@@ -15,7 +18,6 @@ export default function RootLayout({ children }) {
             __html: `document.documentElement.setAttribute('data-theme','dark');`,
           }}
         />
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

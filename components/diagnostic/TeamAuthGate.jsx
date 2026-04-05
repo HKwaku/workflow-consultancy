@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getSupabaseClient } from '@/lib/supabase';
+import { getSupabaseClient, getSessionSafe } from '@/lib/supabase';
 import PortalAuth from '@/app/portal/PortalAuth';
 
 export default function TeamAuthGate({ onAuthenticated, onBack, subtitle }) {
@@ -16,7 +16,7 @@ export default function TeamAuthGate({ onAuthenticated, onBack, subtitle }) {
         if (!mounted) return;
         setSupabase(sb);
 
-        const { data: { session } } = await sb.auth.getSession();
+        const { session } = await getSessionSafe(sb);
         if (mounted && session?.user) {
           onAuthenticated(extractUser(session.user));
           return;

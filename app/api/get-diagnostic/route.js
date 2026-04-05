@@ -16,7 +16,7 @@ export async function GET(request) {
     if (!id) return NextResponse.json({ error: 'Report ID is required. Use ?id=xxx' }, { status: 400 });
     if (!isValidUUID(id)) return NextResponse.json({ error: 'Invalid report ID format.' }, { status: 400 });
 
-    const rl = checkRateLimit(getRateLimitKey(request));
+    const rl = await checkRateLimit(getRateLimitKey(request));
     if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
 
     const sbConfig = requireSupabase();
@@ -64,6 +64,9 @@ export async function GET(request) {
                 name: s.name || s.stepName || `Step ${si + 1}`,
                 department: s.department || '',
                 isDecision: !!s.isDecision,
+                isMerge: !!s.isMerge,
+                parallel: !!s.parallel,
+                inclusive: !!s.inclusive,
                 isExternal: !!s.isExternal,
                 branches: s.branches || [],
               })),
@@ -84,7 +87,7 @@ export async function GET(request) {
             userTime: { meetings: 0, emails: 0, execution: 0, waiting: 0, total: 0 },
             timeAccuracy: 'confident', performance: 'typical', issues: [], biggestDelay: '', delayDetails: '',
             steps: (p.steps || []).map(function (s, si) {
-              return { number: si + 1, name: s.name || 'Step ' + (si + 1), department: s.department || 'Operations', isDecision: s.isDecision || false, isExternal: s.isExternal || false, branches: s.branches || [] };
+              return { number: si + 1, name: s.name || 'Step ' + (si + 1), department: s.department || 'Operations', isDecision: s.isDecision || false, isMerge: s.isMerge || false, parallel: s.parallel || false, inclusive: s.inclusive || false, isExternal: s.isExternal || false, branches: s.branches || [] };
             }),
             handoffs: [], systems: [], approvals: [], knowledge: {}, newHire: {},
             frequency: { type: 'monthly', annual: 12, inFlight: 0, progressing: 0, stuck: 0, waiting: 0 },
@@ -106,7 +109,7 @@ export async function GET(request) {
 
     // Read-only view: public by design for shareable links (UUID is unguessable)
     const sbHeaders = getSupabaseHeaders(supabaseKey);
-    const url = `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${id}&select=id,contact_email,contact_name,company,lead_score,lead_grade,diagnostic_data,diagnostic_mode,created_at,updated_at`;
+    const url = `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${id}&select=id,contact_email,contact_name,company,lead_score,lead_grade,diagnostic_data,diagnostic_mode,implementation_status,parent_report_id,created_at,updated_at`;
     const sbResp = await fetchWithTimeout(url, { method: 'GET', headers: sbHeaders });
     if (!sbResp.ok) return NextResponse.json({ error: 'Failed to fetch report from storage.' }, { status: 502 });
     let rows;
@@ -137,17 +140,21 @@ export async function GET(request) {
     if (redesign) diagData.redesign = redesign;
 
     const session = await verifySupabaseSession(request);
-    const isOwner = session && report.contact_email && report.contact_email.toLowerCase() === session.email.toLowerCase();
-    if (!isOwner && diagData.costAnalysisToken) {
-      const { costAnalysisToken, ...rest } = diagData;
-      Object.assign(diagData, rest);
-      delete diagData.costAnalysisToken;
-    }
+    const costAuthorizedEmails = (diagData.costAuthorizedEmails || []).map(e => e.toLowerCase());
+    const isCostAuthorized = session && costAuthorizedEmails.includes(session.email.toLowerCase());
 
-    let costDataHiddenToOwner = false;
-    if (isOwner && diagData.costCompletedByManager) {
-      costDataHiddenToOwner = true;
-      delete diagData.costAnalysisToken;
+    // Always strip the raw cost analysis token from the response — it is only
+    // needed for the /cost-analysis page and must not leak into the report view.
+    delete diagData.costAnalysisToken;
+
+    let costDataHidden = false;
+    if (!isCostAuthorized) {
+      // User is not in the cost-authorized list — scrub all cost data
+      costDataHidden = true;
+      delete diagData.costAnalysis;
+      delete diagData.financialModel;
+      delete diagData.costAnalysisHistory;
+      delete diagData.costAuthorizedEmails;
       if (diagData.summary) {
         diagData.summary = { ...diagData.summary, totalAnnualCost: 0, potentialSavings: 0 };
       }
@@ -172,7 +179,9 @@ export async function GET(request) {
         company: report.company, leadScore: report.lead_score, leadGrade: report.lead_grade,
         diagnosticMode: report.diagnostic_mode,
         diagnosticData: diagData, createdAt: report.created_at, updatedAt: report.updated_at,
-        costDataHiddenToOwner: costDataHiddenToOwner || undefined,
+        implementationStatus: report.implementation_status || {},
+        parentReportId: report.parent_report_id || null,
+        costDataHidden: costDataHidden || undefined,
       }
     });
   } catch (error) {
@@ -188,7 +197,7 @@ export async function PATCH(request) {
     const auth = await requireAuth(request);
     if (auth.error) return NextResponse.json(auth.error.body, { status: auth.error.status });
 
-    const rl = checkRateLimit(getRateLimitKey(request));
+    const rl = await checkRateLimit(getRateLimitKey(request));
     if (!rl.allowed) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
 
     const sp = request.nextUrl.searchParams;
@@ -235,7 +244,7 @@ export async function PATCH(request) {
 
     if (dd.processes && dd.processes[pi]) {
       dd.processes[pi].steps = steps.map(function(s, si) {
-        return { number: si + 1, name: s.name || '', department: s.department || '', isDecision: !!s.isDecision, isExternal: !!s.isExternal, branches: s.branches || [] };
+        return { number: si + 1, name: s.name || '', department: s.department || '', isDecision: !!s.isDecision, isMerge: !!s.isMerge, parallel: !!s.parallel, inclusive: !!s.inclusive, isExternal: !!s.isExternal, branches: s.branches || [] };
       });
     }
 

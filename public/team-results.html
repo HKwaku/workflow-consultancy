@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Team Alignment Results | Sharpin</title>
+    <title>Team Alignment Results | Vesno</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/styles/base.css">
-    <link rel="stylesheet" href="/styles/diagnostic.css">
+    <link rel="stylesheet" href="/styles/process-audit.css">
     <style>
         /* ── BASE.CSS (inlined) ─────────────────────────────────────── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -273,14 +273,14 @@
         <div class="top-bar">
             <div class="top-bar-inner">
                 <div class="top-bar-left">
-                    <a href="/">Sharpin<span class="top-bar-brand-dot">.</span></a>
+                    <a href="/">Vesno<span class="top-bar-brand-dot">.</span></a>
                     <div class="top-bar-divider"></div>
                     <span class="top-bar-title">Team Alignment</span>
                 </div>
                 <div class="top-bar-nav">
                     <a href="/" class="top-bar-link">&larr; Home</a>
                     <a href="/portal" class="top-bar-link">Portal</a>
-                    <a href="/diagnostic" class="top-bar-link">Create Process Analysis</a>
+                    <a href="/process-audit" class="top-bar-link">Create Process Analysis</a>
                     <button id="themeToggleBtn" class="top-bar-theme-btn" title="Toggle dark mode" aria-label="Toggle dark mode" onclick="toggleTheme()">
                         <svg id="themeIconSun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
                         <svg id="themeIconMoon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -302,7 +302,7 @@
                 <!-- Lookup -->
                 <div id="lookupState" class="state">
                     <h2>Enter Your Team Code</h2>
-                    <p style="margin-bottom: 24px;">Your team lead shared a 6-character code when they created this diagnostic.</p>
+                    <p style="margin-bottom: 24px;">Your team lead shared a 6-character code when they created this process audit.</p>
                     <form class="lookup-form" onsubmit="event.preventDefault(); loadResults();">
                         <input type="text" id="codeInput" placeholder="ABC123" maxlength="6" required autofocus>
                         <button type="submit">View Results</button>
@@ -338,7 +338,7 @@
                     <p id="waitingMsg">Share the team code with your colleagues. Results will appear once at least 2 people have responded.</p>
                     <p style="margin-top: 16px;"><strong>Team Code:</strong> <span id="waitingCode" style="font-size: 1.3rem; letter-spacing: 0.15em; color: var(--accent);"></span></p>
                     <p style="margin-top: 20px; font-size: 0.88rem;">
-                        Haven't completed yours yet? <a id="waitingJoinLink" href="/diagnostic" style="color: var(--accent); font-weight: 600;">Join the session &rarr;</a>
+                        Haven't completed yours yet? <a id="waitingJoinLink" href="/process-audit" style="color: var(--accent); font-weight: 600;">Join the session &rarr;</a>
                     </p>
                 </div>
 
@@ -350,7 +350,7 @@
         </div>
     </div>
 
-    <div class="footer"><a href="/">Sharpin</a> &middot; <a href="/portal">Portal</a> &middot; <a href="/diagnostic">Create Process Analysis</a></div>
+    <div class="footer"><a href="/">Vesno</a> &middot; <a href="/portal">Portal</a> &middot; <a href="/process-audit">Create Process Analysis</a></div>
 
     <script>
         // ── Theme toggle ──────────────────────────────
@@ -643,11 +643,11 @@
                         ? 'No Responses Yet'
                         : '1 Response So Far';
                     document.getElementById('waitingMsg').textContent = data.responseCount === 0
-                        ? `Share the join link: /diagnostic?team=${code} - results appear after 2+ responses.`
+                        ? `Share the join link: /process-audit?team=${code} - results appear after 2+ responses.`
                         : `${data.responses[0].name} has responded. Waiting for more perspectives before comparison.`;
                     document.getElementById('waitingCode').textContent = code;
                     const joinLink = document.getElementById('waitingJoinLink');
-                    if (joinLink) joinLink.href = '/diagnostic?team=' + code;
+                    if (joinLink) joinLink.href = '/process-audit?team=' + code;
                     showState('waiting');
                     return;
                 }
@@ -724,7 +724,7 @@
                         </div>
                         <p>${esc(rc.explanation)}</p>
                         ${rc.evidence ? `<p class="evidence">Evidence: ${esc(rc.evidence)}</p>` : ''}
-                        ${rc.affectedDepartments ? `<p style="font-size:0.78rem;color:var(--text-light);margin-top:4px;">Departments: ${rc.affectedDepartments.map(d => esc(d)).join(', ')}</p>` : ''}
+                        ${rc.affectedDepartments ? `<p style="font-size:0.78rem;color:var(--text-light);margin-top:4px;">Teams: ${rc.affectedDepartments.map(d => esc(d)).join(', ')}</p>` : ''}
                     </div>`;
                 });
             }
@@ -916,8 +916,8 @@
                 <h3>Turn These Insights Into Action</h3>
                 <p>Perception gaps are the #1 signal of process improvement opportunity. Let's discuss what your team's results reveal.</p>
                 <div class="cta-buttons">
-                    <a href="mailto:hopektettey@gmail.com?subject=Team Alignment Discussion - ${encodeURIComponent(team.processName)}" class="cta-button">Book a Call</a>
-                    <a href="/diagnostic" class="cta-button secondary">Create Process Analysis</a>
+                    <a href="mailto:hope@vesno.ai?subject=Team Alignment Discussion - ${encodeURIComponent(team.processName)}" class="cta-button">Book a Call</a>
+                    <a href="/process-audit" class="cta-button secondary">Create Process Analysis</a>
                 </div>
             </div>`;
 
