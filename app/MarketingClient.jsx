@@ -118,7 +118,7 @@ const flowBenefits = [
 const visibilityStripCards = [
   {
     title: 'Stays current as the business changes',
-    body: 'Process maps, costs, and bottlenecks live where your team already works. Update when things shift—not when someone digs up an old deck.',
+    body: 'Process maps, costs, and bottlenecks live where your team already works. Update when things shift, not when someone digs up an old deck.',
     icon: 'workspace',
   },
   {
@@ -339,7 +339,6 @@ export default function MarketingClient() {
           <ul className={menuOpen ? 'open' : ''}>
             <li><a href="#services" onClick={scrollTo('services')}>Where We Work</a></li>
             <li><a href="#approach" onClick={scrollTo('approach')}>Approach</a></li>
-            <li><a href="#demo" onClick={scrollTo('demo')}>Watch Demo</a></li>
             <li><Link href="/portal" onClick={closeMenu}>Client Login</Link></li>
             <li><a href="#diagnostic" className="cta-nav" onClick={scrollTo('diagnostic')}>Get Started</a></li>
             {sessionUser?.email && (
@@ -410,7 +409,7 @@ export default function MarketingClient() {
             <div className="section-label">Where We Work</div>
             <h2 className="section-title">Wherever the complexity lives,<br /><em>we work there</em></h2>
             <p className="section-desc">
-              Four contexts we see most often—each with its own operating rhythm and failure modes. Same audit discipline; different pressure points.
+              Four contexts we see most often, each with its own operating rhythm and failure modes. Same audit discipline; different pressure points.
             </p>
           </div>
           <ServicesSegments />
@@ -900,21 +899,6 @@ export default function MarketingClient() {
         </div>
       </section>
 
-      <section className="demo-section" id="demo" aria-label="Process audit demo video">
-        <div className="container">
-          <div className="demo-video-wrap scroll-reveal">
-            <iframe
-              className="demo-video-embed"
-              src={DEMO_VIDEO_EMBED_URL}
-              title="Process audit walkthrough"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-              loading="lazy"
-              referrerPolicy="strict-origin-when-cross-origin"
-            />
-          </div>
-        </div>
-      </section>
 
       {/* Continuous visibility, not one-and-done */}
       <section className="continuous-strip" id="visibility">
@@ -979,7 +963,6 @@ export default function MarketingClient() {
             <h4>Company</h4>
             <ul>
               <li><a href="#approach" onClick={scrollTo('approach')}>Approach</a></li>
-              <li><a href="#demo" onClick={scrollTo('demo')}>Watch demo</a></li>
               <li><a href="#diagnostic" onClick={scrollTo('diagnostic')}>Process Audit</a></li>
               <li><a href="#diagnostic" onClick={scrollTo('diagnostic')}>Contact</a></li>
             </ul>

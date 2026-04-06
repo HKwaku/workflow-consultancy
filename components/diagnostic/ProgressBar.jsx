@@ -31,9 +31,9 @@ export default function ProgressBar({ onSaveClick, currentScreen: screenProp }) 
     text = 'Complete!';
   } else {
     const stepIdx = screenList.indexOf(currentScreen);
-    const teamPrefix = teamMode ? 'Team — ' : '';
+    const teamPrefix = teamMode ? 'Team: ' : '';
     if (stepIdx >= 0) {
-      text = `${teamPrefix}Step ${stepIdx + 1} of ${screenList.length} — ${labelMap[currentScreen] || SCREEN_LABELS[currentScreen] || ''}`;
+      text = `${teamPrefix}Step ${stepIdx + 1} of ${screenList.length}: ${labelMap[currentScreen] || SCREEN_LABELS[currentScreen] || ''}`;
     } else {
       text = `${teamPrefix}${SCREEN_LABELS[currentScreen] || ''}`;
     }
@@ -54,12 +54,15 @@ export default function ProgressBar({ onSaveClick, currentScreen: screenProp }) 
     : null;
   const showHealthScore = currentScreen > 2 && healthScore !== null;
 
+  const hideSaveInProgressBar = currentScreen === 2;
+
   return (
     <div className="progress-bar">
       <div className="progress-bar-row">
         <div className="progress-track">
           <div className="progress-fill" style={{ width: pct + '%' }} />
         </div>
+        {!hideSaveInProgressBar && (
         <button type="button" className="save-progress-btn" onClick={onSaveClick || (() => {})} title="Save progress and get link">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
@@ -68,6 +71,7 @@ export default function ProgressBar({ onSaveClick, currentScreen: screenProp }) 
           </svg>
           Save &amp; get link
         </button>
+        )}
       </div>
       {text && <div className="progress-text">{text}</div>}
       {showHealthScore && (

@@ -38,6 +38,7 @@ export default function ChatPanel() {
   const [chatProgress, setChatProgress] = useState('');
   const [chatStreamedText, setChatStreamedText] = useState('');
   const [attachments, setAttachments] = useState([]);
+  const [readingFilesHint, setReadingFilesHint] = useState('');
   const [chatError, setChatError] = useState(null);
   const lastFailedPayloadRef = useRef(null);
   const endRef = useRef(null);
@@ -50,16 +51,24 @@ export default function ChatPanel() {
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
+    setReadingFilesHint(`Reading ${files.length} file${files.length > 1 ? 's' : ''}…`);
     let done = 0;
     const toAdd = [];
+    const finishOne = () => {
+      done++;
+      if (done === files.length) {
+        setAttachments((p) => [...p, ...toAdd]);
+        setReadingFilesHint('');
+      }
+    };
     files.forEach((f) => {
       const reader = new FileReader();
       reader.onload = () => {
         const base64 = reader.result?.split(',')[1];
         if (base64) toAdd.push({ name: f.name, type: f.type, content: base64 });
-        done++;
-        if (done === files.length) setAttachments((p) => [...p, ...toAdd]);
+        finishOne();
       };
+      reader.onerror = () => finishOne();
       reader.readAsDataURL(f);
     });
     e.target.value = '';
@@ -84,6 +93,7 @@ export default function ChatPanel() {
     setChatError(null);
     setLoading(true);
     setChatStreamedText('');
+    if (attachmentsToSend.length > 0) setChatProgress('Sending files to the assistant…');
 
     const body = JSON.stringify({
       message: userContent,
@@ -272,6 +282,9 @@ export default function ChatPanel() {
             Try again
           </button>
         </div>
+      )}
+      {readingFilesHint && (
+        <div className="s7-chat-read-status" role="status">{readingFilesHint}</div>
       )}
       {attachments.length > 0 && (
         <div className="s7-chat-attachments">

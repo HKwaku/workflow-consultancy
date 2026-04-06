@@ -44,20 +44,29 @@ export async function POST(request) {
     }
 
     const textPrompt = textContent
-      ? `Extract the process steps from this document or text:\n\n${textContent.slice(0, 8000)}`
+      ? `Extract the process steps from this document or text:\n\n${textContent.slice(0, 20000)}`
       : 'Extract the process steps from this image.';
 
     contentParts.push({
       type: 'text',
       text: `${textPrompt}
 
-Return a JSON array of steps. Each step should have:
-- name: string (the step name, keep concise)
-- department: string (e.g. "Finance", "HR", "IT", "Operations", "Management", "Sales", or leave blank if unclear)
-- systems: string[] (any software tools mentioned, e.g. ["SAP", "Email"])
+Extract every process step and return a JSON array. Each step object must have:
+- name: string — concise step name (e.g. "Submit purchase request")
+- department: string — the team, role, or department responsible. Use the exact name from the source (e.g. "Finance", "Customer Success", "Account Manager", "IT Support"). Leave blank only if genuinely unknown.
+- owner: string — specific role or person if mentioned (e.g. "Finance Manager"), otherwise blank
+- systems: string[] — software tools or systems used in this step (e.g. ["SAP", "Slack", "Email"])
+- isDecision: boolean — true if this is a decision/branch point (e.g. "Approve or Reject?", "If X then Y")
+- branches: array — if isDecision is true, list the branch outcomes as [{label: "Yes"}, {label: "No"}] or use the actual branch labels from the source. Empty array otherwise.
+
+Rules:
+- If the source is a table (e.g. spreadsheet or Teams export), treat each row as a step. Map column headers like "Owner", "Team", "Responsible", "Assigned to" → department/owner.
+- Preserve the original sequence order.
+- Include ALL steps — do not summarise or skip.
+- For decision steps, set isDecision: true and populate branches.
 
 Return ONLY the JSON array, no other text. Example:
-[{"name":"Submit request","department":"Employee","systems":["Email"]},{"name":"Review","department":"Manager","systems":[]}]`,
+[{"name":"Submit request","department":"Procurement","owner":"Procurement Analyst","systems":["SAP"],"isDecision":false,"branches":[]},{"name":"Approve or reject?","department":"Finance Manager","owner":"","systems":[],"isDecision":true,"branches":[{"label":"Approved"},{"label":"Rejected"}]}]`,
     });
 
     const response = await model.invoke([new HumanMessage({ content: contentParts })]);
@@ -74,15 +83,18 @@ Return ONLY the JSON array, no other text. Example:
       return NextResponse.json({ error: 'No steps found in content.' }, { status: 422 });
     }
 
-    const normalised = steps.slice(0, 30).map((s, i) => ({
+    const normalised = steps.slice(0, 50).map((s, i) => ({
       number: i + 1,
       name: String(s.name || '').trim().slice(0, 200),
       department: String(s.department || '').trim().slice(0, 100),
+      owner: String(s.owner || '').trim().slice(0, 100),
       systems: Array.isArray(s.systems) ? s.systems.map(String).slice(0, 10) : [],
-      isDecision: false,
+      isDecision: !!s.isDecision,
       isMerge: false,
       isExternal: false,
-      branches: [],
+      branches: (s.isDecision && Array.isArray(s.branches))
+        ? s.branches.slice(0, 6).map((b) => ({ label: String(b?.label || '').trim(), target: null }))
+        : [],
       contributor: '',
       checklist: [],
     })).filter((s) => s.name);

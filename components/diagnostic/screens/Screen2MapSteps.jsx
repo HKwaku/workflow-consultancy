@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useDiagnostic } from '../DiagnosticContext';
 import { useDiagnosticNav } from '../DiagnosticNavContext';
@@ -19,6 +19,9 @@ import { getWaitProfile } from '@/lib/flows/flowModel';
 import { repairFlow } from '@/lib/flows/normalizer';
 import { reconcileDecisionBranches } from '@/lib/flows/reconcileEdges';
 import FloatingFlowViewer from '../FloatingFlowViewer';
+
+const MAP_SPLIT_RAIL_PX = 48;
+const MAP_SPLIT_HANDLE_PX = 8;
 
 const MIN_STEPS = 3;
 const MAX_STEPS = 50;
@@ -82,8 +85,189 @@ function ensureHandoffs(steps, handoffs) {
   return out.slice(0, needed);
 }
 
+/* ── First-visit guide tour ─────────────────────────────────────── */
 
-export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, onAuditTrailToggle, auditTrailOpen }) {
+const GUIDE_TOUR = [
+  {
+    title: "Hi, I'm Reina",
+    desc: "I'm your process mapping assistant. Describe any business process in plain language, or upload a doc, spreadsheet, or diagram, and I'll build the flow for you in real time.",
+    selector: null,
+    cta: "Show me around →",
+  },
+  {
+    title: "Save & continue later",
+    desc: "Save your progress and get a shareable link at any time. Come back later or send it to your team.",
+    selector: '[title="Save progress and get link"]',
+    cta: "Next →",
+  },
+  {
+    title: "Handover to a colleague",
+    desc: "Pass this process audit to a colleague. They'll get a unique link and can pick up exactly where you left off.",
+    selector: '[title="Handover to a colleague"]',
+    cta: "Next →",
+  },
+  {
+    title: "Expand the flow",
+    desc: "Open the process diagram in a floating window for a full-screen view. Useful once your steps are mapped.",
+    selector: '[title="Expand flow in window"]',
+    cta: "Next →",
+  },
+  {
+    title: "Step editor",
+    desc: "Toggle the step list panel to add or edit steps manually. Useful for fine-tuning names, reordering, or adding details Reina hasn't filled in yet.",
+    selector: '[title="Steps list"],[title="Add steps manually"]',
+    cta: "Next →",
+  },
+  {
+    title: "Activity log",
+    desc: "Every change is tracked. Open the activity log to see a full audit trail of edits made during this session.",
+    selector: '[title="Activity log"]',
+    cta: "Next →",
+  },
+  {
+    title: "Portal / client login",
+    desc: "Access your client portal to view saved reports, manage process audits, and track completed work.",
+    selector: '[title="Portal"],[title="Client login"]',
+    cta: "Next →",
+  },
+  {
+    title: "Ready to go",
+    desc: "That's everything. Start by telling me about your process below. What triggers it, and who kicks it off first?",
+    selector: null,
+    cta: "Let's go →",
+  },
+];
+
+function MapGuide({ onDismiss }) {
+  const [step, setStep] = useState(0);
+  const [spotlightStyle, setSpotlightStyle] = useState(null);
+
+  const current = GUIDE_TOUR[step];
+  const isLast = step === GUIDE_TOUR.length - 1;
+
+  useEffect(() => {
+    if (!current.selector) { setSpotlightStyle(null); return; }
+    const el = document.querySelector(current.selector);
+    if (!el) { setSpotlightStyle(null); return; }
+    const r = el.getBoundingClientRect();
+    const PAD = 8;
+    setSpotlightStyle({
+      top: r.top - PAD,
+      left: r.left - PAD,
+      width: r.width + PAD * 2,
+      height: r.height + PAD * 2,
+    });
+  }, [step, current.selector]);
+
+  // Position card next to the spotlit element, or centred when no highlight
+  const cardStyle = spotlightStyle ? {
+    position: 'fixed',
+    top: Math.max(16, Math.min(
+      spotlightStyle.top + spotlightStyle.height / 2 - 100,
+      window.innerHeight - 320,
+    )),
+    left: spotlightStyle.left + spotlightStyle.width + 16,
+    transform: 'none',
+  } : {
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+  };
+
+  const goNext = useCallback(() => {
+    if (isLast) onDismiss();
+    else setStep((s) => s + 1);
+  }, [isLast, onDismiss]);
+
+  const goBack = useCallback(() => setStep((s) => Math.max(0, s - 1)), []);
+
+  return createPortal(
+    <div
+      className="s7-guide-backdrop"
+      style={spotlightStyle ? { background: 'transparent' } : {}}
+      onClick={onDismiss}
+    >
+      {/* Spotlight ring — its box-shadow creates the dark overlay when active */}
+      {spotlightStyle && (
+        <div className="s7-guide-spotlight" style={spotlightStyle} />
+      )}
+
+      {/* Tour card — positioned next to highlighted element */}
+      <div
+        className={`s7-guide-card${spotlightStyle ? ' s7-guide-card--arrow' : ''}`}
+        style={cardStyle}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="s7-guide-card-top">
+          <div className="s7-guide-card-dots">
+            {GUIDE_TOUR.map((_, i) => (
+              <span key={i} className={`s7-guide-dot${i === step ? ' active' : ''}`} />
+            ))}
+          </div>
+          <button type="button" className="s7-guide-skip-btn" onClick={onDismiss}>Skip tour</button>
+        </div>
+
+        <div className="s7-guide-card-avatar">R</div>
+        <div className="s7-guide-card-title">{current.title}</div>
+        <p className="s7-guide-card-desc">{current.desc}</p>
+
+        <div className="s7-guide-card-actions">
+          {step > 0 && (
+            <button type="button" className="s7-guide-back-btn" onClick={goBack}>← Back</button>
+          )}
+          <button type="button" className="s7-guide-next-btn" onClick={goNext}>{current.cta}</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+/** Save + optional view report — top of icon rail */
+function MapRailPrimaryTools({ onOpenSaveModal, editingReportId, onHandover }) {
+  return (
+    <>
+      <button type="button" className="s7-split-rail-btn" onClick={() => onOpenSaveModal?.()} title="Save progress and get link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+          <polyline points="17 21 17 13 7 13 7 21" />
+          <polyline points="7 3 7 8 15 8" />
+        </svg>
+      </button>
+      {onHandover && (
+        <button type="button" className="s7-split-rail-btn" onClick={onHandover} title="Handover to a colleague">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+        </button>
+      )}
+      {editingReportId && (
+        <a href={`/report?id=${editingReportId}&portal=1`} className="s7-split-rail-btn s7-split-rail-link" title="View report">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
+          </svg>
+        </a>
+      )}
+    </>
+  );
+}
+
+/** Portal / client login — pinned to bottom of rail (Claude-style) */
+function MapRailPortalFooter({ sessionUser }) {
+  return (
+    <a href="/portal" className="s7-split-rail-btn s7-split-rail-link" title={sessionUser ? 'Portal' : 'Client login'}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+      </svg>
+    </a>
+  );
+}
+
+export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, onAuditTrailToggle, auditTrailOpen, onOpenSaveModal }) {
   const {
     processData, updateProcessData, goToScreen,
     customDepartments, addCustomDepartment,
@@ -127,6 +311,8 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
   const [chatAttachments, setChatAttachments] = useState([]);
   const [chatError, setChatError] = useState(null);
   const [chatDragOver, setChatDragOver] = useState(false);
+  /** Shown while FileReader is loading selected files into the composer */
+  const [readingChatFilesHint, setReadingChatFilesHint] = useState('');
   const [dragStepIdx, setDragStepIdx] = useState(null);
   const [dragOverStepIdx, setDragOverStepIdx] = useState(null);
   const [expandedStepIdx, setExpandedStepIdx] = useState(initialStepIdxProp ?? null);
@@ -134,13 +320,6 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
   const [showFloatingFlow, setShowFloatingFlow] = useState(false);
   const [snippets, setSnippets] = useState(() => { try { return loadSnippets(null); } catch { return []; } });
   const [showSnippetPicker, setShowSnippetPicker] = useState(false);
-  const [uploadLoading, setUploadLoading] = useState(false);
-  const [uploadMsg, setUploadMsg] = useState('');
-  const describeFileRef = useRef(null);
-  const [describeDragOver, setDescribeDragOver] = useState(false);
-  const [describeText, setDescribeText] = useState('');
-  const [describeLoading, setDescribeLoading] = useState(false);
-  const [describeError, setDescribeError] = useState('');
   const [showDepsModal, setShowDepsModal] = useState(false);
   const [depsLinks, setDepsLinks] = useState(() => processData.processDependencies || []);
   const [depsNewProcess, setDepsNewProcess] = useState('');
@@ -151,8 +330,20 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
   const [flowCustomEdges, setFlowCustomEdges] = useState(() => processData.flowCustomEdges || []);
   const [flowDeletedEdges, setFlowDeletedEdges] = useState(() => processData.flowDeletedEdges || []);
 
+  /* ═══════ First-visit guide (shows every page load) ═══════ */
+  const [showGuide, setShowGuide] = useState(!editingReportId);
+  const dismissGuide = useCallback(() => setShowGuide(false), []);
+
   /* ═══════ Layout state (floating panels) ═══════ */
   const [floatingPanel, setFloatingPanel] = useState(null); // null | 'steps' | 'chat'
+
+  const SPLIT_CHAT_WIDTH_KEY = 'workflow-s7-map-split-chat-w';
+  const [splitChatWidthPx, setSplitChatWidthPx] = useState(() => {
+    if (typeof window === 'undefined') return 360;
+    const v = parseInt(window.localStorage.getItem(SPLIT_CHAT_WIDTH_KEY) || '', 10);
+    return Number.isFinite(v) && v >= 260 && v <= 640 ? v : 360;
+  });
+  const splitAreaRef = useRef(null);
 
   /* ═══════ AI redesign generation state ═══════ */
   const [redesignPhase, setRedesignPhase] = useState('idle'); // 'idle' | 'loading' | 'ready' | 'error'
@@ -160,7 +351,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
   const triggerRedesignRef = useRef(false);
   const redesignContextRef = useRef(null); // holds serialised redesign context for the chat prompt
 
-  // On first arrival with no steps: seed Afi's opening message (used as context for AI, not shown as chat panel)
+  // On first arrival with no steps: seed Reina's opening message (used as context for AI, not shown as chat panel)
   const hasSeededChatRef = useRef(false);
   useEffect(() => {
     if (hasSeededChatRef.current || editingRedesign) return;
@@ -169,7 +360,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
       const name = processData.processName || 'this process';
       addChatMessage({
         role: 'assistant',
-        content: `Let's map "${name}" together. What's the very first thing that happens — what triggers it, and who kicks it off?`,
+        content: `Hi, I'm Reina! Let's map "${name}" together. What's the very first thing that happens? What triggers it, and who kicks it off?`,
       });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -509,7 +700,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
     const valid = steps.filter((s) => s.name.trim());
     if (valid.length < MIN_STEPS) {
       const missing = MIN_STEPS - valid.length;
-      showValidationToast(`Add at least ${missing} more step${missing > 1 ? 's' : ''} before continuing — you need ${MIN_STEPS} named steps minimum.`);
+      showValidationToast(`Add at least ${missing} more step${missing > 1 ? 's' : ''} before continuing. You need ${MIN_STEPS} named steps minimum.`);
       return;
     }
     // Show dependency mapping modal before navigating away
@@ -584,7 +775,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
     ].filter(Boolean).join(', ');
 
     const msg = statsLine
-      ? `Your optimised process is ready — ${statsLine}. Where would you like to start?`
+      ? `Your optimised process is ready: ${statsLine}. Where would you like to start?`
       : `Your optimised process is ready. Where would you like to start?`;
 
     // Build contextual suggestions
@@ -888,9 +1079,17 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
 
   const processFiles = useCallback((files) => {
     if (!files.length) return;
+    setReadingChatFilesHint(`Reading ${files.length} file${files.length > 1 ? 's' : ''}…`);
     let done = 0;
     const toAdd = [];
     const TEXT_TYPES = ['text/csv', 'text/plain', 'application/json', 'text/tab-separated-values'];
+    const finishOne = () => {
+      done++;
+      if (done === files.length) {
+        setChatAttachments((p) => [...p, ...toAdd]);
+        setReadingChatFilesHint('');
+      }
+    };
     files.forEach((f) => {
       const reader = new FileReader();
       const isText = TEXT_TYPES.includes(f.type) || /\.(csv|txt|tsv|json)$/i.test(f.name);
@@ -902,9 +1101,9 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
           const base64 = reader.result?.split(',')[1];
           if (base64) toAdd.push({ name: f.name, type: f.type || 'application/octet-stream', content: base64 });
         }
-        done++;
-        if (done === files.length) setChatAttachments((p) => [...p, ...toAdd]);
+        finishOne();
       };
+      reader.onerror = () => finishOne();
       if (isText) reader.readAsText(f);
       else reader.readAsDataURL(f);
     });
@@ -940,12 +1139,14 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
   }, []);
 
   /* ═══════ Chat ═══════ */
-  const sendChat = async (systemMessage, isRetry = false, userMsgOverride = null) => {
+  const sendChat = async (systemMessage, isRetry = false, userMsgOverride = null, attachmentsOverride = null) => {
     const isSystem = !!systemMessage && !userMsgOverride;
     const msg = isRetry
       ? (lastFailedChatPayloadRef.current?.userContent || '')
       : userMsgOverride || (isSystem ? systemMessage : chatInput.trim());
-    const attachmentsToSend = isRetry ? (lastFailedChatPayloadRef.current?.attachments || []) : (isSystem ? [] : [...chatAttachments]);
+    const attachmentsToSend = isRetry
+      ? (lastFailedChatPayloadRef.current?.attachments || [])
+      : (attachmentsOverride !== null ? attachmentsOverride : (isSystem ? [] : [...chatAttachments]));
     if (!isRetry && !isSystem && (!msg && chatAttachments.length === 0)) return;
     if (!isRetry && chatLoading) return;
 
@@ -961,6 +1162,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
     setChatError(null);
     setChatLoading(true);
     setChatStreamedText('');
+    if (attachmentsToSend.length > 0) setChatProgress('Sending files to the assistant…');
 
     const incompleteSummary = steps
       .map((s, i) => {
@@ -1072,6 +1274,51 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
 
   /* ═══════ Computed ═══════ */
   const namedSteps = steps.filter((s) => s.name.trim());
+  /** Flowchart / canvas artifact is present — switch to chat-left + canvas-right */
+  const hasFlowArtifact = namedSteps.length > 0;
+
+
+  useLayoutEffect(() => {
+    if (namedSteps.length === 0) return;
+    const id = requestAnimationFrame(() => {
+      chatEndRef.current?.scrollIntoView({ behavior: 'auto' });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [namedSteps.length]);
+
+  const handleSplitResizeStart = useCallback((e) => {
+    e.preventDefault();
+    const parent = splitAreaRef.current;
+    if (!parent) return;
+    const rect = parent.getBoundingClientRect();
+    const startX = e.clientX;
+    const startW = splitChatWidthPx;
+    const minW = 260;
+    const minCanvas = 280;
+    const maxW = Math.min(640, rect.width - MAP_SPLIT_RAIL_PX - MAP_SPLIT_HANDLE_PX - minCanvas);
+
+    const onMove = (ev) => {
+      const dx = ev.clientX - startX;
+      const next = Math.min(maxW, Math.max(minW, startW + dx));
+      setSplitChatWidthPx(next);
+    };
+    const onUp = () => {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      setSplitChatWidthPx((w) => {
+        try {
+          localStorage.setItem(SPLIT_CHAT_WIDTH_KEY, String(w));
+        } catch { /* ignore */ }
+        return w;
+      });
+    };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [splitChatWidthPx, SPLIT_CHAT_WIDTH_KEY]);
 
   const suggestions = useMemo(() => {
     if (namedSteps.length < 3 || !processData.processType || !STEP_SUGGESTIONS[processData.processType]) return [];
@@ -1277,7 +1524,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
                           <div key={bi} className="s7-branch-row">
                             <input type="text" className="s7-input s7-branch-label-input" placeholder="Label..." value={br.label || ''} onChange={(e) => updateBranch(i, bi, 'label', e.target.value)} />
                             <select className="s7-select s7-branch-target-select" value={br.target || ''} onChange={(e) => updateBranch(i, bi, 'target', e.target.value)}>
-                              <option value="">— unlinked —</option>
+                              <option value="">(unlinked)</option>
                               {steps.map((st, si) => si !== i ? <option key={si} value={`Step ${st.number}`}>Step {st.number}{st.name ? `: ${st.name.slice(0, 22)}` : ''}</option> : null)}
                             </select>
                             {!s.parallel && (
@@ -1357,7 +1604,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
                           <select className="s7-input s7-timing-reason-select" value={s.waitType || ''} onChange={(e) => { updateStep(i, 'waitType', e.target.value || undefined); addAuditEvent({ type: 'step_edit', detail: `Set step ${i + 1} wait reason to ${e.target.value}` }); }}>
                             <option value="">—</option>
                             <option value="dependency">Waiting on someone</option>
-                            <option value="blocked">Blocked — missing info</option>
+                            <option value="blocked">Blocked: missing info</option>
                             <option value="capacity">Person unavailable</option>
                             <option value="wip">In queue</option>
                           </select>
@@ -1485,7 +1732,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
           const showSuggestions = isLast && m.role === 'assistant' && m.suggestions?.length > 0 && !chatLoading;
           return (
             <div key={i} className={`s7-msg s7-msg-${m.role}`}>
-              {m.role === 'assistant' && <div className="sharp-avatar sharp-avatar-sm" title="Afi">A</div>}
+              {m.role === 'assistant' && <div className="sharp-avatar sharp-avatar-sm" title="Reina">R</div>}
               <div className="s7-msg-content">
                 <div className="s7-msg-bubble">{m.content}</div>
                 {showSuggestions && (
@@ -1501,7 +1748,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
             </div>
           );
         })}
-        {chatLoading && <div className="s7-msg s7-msg-assistant"><div className="sharp-avatar sharp-avatar-sm" title="Afi">A</div><div className={`s7-msg-bubble ${chatStreamedText ? '' : 's7-typing'}`}>{chatStreamedText ? <span className="s7-typing-text">{chatStreamedText}</span> : chatProgress ? <span className="s7-typing-text">{chatProgress}</span> : <><span /><span /><span /></>}</div></div>}
+        {chatLoading && <div className="s7-msg s7-msg-assistant"><div className="sharp-avatar sharp-avatar-sm" title="Reina">R</div><div className={`s7-msg-bubble ${chatStreamedText ? '' : 's7-typing'}`}>{chatStreamedText ? <span className="s7-typing-text">{chatStreamedText}</span> : chatProgress ? <span className="s7-typing-text">{chatProgress}</span> : <><span /><span /><span /></>}</div></div>}
         <div ref={chatEndRef} />
       </div>
       {chatError && (
@@ -1511,6 +1758,9 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
             Try again
           </button>
         </div>
+      )}
+      {readingChatFilesHint && (
+        <div className="s7-chat-read-status" role="status">{readingChatFilesHint}</div>
       )}
       {chatAttachments.length > 0 && (
         <div className="s7-chat-attachments">
@@ -1973,14 +2223,13 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
     if (!registerNav) return;
     registerNav({
       onBack: editingReportId ? () => { window.location.href = '/portal'; } : () => goToScreen(teamMode ? 1 : 0),
-      onHandover: editingReportId ? undefined : openHandoverModal,
       onContinue: editingReportId ? undefined : handleContinue,
       onSaveToReport: editingReportId ? handleSaveToReport : undefined,
       savingToReport,
       saveLabel: editingRedesign ? 'Save Redesign' : undefined,
     });
     return () => registerNav(null);
-  }, [registerNav, teamMode, openHandoverModal, handleContinue, goToScreen, editingReportId, handleSaveToReport, savingToReport]);
+  }, [registerNav, teamMode, handleContinue, goToScreen, editingReportId, handleSaveToReport, savingToReport]);
 
   // Mobile block — show message only at the canvas screen, not earlier in the flow
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
@@ -2003,101 +2252,6 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
     );
   }
 
-  const handleDescribeExtract = async () => {
-    const text = describeText.trim();
-    if (!text) return;
-    // Add user message and open the floating chat panel
-    addChatMessage({ role: 'user', content: text });
-    setFloatingPanel('chat');
-    setDescribeText('');
-    setDescribeLoading(true);
-    setDescribeError('');
-    try {
-      const resp = await apiFetch('/api/extract-steps', { method: 'POST', body: JSON.stringify({ textContent: text }) });
-      const data = await resp.json();
-      if (resp.ok && data.steps?.length) {
-        const merged = data.steps.map((s, i) => ({ ...s, number: i + 1 }));
-        setSteps(merged);
-        setHandoffs(ensureHandoffs(merged, []));
-        addAuditEvent({ type: 'step_import', detail: `Extracted ${merged.length} steps from description` });
-        addChatMessage({ role: 'assistant', content: `I've pulled out ${merged.length} steps from your description. Take a look at the canvas — click any step to edit the details, and let me know if anything needs adjusting.` });
-      } else {
-        setDescribeError(data.error || 'Couldn\'t extract steps — try adding more detail.');
-      }
-    } catch {
-      setDescribeError('Something went wrong. Please try again.');
-    } finally {
-      setDescribeLoading(false);
-    }
-  };
-
-  const handleUploadForExtraction = async (file) => {
-    if (!file) return;
-    setUploadLoading(true);
-    setUploadMsg('');
-    try {
-      let body;
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        const base64 = await new Promise((resolve, reject) => {
-          reader.onload = () => resolve(reader.result.split(',')[1]);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        body = JSON.stringify({ imageBase64: base64, mediaType: file.type });
-      } else {
-        const text = await file.text();
-        body = JSON.stringify({ textContent: text });
-      }
-      const resp = await apiFetch('/api/extract-steps', { method: 'POST', body });
-      const data = await resp.json();
-      if (resp.ok && data.steps?.length) {
-        setSteps((prev) => {
-          const merged = [...data.steps.map((s, i) => ({ ...s, number: i + 1 }))];
-          setHandoffs(ensureHandoffs(merged, []));
-          return merged;
-        });
-        setUploadMsg(`${data.steps.length} steps pre-filled — review and edit below`);
-        addAuditEvent({ type: 'step_import', detail: `Imported ${data.steps.length} steps from uploaded file` });
-      } else {
-        setUploadMsg(data.error || 'Could not extract steps from this file.');
-      }
-    } catch {
-      setUploadMsg('Upload failed. Please try again.');
-    } finally {
-      setUploadLoading(false);
-    }
-  };
-
-  const onDescribeFileChange = (e) => {
-    const files = Array.from(e.target.files || []);
-    e.target.value = '';
-    files.forEach((file) => {
-      void handleUploadForExtraction(file);
-    });
-  };
-
-  const onDescribeDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDescribeDragOver(false);
-    const files = Array.from(e.dataTransfer?.files || []);
-    files.forEach((file) => {
-      void handleUploadForExtraction(file);
-    });
-  };
-
-  const onDescribeDragOver = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDescribeDragOver(true);
-  };
-
-  const onDescribeDragLeave = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDescribeDragOver(false);
-  };
 
   return (
     <>
@@ -2143,46 +2297,64 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
           </div>
         )}
 
-        {/* ── Canvas (full width) with floating icons overlay ── */}
-        <div className="s7-canvas-area">
-          <div className="s7-canvas-topbar">
-            {namedSteps.length > 0 && (
-              <div className="s7-view-toggle">
-                {['grid', 'swimlane'].map(m => (
-                  <button key={m} type="button" className={`s7-view-btn${previewViewMode === m ? ' active' : ''}`} onClick={() => setPreviewViewMode(m)}>
-                    {m === 'grid' ? 'Grid' : 'Swimlane'}
-                  </button>
-                ))}
-              </div>
-            )}
+        {/* ── Before flowchart: full-width describe + floating chat. After: rail + chat + resize + canvas ── */}
+        {hasFlowArtifact ? (
+        <div ref={splitAreaRef} className="s7-canvas-area s7-canvas-area--split">
+          <nav className="s7-split-rail" data-theme={theme} aria-label="Mapping tools">
+            <div className="s7-split-rail-body">
+            <MapRailPrimaryTools onOpenSaveModal={onOpenSaveModal} editingReportId={editingReportId} onHandover={editingReportId ? undefined : openHandoverModal} />
+            <div className="s7-split-rail-sep" role="separator" aria-hidden />
+            <button type="button" className="s7-split-rail-btn" onClick={() => setShowFloatingFlow(true)} title="Expand flow in window">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/><path d="M10 5H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-5"/></svg>
+            </button>
+            <button type="button" className={`s7-split-rail-btn${floatingPanel === 'steps' ? ' active' : ''}`} onClick={() => setFloatingPanel((p) => (p === 'steps' ? null : 'steps'))} title="Steps list">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg>
+              {steps.length > 0 && <span className="s7-split-rail-count">{steps.length}</span>}
+            </button>
             {snippets.length > 0 && (
-              <button type="button" className="s7-canvas-float-btn s7-canvas-topbar-snippets" onClick={() => setShowSnippetPicker(true)} title="Load a saved step snippet">Snippets</button>
+              <button type="button" className="s7-split-rail-btn" onClick={() => setShowSnippetPicker(true)} title="Snippets">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+              </button>
             )}
+            {sessionUser && typeof onAuditTrailToggle === 'function' && (
+              <button type="button" className={`s7-split-rail-btn${auditTrailOpen ? ' active' : ''}`} onClick={onAuditTrailToggle} title="Activity log">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </button>
+            )}
+            </div>
+            <div className="s7-split-rail-footer">
+              <MapRailPortalFooter sessionUser={sessionUser} />
+            </div>
+          </nav>
+          <div
+            className="s7-inline-chat s7-inline-chat--sized"
+            data-theme={theme}
+            style={{ width: splitChatWidthPx, flex: '0 0 auto' }}
+          >
+            <div className="s7-inline-chat-header">
+              <div className="sharp-avatar sharp-avatar-sm" title="Reina">R</div>
+              <span className="s7-inline-chat-title">AI Assistant</span>
+            </div>
+            {chatContent}
+          </div>
+          <div
+            className="s7-split-resize-handle"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize chat and canvas"
+            onMouseDown={handleSplitResizeStart}
+          />
+          <div className="s7-canvas-column">
+          <div className="s7-canvas-topbar">
+            <div className="s7-view-toggle">
+              {['grid', 'swimlane'].map(m => (
+                <button key={m} type="button" className={`s7-view-btn${previewViewMode === m ? ' active' : ''}`} onClick={() => setPreviewViewMode(m)}>
+                  {m === 'grid' ? 'Grid' : 'Swimlane'}
+                </button>
+              ))}
+            </div>
           </div>
           <div ref={previewCanvasRef} className="s7-canvas">
-            <div className="s7-floating-icons">
-              <button type="button" className="s7-floating-icon-btn" onClick={() => setShowFloatingFlow(true)} title="Open in floating view">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/><path d="M10 5H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-5"/></svg>
-              </button>
-              <button type="button" className={`s7-floating-icon-btn${floatingPanel === 'chat' ? ' active' : ''}`} onClick={() => setFloatingPanel((p) => (p === 'chat' ? null : 'chat'))} title="AI Assistant">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-              </button>
-              <button type="button" className={`s7-floating-icon-btn${floatingPanel === 'steps' ? ' active' : ''}`} onClick={() => setFloatingPanel((p) => (p === 'steps' ? null : 'steps'))} title="Steps">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg>
-                {steps.length > 0 && <span className="s7-floating-icon-count">{steps.length}</span>}
-              </button>
-              {sessionUser && typeof onAuditTrailToggle === 'function' && (
-                <button
-                  type="button"
-                  className={`s7-floating-icon-btn${auditTrailOpen ? ' active' : ''}`}
-                  onClick={onAuditTrailToggle}
-                  title="Activity log"
-                >
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                </button>
-              )}
-            </div>
-            {namedSteps.length > 0 ? (
               <InteractiveFlowCanvas
                 process={{ ...processData, steps, handoffs: ensureHandoffs(steps, handoffs) }}
                 layout={previewViewMode}
@@ -2228,92 +2400,53 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
                   queueMicrotask(() => updateProcessData({ flowCustomEdges: remappedCustom, flowDeletedEdges: newDeleted }));
                 }}
               />
-            ) : (
-              <div className="s7-canvas-empty">
-                <div className="s7-describe-box">
-                  <h2 className="s7-describe-heading">
-                    <span className="s7-describe-kicker" aria-hidden="true">✦</span>
-                    <span className="s7-describe-heading-inner">
-                      <span className="s7-describe-heading-muted">How does </span>
-                      <span className="s7-describe-name">{processData.processName || 'this process'}</span>
-                      <span className="s7-describe-heading-muted"> work?</span>
-                    </span>
-                  </h2>
-                  <div
-                    className={`s7-describe-field${describeDragOver ? ' s7-describe-drop-active' : ''}`}
-                    onDrop={onDescribeDrop}
-                    onDragOver={onDescribeDragOver}
-                    onDragLeave={onDescribeDragLeave}
-                  >
-                    {describeDragOver && (
-                      <div className="s7-describe-drop-overlay" aria-hidden>
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
-                        <span>Drop files here</span>
-                      </div>
-                    )}
-                    <input
-                      type="file"
-                      ref={describeFileRef}
-                      className="s7-chat-file-input"
-                      multiple
-                      accept="image/*,.pdf,.xlsx,.xls,.csv,.doc,.docx,.txt,.json"
-                      onChange={onDescribeFileChange}
-                    />
-                    <textarea
-                      className="s7-describe-textarea"
-                      placeholder="Describe it step by step in plain English — who does what, what triggers it, how it ends..."
-                      value={describeText}
-                      onChange={(e) => setDescribeText(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key !== 'Enter') return;
-                        if (e.altKey) return;
-                        if (e.shiftKey) return;
-                        e.preventDefault();
-                        if (!describeLoading && describeText.trim()) handleDescribeExtract();
-                      }}
-                    />
-                    <div className="s7-describe-field-actions">
-                      <button
-                        type="button"
-                        className="s7-chat-attach"
-                        onClick={() => describeFileRef.current?.click()}
-                        title="Attach files (images, Excel, PDF, etc.)"
-                        disabled={uploadLoading}
-                      >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" aria-hidden><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                      </button>
-                    </div>
-                  </div>
-                  {describeError && <p className="s7-describe-error">{describeError}</p>}
-                  <button type="button" className="s7-describe-manual" onClick={() => { addStep(); setFloatingPanel('steps'); }}>Add steps manually</button>
-                </div>
-              </div>
-            )}
+          </div>
           </div>
         </div>
-
-        {/* ── Right detail panel ── */}
-        <div className={`s7-detail-panel${activeStep ? ' open' : ''}`}>
-          {stepDetailContent}
+        ) : (
+        <div className="s7-canvas-area s7-canvas-area--with-rail">
+          <nav className="s7-split-rail" data-theme={theme} aria-label="Mapping tools">
+            <div className="s7-split-rail-body">
+              <MapRailPrimaryTools onOpenSaveModal={onOpenSaveModal} editingReportId={editingReportId} onHandover={editingReportId ? undefined : openHandoverModal} />
+              <div className="s7-split-rail-sep" role="separator" aria-hidden />
+              <button type="button" className="s7-split-rail-btn" onClick={() => setShowFloatingFlow(true)} title="Expand flow in window">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/><path d="M10 5H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-5"/></svg>
+              </button>
+              <button type="button" className={`s7-split-rail-btn${floatingPanel === 'steps' ? ' active' : ''}`} onClick={() => setFloatingPanel((p) => (p === 'steps' ? null : 'steps'))} title="Add steps manually">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg>
+              </button>
+              {snippets.length > 0 && (
+                <button type="button" className="s7-split-rail-btn" onClick={() => setShowSnippetPicker(true)} title="Snippets">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+                </button>
+              )}
+              {typeof onAuditTrailToggle === 'function' && (
+                <button type="button" className={`s7-split-rail-btn${auditTrailOpen ? ' active' : ''}`} onClick={onAuditTrailToggle} title="Activity log">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </button>
+              )}
+            </div>
+            <div className="s7-split-rail-footer">
+              <MapRailPortalFooter sessionUser={sessionUser} />
+            </div>
+          </nav>
+          <div className="s7-map-landing" data-theme={theme}>
+            {chatContent}
+          </div>
         </div>
+        )}
+
+        {/* ── Right detail panel (split view only) ── */}
+        {hasFlowArtifact && (
+          <div className={`s7-detail-panel${activeStep ? ' open' : ''}`}>
+            {stepDetailContent}
+          </div>
+        )}
 
         </div>{/* /s7-workspace-main */}
       </div>
 
-      {/* Floating panels (Steps / AI Chat) — portal to body */}
-      {floatingPanel === 'chat' && createPortal(
-        <div className="s7-floating-panel" data-theme={theme}>
-          <div className="s7-floating-panel-header">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-            <span>AI Assistant</span>
-            <button type="button" className="s7-floating-panel-close" onClick={() => setFloatingPanel(null)} title="Close">&times;</button>
-          </div>
-          <div className="s7-floating-panel-body">
-            {chatContent}
-          </div>
-        </div>,
-        document.body
-      )}
+      {/* Floating panels (Steps list only — chat is always inline) */}
 
       {floatingPanel === 'steps' && createPortal(
         <div className="s7-floating-panel" data-theme={theme}>
@@ -2345,7 +2478,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
           stepsLength={steps.length}
           onDeleteNode={handleDeleteNode}
           stepListContent={stepListContent}
-          chatContent={chatContent}
+          chatContent={hasFlowArtifact ? null : chatContent}
           chatLoading={chatLoading}
           stepDetailContent={stepDetailContent}
           onAddNodeBetween={(insertIdx, isDecisionEdgeInsert) => {
@@ -2489,7 +2622,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
             </div>
             <div className="s7-deps-modal-footer">
               <button type="button" className="s7-deps-skip-btn" onClick={() => { setShowDepsModal(false); setPendingNavAfterDeps(false); commitAndNavigate(depsLinks); }}>
-                {depsLinks.length === 0 ? 'No dependencies — Continue' : 'Done — Continue →'}
+                {depsLinks.length === 0 ? 'No dependencies, Continue' : 'Done, Continue →'}
               </button>
             </div>
           </div>
@@ -2517,6 +2650,9 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
           </div>
         </div>
       )}
+
+      {/* First-visit guide tour */}
+      {showGuide && <MapGuide onDismiss={dismissGuide} />}
 
       {/* Handover modal */}
       {handoverModalOpen && (

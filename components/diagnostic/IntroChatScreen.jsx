@@ -6,6 +6,7 @@ import { useDiagnosticNav } from './DiagnosticNavContext';
 import { PROCESSES } from '@/lib/diagnostic';
 import {
   COMPREHENSIVE_PROMPTS,
+  nextPromptIndexAfter,
 } from '@/lib/diagnostic/guidedPrompts';
 
 function deepMerge(target, source) {
@@ -46,17 +47,17 @@ export default function IntroChatScreen() {
   const isComplete = phase === 'process' && processComplete;
 
   const segmentGreetings = {
-    ma: "Hello, I'm Afi! I'll help you build your Day 1 integration baseline — mapping the target company's processes and surfacing where complexity will compound if left unaddressed. How deep would you like to go?",
-    pe: "Hello, I'm Afi! I'll help you identify value creation opportunities across your portfolio company's operations — quantifying the cost of bottlenecks and prioritising the highest-ROI fixes. How deep would you like to go?",
-    highstakes: "Hello, I'm Afi! With high-stakes timelines in mind, I'll help you map and prioritise the processes that matter most before your deadline. How deep would you like to go?",
-    scaling: "Hello, I'm Afi! I'll help you find exactly where your operations are slowing you down as you scale, and what fixing them is worth. How deep would you like to go?",
+    ma: "Hello, I'm Reina! I'll help you build your Day 1 integration baseline: mapping the target company's processes and surfacing where complexity will compound if left unaddressed. How deep would you like to go?",
+    pe: "Hello, I'm Reina! I'll help you identify value creation opportunities across your portfolio company's operations: quantifying the cost of bottlenecks and prioritising the highest-ROI fixes. How deep would you like to go?",
+    highstakes: "Hello, I'm Reina! With high-stakes timelines in mind, I'll help you map and prioritise the processes that matter most before your deadline. How deep would you like to go?",
+    scaling: "Hello, I'm Reina! I'll help you find exactly where your operations are slowing you down as you scale, and what fixing them is worth. How deep would you like to go?",
   };
 
   // Initial message — start directly with mode selection
   useEffect(() => {
     if (messages.length === 0) {
       setPendingPath('individual');
-      const greeting = segmentGreetings[processData?.segment] || "Hello, I'm Afi! I'll help you map your process and find where time and money are leaking. How deep would you like to go?";
+      const greeting = segmentGreetings[processData?.segment] || "Hello, I'm Reina! I'll help you map your process and find where time and money are leaking. How deep would you like to go?";
       setMessages([{ role: 'assistant', content: greeting, promptId: 'mode' }]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -102,11 +103,7 @@ export default function IntroChatScreen() {
     updateProcessData(merged);
     setInput('');
 
-    // Advance index, skipping prompts hidden for this segment
-    let nextIndex = processIndex + 1;
-    while (nextIndex < processPrompts.length && processPrompts[nextIndex].shouldShow && !processPrompts[nextIndex].shouldShow(merged)) {
-      nextIndex++;
-    }
+    const nextIndex = nextPromptIndexAfter(processIndex, merged, processPrompts);
     setProcessIndex(nextIndex);
 
     if (nextIndex < processPrompts.length) {
@@ -233,7 +230,7 @@ export default function IntroChatScreen() {
         {messages.map((m, i) => (
           <div key={i} className={`s7-msg s7-msg-${m.role}`}>
             {m.role === 'assistant' && (
-              <div className="sharp-avatar" title="Afi">A</div>
+              <div className="sharp-avatar" title="Reina">R</div>
             )}
             <div className="s7-msg-bubble">{m.content}</div>
           </div>

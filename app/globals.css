@@ -58,11 +58,12 @@ body {
 }
 
 /* ── Headings ────────────────────────────────────── */
+/* Use primary text colour — default page is dark; marketing / light sections override locally */
 h1, h2, h3, h4 {
     font-family: 'Cormorant Garamond', serif;
     font-weight: 600;
     line-height: 1.15;
-    color: var(--dark, #0c1b2e);
+    color: var(--text);
 }
 
 /* ── Header (report, team-results, monitor) ──────── */

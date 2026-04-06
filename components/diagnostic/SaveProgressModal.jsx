@@ -51,7 +51,7 @@ export default function SaveProgressModal({ isOpen, onClose }) {
               Save your progress and get a link to continue on any device.
             </p>
             <div className="form-group">
-              <label htmlFor="saveModalEmail">Email (optional — we&apos;ll send you the link)</label>
+              <label htmlFor="saveModalEmail">Email (optional, we&apos;ll send you the link)</label>
               <input
                 type="email"
                 id="saveModalEmail"

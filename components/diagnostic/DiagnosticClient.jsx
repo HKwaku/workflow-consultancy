@@ -6,7 +6,6 @@ import { useSearchParams } from 'next/navigation';
 import { DiagnosticProvider, useDiagnostic } from './DiagnosticContext';
 import ProgressBar from './ProgressBar';
 import { DiagnosticNavProvider, DiagnosticNavBar } from './DiagnosticNavContext';
-import ThemeToggle from '@/components/ThemeToggle';
 import IntroChatScreen from './IntroChatScreen';
 import GuidedChatScreen from './GuidedChatScreen';
 import { useAuth } from '@/lib/useAuth';
@@ -89,24 +88,28 @@ const AuditTrailPanel = dynamic(() => import('./AuditTrailPanel'), { ssr: false 
 const AUDIT_SEGMENTS = [
   {
     id: 'scaling',
+    variant: 'teal',
     label: 'Scaling Business',
     tagline: 'Growing fast, processes breaking',
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width={22} height={22}><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>,
   },
   {
     id: 'ma',
+    variant: 'violet',
     label: 'M&A Integration',
     tagline: 'Day 1 baseline, integration clarity',
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width={22} height={22}><circle cx="8" cy="18" r="3"/><circle cx="16" cy="6" r="3"/><path d="M8 15V9a6 6 0 016-6"/><path d="M16 9v6a6 6 0 01-6 6"/></svg>,
   },
   {
     id: 'pe',
+    variant: 'amber',
     label: 'Private Equity',
     tagline: 'Acquisition baseline to exit-ready',
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width={22} height={22}><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>,
   },
   {
     id: 'highstakes',
+    variant: 'rose',
     label: 'High-stakes Event',
     tagline: 'Carve-out, ERP, VC-backed scale-up',
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width={22} height={22}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
@@ -133,78 +136,71 @@ function AuditGate({ onComplete }) {
   };
 
   return (
-    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', background: 'var(--bg, #111)', color: 'var(--text, #e8e8e8)' }}>
-      <div style={{ width: '100%', maxWidth: 560 }}>
-        <div style={{ marginBottom: 32, textAlign: 'center' }}>
-          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 8 }}>
-            Vesno<span style={{ color: 'var(--accent, #0d9488)' }}>.</span>
+    <div className="audit-gate-screen">
+      <div className="audit-gate-inner">
+        <header className="audit-gate-hero">
+          <div className="audit-gate-brand">
+            Vesno<span>.</span>
           </div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 8px', letterSpacing: '-0.02em' }}>Start your process audit</h1>
-          <p style={{ fontSize: 14, color: 'var(--text-mid, #94a3b8)', margin: 0 }}>We&apos;ll tailor the audit to your situation and send your report to your inbox.</p>
-        </div>
+          <h1 className="audit-gate-hero-title">Start your process audit</h1>
+          <p className="audit-gate-hero-lede">
+            We&apos;ll tailor the audit to your situation and send your report to your inbox.
+          </p>
+        </header>
 
         <form onSubmit={handleSubmit} noValidate>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-mid, #94a3b8)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Your name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="Jane Smith"
-                autoComplete="name"
-                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1.5px solid var(--border, #334155)', background: 'var(--bg-2, #1e293b)', color: 'var(--text, #e8e8e8)', fontSize: 14, boxSizing: 'border-box', outline: 'none' }}
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-mid, #94a3b8)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Work email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="jane@company.com"
-                autoComplete="email"
-                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1.5px solid var(--border, #334155)', background: 'var(--bg-2, #1e293b)', color: 'var(--text, #e8e8e8)', fontSize: 14, boxSizing: 'border-box', outline: 'none' }}
-              />
-            </div>
-          </div>
-
-          <div style={{ marginBottom: 24 }}>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-mid, #94a3b8)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Which best describes your situation?</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {AUDIT_SEGMENTS.map(s => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setSegment(s.id)}
-                  style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8,
-                    padding: '14px 16px', borderRadius: 10, textAlign: 'left', cursor: 'pointer',
-                    border: segment === s.id ? '2px solid var(--accent, #0d9488)' : '1.5px solid var(--border, #334155)',
-                    background: segment === s.id ? 'rgba(13,148,136,0.08)' : 'var(--bg-2, #1e293b)',
-                    color: 'var(--text, #e8e8e8)', transition: 'border-color 0.15s, background 0.15s',
-                  }}
-                >
-                  <span style={{ color: segment === s.id ? 'var(--accent, #0d9488)' : 'var(--text-mid, #94a3b8)' }}>{s.icon}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.2 }}>{s.label}</span>
-                  <span style={{ fontSize: 12, color: 'var(--text-mid, #94a3b8)', lineHeight: 1.4 }}>{s.tagline}</span>
-                </button>
-              ))}
+          <div className="audit-gate-form">
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="audit-gate-name">Your name</label>
+                <input
+                  id="audit-gate-name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Jane Smith"
+                  autoComplete="name"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="audit-gate-email">Work email</label>
+                <input
+                  id="audit-gate-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="jane@company.com"
+                  autoComplete="email"
+                />
+              </div>
             </div>
           </div>
 
-          {error && <p style={{ fontSize: 13, color: 'var(--red, #f87171)', margin: '0 0 12px' }}>{error}</p>}
+          <p className="audit-gate-seg-head">Which best describes your situation?</p>
+          <div className="audit-gate-paths">
+            {AUDIT_SEGMENTS.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                className={`audit-seg-btn audit-seg-btn--${s.variant}${segment === s.id ? ' selected' : ''}`}
+                onClick={() => setSegment(s.id)}
+              >
+                <span className="audit-seg-icon">{s.icon}</span>
+                <span className="audit-seg-label">{s.label}</span>
+                <span className="audit-seg-meta">{s.tagline}</span>
+              </button>
+            ))}
+          </div>
 
-          <button
-            type="submit"
-            style={{ width: '100%', padding: '12px 24px', borderRadius: 8, border: 'none', background: 'var(--accent, #0d9488)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', letterSpacing: '-0.01em' }}
-          >
+          {error && <p className="audit-gate-error">{error}</p>}
+
+          <button type="submit" className="audit-gate-submit">
             Start Audit →
           </button>
         </form>
 
-        <p style={{ fontSize: 12, color: 'var(--text-mid, #94a3b8)', textAlign: 'center', marginTop: 20 }}>
-          Already have an account? <a href="/portal" style={{ color: 'var(--accent, #0d9488)', textDecoration: 'none' }}>Sign in</a>
+        <p className="audit-gate-footer">
+          Already have an account? <a href="/portal">Sign in</a>
         </p>
       </div>
     </div>
@@ -453,6 +449,7 @@ function DiagnosticContent() {
               teamMode: d.teamMode || null,
               contact: d.contact || null,
               authUser: d.authUser || null,
+              chatMessages: d.chatMessages,
               timestamp: result.progress.updatedAt || result.progress.createdAt || new Date().toISOString(),
               handoverSender: d.handoverSender || null,
               handoverComments: d.handoverComments || null,
@@ -525,6 +522,7 @@ function DiagnosticContent() {
             initialStepIdx={initialStepIdx}
             onAuditTrailToggle={() => setShowAuditTrail((v) => !v)}
             auditTrailOpen={showAuditTrail}
+            onOpenSaveModal={() => setShowSaveModal(true)}
           />
         );
       case 4:
@@ -568,29 +566,6 @@ function DiagnosticContent() {
 
   return (
     <>
-      <div className="top-bar">
-        <div className="top-bar-inner">
-          <div className="top-bar-left">
-            <a href="/">Vesno<span className="top-bar-brand-dot">.</span></a>
-            <div className="top-bar-divider" />
-            <span className="top-bar-title">Process Audit</span>
-          </div>
-          <div className="top-bar-nav">
-            <ThemeToggle className="top-bar-theme-btn" />
-            {editingReportId && <a href={`/report?id=${editingReportId}&portal=1`} className="top-bar-link">View Report</a>}
-            {sessionUser?.email ? (
-              <>
-                <a href="/portal" className="top-bar-link">Portal</a>
-                <span className="top-bar-email">{sessionUser.email}</span>
-                <button type="button" className="top-bar-btn" onClick={sessionSignOut}>Sign Out</button>
-              </>
-            ) : (
-              <a href="/portal" className="top-bar-link">Client Login</a>
-            )}
-          </div>
-        </div>
-      </div>
-
       <div className={`container${currentScreen === 2 ? ' container-wide' : ''}`}>
         <DiagnosticNavProvider>
           <ProgressBar onSaveClick={() => setShowSaveModal(true)} currentScreen={currentScreen} />

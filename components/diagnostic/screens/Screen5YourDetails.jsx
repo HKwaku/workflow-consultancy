@@ -74,7 +74,7 @@ export default function Screen5YourDetails() {
         <p className="screen-subtitle">Where should we send your report?</p>
         {(authUser?.name || authUser?.email) && (
           <p style={{ fontSize: 13, color: 'var(--text-mid)', margin: '0 0 16px', padding: '8px 12px', background: 'var(--bg-2, #1e293b)', borderRadius: 6, border: '1px solid var(--border, #334155)' }}>
-            Name and email pre-filled from sign-up — update if needed.
+            Name and email pre-filled from sign-up. Update if needed.
           </p>
         )}
 

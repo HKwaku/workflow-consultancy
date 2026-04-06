@@ -236,9 +236,9 @@ export default function Screen4Cost() {
             <input type="number" id="hoursPerInstance" min={0.5} step={0.5} value={hoursPerInstance} onChange={(e) => setHoursPerInstance(Math.max(0.5, parseFloat(e.target.value) || 1))} onBlur={(e) => addAuditEvent({ type: 'step_edit', detail: `Person-hours per instance set to ${e.target.value}h` })} />
             <span className="form-hint">
               {hoursFromSteps
-                ? `Calculated from step durations (${computed.hoursPerInstance.toFixed(1)}h) — adjust if needed`
+                ? `Calculated from step durations (${computed.hoursPerInstance.toFixed(1)}h). Adjust if needed.`
                 : hoursFromChat
-                  ? `Afi estimated ${chatHours}h based on your answers — adjust if needed`
+                  ? `Reina estimated ${chatHours}h based on your answers. Adjust if needed.`
                   : 'Actual work time across everyone involved'}
             </span>
           </div>

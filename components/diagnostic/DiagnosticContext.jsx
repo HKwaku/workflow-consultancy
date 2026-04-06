@@ -14,6 +14,23 @@ import {
 
 const STORAGE_KEY = 'processDiagnosticProgress';
 const MAX_AGE_HOURS = 24;
+/** Cap persisted map-assistant history so localStorage / cloud payloads stay small */
+const MAX_CHAT_MESSAGES_PERSIST = 80;
+
+function sanitizeChatMessagesForPersist(msgs) {
+  if (!Array.isArray(msgs)) return null;
+  const out = [];
+  for (const m of msgs) {
+    if (!m || (m.role !== 'user' && m.role !== 'assistant')) continue;
+    const content = typeof m.content === 'string' ? m.content : String(m.content ?? '');
+    const item = { role: m.role, content };
+    if (Array.isArray(m.suggestions) && m.suggestions.length) {
+      item.suggestions = m.suggestions.filter((s) => typeof s === 'string').slice(0, 12);
+    }
+    out.push(item);
+  }
+  return out.length ? out.slice(-MAX_CHAT_MESSAGES_PERSIST) : null;
+}
 
 // --- Reducer ---
 function diagnosticReducer(state, action) {
@@ -139,6 +156,7 @@ export function DiagnosticProvider({ children }) {
   const saveProgress = useCallback(() => {
     if (typeof window === 'undefined') return;
     try {
+      const chatPersist = sanitizeChatMessagesForPersist(state.chatMessages);
       const payload = {
         currentScreen: state.currentScreen,
         processData: state.processData,
@@ -151,6 +169,7 @@ export function DiagnosticProvider({ children }) {
         authUser: state.authUser || null,
         contact: state.contact || null,
         auditTrail: (state.auditTrail || []).slice(-50),
+        ...(chatPersist?.length ? { chatMessages: chatPersist } : {}),
         timestamp: new Date().toISOString(),
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -169,6 +188,7 @@ export function DiagnosticProvider({ children }) {
     state.authUser,
     state.contact,
     state.auditTrail,
+    state.chatMessages,
   ]);
 
   // Save on state change (debounced)
@@ -312,6 +332,7 @@ export function DiagnosticProvider({ children }) {
     if (hasIdentity) {
       trail.push({ id: Math.random().toString(36).slice(2, 10), type: 'resume', timestamp: new Date().toISOString(), detail: `Resumed at screen ${data.currentScreen ?? 0}` });
     }
+    const restoredChat = sanitizeChatMessagesForPersist(data.chatMessages);
     dispatch({
       type: 'RESTORE',
       payload: {
@@ -327,6 +348,7 @@ export function DiagnosticProvider({ children }) {
         authUser: data.authUser || null,
         contact: data.contact || null,
         auditTrail: trail,
+        ...(restoredChat?.length ? { chatMessages: restoredChat } : {}),
       },
     });
   }, []);
@@ -334,6 +356,7 @@ export function DiagnosticProvider({ children }) {
   /** POST to /api/progress - save progress to cloud, get resume link. Options: step, processDataOverride, isHandover, senderName, comments. */
   const saveProgressToCloud = useCallback(async (email = null, { step, processDataOverride, isHandover, senderName, comments } = {}) => {
     const pd = processDataOverride || state.processData;
+    const chatPersist = sanitizeChatMessagesForPersist(state.chatMessages);
     const progressData = {
       currentScreen: state.currentScreen,
       processData: pd,
@@ -345,6 +368,7 @@ export function DiagnosticProvider({ children }) {
       contact: state.contact || null,
       authUser: state.authUser || null,
       auditTrail: (state.auditTrail || []).slice(-50),
+      ...(chatPersist?.length ? { chatMessages: chatPersist } : {}),
     };
     const body = {
       email: email || null,
@@ -369,7 +393,7 @@ export function DiagnosticProvider({ children }) {
       dispatch({ type: 'ADD_AUDIT_EVENT', payload: { id: Math.random().toString(36).slice(2, 10), type: evtType, timestamp: new Date().toISOString(), detail: evtType === 'handover' ? `Handed over by ${senderName}` : `Progress saved (screen ${state.currentScreen})` } });
     }
     return { resumeUrl: data.resumeUrl, progressId: data.progressId };
-  }, [state.currentScreen, state.processData, state.completedProcesses, state.customDepartments, state.stepCount, state.diagnosticMode, state.teamMode]);
+  }, [state.currentScreen, state.processData, state.completedProcesses, state.customDepartments, state.stepCount, state.diagnosticMode, state.teamMode, state.chatMessages, state.authUser, state.contact, state.auditTrail]);
 
   /** POST to /api/send-diagnostic-report. Payload: { contact, summary, recommendations, automationScore, roadmap, processes, rawProcesses, customDepartments, editingReportId, timestamp } */
   const sendDiagnosticReport = useCallback(async (payload, options = {}) => {

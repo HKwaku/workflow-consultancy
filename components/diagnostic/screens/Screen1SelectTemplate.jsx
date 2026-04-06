@@ -32,7 +32,7 @@ export default function Screen1SelectTemplate() {
   };
 
   return (
-    <div className="screen-template-select" style={{ maxWidth: 900, margin: '0 auto', padding: '40px 24px' }}>
+    <div className="screen-template-select">
       <div style={{ marginBottom: 32, textAlign: 'center' }}>
         <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 8px' }}>Start from a template</h2>
         <p style={{ fontSize: 14, color: 'var(--text-mid)', margin: 0 }}>

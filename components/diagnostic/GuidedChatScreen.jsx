@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useDiagnostic } from './DiagnosticContext';
 import { useDiagnosticNav } from './DiagnosticNavContext';
-import { MAP_ONLY_PROMPTS, COMPREHENSIVE_PROMPTS } from '@/lib/diagnostic/guidedPrompts';
+import { MAP_ONLY_PROMPTS, COMPREHENSIVE_PROMPTS, nextPromptIndexAfter } from '@/lib/diagnostic/guidedPrompts';
 import { PROCESSES as processesConst } from '@/lib/diagnostic/processData';
 
 function deepMerge(target, source) {
@@ -87,10 +87,12 @@ export default function GuidedChatScreen() {
     setCollectedData(merged);
     updateProcessData(merged);
     setInput('');
-    setCurrentIndex((i) => i + 1);
 
-    if (currentIndex + 1 < prompts.length) {
-      const next = prompts[currentIndex + 1];
+    const nextIndex = nextPromptIndexAfter(currentIndex, merged, prompts);
+    setCurrentIndex(nextIndex);
+
+    if (nextIndex < prompts.length) {
+      const next = prompts[nextIndex];
       const q = typeof next.question === 'function' ? next.question(merged) : next.question;
       setMessages((prev) => [
         ...prev,
@@ -120,7 +122,7 @@ export default function GuidedChatScreen() {
         {messages.map((m, i) => (
           <div key={i} className={`s7-msg s7-msg-${m.role}`}>
             {m.role === 'assistant' && (
-              <div className="sharp-avatar" title="Afi">A</div>
+              <div className="sharp-avatar" title="Reina">R</div>
             )}
             <div className="s7-msg-bubble">{m.content}</div>
           </div>
