@@ -2950,11 +2950,20 @@ body { line-height: 1.65; }
         @media (max-width: 1000px) {
         }
         @media (max-width: 768px) {
-            /* Override globals.css min-height: 100vh so body doesn't extend beyond the container */
-            html body { min-height: 0; }
+            /*
+             * globals.css sets body { min-height: 100vh }. Without overriding html/body, the page
+             * paints a full-viewport-tall background with the chat card only in the top half (dead space).
+             * Scope to diagnostic-shell so map (container-wide) can still use full viewport when needed.
+             */
+            html:has(.diagnostic-shell:not(.container-wide)),
+            body:has(.diagnostic-shell:not(.container-wide)) {
+                min-height: 0 !important;
+                height: auto !important;
+            }
 
+            /* Chat / intro / template: height follows content. Form steps (.screen.active) opt into full viewport below. */
             .container:not(.container-wide) {
-                min-height: 100dvh;
+                min-height: auto;
                 display: flex;
                 flex-direction: column;
                 justify-content: flex-start;
@@ -2963,10 +2972,8 @@ body { line-height: 1.65; }
                 box-sizing: border-box;
             }
 
-            /* Intro / guided chat / template: don't force full viewport — removes empty area below the card */
-            .container:not(.container-wide):has(.guided-chat-screen),
-            .container:not(.container-wide):has(.screen-template-select) {
-                min-height: 0;
+            .container:not(.container-wide):has(.screen.active) {
+                min-height: 100dvh;
             }
 
             /* These must not grow — only the screen content should fill remaining space */
@@ -2984,7 +2991,7 @@ body { line-height: 1.65; }
             .guided-chat-screen,
             .intro-chat-screen {
                 flex: 0 1 auto;
-                min-height: 0;
+                min-height: 0 !important;
                 max-width: 100%;
             }
 

@@ -566,7 +566,7 @@ function DiagnosticContent() {
 
   return (
     <>
-      <div className={`container${currentScreen === 2 ? ' container-wide' : ''}`}>
+      <div className={`diagnostic-shell container${currentScreen === 2 ? ' container-wide' : ''}`}>
         <DiagnosticNavProvider>
           <ProgressBar onSaveClick={() => setShowSaveModal(true)} currentScreen={currentScreen} />
           <DiagnosticNavBar currentScreen={currentScreen} />
