@@ -2950,6 +2950,9 @@ body { line-height: 1.65; }
         @media (max-width: 1000px) {
         }
         @media (max-width: 768px) {
+            /* Override globals.css min-height: 100vh so body doesn't extend beyond the container */
+            html body { min-height: 0; }
+
             .container:not(.container-wide) {
                 min-height: 100dvh;
                 display: flex;

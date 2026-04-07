@@ -2233,7 +2233,6 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
 
   // Mobile block — show message only at the canvas screen, not earlier in the flow
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
-  const [mobileSaveEmail, setMobileSaveEmail] = useState('');
   const [mobileSaveStatus, setMobileSaveStatus] = useState('idle'); // idle | saving | done | error
   const [mobileSaveUrl, setMobileSaveUrl] = useState('');
   const [mobileLinkCopied, setMobileLinkCopied] = useState(false);
@@ -2244,11 +2243,12 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
   }, []);
 
   if (isMobile) {
-    const handleMobileSave = async (withEmail) => {
+    const knownEmail = contact?.email || authUser?.email || '';
+
+    const handleMobileSave = async () => {
       setMobileSaveStatus('saving');
       try {
-        const email = withEmail && mobileSaveEmail.trim() ? mobileSaveEmail.trim() : null;
-        const result = await saveProgressToCloud(email);
+        const result = await saveProgressToCloud(knownEmail || null);
         if (result?.resumeUrl) {
           setMobileSaveUrl(result.resumeUrl);
           setMobileSaveStatus('done');
@@ -2279,20 +2279,16 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
 
         {mobileSaveStatus !== 'done' && (
           <div style={{ width: '100%', maxWidth: 320, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <input
-              type="email"
-              placeholder="your@email.com (optional)"
-              value={mobileSaveEmail}
-              onChange={(e) => setMobileSaveEmail(e.target.value)}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-alt, #1e1e1e)', color: 'var(--text)', fontSize: 14, boxSizing: 'border-box' }}
-            />
+            {knownEmail && (
+              <p style={{ fontSize: 12, color: 'var(--text-mid)', margin: 0 }}>We'll email the link to <strong style={{ color: 'var(--text)' }}>{knownEmail}</strong></p>
+            )}
             <button
               type="button"
-              onClick={() => handleMobileSave(true)}
+              onClick={handleMobileSave}
               disabled={mobileSaveStatus === 'saving'}
               style={{ padding: '11px 20px', borderRadius: 8, border: 'none', background: 'var(--accent, #0d9488)', color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer', opacity: mobileSaveStatus === 'saving' ? 0.7 : 1 }}
             >
-              {mobileSaveStatus === 'saving' ? 'Saving...' : mobileSaveEmail.trim() ? 'Save & email link' : 'Save & copy link'}
+              {mobileSaveStatus === 'saving' ? 'Saving...' : knownEmail ? 'Save & email link' : 'Save & copy link'}
             </button>
             {mobileSaveStatus === 'error' && (
               <p style={{ fontSize: 12, color: '#ef4444', margin: 0 }}>Something went wrong. Please try again.</p>
@@ -2303,7 +2299,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
         {mobileSaveStatus === 'done' && (
           <div style={{ width: '100%', maxWidth: 320, display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
             <p style={{ fontSize: 13, color: '#10b981', fontWeight: 600, margin: 0 }}>
-              {mobileSaveEmail.trim() ? 'Link saved and emailed.' : 'Link copied to clipboard.'}
+              {knownEmail ? `Link emailed to ${knownEmail}.` : 'Link copied to clipboard.'}
             </p>
             <div style={{ display: 'flex', width: '100%', gap: 8 }}>
               <input
