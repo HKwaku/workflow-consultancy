@@ -1,5 +1,5 @@
 html, body { overflow-x: hidden; max-width: 100%; }
-body { line-height: 1.65; min-height: 0; } /* override globals.css 100vh — diagnostic page sizes to content */
+body { line-height: 1.65; }
         :root {
             --radius-sm: 12px;
             --radius-md: 16px;
@@ -2950,20 +2950,43 @@ body { line-height: 1.65; min-height: 0; } /* override globals.css 100vh — dia
         @media (max-width: 1000px) {
         }
         @media (max-width: 768px) {
-            .container {
+            .container:not(.container-wide) {
+                min-height: 100dvh;
+                display: flex;
+                flex-direction: column;
                 padding: 0.5rem 0.75rem 0.75rem;
+                box-sizing: border-box;
+            }
+
+            /* These must not grow — only the screen content should fill remaining space */
+            .container:not(.container-wide) > .progress-bar,
+            .container:not(.container-wide) > .diagnostic-screen-nav,
+            .container:not(.container-wide) > .resume-toast {
+                flex-shrink: 0;
             }
 
             .screen-card {
                 padding: 1.25rem;
             }
 
-            .guided-chat-screen {
+            /* Chat screens grow to fill remaining space, eliminating dead space */
+            .guided-chat-screen,
+            .intro-chat-screen {
+                flex: 1;
                 min-height: 0;
             }
 
-            .intro-chat-screen {
+            /* Form screens (cost, details, etc.) also fill remaining height */
+            .screen.active {
+                flex: 1;
                 min-height: 0;
+                display: flex;
+                flex-direction: column;
+            }
+            .screen.active > .screen-card {
+                flex: 1;
+                min-height: 0;
+                overflow-y: auto;
             }
 
             .screen-title {
