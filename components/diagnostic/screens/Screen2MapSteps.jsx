@@ -2233,6 +2233,10 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
 
   // Mobile block — show message only at the canvas screen, not earlier in the flow
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  const [mobileSaveEmail, setMobileSaveEmail] = useState('');
+  const [mobileSaveStatus, setMobileSaveStatus] = useState('idle'); // idle | saving | done | error
+  const [mobileSaveUrl, setMobileSaveUrl] = useState('');
+  const [mobileLinkCopied, setMobileLinkCopied] = useState(false);
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handler);
@@ -2240,14 +2244,87 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
   }, []);
 
   if (isMobile) {
+    const handleMobileSave = async (withEmail) => {
+      setMobileSaveStatus('saving');
+      try {
+        const email = withEmail && mobileSaveEmail.trim() ? mobileSaveEmail.trim() : null;
+        const result = await saveProgressToCloud(email);
+        if (result?.resumeUrl) {
+          setMobileSaveUrl(result.resumeUrl);
+          setMobileSaveStatus('done');
+          try { navigator.clipboard.writeText(result.resumeUrl); } catch { /* ignore */ }
+        } else {
+          setMobileSaveStatus('error');
+        }
+      } catch {
+        setMobileSaveStatus('error');
+      }
+    };
+
+    const handleMobileCopy = () => {
+      if (!mobileSaveUrl) return;
+      navigator.clipboard.writeText(mobileSaveUrl).then(() => {
+        setMobileLinkCopied(true);
+        setTimeout(() => setMobileLinkCopied(false), 2500);
+      }).catch(() => {});
+    };
+
     return (
-      <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', textAlign: 'center', gap: 16, color: 'var(--text)' }}>
+      <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', textAlign: 'center', gap: 20, color: 'var(--text)' }}>
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-        <div style={{ maxWidth: 300 }}>
+        <div style={{ maxWidth: 320 }}>
           <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Desktop required for this step</p>
-          <p style={{ fontSize: 13, color: 'var(--text-mid)', lineHeight: 1.6 }}>The process mapping canvas needs a larger screen. Please switch to a desktop or laptop to continue.</p>
+          <p style={{ fontSize: 13, color: 'var(--text-mid)', lineHeight: 1.6 }}>The process mapping canvas needs a larger screen. Save your progress and continue on a desktop or laptop.</p>
         </div>
-        <button type="button" onClick={() => goToScreen(1)} style={{ marginTop: 8, padding: '10px 24px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-mid)', cursor: 'pointer', fontSize: 13 }}>← Go back</button>
+
+        {mobileSaveStatus !== 'done' && (
+          <div style={{ width: '100%', maxWidth: 320, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <input
+              type="email"
+              placeholder="your@email.com (optional)"
+              value={mobileSaveEmail}
+              onChange={(e) => setMobileSaveEmail(e.target.value)}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-alt, #1e1e1e)', color: 'var(--text)', fontSize: 14, boxSizing: 'border-box' }}
+            />
+            <button
+              type="button"
+              onClick={() => handleMobileSave(true)}
+              disabled={mobileSaveStatus === 'saving'}
+              style={{ padding: '11px 20px', borderRadius: 8, border: 'none', background: 'var(--accent, #0d9488)', color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer', opacity: mobileSaveStatus === 'saving' ? 0.7 : 1 }}
+            >
+              {mobileSaveStatus === 'saving' ? 'Saving...' : mobileSaveEmail.trim() ? 'Save & email link' : 'Save & copy link'}
+            </button>
+            {mobileSaveStatus === 'error' && (
+              <p style={{ fontSize: 12, color: '#ef4444', margin: 0 }}>Something went wrong. Please try again.</p>
+            )}
+          </div>
+        )}
+
+        {mobileSaveStatus === 'done' && (
+          <div style={{ width: '100%', maxWidth: 320, display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+            <p style={{ fontSize: 13, color: '#10b981', fontWeight: 600, margin: 0 }}>
+              {mobileSaveEmail.trim() ? 'Link saved and emailed.' : 'Link copied to clipboard.'}
+            </p>
+            <div style={{ display: 'flex', width: '100%', gap: 8 }}>
+              <input
+                type="text"
+                readOnly
+                value={mobileSaveUrl}
+                onClick={(e) => e.target.select()}
+                style={{ flex: 1, padding: '9px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-alt, #1e1e1e)', color: 'var(--text-mid)', fontSize: 12, minWidth: 0 }}
+              />
+              <button
+                type="button"
+                onClick={handleMobileCopy}
+                style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)', fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >
+                {mobileLinkCopied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <button type="button" onClick={() => goToScreen(1)} style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-mid)', cursor: 'pointer', fontSize: 13 }}>← Go back</button>
       </div>
     );
   }

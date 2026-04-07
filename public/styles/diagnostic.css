@@ -1,5 +1,5 @@
 html, body { overflow-x: hidden; max-width: 100%; }
-body { line-height: 1.65; }
+body { line-height: 1.65; min-height: 0; } /* override globals.css 100vh — diagnostic page sizes to content */
         :root {
             --radius-sm: 12px;
             --radius-md: 16px;
@@ -2951,11 +2951,19 @@ body { line-height: 1.65; }
         }
         @media (max-width: 768px) {
             .container {
-                padding: 1rem;
+                padding: 0.5rem 0.75rem 0.75rem;
             }
 
             .screen-card {
-                padding: 1.5rem;
+                padding: 1.25rem;
+            }
+
+            .guided-chat-screen {
+                min-height: 0;
+            }
+
+            .intro-chat-screen {
+                min-height: 0;
             }
 
             .screen-title {
@@ -3010,7 +3018,8 @@ body { line-height: 1.65; }
         }
 
         @media (max-width: 480px) {
-            .screen-card { padding: 1.25rem; }
+            .container { padding: 0.25rem 0.5rem 0.5rem; }
+            .screen-card { padding: 1rem; }
             .screen-title { font-size: 1.35rem; }
             .metric-grid { grid-template-columns: 1fr; }
             .button { padding: 0.85rem 1.5rem; font-size: 0.95rem; }
