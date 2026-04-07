@@ -2963,6 +2963,12 @@ body { line-height: 1.65; }
                 box-sizing: border-box;
             }
 
+            /* Intro / guided chat / template: don't force full viewport — removes empty area below the card */
+            .container:not(.container-wide):has(.guided-chat-screen),
+            .container:not(.container-wide):has(.screen-template-select) {
+                min-height: 0;
+            }
+
             /* These must not grow — only the screen content should fill remaining space */
             .container:not(.container-wide) > .progress-bar,
             .container:not(.container-wide) > .diagnostic-screen-nav,
