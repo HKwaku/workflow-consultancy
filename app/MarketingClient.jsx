@@ -337,7 +337,7 @@ export default function MarketingClient() {
             <span /><span /><span />
           </button>
           <ul className={menuOpen ? 'open' : ''}>
-            <li><a href="#services" onClick={scrollTo('services')}>Where We Work</a></li>
+            <li><a href="#services" onClick={scrollTo('services')}>Our Value Add</a></li>
             <li><a href="#approach" onClick={scrollTo('approach')}>Approach</a></li>
             <li><Link href="/portal" onClick={closeMenu}>Client Login</Link></li>
             <li><a href="#diagnostic" className="cta-nav" onClick={scrollTo('diagnostic')}>Get Started</a></li>
@@ -406,7 +406,7 @@ export default function MarketingClient() {
         <div className="container">
           <div className="section-header section-header--center scroll-reveal">
             <div className="section-rule" />
-            <div className="section-label">Where We Work</div>
+            <div className="section-label">Our Value Add</div>
             <h2 className="section-title">Wherever the complexity lives,<br /><em>we work there</em></h2>
             <p className="section-desc">
               Four contexts we see most often, each with its own operating rhythm and failure modes. Same audit discipline; different pressure points.
@@ -936,8 +936,8 @@ export default function MarketingClient() {
               <p></p>
             </div>
             <div className="diagnostic-cta-buttons">
-              <a href="mailto:hope@vesno.io" className="btn-white">Book Discovery Call</a>
-              <a href="#services" className="btn-outline" onClick={scrollTo('services')}>See where we work</a>
+              <a href="https://calendly.com/hope-vesno/vesno-process-audit-introduction" className="btn-white" target="_blank" rel="noopener noreferrer">Book Discovery Call</a>
+              <a href="#services" className="btn-outline" onClick={scrollTo('services')}>See our value add</a>
             </div>
           </div>
         </div>
@@ -951,7 +951,7 @@ export default function MarketingClient() {
             <p className="footer-tagline">Evidence-based process intelligence and ongoing operational visibility, not one-off decks, for scaling companies, M&amp;A integration, and private equity portfolios.</p>
           </div>
           <div>
-            <h4>Where We Work</h4>
+            <h4>Our Value Add</h4>
             <ul>
               <li><a href="#services" onClick={scrollTo('services')}>Scaling Mid-Market</a></li>
               <li><a href="#services" onClick={scrollTo('services')}>M&amp;A Integration</a></li>

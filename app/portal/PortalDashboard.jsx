@@ -1138,7 +1138,7 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
         </div>
         <div className="header-right">
           <ThemeToggle className="header-theme-btn" />
-          <Link href={'/monitor?email=' + encodeURIComponent(email)} className="header-nav-link">Monitor</Link>
+
           <span className="header-email">{email}</span>
           <button onClick={onSignOut} className="header-btn">Sign Out</button>
         </div>
