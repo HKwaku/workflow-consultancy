@@ -1468,7 +1468,7 @@
    
    @media (max-width: 600px) {
      .hero-stat-bar-inner { grid-template-columns: 1fr; }
-     .hero-stat-item { border-right: none; border-bottom: 1px solid var(--border-subtle); border-left: 3px solid var(--accent); padding-left: 1.25rem; }
+     .hero-stat-item { border-right: none; border-bottom: 1px solid var(--border-subtle); border-left: none; padding-left: 0; }
      .hero-stat-item:last-child { border-bottom: none; }
      .comp-grid { grid-template-columns: 1fr; }
    }
