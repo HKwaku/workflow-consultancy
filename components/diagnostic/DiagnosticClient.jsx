@@ -497,6 +497,37 @@ function DiagnosticContent() {
     return () => window.removeEventListener('open-save-modal', handler);
   }, []);
 
+  /*
+   * Mobile layout uses CSS to drop html/body min-height for chat steps. Browser back/forward
+   * (BFCache) can restore a snapshot where :has() doesn’t re-match — set a real attribute so
+   * styles always apply after return navigation.
+   */
+  const currentScreenRef = useRef(currentScreen);
+  currentScreenRef.current = currentScreen;
+  const showDiagnosticShell = gateCompleted && !editLoading && !editError;
+  const showDiagnosticShellRef = useRef(showDiagnosticShell);
+  showDiagnosticShellRef.current = showDiagnosticShell;
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const applyDiagnosticViewAttr = () => {
+      if (!showDiagnosticShellRef.current) {
+        root.removeAttribute('data-diagnostic-view');
+        return;
+      }
+      root.setAttribute('data-diagnostic-view', currentScreenRef.current === 2 ? 'map' : 'flow');
+    };
+    applyDiagnosticViewAttr();
+    const onPageShow = () => {
+      queueMicrotask(applyDiagnosticViewAttr);
+    };
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      window.removeEventListener('pageshow', onPageShow);
+      root.removeAttribute('data-diagnostic-view');
+    };
+  }, [currentScreen, gateCompleted, editLoading, editError]);
+
   useEffect(() => {
     if (currentScreen === 2) {
       document.documentElement.style.overflowX = 'hidden';

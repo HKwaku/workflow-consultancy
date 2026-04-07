@@ -2953,8 +2953,11 @@ body { line-height: 1.65; }
             /*
              * globals.css sets body { min-height: 100vh }. Without overriding html/body, the page
              * paints a full-viewport-tall background with the chat card only in the top half (dead space).
-             * Scope to diagnostic-shell so map (container-wide) can still use full viewport when needed.
+             * data-diagnostic-view="flow" is set from DiagnosticClient so BFCache/back navigation still
+             * applies ( :has() alone can fail to recalculate after restore ).
              */
+            html[data-diagnostic-view="flow"],
+            html[data-diagnostic-view="flow"] body,
             html:has(.diagnostic-shell:not(.container-wide)),
             body:has(.diagnostic-shell:not(.container-wide)) {
                 min-height: 0 !important;
