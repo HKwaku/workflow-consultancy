@@ -2964,19 +2964,15 @@ body { line-height: 1.65; }
                 height: auto !important;
             }
 
-            /* Chat / intro / template: height follows content. Form steps (.screen.active) opt into full viewport below. */
+            /* Container always fills the viewport — chat, template, and form screens all grow into it via flex:1 */
             .container:not(.container-wide) {
-                min-height: auto;
+                min-height: 100dvh;
                 display: flex;
                 flex-direction: column;
                 justify-content: flex-start;
                 align-items: stretch;
                 padding: 0.5rem 0.75rem 0.75rem;
                 box-sizing: border-box;
-            }
-
-            .container:not(.container-wide):has(.screen.active) {
-                min-height: 100dvh;
             }
 
             /* These must not grow — only the screen content should fill remaining space */
@@ -2990,21 +2986,21 @@ body { line-height: 1.65; }
                 padding: 1.25rem;
             }
 
-            /* Chat cards size to content; avoid flex:1 on messages (creates huge empty band on tall phones) */
+            /* Chat/intro screens fill the container; messages scroll inside */
             .guided-chat-screen,
             .intro-chat-screen {
-                flex: 0 1 auto;
-                min-height: 0 !important;
+                flex: 1;
+                min-height: 0;
                 max-width: 100%;
             }
 
             .guided-chat-messages {
-                flex: 0 1 auto;
+                flex: 1;
                 min-height: 0;
             }
 
             .screen-template-select {
-                flex: 0 1 auto;
+                flex: 1;
                 width: 100%;
                 box-sizing: border-box;
             }
