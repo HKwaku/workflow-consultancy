@@ -2236,6 +2236,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
   const [mobileSaveStatus, setMobileSaveStatus] = useState('idle'); // idle | saving | done | error
   const [mobileSaveUrl, setMobileSaveUrl] = useState('');
   const [mobileLinkCopied, setMobileLinkCopied] = useState(false);
+  const [mobileEmailSent, setMobileEmailSent] = useState(null); // null | true | false after save
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handler);
@@ -2299,7 +2300,13 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
         {mobileSaveStatus === 'done' && (
           <div style={{ width: '100%', maxWidth: 320, display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
             <p style={{ fontSize: 13, color: '#10b981', fontWeight: 600, margin: 0 }}>
-              {knownEmail ? `Link emailed to ${knownEmail}.` : 'Link copied to clipboard.'}
+              {knownEmail && mobileEmailSent === true
+                ? `Resume link sent to ${knownEmail}.`
+                : knownEmail && mobileEmailSent === false
+                  ? 'Progress saved. Email could not be sent automatically — use Copy below or open this page on desktop.'
+                  : knownEmail
+                    ? 'Progress saved.'
+                    : 'Link copied to clipboard.'}
             </p>
             <div style={{ display: 'flex', width: '100%', gap: 8 }}>
               <input

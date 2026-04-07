@@ -370,11 +370,12 @@ export function DiagnosticProvider({ children }) {
       auditTrail: (state.auditTrail || []).slice(-50),
       ...(chatPersist?.length ? { chatMessages: chatPersist } : {}),
     };
+    const emailTrimmed = typeof email === 'string' ? email.trim() : '';
     const body = {
-      email: email || null,
       progressData,
       currentScreen: state.currentScreen,
       processName: pd?.processName || '',
+      ...(emailTrimmed ? { email: emailTrimmed } : {}),
     };
     if (step != null) body.step = step;
     if (isHandover != null) body.isHandover = isHandover;
@@ -392,7 +393,12 @@ export function DiagnosticProvider({ children }) {
       const evtType = senderName ? 'handover' : 'save';
       dispatch({ type: 'ADD_AUDIT_EVENT', payload: { id: Math.random().toString(36).slice(2, 10), type: evtType, timestamp: new Date().toISOString(), detail: evtType === 'handover' ? `Handed over by ${senderName}` : `Progress saved (screen ${state.currentScreen})` } });
     }
-    return { resumeUrl: data.resumeUrl, progressId: data.progressId };
+    return {
+      resumeUrl: data.resumeUrl,
+      progressId: data.progressId,
+      emailSent: !!data.emailSent,
+      message: data.message || '',
+    };
   }, [state.currentScreen, state.processData, state.completedProcesses, state.customDepartments, state.stepCount, state.diagnosticMode, state.teamMode, state.chatMessages, state.authUser, state.contact, state.auditTrail]);
 
   /** POST to /api/send-diagnostic-report. Payload: { contact, summary, recommendations, automationScore, roadmap, processes, rawProcesses, customDepartments, editingReportId, timestamp } */

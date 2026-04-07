@@ -2957,6 +2957,8 @@ body { line-height: 1.65; }
                 min-height: 100dvh;
                 display: flex;
                 flex-direction: column;
+                justify-content: flex-start;
+                align-items: stretch;
                 padding: 0.5rem 0.75rem 0.75rem;
                 box-sizing: border-box;
             }
@@ -2972,11 +2974,23 @@ body { line-height: 1.65; }
                 padding: 1.25rem;
             }
 
-            /* Chat screens grow to fill remaining space, eliminating dead space */
+            /* Chat cards size to content; avoid flex:1 on messages (creates huge empty band on tall phones) */
             .guided-chat-screen,
             .intro-chat-screen {
-                flex: 1;
+                flex: 0 1 auto;
                 min-height: 0;
+                max-width: 100%;
+            }
+
+            .guided-chat-messages {
+                flex: 0 1 auto;
+                min-height: 0;
+            }
+
+            .screen-template-select {
+                flex: 0 1 auto;
+                width: 100%;
+                box-sizing: border-box;
             }
 
             /* Form screens (cost, details, etc.) also fill remaining height */
