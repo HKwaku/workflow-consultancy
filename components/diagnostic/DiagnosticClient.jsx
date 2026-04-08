@@ -119,6 +119,8 @@ const AUDIT_SEGMENTS = [
 function AuditGate({ onComplete }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [company, setCompany] = useState('');
+  const [title, setTitle] = useState('');
   const [segment, setSegment] = useState('');
   const [error, setError] = useState('');
 
@@ -132,7 +134,7 @@ function AuditGate({ onComplete }) {
       setError('Please select which best describes your situation.');
       return;
     }
-    onComplete({ name: name.trim(), email: email.trim(), segment });
+    onComplete({ name: name.trim(), email: email.trim(), company: company.trim(), title: title.trim(), segment });
   };
 
   return (
@@ -171,6 +173,30 @@ function AuditGate({ onComplete }) {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="jane@company.com"
                   autoComplete="email"
+                />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="audit-gate-company">Company (optional)</label>
+                <input
+                  id="audit-gate-company"
+                  type="text"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                  placeholder="Acme Corp"
+                  autoComplete="organization"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="audit-gate-title">Job title (optional)</label>
+                <input
+                  id="audit-gate-title"
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Operations Manager"
+                  autoComplete="organization-title"
                 />
               </div>
             </div>
@@ -567,8 +593,8 @@ function DiagnosticContent() {
     }
   };
 
-  const handleGateComplete = ({ name, email, segment }) => {
-    setAuthUser({ name, email });
+  const handleGateComplete = ({ name, email, company, title, segment }) => {
+    setAuthUser({ name, email, company, title });
     updateProcessData({ segment });
     setGateCompleted(true);
   };

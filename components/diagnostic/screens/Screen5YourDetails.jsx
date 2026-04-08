@@ -6,15 +6,10 @@ import { useDiagnosticNav } from '../DiagnosticNavContext';
 
 export default function Screen5YourDetails() {
   const { processData, completedProcesses, goToScreen, setContact, teamMode, diagnosticMode, authUser, addAuditEvent } = useDiagnostic();
-  const [name, setName] = useState(authUser?.name || '');
-  const [email, setEmail] = useState(authUser?.email || '');
-  const [company, setCompany] = useState('');
-  const [title, setTitle] = useState('');
   const [department, setDepartment] = useState('');
   const [costAnalystEmail, setCostAnalystEmail] = useState('');
   const teamSize = processData?.teamSize || '';
   const industry = processData?.industry || '';
-  const [error, setError] = useState('');
   const [confirmStep, setConfirmStep] = useState(false);
   const confirmTimeoutRef = useRef(null);
 
@@ -28,10 +23,6 @@ export default function Screen5YourDetails() {
   }, []);
 
   const handleSubmit = useCallback(() => {
-    if (!name.trim() || !email.trim()) {
-      setError('Please provide your name and email.');
-      return;
-    }
     if (!confirmStep) {
       setConfirmStep(true);
       confirmTimeoutRef.current = setTimeout(() => setConfirmStep(false), 5000);
@@ -41,10 +32,14 @@ export default function Screen5YourDetails() {
       clearTimeout(confirmTimeoutRef.current);
       confirmTimeoutRef.current = null;
     }
-    setContact({ name: name.trim(), email: email.trim(), company: company.trim(), title: title.trim(), department: department.trim(), teamSize, industry, costAnalystEmail: costAnalystEmail.trim() || null });
-    addAuditEvent({ type: 'submit', detail: `Contact details confirmed — ${name.trim()}${company.trim() ? ` (${company.trim()})` : ''}${title.trim() ? `, ${title.trim()}` : ''}` });
+    const contactName = authUser?.name || '';
+    const contactEmail = authUser?.email || '';
+    const contactCompany = authUser?.company || '';
+    const contactTitle = authUser?.title || '';
+    setContact({ name: contactName, email: contactEmail, company: contactCompany, title: contactTitle, department: department.trim(), teamSize, industry, costAnalystEmail: costAnalystEmail.trim() || null });
+    addAuditEvent({ type: 'submit', detail: `Contact details confirmed — ${contactName}${contactCompany ? ` (${contactCompany})` : ''}${contactTitle ? `, ${contactTitle}` : ''}` });
     goToScreen(6);
-  }, [name, email, company, title, department, teamSize, industry, confirmStep, setContact, goToScreen]);
+  }, [authUser, department, teamSize, industry, costAnalystEmail, confirmStep, setContact, goToScreen, addAuditEvent]);
 
   const diagnosticNav = useDiagnosticNav();
   const continueLabel = confirmStep
@@ -72,11 +67,6 @@ export default function Screen5YourDetails() {
       <div className="screen-card">
         <h2 className="screen-title">Your Details</h2>
         <p className="screen-subtitle">Where should we send your report?</p>
-        {(authUser?.name || authUser?.email) && (
-          <p style={{ fontSize: 13, color: 'var(--text-mid)', margin: '0 0 16px', padding: '8px 12px', background: 'var(--bg-2, #1e293b)', borderRadius: 6, border: '1px solid var(--border, #334155)' }}>
-            Name and email pre-filled from sign-up. Update if needed.
-          </p>
-        )}
 
         {processesToSubmit.length > 0 && (
           <div className="process-submit-box">
@@ -89,29 +79,12 @@ export default function Screen5YourDetails() {
           </div>
         )}
 
-        <div className="form-group">
-          <label htmlFor="contactName">Your name *</label>
-          <input type="text" id="contactName" value={name} onChange={(e) => { setName(e.target.value); setError(''); }} required />
-        </div>
-        <div className="form-group">
-          <label htmlFor="contactEmail">Your email *</label>
-          <input type="email" id="contactEmail" value={email} onChange={(e) => { setEmail(e.target.value); setError(''); }} required />
-        </div>
-        <div className="form-group">
-          <label htmlFor="contactCompany">Company (optional)</label>
-          <input type="text" id="contactCompany" value={company} onChange={(e) => setCompany(e.target.value)} />
-        </div>
         {isTeam && (
           <div className="form-group">
             <label htmlFor="contactDepartment">Team (optional)</label>
             <input type="text" id="contactDepartment" value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="e.g., Sales, Operations" />
           </div>
         )}
-        <div className="form-group">
-          <label htmlFor="contactTitle">Job title (optional)</label>
-          <input type="text" id="contactTitle" value={title} onChange={(e) => setTitle(e.target.value)} />
-        </div>
-
         {diagnosticMode === 'comprehensive' && (
           <div className="form-group">
             <label htmlFor="costAnalystEmail">Cost analyst email (optional)</label>
@@ -125,12 +98,6 @@ export default function Screen5YourDetails() {
               onChange={(e) => setCostAnalystEmail(e.target.value)}
               placeholder="manager@company.com"
             />
-          </div>
-        )}
-
-        {error && (
-          <div className="error-box">
-            <div className="error-text">{error}</div>
           </div>
         )}
       </div>
