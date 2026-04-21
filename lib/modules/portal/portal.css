@@ -1,0 +1,8 @@
+/**
+ * Portal module CSS — dashboard, deals, org-admin, analytics.
+ *
+ * Current home: `app/portal/portal.css`. When the portal page lives in an
+ * app-router segment, keeping CSS co-located with the page is idiomatic for
+ * Next.js; this module CSS file re-exports (via @import) from there.
+ */
+@import url('../../../app/portal/portal.css');

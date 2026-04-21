@@ -110,8 +110,22 @@ export async function GET(request) {
     // Read-only view: public by design for shareable links (UUID is unguessable)
     const sbHeaders = getSupabaseHeaders(supabaseKey);
     const url = `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${id}&select=id,contact_email,contact_name,company,lead_score,lead_grade,diagnostic_data,diagnostic_mode,implementation_status,parent_report_id,created_at,updated_at`;
-    const sbResp = await fetchWithTimeout(url, { method: 'GET', headers: sbHeaders });
-    if (!sbResp.ok) return NextResponse.json({ error: 'Failed to fetch report from storage.' }, { status: 502 });
+    let sbResp = await fetchWithTimeout(url, { method: 'GET', headers: sbHeaders });
+
+    // If Supabase returns 400, optional columns (implementation_status, parent_report_id)
+    // may not exist yet — retry without them (migration-v2.sql not yet applied).
+    if (sbResp.status === 400) {
+      const errBody = await sbResp.text().catch(() => '');
+      logger.warn('Get diagnostic: column error, falling back to minimal query', { requestId: getRequestId(request), sbError: errBody.slice(0, 200) });
+      const fallbackUrl = `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${id}&select=id,contact_email,contact_name,company,lead_score,lead_grade,diagnostic_data,diagnostic_mode,created_at,updated_at`;
+      sbResp = await fetchWithTimeout(fallbackUrl, { method: 'GET', headers: sbHeaders });
+    }
+
+    if (!sbResp.ok) {
+      const errBody = await sbResp.text().catch(() => '');
+      logger.error('Get diagnostic: Supabase error', { requestId: getRequestId(request), status: sbResp.status, sbError: errBody.slice(0, 300) });
+      return NextResponse.json({ error: 'Failed to fetch report from storage.' }, { status: 502 });
+    }
     let rows;
     try { rows = await sbResp.json(); } catch (e) { logger.error('Get diagnostic: Supabase parse error', { requestId: getRequestId(request), error: e.message }); return NextResponse.json({ error: 'Failed to fetch report from storage.' }, { status: 502 }); }
     if (!rows || rows.length === 0) return NextResponse.json({ error: 'Report not found.' }, { status: 404 });

@@ -6,6 +6,7 @@ import { SendDiagnosticReportInputSchema } from '@/lib/ai-schemas';
 import { triggerWebhook } from '@/lib/triggerWebhook';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
+import { normalizeCostAuthorizedEmails, getCostAnalystNotificationTargets } from '@/lib/costAnalystEnv';
 
 export async function POST(request) {
   const originErr = checkOrigin(request);
@@ -27,7 +28,7 @@ export async function POST(request) {
       const msg = err.formErrors?.join?.(' ') || err.errors?.[0]?.message || 'Invalid request.';
       return NextResponse.json({ error: msg, details: err }, { status: 400 });
     }
-    let { editingReportId, contact, fallbackEmail, authToken, summary, recommendations, automationScore, roadmap, processes, rawProcesses, customDepartments, diagnosticMode, timestamp, userId, progressId, auditTrail, costAnalystEmail, parentReportId } = parsed.data;
+    let { editingReportId, contact, fallbackEmail, authToken, summary, recommendations, automationScore, roadmap, processes, rawProcesses, customDepartments, diagnosticMode, timestamp, userId, progressId, auditTrail, costAnalystEmail, parentReportId, dealParticipantToken, dealCode } = parsed.data;
     let resolvedEmail = (contact?.email || '').trim() || (fallbackEmail || '').trim() || '';
     if (!resolvedEmail || !isValidEmail(resolvedEmail)) {
       const token = authToken || request.headers.get('Authorization')?.replace(/^Bearer\s+/i, '')?.trim();
@@ -54,6 +55,12 @@ export async function POST(request) {
 
     const sbConfig = requireSupabase();
     let storedInSupabase = false;
+    let supabaseError = null;
+
+    if (!sbConfig) {
+      logger.warn('Supabase not configured — SUPABASE_URL or SUPABASE_SERVICE_KEY missing', { requestId: getRequestId(request) });
+      supabaseError = 'Supabase not configured (missing env vars)';
+    }
 
     // Collect contributor emails automatically from sharing events
     const autoContributors = new Set();
@@ -78,12 +85,73 @@ export async function POST(request) {
     }
     const contributorEmailsToSave = [...autoContributors];
 
+    // Resolve deal participant token → deal link data (non-fatal if missing/invalid)
+    let dealLink = null; // { dealId, dealRole, participantId }
+    if (dealParticipantToken && sbConfig && !editingReportId) {
+      try {
+        const { url: supabaseUrl, key: supabaseKey } = sbConfig;
+        const dpResp = await fetchWithTimeout(
+          `${supabaseUrl}/rest/v1/deal_participants?invite_token=eq.${encodeURIComponent(dealParticipantToken)}&select=id,deal_id,role,status`,
+          { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
+        );
+        if (dpResp.ok) {
+          const [dp] = await dpResp.json();
+          if (dp && dp.status !== 'complete') {
+            dealLink = { dealId: dp.deal_id, dealRole: dp.role, participantId: dp.id };
+          }
+        }
+      } catch { /* non-fatal */ }
+    }
+
+    // Code-based flow: no pre-created participant; create one on-the-fly
+    if (!dealLink && dealCode && sbConfig && !editingReportId) {
+      const trimmedDealCode = (dealCode || '').trim().toUpperCase();
+      if (/^[A-Z0-9]{4,20}$/.test(trimmedDealCode)) {
+        try {
+          const { url: supabaseUrl, key: supabaseKey } = sbConfig;
+          // Find deal by code
+          const dealResp = await fetchWithTimeout(
+            `${supabaseUrl}/rest/v1/deals?deal_code=eq.${encodeURIComponent(trimmedDealCode)}&select=id,type,status,owner_email`,
+            { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
+          );
+          if (dealResp.ok) {
+            const [foundDeal] = await dealResp.json();
+            if (foundDeal && foundDeal.status !== 'complete') {
+              // Determine role from deal type
+              const codeRole = foundDeal.type === 'ma' ? 'target' : foundDeal.type === 'pe_rollup' ? 'portfolio_company' : 'self';
+              // Create participant on-the-fly
+              const partResp = await fetchWithTimeout(
+                `${supabaseUrl}/rest/v1/deal_participants`,
+                {
+                  method: 'POST',
+                  headers: { ...getSupabaseWriteHeaders(supabaseKey), Prefer: 'return=representation' },
+                  body: JSON.stringify({
+                    deal_id: foundDeal.id,
+                    role: codeRole,
+                    company_name: contact?.company || 'Unknown',
+                    participant_email: resolvedEmail || null,
+                    participant_name: contact?.name || null,
+                    invited_at: null,
+                  }),
+                }
+              );
+              if (partResp.ok) {
+                const [newPart] = await partResp.json();
+                if (newPart) dealLink = { dealId: foundDeal.id, dealRole: newPart.role, participantId: newPart.id };
+              }
+            }
+          }
+        } catch { /* non-fatal */ }
+      }
+    }
+
     if (sbConfig) {
       const { url: supabaseUrl, key: supabaseKey } = sbConfig;
       try {
         const costAnalysisPending = (summary?.totalAnnualCost || 0) === 0 && diagnosticMode === 'comprehensive';
         let costStatus = costAnalysisPending ? 'pending' : 'complete';
         let costToken = costAnalysisPending ? costAnalysisToken : undefined;
+        let existingAuthorizedEmails = [];
 
         if (isUpdate) {
           const readResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}&select=diagnostic_data`, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
@@ -97,9 +165,24 @@ export async function POST(request) {
               } else if (dd.costAnalysisToken) {
                 costToken = dd.costAnalysisToken;
               }
+              if (Array.isArray(dd.costAuthorizedEmails)) {
+                existingAuthorizedEmails = dd.costAuthorizedEmails;
+              }
             } catch { /* keep new token */ }
           }
         }
+
+        const mergedCostAuthorizedEmails = normalizeCostAuthorizedEmails({
+          costAnalystEmail,
+          existing: existingAuthorizedEmails,
+          ownerEmail: contact.email || '',
+        });
+
+        // Guard: only write known segment values to the DB column (has a CHECK constraint).
+        // Unknown values (e.g. a new module not yet in the migration) are stored in
+        // diagnostic_data.contact.segment but not in the promoted column.
+        const VALID_DB_SEGMENTS = ['scaling', 'ma', 'pe', 'highstakes', 'high-risk-ops'];
+        const safeSegment = VALID_DB_SEGMENTS.includes(contact.segment) ? contact.segment : null;
 
         const reportPayload = {
           id: reportId,
@@ -111,7 +194,7 @@ export async function POST(request) {
           lead_score: leadScore.score,
           lead_grade: leadScore.grade,
           diagnostic_mode: diagnosticMode || 'comprehensive',
-          segment: contact.segment || null,
+          segment: safeSegment,
           cost_analysis_status: costStatus,
           cost_analysis_token: costToken || null,
           cost_analysis_token_expires_at: costToken ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null,
@@ -123,13 +206,15 @@ export async function POST(request) {
             contact, summary, recommendations, automationScore, roadmap, processes, rawProcesses: rawProcesses || null, customDepartments: customDepartments || [], leadScore, diagnosticMode: diagnosticMode || 'comprehensive', auditTrail: (auditTrail || []).slice(-50),
             costAnalysisStatus: costStatus,
             ...(costToken ? { costAnalysisToken: costToken } : {}),
-            // Seed the cost-authorized list with the cost analyst's email.
             // Only users in this list (or holders of the cost_analysis_token) can see cost data.
-            costAuthorizedEmails: costAnalystEmail ? [(costAnalystEmail).trim().toLowerCase()] : [],
+            // Seeded from DEFAULT_COST_ANALYST_EMAILS + per-request costAnalystEmail + any
+            // addresses already persisted on the report.
+            costAuthorizedEmails: mergedCostAuthorizedEmails,
           },
           updated_at: now,
           ...(userId ? { user_id: userId } : {}),
           ...(parentReportId && !isUpdate ? { parent_report_id: parentReportId } : {}),
+          ...(dealLink && !isUpdate ? { deal_id: dealLink.dealId, deal_role: dealLink.dealRole } : {}),
         };
         if (!isUpdate) reportPayload.created_at = timestamp || now;
 
@@ -141,13 +226,23 @@ export async function POST(request) {
           sbResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports`, { method: 'POST', headers: getSupabaseWriteHeaders(supabaseKey), body: JSON.stringify(reportPayload) });
         }
         if (sbResp.ok || sbResp.status === 201 || sbResp.status === 204) storedInSupabase = true;
-        else logger.warn('Supabase failed', { requestId: getRequestId(request), status: sbResp.status });
+        else {
+          let sbBody = '';
+          try { sbBody = await sbResp.text(); } catch { /* ignore */ }
+          logger.warn('Supabase write failed', { requestId: getRequestId(request), status: sbResp.status, body: sbBody.slice(0, 500) });
+        }
 
         if (storedInSupabase && !isUpdate) {
           scheduleFollowups(supabaseUrl, supabaseKey, reportId, contact, now, getRequestId(request));
           linkProgressRecord(supabaseUrl, supabaseKey, progressId, reportId, getRequestId(request));
+          if (dealLink) {
+            completeDealParticipant(supabaseUrl, supabaseKey, dealLink.participantId, reportId, now, getRequestId(request));
+          }
         }
-      } catch (sbErr) { logger.warn('Supabase error', { requestId: getRequestId(request), message: sbErr.message }); }
+      } catch (sbErr) {
+        supabaseError = sbErr.message;
+        logger.warn('Supabase error', { requestId: getRequestId(request), message: sbErr.message });
+      }
     }
 
     const notif = buildNotificationSummary(contact, summary, leadScore, automationScore);
@@ -182,11 +277,37 @@ export async function POST(request) {
     const costAnalysisPending = (summary?.totalAnnualCost || 0) === 0 && diagnosticMode === 'comprehensive';
     const costAnalysisUrl = costAnalysisPending ? `${baseUrl}/cost-analysis?id=${reportId}&token=${costAnalysisToken}` : null;
 
+    // Server-side COST_ANALYSIS_SHARE — fires for each notification target when the
+    // analysis is pending. Replaces the per-client call from Screen6Complete so the
+    // email always goes out, even if the browser navigates away after save.
+    if (costAnalysisPending && costAnalysisUrl && storedInSupabase) {
+      const targets = getCostAnalystNotificationTargets(costAnalystEmail);
+      for (const target of targets) {
+        try {
+          await triggerWebhook(
+            {
+              requestType: 'cost-analysis-share',
+              reportId,
+              managerEmail: target,
+              costUrl: costAnalysisUrl,
+              contactName: contact.name || '',
+              company: contact.company || '',
+              timestamp: new Date().toISOString(),
+            },
+            { envSuffix: 'COST_ANALYSIS_SHARE', requestId: getRequestId(request) }
+          );
+        } catch (err) {
+          logger.warn('cost-analysis-share (server) failed', { requestId: getRequestId(request), reportId, target, error: err.message });
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true, reportId,
       reportUrl: storedInSupabase ? reportUrl : null,
       costAnalysisUrl: costAnalysisPending ? costAnalysisUrl : null,
       webhookConfigured, storedInSupabase, leadScore,
+      ...(supabaseError && { supabaseError }),
       message: webhookConfigured ? 'Report sent successfully.' : 'Report generated.',
       ...(webhookResponse || {}),
     });
@@ -220,6 +341,21 @@ async function scheduleFollowups(supabaseUrl, supabaseKey, reportId, contact, no
     });
   } catch (err) {
     logger.warn('Failed to schedule follow-ups', { requestId, message: err.message });
+  }
+}
+
+async function completeDealParticipant(supabaseUrl, supabaseKey, participantId, reportId, now, requestId) {
+  try {
+    await fetchWithTimeout(
+      `${supabaseUrl}/rest/v1/deal_participants?id=eq.${encodeURIComponent(participantId)}`,
+      {
+        method: 'PATCH',
+        headers: getSupabaseWriteHeaders(supabaseKey),
+        body: JSON.stringify({ report_id: reportId, status: 'complete', completed_at: now }),
+      }
+    );
+  } catch (err) {
+    logger.warn('Failed to mark deal participant complete', { requestId, message: err.message });
   }
 }
 

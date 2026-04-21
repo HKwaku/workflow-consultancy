@@ -1,0 +1,11 @@
+/**
+ * Flow module CSS — canvas, nodes, edges, mini-map, floating flow viewer.
+ *
+ * Selectors owned by this module (prefix):
+ *   .rf-*, .react-flow__*, .flow-*            (React Flow + canvas)
+ *   .ffv-*                                     (Floating Flow Viewer)
+ *   .s7-canvas-*                               (chat-workspace canvas)
+ *
+ * The existing `public/styles/flow-canvas.css` is the current home of most
+ * of these — this module's CSS will @import or absorb it after the split.
+ */

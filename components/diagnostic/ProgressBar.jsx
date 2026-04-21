@@ -54,7 +54,8 @@ export default function ProgressBar({ onSaveClick, currentScreen: screenProp }) 
     : null;
   const showHealthScore = currentScreen > 2 && healthScore !== null;
 
-  const hideSaveInProgressBar = currentScreen === 2;
+  // Hidden on Screen 2 (left rail has it) and on chat screens 0/1/1.5 (ChatWorkspaceShell rail has it)
+  const hideSaveInProgressBar = currentScreen === 2 || currentScreen === 0 || currentScreen === 1 || currentScreen === 1.5;
 
   return (
     <div className="progress-bar">

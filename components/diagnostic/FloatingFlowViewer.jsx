@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useTheme } from '@/components/ThemeProvider';
 import InteractiveFlowCanvas from '@/components/flow/InteractiveFlowCanvas';
+import { resolveStoredPositions } from '@/lib/flows';
 
 const MIN_W = 360;
 const MIN_H = 280;
@@ -165,7 +166,7 @@ export default function FloatingFlowViewer({ proc, onClose, initialViewMode = 'g
                 darkTheme={darkTheme}
                 onStepClick={onStepClick}
                 className="ffv-flow-canvas"
-                storedPositions={flowNodePositions[`${stepsLength ?? proc?.steps?.length ?? 0}-${viewMode}`] || flowNodePositions[`${stepsLength ?? proc?.steps?.length ?? 0}`] || null}
+                storedPositions={resolveStoredPositions(flowNodePositions, stepsLength ?? proc?.steps?.length ?? 0, viewMode)}
                 onPositionsChange={onPositionsChange}
                 customEdges={customEdges}
                 onCustomEdgesChange={onCustomEdgesChange}

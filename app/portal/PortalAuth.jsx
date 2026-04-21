@@ -165,7 +165,7 @@ export default function PortalAuth({ supabase, onAuthenticated, mode: initialMod
       <h2>{mode === 'signup' ? 'Create Account' : 'Sign In'}</h2>
       <p className={mode === 'login' ? 'auth-subtitle auth-subtitle--signin' : 'auth-subtitle'}>
         {mode === 'signup'
-          ? 'Sign up to access your client portal. Use the same email from your process audit.'
+          ? 'Sign up to access your dashboard. Use the same email from your process audit.'
           : 'Access your audit reports and track implementation progress.'}
       </p>
       {error && <div className="auth-error show">{error}</div>}

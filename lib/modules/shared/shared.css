@@ -1,0 +1,11 @@
+/**
+ * Shared module CSS — design tokens, reset, typography, top-bar, audit-trail,
+ * loading spinner, theme toggle, mobile input protection.
+ *
+ * This is the single "global" stylesheet — everything here is referenced from
+ * 3+ modules. Module-specific styles belong in their own module CSS file.
+ *
+ * Current home: `app/globals.css`. When the split is complete, the canonical
+ * source moves here and app/globals.css becomes a thin re-export.
+ */
+@import url('../../../app/globals.css');

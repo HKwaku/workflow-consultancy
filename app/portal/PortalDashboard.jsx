@@ -9,11 +9,13 @@ import { useFlowLayoutSave } from '@/lib/useFlowLayoutSave';
 import { calculateAutomationScore } from '@/lib/diagnostic/buildLocalResults';
 import { getAutomationReadinessColor, getAutomationReadinessClass } from '@/lib/diagnostic/automationReadiness';
 import InteractiveFlowCanvas from '@/components/flow/InteractiveFlowCanvas';
+import { resolveStoredPositions } from '@/lib/flows';
 import FloatingFlowViewer from '@/components/diagnostic/FloatingFlowViewer';
 import AuditTrailPanel from '@/components/diagnostic/AuditTrailPanel';
 import StepInsightPanel from '@/components/report/StepInsightPanel';
 import MetricDrillModal from '@/components/report/MetricDrillModal';
 import PortalAnalyticsPanel from '@/app/portal/PortalAnalyticsPanel';
+import DealsPanel from '@/app/portal/DealsPanel';
 
 function formatCurrency(val) {
   if (val >= 1000000) return '\u00A3' + (val / 1000000).toFixed(1) + 'M';
@@ -417,7 +419,7 @@ function ProcessFlowPanel({ proc, label, actions, automationPct, darkTheme, repo
           isWrapped={isWrapped}
           customEdges={customEdges}
           deletedEdges={deletedEdges}
-          storedPositions={flowNodePositions[`${steps.length}-${viewMode}`] || flowNodePositions[`${steps.length}`] || null}
+          storedPositions={resolveStoredPositions(flowNodePositions, steps.length, viewMode)}
           onPositionsChange={(positions, layout) => setFlowNodePositions((prev) => ({ ...prev, [`${steps.length}-${layout}`]: positions }))}
           onCustomEdgesChange={setCustomEdges}
           onDeletedEdgesChange={setDeletedEdges}
@@ -460,7 +462,7 @@ function ProcessFlowPanel({ proc, label, actions, automationPct, darkTheme, repo
   );
 }
 
-export default function PortalDashboard({ user, accessToken, onSignOut }) {
+export default function PortalDashboard({ user, accessToken, onSignOut, initialSection = 'processes' }) {
   const { theme } = useTheme();
   const darkTheme = theme === 'dark';
   const [reports, setReports] = useState(null);
@@ -485,15 +487,38 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
   const [renameSaving, setRenameSaving] = useState(false);
   const [renameError, setRenameError] = useState(null);
   const [costLinkCopiedId, setCostLinkCopiedId] = useState(null);
-  const [activeSection, setActiveSection] = useState('processes'); // 'processes' | 'analytics'
+  const [activeSection, setActiveSection] = useState(initialSection); // 'processes' | 'analytics' | 'deals'
+  const [deals, setDeals] = useState(null);
+  const [dealsLoading, setDealsLoading] = useState(false);
   const [processTypeFilter, setProcessTypeFilter] = useState('all'); // 'all' | 'process-only' | 'comprehensive'
   const [segmentFilter, setSegmentFilter] = useState('all'); // 'all' | 'scaling' | 'ma' | 'pe' | 'highstakes'
   const [settingsOpenId, setSettingsOpenId] = useState(null);
   const [processPage, setProcessPage] = useState(1);
+  const [showOrgAdminLink, setShowOrgAdminLink] = useState(false);
   const settingsOpenRef = useRef(null);
 
   const PROCESSES_PER_PAGE = 8;
   const email = user?.email || '';
+
+  useEffect(() => {
+    if (!accessToken) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await apiFetch('/api/organizations', {}, accessToken);
+        const text = await resp.text();
+        const trimmed = text.trim();
+        if (!trimmed.startsWith('{')) return;
+        const data = JSON.parse(trimmed);
+        if (cancelled) return;
+        const orgAdmins = (data.memberships || []).filter((m) => m.is_org_admin);
+        setShowOrgAdminLink(!!data.platformAdmin || orgAdmins.length > 0);
+      } catch {
+        /* API missing or not JSON — hide link */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [accessToken]);
 
   useEffect(() => {
     if (!settingsOpenId) return;
@@ -536,6 +561,26 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
     if (!email) return;
     refreshReports();
   }, [email, refreshReports]);
+
+  const refreshDeals = useCallback(async () => {
+    if (!email) return;
+    setDealsLoading(true);
+    try {
+      const resp = await apiFetch('/api/deals', {}, accessToken);
+      const data = await resp.json();
+      setDeals(resp.ok ? (data.deals || []) : []);
+    } catch {
+      setDeals([]);
+    } finally {
+      setDealsLoading(false);
+    }
+  }, [email, accessToken]);
+
+  useEffect(() => {
+    if (activeSection === 'deals' && deals === null) {
+      refreshDeals();
+    }
+  }, [activeSection, deals, refreshDeals]);
 
   useEffect(() => {
     if (redesignSaveModal) setSaveModalName('');
@@ -1134,9 +1179,14 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
         <div className="header-left">
           <Link href="/" className="header-logo">Vesno<span className="header-logo-dot">.</span></Link>
           <div className="header-divider" />
-          <span className="header-title">Client Portal</span>
+          <span className="header-title">Dashboard</span>
         </div>
         <div className="header-right">
+          {showOrgAdminLink && (
+            <Link href="/portal/org-admin" className="header-org-admin-link">
+              Organisation admin
+            </Link>
+          )}
           <ThemeToggle className="header-theme-btn" />
 
           <span className="header-email">{email}</span>
@@ -1175,6 +1225,16 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
               onClick={() => setActiveSection('analytics')}
             >
               Analytics
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeSection === 'deals'}
+              className={`portal-section-tab ${activeSection === 'deals' ? 'active' : ''}`}
+              onClick={() => setActiveSection('deals')}
+            >
+              Deals
+              {deals && deals.length > 0 && <span className="portal-section-tab-badge">{deals.length}</span>}
             </button>
           </nav>
 
@@ -1291,6 +1351,14 @@ export default function PortalDashboard({ user, accessToken, onSignOut }) {
               <div className="portal-analytics-tab-panel">
                 <PortalAnalyticsPanel reportList={reportList} teamSessions={teamSessions} loading={loading} activeSection={activeSection} onSectionChange={setActiveSection} metrics={{ totalProcs, avgAuto, autoColor, redesignedCount, totalCost }} onMetricDrill={setMetricDrill} />
               </div>
+            )}
+            {activeSection === 'deals' && (
+              <DealsPanel
+                deals={deals}
+                loading={dealsLoading}
+                onRefresh={refreshDeals}
+                accessToken={accessToken}
+              />
             )}
           </main>
         </div>

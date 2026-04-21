@@ -1,0 +1,14 @@
+/**
+ * Diagnostic module CSS — intake screens, chat, progress bar, auth gate.
+ *
+ * Selectors owned by this module (prefix):
+ *   .s1-*, .s2-*, .s3-*, .s4-*, .s5-*, .s6-*, .sc6-*   (screen 1..6)
+ *   .progress-*, .dc-*                                   (progress + context)
+ *   .intro-*, .guided-chat-*                             (intake chat)
+ *   .auth-*, .team-auth-*                                (auth gate)
+ *   .save-modal-*, .handover-*                           (save + handover)
+ *
+ * Populated by splitting `public/styles/diagnostic.css`. Temporary aggregator
+ * behavior kept in diagnostic.css until split is complete — this file is the
+ * destination.
+ */

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import ThemeToggle from '@/components/ThemeToggle';
 import { getSupabaseClient, getSessionSafe } from '@/lib/supabase';
 import { calculateProcessSavings } from '@/lib/costSavingsCalculator';
+import CostAccessPanel from '@/components/CostAccessPanel';
 
 const G10_CURRENCIES = {
   GBP: { symbol: '£', code: 'GBP', name: 'British Pound' },
@@ -1337,7 +1338,7 @@ function CostAnalysisContent() {
           <h1 className="report-title">Cost analysis</h1>
           <p className="report-subtitle" style={{ color: 'var(--danger)' }}>{error}</p>
           {!token && <p style={{ marginTop: 12, fontSize: '0.9rem' }}>Use the link provided by the report owner.</p>}
-          <Link href="/portal" style={{ color: 'var(--accent)', marginTop: 16, display: 'inline-block' }}>Back to portal</Link>
+          <Link href="/portal?dashboard=1" style={{ color: 'var(--accent)', marginTop: 16, display: 'inline-block' }}>Back to dashboard</Link>
         </div>
       </div>
     );
@@ -1745,6 +1746,12 @@ function CostAnalysisContent() {
                           </div>
                         );
                       })()}
+
+                      {id && (
+                        <div style={{ marginBottom: 20 }}>
+                          <CostAccessPanel reportId={id} />
+                        </div>
+                      )}
 
                       {/* ── Group 1: Process costs ── */}
                       <div className="cost-metric-group">

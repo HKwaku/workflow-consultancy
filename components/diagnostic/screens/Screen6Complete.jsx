@@ -98,7 +98,7 @@ async function readDiagnosticStream(payload, onProgress) {
 
 /* ── Component ───────────────────────────────────────────────── */
 
-export default function Screen6Complete() {
+export default function Screen6Complete({ onComplete }) {
   const router = useRouter();
   const { user: sessionUser, loading: authLoading, accessToken } = useAuth();
   const {
@@ -106,6 +106,7 @@ export default function Screen6Complete() {
     processData,
     contact,
     authUser,
+    moduleId,
     diagnosticMode,
     customDepartments,
     editingReportId,
@@ -114,6 +115,11 @@ export default function Screen6Complete() {
     auditTrail,
     goToScreen,
     setContact,
+    dealId,
+    dealCode,
+    dealRole,
+    dealName,
+    dealParticipants,
   } = useDiagnostic();
 
   const [status, setStatus] = useState('loading'); // loading | done | error
@@ -139,6 +145,10 @@ export default function Screen6Complete() {
   }, [contact?.email, sessionUser?.email, setContact]);
 
   const effectiveEmail = contact?.email || authUser?.email || sessionUser?.email;
+  // moduleId is the canonical module identifier (e.g. 'pe', 'ma', 'scaling', 'high-risk-ops').
+  // It's set at the AuditGate and stored in DiagnosticContext. We pass it both as a top-level
+  // field on the API payload AND as contact.segment so the agent and Supabase both receive it.
+  const effectiveModuleId = moduleId || processData?.segment || '';
   const effectiveContact = {
     name: contact?.name || authUser?.name || sessionUser?.user_metadata?.full_name || sessionUser?.email || '',
     email: effectiveEmail || '',
@@ -146,10 +156,14 @@ export default function Screen6Complete() {
     title: contact?.title || '',
     industry: contact?.industry || '',
     teamSize: contact?.teamSize || '',
-    segment: processData?.segment || '',
+    segment: effectiveModuleId,
     ...(processData?.maEntity && { maEntity: processData.maEntity }),
     ...(processData?.maTimeline && { maTimeline: processData.maTimeline }),
     ...(processData?.peStage && { peStage: processData.peStage }),
+    ...(processData?.peYearsIn && { peYearsIn: processData.peYearsIn }),
+    ...(processData?.peSopStatus && { peSopStatus: processData.peSopStatus }),
+    ...(processData?.peKeyPerson && { peKeyPerson: processData.peKeyPerson }),
+    ...(processData?.peReportingImpact && { peReportingImpact: processData.peReportingImpact }),
     ...(processData?.highStakesType && { highStakesType: processData.highStakesType }),
     ...(processData?.highStakesDeadline && { highStakesDeadline: processData.highStakesDeadline }),
   };
@@ -228,6 +242,7 @@ export default function Screen6Complete() {
         const payload = {
           processes: sanitizedProcesses,
           contact: effectiveContact.email ? effectiveContact : undefined,
+          moduleId: effectiveModuleId || undefined,
           qualityScore: { averageScore: 70 },
           diagnosticMode: diagnosticMode || 'comprehensive',
           timestamp: new Date().toISOString(),
@@ -281,6 +296,8 @@ export default function Screen6Complete() {
           customDepartments: customDepartments || [],
           auditTrail: (auditTrail || []).slice(-50),
           costAnalystEmail: contact?.costAnalystEmail || null,
+          dealParticipantToken: authUser?.dealParticipantToken || null,
+          dealCode: authUser?.dealCode || null,
         };
 
         const reportData = await sendDiagnosticReport(reportPayload, { accessToken: accessToken || undefined });
@@ -295,23 +312,8 @@ export default function Screen6Complete() {
           } catch { /* ignore */ }
         }
 
-        // Auto-send cost analysis link to the nominated analyst
-        const analystEmail = contact?.costAnalystEmail;
-        if (analystEmail && reportData.costAnalysisUrl && reportData.reportId) {
-          try {
-            await fetch('/api/share-cost-analysis', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                reportId: reportData.reportId,
-                managerEmail: analystEmail,
-                costUrl: reportData.costAnalysisUrl,
-                contactName: effectiveContact.name || '',
-                company: effectiveContact.company || '',
-              }),
-            });
-          } catch { /* non-fatal */ }
-        }
+        // Cost-analysis share notification is fired server-side by
+        // /api/send-diagnostic-report when the report is pending cost analysis.
 
         // Extract top 3 findings for the intermediate screen
         const recs = result.recommendations || [];
@@ -320,8 +322,19 @@ export default function Screen6Complete() {
         ).filter(Boolean);
         setFindings(topFindings);
 
-        if (reportData.reportUrl || reportData.reportId) {
-          setPendingUrl(`/report?id=${reportData.reportId}`);
+        // For PE Roll-up deals, redirect to the deal dashboard so all participants are visible
+        const effectiveDealId = dealId || processData?.dealId;
+        if (effectiveModuleId === 'pe' && effectiveDealId) {
+          setPendingUrl(`/deals/${effectiveDealId}`);
+        } else if (reportData.reportId) {
+          // Chat-first: notify parent to load report in the workspace
+          if (typeof onComplete === 'function') {
+            onComplete(reportData.reportId);
+          } else {
+            setPendingUrl(`/report?id=${reportData.reportId}`);
+          }
+        } else if (!reportData.storedInSupabase) {
+          throw new Error('Your report could not be saved. Please check your connection and try again.');
         }
         setStatus('done');
       } catch (err) {
@@ -362,42 +375,116 @@ export default function Screen6Complete() {
           </>
         )}
 
-        {status === 'done' && (
-          <>
-            <div className="sc6-done-header">
-              <span className="sc6-done-check">✓</span>
-              <h1 className="screen-title" style={{ margin: 0 }}>Process audit complete</h1>
-            </div>
+        {status === 'done' && (() => {
+          const effectiveDealId = dealId || processData?.dealId;
+          const isPEDeal = effectiveModuleId === 'pe' && effectiveDealId;
+          const targets = dealParticipants?.filter((p) => p.role === 'portfolio_company') || [];
+          const isPlatform = dealRole === 'platform_company';
+          const isPortfolio = dealRole === 'portfolio_company' || !!authUser?.dealParticipantToken && !isPlatform;
 
-            {findings.length > 0 && (
+          if (isPEDeal) {
+            return (
               <>
-                <p className="screen-subtitle" style={{ marginBottom: 14 }}>
-                  Top findings from your process analysis:
-                </p>
-                <ul className="sc6-findings">
-                  {findings.map((f, i) => (
-                    <li key={i} className="sc6-finding-item">
-                      <span className="sc6-finding-bullet">▶</span>
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="sc6-done-header">
+                  <span className="sc6-done-check">✓</span>
+                  <h1 className="screen-title" style={{ margin: 0 }}>Process mapped</h1>
+                </div>
+
+                <div className="sc6-pe-deal-card">
+                  <div className="sc6-pe-deal-name">{dealName || 'PE Roll-up'}</div>
+                  {isPlatform ? (
+                    <>
+                      <p className="sc6-pe-deal-desc">
+                        Your platform company process is saved.
+                        {targets.length > 0 && (
+                          <> Share the links below with your {targets.length === 1 ? 'target' : `${targets.length} targets`} to complete the roll-up.</>
+                        )}
+                      </p>
+                      {targets.length > 0 && (
+                        <div className="sc6-pe-targets">
+                          {targets.map((p) => (
+                            <div key={p.id} className="sc6-pe-target-row">
+                              <span className="sc6-pe-target-name">{p.companyName}</span>
+                              {p.inviteUrl ? (
+                                <button
+                                  type="button"
+                                  className="sc6-pe-copy-btn"
+                                  onClick={() => navigator.clipboard?.writeText(p.inviteUrl)}
+                                >
+                                  Copy invite link
+                                </button>
+                              ) : (
+                                <span className="sc6-pe-target-status">Invite pending</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="sc6-pe-deal-desc">
+                      Your process is saved and shared with the deal coordinator.
+                    </p>
+                  )}
+                </div>
+
+                {pendingUrl && (
+                  <button
+                    type="button"
+                    className="button button-primary"
+                    onClick={handleViewReport}
+                  >
+                    Go to deal dashboard →
+                  </button>
+                )}
+
+                <p className="sc6-redirect-hint">Redirecting to the deal dashboard…</p>
               </>
-            )}
+            );
+          }
 
-            {pendingUrl && (
-              <button
-                type="button"
-                className="button button-primary"
-                onClick={handleViewReport}
-              >
-                View your report →
-              </button>
-            )}
+          return (
+            <>
+              <div className="sc6-done-header">
+                <span className="sc6-done-check">✓</span>
+                <h1 className="screen-title" style={{ margin: 0 }}>Process audit complete</h1>
+              </div>
 
-            <p className="sc6-redirect-hint">Redirecting automatically in a few seconds…</p>
-          </>
-        )}
+              {findings.length > 0 && (
+                <>
+                  <p className="screen-subtitle" style={{ marginBottom: 14 }}>
+                    Top findings from your process analysis:
+                  </p>
+                  <ul className="sc6-findings">
+                    {findings.map((f, i) => (
+                      <li key={i} className="sc6-finding-item">
+                        <span className="sc6-finding-bullet">▶</span>
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+
+              {pendingUrl && (
+                <button
+                  type="button"
+                  className="button button-primary"
+                  onClick={handleViewReport}
+                >
+                  View your report →
+                </button>
+              )}
+
+              {!pendingUrl && onComplete && (
+                <p className="sc6-redirect-hint">Report ready — loading in your workspace…</p>
+              )}
+              {pendingUrl && (
+                <p className="sc6-redirect-hint">Redirecting automatically in a few seconds…</p>
+              )}
+            </>
+          );
+        })()}
 
         {status === 'error' && (
           <>

@@ -5,6 +5,8 @@ import { useDiagnostic } from './DiagnosticContext';
 import { DEPT_INTERNAL, DEPT_EXTERNAL } from '@/lib/diagnostic/stepConstants';
 import { getFriendlyChatError, isRetryableError } from '@/lib/chat-utils';
 import { repairFlow } from '@/lib/flows/normalizer';
+import { useAuth } from '@/lib/useAuth';
+import { apiFetch } from '@/lib/api-fetch';
 
 const PREDEFINED_DEPTS = new Set([...DEPT_INTERNAL, ...DEPT_EXTERNAL]);
 
@@ -14,6 +16,58 @@ function isCustomDepartment(dept) {
 
 export default function ChatPanel() {
   const { processData, chatMessages, addChatMessage, updateProcessData, addCustomDepartment, editingReportId, editingRedesign } = useDiagnostic();
+  const { accessToken } = useAuth();
+  // Cloud chat-session id. Persisted client-side so a refresh inside the
+  // same diagnostic keeps appending to the same session instead of spawning
+  // a new one on every reload.
+  const chatSessionIdRef = useRef(null);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const key = editingReportId ? `vesno_chat_session_${editingReportId}` : 'vesno_chat_session_active';
+    try { chatSessionIdRef.current = localStorage.getItem(key) || null; } catch { /* ignore */ }
+  }, [editingReportId]);
+
+  const persistMessageToCloud = useCallback(async ({ role, content, actions, attachments: attachmentsArg }) => {
+    if (!accessToken) {
+      if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+        console.warn('[chat-save] skipped — no accessToken (user not signed in)');
+      }
+      return;
+    }
+    try {
+      const resp = await apiFetch('/api/chat-messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: chatSessionIdRef.current || undefined,
+          reportId: editingReportId || undefined,
+          kind: editingRedesign ? 'redesign' : 'map',
+          title: processData.processName || undefined,
+          role,
+          content: typeof content === 'string' ? content : String(content ?? ''),
+          actions: actions || undefined,
+          attachments: attachmentsArg && attachmentsArg.length
+            ? attachmentsArg.map((a) => ({ name: a.name, type: a.type, size: a.content?.length || a.textContent?.length || 0 }))
+            : undefined,
+        }),
+      }, accessToken);
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => '');
+        console.warn('[chat-save] failed', resp.status, errText);
+        return;
+      }
+      const data = await resp.json().catch(() => null);
+      if (data?.sessionId && data.sessionId !== chatSessionIdRef.current) {
+        chatSessionIdRef.current = data.sessionId;
+        if (typeof window !== 'undefined') {
+          const key = editingReportId ? `vesno_chat_session_${editingReportId}` : 'vesno_chat_session_active';
+          try { localStorage.setItem(key, data.sessionId); } catch { /* ignore */ }
+        }
+      }
+    } catch (err) {
+      console.warn('[chat-save] network error', err?.message || err);
+    }
+  }, [accessToken, editingReportId, editingRedesign, processData.processName]);
 
   const incompleteInfo = useMemo(() => {
     const steps = processData.steps || [];
@@ -89,6 +143,9 @@ export default function ChatPanel() {
       setInput('');
       setAttachments([]);
       lastFailedPayloadRef.current = { userContent, attachments: attachmentsToSend };
+      // Fire-and-forget cloud save so the user-side message is durable
+      // even if the stream that follows errors out.
+      persistMessageToCloud({ role: 'user', content: userContent, attachments: attachmentsToSend });
     }
     setChatError(null);
     setLoading(true);
@@ -154,6 +211,7 @@ export default function ChatPanel() {
       }
 
       addChatMessage({ role: 'assistant', content: data.reply });
+      persistMessageToCloud({ role: 'assistant', content: data.reply, actions: data.actions });
       if (data.actions?.length > 0) {
         const currentSteps = [...(processData.steps || [])];
         let newSteps = currentSteps;

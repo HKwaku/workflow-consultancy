@@ -47,7 +47,8 @@ function estimateSavingsPercent(processData) {
 }
 
 export default function Screen4Cost() {
-  const { processData, updateProcessData, goToScreen, saveProgressToCloud, editingReportId, addAuditEvent } = useDiagnostic();
+  const { processData, updateProcessData, goToScreen, saveProgressToCloud, editingReportId, addAuditEvent, moduleId } = useDiagnostic();
+  const isPE = moduleId === 'pe';
 
   const chatFreq = processData.frequency?.type || '';
   const initialFreq = FREQ_MAP[chatFreq] ? chatFreq : '';
@@ -57,6 +58,11 @@ export default function Screen4Cost() {
 
   const [bottleneckReason, setBottleneckReason] = useState(processData.bottleneck?.reason || '');
   const [bottleneckDetail, setBottleneckDetail] = useState(processData.bottleneck?.why || '');
+
+  // PE-specific fields
+  const [peSopStatus, setPeSopStatus] = useState(processData.peSopStatus || '');
+  const [peKeyPerson, setPeKeyPerson] = useState(processData.peKeyPerson || '');
+  const [peReportingImpact, setPeReportingImpact] = useState(processData.peReportingImpact || '');
 
   const chatHours = processData.costs?.hoursPerInstance;
   const hoursFromChat = typeof chatHours === 'number' && chatHours > 0;
@@ -86,18 +92,25 @@ export default function Screen4Cost() {
 
   /* ═══════ Build fresh processData snapshot for handover ═══════ */
   const buildFreshProcessData = useCallback(() => {
+    const peFields = isPE ? {
+      ...(peSopStatus && { peSopStatus }),
+      ...(peKeyPerson && { peKeyPerson }),
+      ...(peReportingImpact && { peReportingImpact }),
+    } : {};
     const pd = {
       ...processData,
       frequency: { type: freq, annual, inFlight },
       bottleneck: { reason: bottleneckReason, why: bottleneckDetail },
       costs: { hoursPerInstance, cycleDays, teamSize, annual },
       savings: { percent: savingsPct },
+      ...peFields,
     };
     updateProcessData({
       frequency: pd.frequency,
       bottleneck: pd.bottleneck,
       costs: pd.costs,
       savings: pd.savings,
+      ...peFields,
     });
     return pd;
   }, [processData, freq, annual, inFlight, bottleneckReason, bottleneckDetail, hoursPerInstance, cycleDays, teamSize, savingsPct, updateProcessData]);
@@ -147,15 +160,21 @@ export default function Screen4Cost() {
   }, [buildFreshProcessData, saveProgressToCloud, handoverState.email, handoverState.senderName, handoverState.comments]);
 
   const handleContinue = useCallback(() => {
+    const peFields = isPE ? {
+      ...(peSopStatus && { peSopStatus }),
+      ...(peKeyPerson && { peKeyPerson }),
+      ...(peReportingImpact && { peReportingImpact }),
+    } : {};
     updateProcessData({
       frequency: { type: freq, annual, inFlight },
       bottleneck: { reason: bottleneckReason, why: bottleneckDetail },
       costs: { hoursPerInstance, cycleDays, teamSize, annual },
       savings: { percent: savingsPct },
+      ...peFields,
     });
-    addAuditEvent({ type: 'navigate', detail: `Completed cost & impact — bottleneck: "${bottleneckReason || 'none'}", frequency: ${freq || 'unset'} (${annual}/yr), ${hoursPerInstance}h/instance, ${teamSize} people` });
+    addAuditEvent({ type: 'navigate', detail: `Completed cost & impact — bottleneck: "${bottleneckReason || 'none'}", frequency: ${freq || 'unset'} (${annual}/yr), ${hoursPerInstance}h/instance, ${teamSize} people${isPE && peSopStatus ? `, SOP: ${peSopStatus}` : ''}` });
     goToScreen(5);
-  }, [freq, annual, inFlight, bottleneckReason, bottleneckDetail, hoursPerInstance, cycleDays, teamSize, savingsPct, updateProcessData, goToScreen, addAuditEvent]);
+  }, [freq, annual, inFlight, bottleneckReason, bottleneckDetail, hoursPerInstance, cycleDays, teamSize, savingsPct, peSopStatus, peKeyPerson, peReportingImpact, isPE, updateProcessData, goToScreen, addAuditEvent]);
 
   const diagnosticNav = useDiagnosticNav();
   const registerNav = diagnosticNav?.registerNav;
@@ -250,6 +269,84 @@ export default function Screen4Cost() {
             A manager will complete the cost analysis (rates, savings) after the audit. You&apos;ll get a link to assign to them.
           </p>
         </div>
+
+        {/* ── PE-specific data-room fields ─────────────────────────── */}
+        {isPE && (
+          <div className="merged-section" style={{ borderTop: '1px solid var(--accent, #d97706)22', paddingTop: 20 }}>
+            <h3 className="merged-section-title" style={{ color: 'var(--accent, #d97706)' }}>
+              Portfolio Context
+            </h3>
+            <p className="screen-subtitle" style={{ marginBottom: '0.75rem', fontSize: '0.9rem' }}>
+              These fields are used to frame the AI analysis for investor readiness.
+            </p>
+
+            <div className="form-group">
+              <label>Is there a documented SOP for this process?</label>
+              <div className="radio-group">
+                {[
+                  { id: 'documented', label: 'Yes — fully documented' },
+                  { id: 'partial', label: 'Partial / informal notes exist' },
+                  { id: 'undocumented', label: "No — it lives in people's heads" },
+                ].map(({ id, label }) => (
+                  <label key={id} className={`radio-option ${peSopStatus === id ? 'selected' : ''}`}>
+                    <input
+                      type="radio"
+                      name="peSopStatus"
+                      value={id}
+                      checked={peSopStatus === id}
+                      onChange={() => { setPeSopStatus(id); addAuditEvent({ type: 'step_edit', detail: `PE SOP status: "${label}"` }); }}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Is there a key-person dependency in this process?</label>
+              <div className="radio-group">
+                {[
+                  { id: 'yes', label: 'Yes — one person is critical and has no backup' },
+                  { id: 'partial', label: 'Partial — one person leads but others can cover' },
+                  { id: 'no', label: 'No — fully distributable across the team' },
+                ].map(({ id, label }) => (
+                  <label key={id} className={`radio-option ${peKeyPerson === id ? 'selected' : ''}`}>
+                    <input
+                      type="radio"
+                      name="peKeyPerson"
+                      value={id}
+                      checked={peKeyPerson === id}
+                      onChange={() => { setPeKeyPerson(id); addAuditEvent({ type: 'step_edit', detail: `PE key-person dependency: "${label}"` }); }}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Does this process feed into investor or board reporting?</label>
+              <div className="radio-group">
+                {[
+                  { id: 'yes-direct', label: 'Yes — directly produces reporting data' },
+                  { id: 'yes-indirect', label: 'Yes — indirectly (upstream input)' },
+                  { id: 'no', label: 'No' },
+                ].map(({ id, label }) => (
+                  <label key={id} className={`radio-option ${peReportingImpact === id ? 'selected' : ''}`}>
+                    <input
+                      type="radio"
+                      name="peReportingImpact"
+                      value={id}
+                      checked={peReportingImpact === id}
+                      onChange={() => { setPeReportingImpact(id); addAuditEvent({ type: 'step_edit', detail: `PE reporting impact: "${label}"` }); }}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
 

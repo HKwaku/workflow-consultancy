@@ -19,6 +19,7 @@ import { getWaitProfile } from '@/lib/flows/flowModel';
 import { repairFlow } from '@/lib/flows/normalizer';
 import { reconcileDecisionBranches } from '@/lib/flows/reconcileEdges';
 import FloatingFlowViewer from '../FloatingFlowViewer';
+import ChatHistoryPanel from '../ChatHistoryPanel';
 
 const MAP_SPLIT_RAIL_PX = 48;
 const MAP_SPLIT_HANDLE_PX = 8;
@@ -125,9 +126,9 @@ const GUIDE_TOUR = [
     cta: "Next →",
   },
   {
-    title: "Portal / client login",
-    desc: "Access your client portal to view saved reports, manage process audits, and track completed work.",
-    selector: '[title="Portal"],[title="Client login"]',
+    title: "Dashboard / sign in",
+    desc: "Access your dashboard to view saved reports, manage process audits, and track completed work.",
+    selector: '[title="Dashboard"],[title="Sign in"]',
     cta: "Next →",
   },
   {
@@ -224,10 +225,87 @@ function MapGuide({ onDismiss }) {
   );
 }
 
+/** In-chat PE deal setup card — rendered as part of an assistant message. */
+function DealSetupCard({ platformCompany, onSubmit }) {
+  const [dealName, setDealName] = useState('');
+  const [targetCompany, setTargetCompany] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    const name = dealName.trim();
+    const target = targetCompany.trim();
+    if (!name) { setError('Enter a deal name.'); return; }
+    if (!target) { setError('Enter at least one portfolio company.'); return; }
+    setSubmitting(true);
+    const res = await onSubmit({ dealName: name, targetCompany: target, platformCompany });
+    setSubmitting(false);
+    if (res?.ok) setDone(true);
+    else if (res?.error) setError(res.error);
+  };
+
+  if (done) {
+    return (
+      <div className="s7-deal-setup-card s7-deal-setup-card--done">
+        <span>Deal created ✓</span>
+      </div>
+    );
+  }
+
+  return (
+    <form className="s7-deal-setup-card" onSubmit={handleSubmit}>
+      <label className="s7-deal-setup-field">
+        <span className="s7-deal-setup-label">Deal name</span>
+        <input
+          type="text"
+          className="s7-deal-setup-input"
+          value={dealName}
+          onChange={(e) => setDealName(e.target.value)}
+          placeholder="e.g. ABC Capital 2026 Roll-up"
+          autoComplete="off"
+          disabled={submitting}
+        />
+      </label>
+      <label className="s7-deal-setup-field">
+        <span className="s7-deal-setup-label">First portfolio company</span>
+        <input
+          type="text"
+          className="s7-deal-setup-input"
+          value={targetCompany}
+          onChange={(e) => setTargetCompany(e.target.value)}
+          placeholder="Portfolio company name"
+          autoComplete="off"
+          disabled={submitting}
+        />
+      </label>
+      <div className="s7-deal-setup-platform">Platform: <strong>{platformCompany}</strong></div>
+      {error && <div className="s7-deal-setup-error">{error}</div>}
+      <button type="submit" className="s7-deal-setup-submit" disabled={submitting}>
+        {submitting ? 'Creating…' : 'Create deal & continue'}
+      </button>
+    </form>
+  );
+}
+
 /** Save + optional view report — top of icon rail */
-function MapRailPrimaryTools({ onOpenSaveModal, editingReportId, onHandover }) {
+function MapRailPrimaryTools({ onOpenSaveModal, editingReportId, onViewReport, onHandover, onContinue, onSaveToReport, savingToReport, sessionUser }) {
   return (
     <>
+      <a
+        href={sessionUser ? '/portal?dashboard=1' : '/portal'}
+        className="s7-split-rail-btn s7-split-rail-link"
+        title={sessionUser ? 'Dashboard' : 'Sign in'}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <rect x="3" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" />
+          <rect x="14" y="14" width="7" height="7" rx="1" />
+        </svg>
+      </a>
       <button type="button" className="s7-split-rail-btn" onClick={() => onOpenSaveModal?.()} title="Save progress and get link">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
@@ -244,39 +322,189 @@ function MapRailPrimaryTools({ onOpenSaveModal, editingReportId, onHandover }) {
         </button>
       )}
       {editingReportId && (
-        <a href={`/report?id=${editingReportId}&portal=1`} className="s7-split-rail-btn s7-split-rail-link" title="View report">
+        <button type="button" className="s7-split-rail-btn" onClick={() => onViewReport?.(editingReportId)} title="View report">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
             <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
             <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
           </svg>
-        </a>
+        </button>
+      )}
+      {onSaveToReport && (
+        <button type="button" className="s7-split-rail-btn" onClick={onSaveToReport} disabled={savingToReport} title={savingToReport ? 'Saving…' : 'Save to report'}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M20 14v6a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h6"/><polyline points="14 2 20 2 20 8"/><line x1="12" y1="12" x2="20" y2="2"/>
+          </svg>
+        </button>
+      )}
+      {onContinue && (
+        <button type="button" className="s7-split-rail-btn s7-split-rail-btn--accent" onClick={onContinue} title="Generate report">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </button>
       )}
     </>
   );
 }
 
-/** Portal / client login — pinned to bottom of rail (Claude-style) */
-function MapRailPortalFooter({ sessionUser }) {
+/** Account menu — pinned to bottom of rail (Claude-style) */
+function MapRailPortalFooter({ sessionUser, onSignOut }) {
+  const { theme } = useTheme();
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState(null);
+  const btnRef = useRef(null);
+
+  // If not signed in, keep the simple sign-in link.
+  if (!sessionUser) {
+    return (
+      <a href="/portal" className="s7-split-rail-btn s7-split-rail-link" title="Sign in">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+      </a>
+    );
+  }
+
+  const toggle = () => {
+    if (open) { setOpen(false); return; }
+    const r = btnRef.current?.getBoundingClientRect();
+    if (!r) return;
+    setPos({ left: r.right + 8, bottom: window.innerHeight - r.bottom });
+    setOpen(true);
+  };
+
+  const handleSignOut = async () => {
+    setOpen(false);
+    try { await onSignOut?.(); } catch { /* ignore */ }
+    if (typeof window !== 'undefined') window.location.href = '/';
+  };
+
+  const email = sessionUser?.email || '';
+  const name = sessionUser?.user_metadata?.full_name || sessionUser?.user_metadata?.name || '';
+  const initials = (name || email || '?').slice(0, 1).toUpperCase();
+
   return (
-    <a href="/portal" className="s7-split-rail-btn s7-split-rail-link" title={sessionUser ? 'Portal' : 'Client login'}>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-        <circle cx="12" cy="7" r="4" />
-      </svg>
-    </a>
+    <>
+      <button
+        type="button"
+        ref={btnRef}
+        className={`s7-split-rail-btn${open ? ' active' : ''}`}
+        onClick={toggle}
+        title="Account"
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+      </button>
+      {open && pos && createPortal(
+        <>
+          <div className="s7-account-menu-backdrop" onClick={() => setOpen(false)} />
+          <div className="s7-account-menu" data-theme={theme} style={{ left: pos.left, bottom: pos.bottom }} role="menu">
+            <div className="s7-account-menu-header">
+              <div className="s7-account-menu-avatar">{initials}</div>
+              <div className="s7-account-menu-identity">
+                {name && <div className="s7-account-menu-name">{name}</div>}
+                <div className="s7-account-menu-email">{email}</div>
+              </div>
+            </div>
+            <div className="s7-account-menu-sep" />
+            <button type="button" className="s7-account-menu-item s7-account-menu-item--danger" role="menuitem" onClick={handleSignOut}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              Sign out
+            </button>
+          </div>
+        </>,
+        document.body,
+      )}
+    </>
   );
 }
 
-export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, onAuditTrailToggle, auditTrailOpen, onOpenSaveModal }) {
+export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, onAuditTrailToggle, auditTrailOpen, onOpenSaveModal, reportToLoad, onReportLoaded, redesignReportId, onRedesignConsumed }) {
   const {
     processData, updateProcessData, goToScreen,
     customDepartments, addCustomDepartment,
     diagnosticMode, teamMode, chatMessages, addChatMessage,
-    saveProgressToCloud, editingReportId, editingRedesign, aiRedesignMode, contact, authUser,
+    saveProgressToCloud, editingReportId, editingRedesign, aiRedesignMode, contact, authUser, setContact,
     addAuditEvent,
+    moduleId, setModuleId, dealCanonicalProcessName, dealName, dealRole, dealId, setDeal,
   } = useDiagnostic();
-  const { accessToken, user: sessionUser } = useAuth();
+  const { accessToken, user: sessionUser, signOut } = useAuth();
   const { theme } = useTheme();
+
+  /* ── Cloud chat persistence ── */
+  const chatSessionIdRef = useRef(null);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const key = editingReportId ? `vesno_chat_session_${editingReportId}` : 'vesno_chat_session_active';
+    try { chatSessionIdRef.current = localStorage.getItem(key) || null; } catch { /* ignore */ }
+  }, [editingReportId]);
+
+  const persistMessageToCloud = useCallback(async ({ role, content, actions, attachments: attachmentsArg, snapshot }) => {
+    if (!accessToken) {
+      if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+        console.warn('[chat-save] skipped — no accessToken (user not signed in)');
+      }
+      return;
+    }
+    let processSnapshot = null;
+    try {
+      processSnapshot = snapshot ? JSON.parse(JSON.stringify(snapshot)) : null;
+    } catch { processSnapshot = null; }
+    try {
+      const resp = await apiFetch('/api/chat-messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: chatSessionIdRef.current || undefined,
+          reportId: editingReportId || undefined,
+          kind: editingRedesign ? 'redesign' : 'map',
+          title: (snapshot?.processName || processData.processName) || undefined,
+          role,
+          content: typeof content === 'string' ? content : String(content ?? ''),
+          actions: actions || undefined,
+          attachments: attachmentsArg && attachmentsArg.length
+            ? attachmentsArg.map((a) => ({ name: a.name, type: a.type, size: a.content?.length || a.textContent?.length || 0 }))
+            : undefined,
+          processSnapshot,
+        }),
+      }, accessToken);
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => '');
+        console.warn('[chat-save] failed', resp.status, errText);
+        return;
+      }
+      const data = await resp.json().catch(() => null);
+      if (data?.sessionId && data.sessionId !== chatSessionIdRef.current) {
+        chatSessionIdRef.current = data.sessionId;
+        if (typeof window !== 'undefined') {
+          const key = editingReportId ? `vesno_chat_session_${editingReportId}` : 'vesno_chat_session_active';
+          try { localStorage.setItem(key, data.sessionId); } catch { /* ignore */ }
+        }
+      }
+    } catch (err) {
+      console.warn('[chat-save] network error', err?.message || err);
+    }
+  }, [accessToken, editingReportId, editingRedesign, processData]);
+
+  const syncSnapshotToSession = useCallback(async (snapshot) => {
+    if (!accessToken || !chatSessionIdRef.current) return;
+    try {
+      await apiFetch(`/api/chat-sessions/${encodeURIComponent(chatSessionIdRef.current)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ processSnapshot: snapshot }),
+      }, accessToken);
+    } catch { /* best-effort */ }
+  }, [accessToken]);
 
   /* ═══════ Step state ═══════ */
   const initialSteps = useMemo(() => {
@@ -318,6 +546,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
   const [expandedStepIdx, setExpandedStepIdx] = useState(initialStepIdxProp ?? null);
   const [checklistInputs, setChecklistInputs] = useState({});
   const [showFloatingFlow, setShowFloatingFlow] = useState(false);
+  const [inlineReportId, setInlineReportId] = useState(null);
   const [snippets, setSnippets] = useState(() => { try { return loadSnippets(null); } catch { return []; } });
   const [showSnippetPicker, setShowSnippetPicker] = useState(false);
   const [showDepsModal, setShowDepsModal] = useState(false);
@@ -330,8 +559,15 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
   const [flowCustomEdges, setFlowCustomEdges] = useState(() => processData.flowCustomEdges || []);
   const [flowDeletedEdges, setFlowDeletedEdges] = useState(() => processData.flowDeletedEdges || []);
 
+  /* ═══════ Chat history panel ═══════ */
+  const [showChatHistory, setShowChatHistory] = useState(false);
+
+  /* Ref for first-paint context inside the one-shot chat seeding effect */
+  const chatSeedCtxRef = useRef(null);
+  chatSeedCtxRef.current = { processData, moduleId, dealCanonicalProcessName, dealName, dealRole, chatMessages };
+
   /* ═══════ First-visit guide (shows every page load) ═══════ */
-  const [showGuide, setShowGuide] = useState(!editingReportId);
+  const [showGuide, setShowGuide] = useState(false);
   const dismissGuide = useCallback(() => setShowGuide(false), []);
 
   /* ═══════ Layout state (floating panels) ═══════ */
@@ -351,19 +587,221 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
   const triggerRedesignRef = useRef(false);
   const redesignContextRef = useRef(null); // holds serialised redesign context for the chat prompt
 
-  // On first arrival with no steps: seed Reina's opening message (used as context for AI, not shown as chat panel)
+  const SEGMENT_CHIPS = [
+    { name: 'Scaling Business', segmentId: 'scaling', tagline: 'Growing fast, processes breaking' },
+    { name: 'M&A Integration', segmentId: 'ma', tagline: 'Day 1 baseline, integration clarity' },
+    { name: 'Private Equity', segmentId: 'pe', tagline: 'Acquisition baseline to exit-ready' },
+    { name: 'High Risk Ops', segmentId: 'high-risk-ops', tagline: 'Compliance gaps, key-person risk' },
+  ];
+
+  const buildOpeningMessage = ({ mid, dName, dRole, canonical, processName }) => {
+    if (processName) {
+      return `Hi, I'm Reina! Let's map "${processName}" together. What's the very first thing that happens? What triggers it, and who kicks it off?`;
+    }
+    const isPE = mid === 'pe';
+    const isPort = dRole === 'portfolio_company';
+    const isPlat = dRole === 'platform_company';
+    if (isPE && dName) {
+      if (isPlat) return `Your roll-up "${dName}" is set up.\n\nWhich process are you mapping first? Tell me the name, then describe the first step — what triggers it and who kicks it off?`;
+      if (isPort && canonical) return `Welcome! You're mapping the "${canonical}" process for the roll-up "${dName}".\n\nWhat's the very first step — what triggers it, and who kicks it off?`;
+      return `Hi, I'm Reina! Let's map your processes for "${dName}".\n\nWhat process are you focusing on, and what's the first step?`;
+    }
+    return `Hi, I'm Reina! Let's map your process.\n\nWhat's the name of this process, and what's the very first thing that happens — what triggers it, and who kicks it off?`;
+  };
+
+  // On first arrival with no steps: seed Reina's opening message (no guided prompt questionnaire)
   const hasSeededChatRef = useRef(false);
   useEffect(() => {
     if (hasSeededChatRef.current || editingRedesign) return;
-    if (chatMessages.length === 0 && initialSteps.length === 0) {
+
+    const { processData: pd, moduleId: mid, dealCanonicalProcessName: canonical, dealName: dName, dealRole: dRole, chatMessages: ctxMsgs } = chatSeedCtxRef.current;
+    const processName = pd?.processName?.trim() || canonical?.trim() || '';
+
+    // ── Restored session or already-seeded (any existing messages means
+    //    we're either restoring a session or Screen2 remounted after the
+    //    user picked a pillar — don't seed another intro in either case) ──
+    if (initialSteps.length > 0) return;
+    if (ctxMsgs.length > 0) {
       hasSeededChatRef.current = true;
-      const name = processData.processName || 'this process';
+      if (!editingReportId) setShowGuide(true);
+      return;
+    }
+
+    hasSeededChatRef.current = true;
+
+    if (!mid && !dName) {
+      // No segment selected yet — introduce Reina and ask which situation fits
       addChatMessage({
         role: 'assistant',
-        content: `Hi, I'm Reina! Let's map "${name}" together. What's the very first thing that happens? What triggers it, and who kicks it off?`,
+        content: `Hi, I'm Reina — your process mapping assistant.\n\nTell me about any business process in plain language and I'll build the flow for you in real time — steps, handoffs, decision branches, timings, and systems. You can also drop in docs, spreadsheets, screenshots, or diagrams and I'll extract the process from them.\n\nOnce it's mapped, I'll spot bottlenecks, estimate the cost of the current flow, and generate a redesign with automation suggestions and projected savings.\n\nTo tailor the audit, which best describes your situation?`,
+        chips: SEGMENT_CHIPS,
       });
+      if (!editingReportId) setShowGuide(true);
+    } else {
+      addChatMessage({ role: 'assistant', content: buildOpeningMessage({ mid, dName, dRole, canonical, processName }) });
+      if (!editingReportId) setShowGuide(true);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const MODULE_LABELS = { scaling: 'Scaling Business', ma: 'M&A Integration', pe: 'Private Equity', 'high-risk-ops': 'High Risk Ops' };
+  const BOTTLENECK_LABELS = { waiting: 'Waiting time', approvals: 'Approval bottlenecks', 'manual-work': 'Manual work', handoffs: 'Handoff issues', systems: 'System issues', rework: 'Rework / errors' };
+
+  const handleLoadReport = useCallback((report) => {
+    const dd = report.diagnosticData || {};
+    const raw = (report.rawProcesses || dd.rawProcesses || [])[0] || {};
+    const processName = raw.processName || report.contactName || 'Process Audit';
+    const company = report.company || report.contact?.company || '';
+    const stepCount = (raw.steps || []).length;
+    const bottleneck = BOTTLENECK_LABELS[raw.bottleneck?.reason] || raw.bottleneck?.reason || '';
+    const savings = raw.savings?.estimatedSavingsPercent || 0;
+    const mod = report.moduleId || dd.moduleId || raw.segment || '';
+    const modLabel = MODULE_LABELS[mod] || '';
+
+    const lines = [`**${processName}**${company ? ` · ${company}` : ''}${modLabel ? ` · ${modLabel}` : ''}`];
+    if (stepCount > 0) lines.push(`${stepCount} step${stepCount !== 1 ? 's' : ''} mapped`);
+    if (bottleneck) lines.push(`Main bottleneck: ${bottleneck}`);
+    if (savings > 0) lines.push(`Estimated saving: ~${savings}%`);
+
+    addChatMessage({
+      role: 'assistant',
+      content: lines.join('\n'),
+      reportActions: { id: report.id, processName },
+    });
+  }, [addChatMessage]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Consume report passed from DiagnosticClient (e.g. after Screen6 completion)
+  useEffect(() => {
+    if (!reportToLoad) return;
+    handleLoadReport(reportToLoad);
+    onReportLoaded?.();
+  }, [reportToLoad]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Consume redesign trigger from DiagnosticClient (e.g. from chat history)
+  useEffect(() => {
+    if (!redesignReportId) return;
+    handleRedesignInChat(redesignReportId);
+    onRedesignConsumed?.();
+  }, [redesignReportId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSegmentChip = useCallback((segmentId, label) => {
+    setModuleId(segmentId);
+    updateProcessData({ segment: segmentId });
+    addChatMessage({ role: 'user', content: label });
+    if (segmentId === 'pe' && !dealId) {
+      // PE roll-up: collect deal setup in-chat before opening question.
+      const platformCompany = (authUser?.company || '').trim() || 'your platform company';
+      addChatMessage({
+        role: 'assistant',
+        content: `Great — let's set up your roll-up. I'll create a deal for **${platformCompany}** and one portfolio company to start (you can invite more later).`,
+        dealSetup: {
+          platformCompany,
+        },
+      });
+    } else {
+      const opening = buildOpeningMessage({ mid: segmentId, dName: null, dRole: null, canonical: null, processName: null });
+      addChatMessage({ role: 'assistant', content: opening });
+    }
+    if (!editingReportId) setShowGuide(true);
+  }, [setModuleId, updateProcessData, addChatMessage, editingReportId, dealId, authUser]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ── In-chat PE deal setup submission ── */
+  const handleDealSetupSubmit = useCallback(async ({ dealName: name, targetCompany, platformCompany }) => {
+    if (!accessToken) {
+      addChatMessage({ role: 'assistant', content: 'You need to be signed in to create a deal. [Sign in](/portal?returnTo=%2Fprocess-audit)' });
+      return { error: 'not signed in' };
+    }
+    try {
+      const resp = await apiFetch('/api/deals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'pe_rollup',
+          name,
+          participants: [
+            { role: 'platform_company', companyName: platformCompany },
+            { role: 'portfolio_company', companyName: targetCompany },
+          ],
+        }),
+      }, accessToken);
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(data.error || 'Failed to create deal');
+      const d = data.deal;
+      setDeal({
+        dealId: d.id,
+        dealCode: d.dealCode,
+        dealRole: 'platform_company',
+        dealName: d.name,
+        dealParticipants: data.participants || [],
+        canonicalProcessName: d.processName || null,
+      });
+      updateProcessData({ dealCode: d.dealCode, segment: 'pe' });
+      addChatMessage({ role: 'user', content: `Deal "${name}" · Portfolio: ${targetCompany}` });
+      addChatMessage({
+        role: 'assistant',
+        content: buildOpeningMessage({ mid: 'pe', dName: d.name, dRole: 'platform_company', canonical: null, processName: null }),
+      });
+      return { ok: true };
+    } catch (err) {
+      return { error: err.message || 'Something went wrong.' };
+    }
+  }, [accessToken, addChatMessage, setDeal, updateProcessData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleRedesignInChat = useCallback(async (reportId) => {
+    addChatMessage({ role: 'user', content: 'Redesign this process' });
+    addChatMessage({ role: 'assistant', content: 'Starting redesign analysis…' });
+    try {
+      const resp = await fetch('/api/generate-redesign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
+        body: JSON.stringify({ reportId }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        addChatMessage({ role: 'assistant', content: `Redesign failed: ${err.error || 'Please try again.'}` });
+        return;
+      }
+      const contentType = resp.headers.get('content-type') || '';
+      if (!contentType.includes('text/event-stream')) {
+        const data = await resp.json();
+        if (data.cached && data.redesign) {
+          addChatMessage({ role: 'assistant', content: `Redesign ready. ${data.redesign.summary || 'View the full report to see the redesigned flow.'}`, reportActions: { id: reportId, processName: 'Redesigned Process' } });
+        }
+        return;
+      }
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buf.indexOf('\n\n')) !== -1) {
+          const chunk = buf.slice(0, idx);
+          buf = buf.slice(idx + 2);
+          let eventName = 'message', dataStr = '';
+          for (const line of chunk.split('\n')) {
+            if (line.startsWith('event: ')) eventName = line.slice(7).trim();
+            else if (line.startsWith('data: ')) dataStr = line.slice(6).trim();
+          }
+          if (!dataStr) continue;
+          let parsed;
+          try { parsed = JSON.parse(dataStr); } catch { continue; }
+          if (eventName === 'progress') {
+            addChatMessage({ role: 'assistant', content: parsed.message || 'Analysing…' });
+          } else if (eventName === 'done') {
+            const summary = parsed.redesign?.summary || 'Redesign complete.';
+            addChatMessage({ role: 'assistant', content: summary, reportActions: { id: reportId, processName: 'Redesigned Process' } });
+          } else if (eventName === 'error') {
+            addChatMessage({ role: 'assistant', content: `Redesign failed: ${parsed.error || 'Please try again.'}` });
+          }
+        }
+      }
+    } catch (err) {
+      addChatMessage({ role: 'assistant', content: 'Redesign failed. Please check your connection and try again.' });
+    }
+  }, [accessToken, addChatMessage]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [detailTab, setDetailTab] = useState('type'); // active tab in node inspector
 
   const focusNameRef = useRef({});
@@ -397,6 +835,31 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
     }, 350);
     return () => clearTimeout(stepsSyncTimerRef.current);
   }, [steps, handoffs]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Workspace snapshot sync — fires whenever steps/handoffs/flow canvas
+  // state changes. Catches updates from AI tool-calls that land after the
+  // chat-message persist, so resuming restores the latest flow accurately.
+  const snapshotSyncTimerRef = useRef(null);
+  const snapshotSyncMountedRef = useRef(false);
+  useEffect(() => {
+    if (!snapshotSyncMountedRef.current) {
+      snapshotSyncMountedRef.current = true;
+      return;
+    }
+    if (!accessToken || !chatSessionIdRef.current) return;
+    clearTimeout(snapshotSyncTimerRef.current);
+    snapshotSyncTimerRef.current = setTimeout(() => {
+      syncSnapshotToSession({
+        ...processData,
+        steps,
+        handoffs,
+        flowCustomEdges: flowCustomEdgesRef.current || [],
+        flowDeletedEdges: flowDeletedEdgesRef.current || [],
+        flowNodePositions: flowNodePositionsRef.current || {},
+      });
+    }, 600);
+    return () => clearTimeout(snapshotSyncTimerRef.current);
+  }, [steps, handoffs, flowCustomEdges, flowDeletedEdges, flowNodePositions, accessToken, syncSnapshotToSession]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => () => { if (validationToastTimerRef.current) clearTimeout(validationToastTimerRef.current); }, []);
 
@@ -691,10 +1154,13 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
     const h = ensureHandoffs(repairedValid, handoffs);
     const allSys = [...new Set(repairedValid.flatMap((s) => s.systems || []).filter(Boolean))];
     updateProcessData({ steps: repairedValid, handoffs: h, systems: allSys.length > 0 ? allSys : processData.systems, processDependencies: deps });
+    if (authUser?.email && !contact?.email) {
+      setContact({ name: authUser.name || '', email: authUser.email, company: authUser.company || '', title: authUser.title || '' });
+    }
     setError('');
     addAuditEvent({ type: 'navigate', detail: `Completed step mapping with ${valid.length} steps` });
-    goToScreen(5);
-  }, [steps, handoffs, processData.systems, updateProcessData, goToScreen, addAuditEvent]);
+    goToScreen(6);
+  }, [steps, handoffs, processData.systems, updateProcessData, goToScreen, addAuditEvent, authUser, contact, setContact]);
 
   const handleContinue = useCallback(() => {
     const valid = steps.filter((s) => s.name.trim());
@@ -1152,12 +1618,25 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
 
     const userContent = isSystem ? (systemMessage || msg) : (msg || (attachmentsToSend.length > 0 ? 'Extract process steps from the attached file(s).' : ''));
 
+    // Build a live snapshot of the workspace (steps + handoffs from local
+    // state which may be ahead of processData's debounced copy, plus the
+    // flow canvas metadata which lives only on this screen).
+    const buildLiveSnapshot = () => ({
+      ...processData,
+      steps,
+      handoffs,
+      flowCustomEdges: flowCustomEdgesRef.current || [],
+      flowDeletedEdges: flowDeletedEdgesRef.current || [],
+      flowNodePositions: flowNodePositionsRef.current || {},
+    });
+
     if (!isSystem && !isRetry) {
       addChatMessage({ role: 'user', content: userContent });
       setChatInput('');
       if (chatTextareaRef.current) { chatTextareaRef.current.style.height = 'auto'; }
       setChatAttachments([]);
       lastFailedChatPayloadRef.current = { userContent, attachments: attachmentsToSend };
+      persistMessageToCloud({ role: 'user', content: userContent, attachments: attachmentsToSend, snapshot: buildLiveSnapshot() });
     }
     setChatError(null);
     setChatLoading(true);
@@ -1194,7 +1673,10 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
       try {
         const resp = await fetch('/api/diagnostic-chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
         body,
       });
 
@@ -1235,6 +1717,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
       }
 
       addChatMessage({ role: 'assistant', content: data.reply });
+      persistMessageToCloud({ role: 'assistant', content: data.reply, actions: data.actions, snapshot: buildLiveSnapshot() });
       if (data.actions?.length > 0) {
         const addedNames = processActions(data.actions);
         if (!isSystem && addedNames.length > 0) {
@@ -1289,7 +1772,8 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
   const handleSplitResizeStart = useCallback((e) => {
     e.preventDefault();
     const parent = splitAreaRef.current;
-    if (!parent) return;
+    const handle = e.currentTarget;
+    if (!parent || !handle) return;
     const rect = parent.getBoundingClientRect();
     const startX = e.clientX;
     const startW = splitChatWidthPx;
@@ -1297,27 +1781,54 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
     const minCanvas = 280;
     const maxW = Math.min(640, rect.width - MAP_SPLIT_RAIL_PX - MAP_SPLIT_HANDLE_PX - minCanvas);
 
+    // Pointer capture routes every subsequent pointer event back to the
+    // handle, even when the cursor crosses over the canvas iframe (whose
+    // inner window would otherwise swallow mousemove). Pair it with a
+    // data-resizing flag so CSS can disable pointer-events on the iframe
+    // and react-flow canvas while dragging — belt-and-braces against
+    // mid-drag stutter.
+    try { handle.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+
+    // Require the pointer to travel past a small threshold before the drag
+    // "engages" — avoids micro-resizes from accidental clicks or hand jitter
+    // that make the splitter feel hair-trigger.
+    const DRAG_THRESHOLD_PX = 4;
+    let engaged = false;
+
     const onMove = (ev) => {
       const dx = ev.clientX - startX;
+      if (!engaged) {
+        if (Math.abs(dx) < DRAG_THRESHOLD_PX) return;
+        engaged = true;
+        parent.setAttribute('data-resizing', '1');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+      }
       const next = Math.min(maxW, Math.max(minW, startW + dx));
       setSplitChatWidthPx(next);
     };
-    const onUp = () => {
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-      setSplitChatWidthPx((w) => {
-        try {
-          localStorage.setItem(SPLIT_CHAT_WIDTH_KEY, String(w));
-        } catch { /* ignore */ }
-        return w;
-      });
+    const onUp = (ev) => {
+      try { handle.releasePointerCapture(ev.pointerId); } catch { /* ignore */ }
+      if (engaged) {
+        parent.removeAttribute('data-resizing');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup', onUp);
+      handle.removeEventListener('pointercancel', onUp);
+      if (engaged) {
+        setSplitChatWidthPx((w) => {
+          try {
+            localStorage.setItem(SPLIT_CHAT_WIDTH_KEY, String(w));
+          } catch { /* ignore */ }
+          return w;
+        });
+      }
     };
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onUp);
+    handle.addEventListener('pointercancel', onUp);
   }, [splitChatWidthPx, SPLIT_CHAT_WIDTH_KEY]);
 
   const suggestions = useMemo(() => {
@@ -1730,6 +2241,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
         {chatMessages.map((m, i) => {
           const isLast = i === chatMessages.length - 1;
           const showSuggestions = isLast && m.role === 'assistant' && m.suggestions?.length > 0 && !chatLoading;
+          const showChips = isLast && m.role === 'assistant' && m.chips?.length > 0 && !chatLoading;
           return (
             <div key={i} className={`s7-msg s7-msg-${m.role}`}>
               {m.role === 'assistant' && <div className="sharp-avatar sharp-avatar-sm" title="Reina">R</div>}
@@ -1743,6 +2255,41 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
                       </button>
                     ))}
                   </div>
+                )}
+                {showChips && (
+                  <div className="s7-redesign-suggestions">
+                    {m.chips.map((c, ci) => (
+                      <button
+                        key={ci}
+                        type="button"
+                        className="s7-redesign-suggestion-chip"
+                        onClick={() => c.segmentId ? handleSegmentChip(c.segmentId, c.name) : sendChat(null, false, c.name)}
+                      >
+                        <span>{c.name}</span>
+                        {c.tagline && <span style={{ display: 'block', fontSize: '0.75em', opacity: 0.65, fontWeight: 400 }}>{c.tagline}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {m.reportActions && (
+                  <div className="s7-report-actions">
+                    <button
+                      type="button"
+                      className="s7-report-action-btn s7-report-action-btn--primary"
+                      onClick={() => setInlineReportId(m.reportActions.id)}
+                    >
+                      View report
+                    </button>
+                    <a href={`/report?id=${m.reportActions.id}&portal=1`} target="_blank" rel="noopener noreferrer" className="s7-report-action-btn">
+                      Open in new tab ↗
+                    </a>
+                  </div>
+                )}
+                {m.dealSetup && !dealId && (
+                  <DealSetupCard
+                    platformCompany={m.dealSetup.platformCompany}
+                    onSubmit={handleDealSetupSubmit}
+                  />
                 )}
               </div>
             </div>
@@ -1830,6 +2377,11 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
       </div>
     </div>
   );
+
+  // Show chat history panel or regular chat depending on state
+  const activeChatContent = showChatHistory
+    ? <ChatHistoryPanel onClose={() => setShowChatHistory(false)} onLoadReport={handleLoadReport} onRedesignReport={handleRedesignInChat} />
+    : chatContent;
 
   const handleFlowStepClick = useCallback((idx) => {
     if (idx >= 0 && idx < steps.length) {
@@ -2327,7 +2879,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
           </div>
         )}
 
-        <button type="button" onClick={() => goToScreen(1)} style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-mid)', cursor: 'pointer', fontSize: 13 }}>← Go back</button>
+        <button type="button" onClick={() => window.location.href = '/process-audit'} style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-mid)', cursor: 'pointer', fontSize: 13 }}>← Start over</button>
       </div>
     );
   }
@@ -2382,8 +2934,20 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
         <div ref={splitAreaRef} className="s7-canvas-area s7-canvas-area--split">
           <nav className="s7-split-rail" data-theme={theme} aria-label="Mapping tools">
             <div className="s7-split-rail-body">
-            <MapRailPrimaryTools onOpenSaveModal={onOpenSaveModal} editingReportId={editingReportId} onHandover={editingReportId ? undefined : openHandoverModal} />
+            <MapRailPrimaryTools
+              onOpenSaveModal={onOpenSaveModal}
+              editingReportId={editingReportId}
+              onViewReport={(id) => setInlineReportId(id)}
+              onHandover={editingReportId ? undefined : openHandoverModal}
+              onContinue={editingReportId ? undefined : handleContinue}
+              onSaveToReport={editingReportId ? handleSaveToReport : undefined}
+              savingToReport={savingToReport}
+              sessionUser={sessionUser}
+            />
             <div className="s7-split-rail-sep" role="separator" aria-hidden />
+            <button type="button" className={`s7-split-rail-btn${showChatHistory ? ' active' : ''}`} onClick={() => setShowChatHistory((v) => !v)} title="Chat history">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="13" y2="14"/></svg>
+            </button>
             <button type="button" className="s7-split-rail-btn" onClick={() => setShowFloatingFlow(true)} title="Expand flow in window">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/><path d="M10 5H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-5"/></svg>
             </button>
@@ -2403,7 +2967,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
             )}
             </div>
             <div className="s7-split-rail-footer">
-              <MapRailPortalFooter sessionUser={sessionUser} />
+              <MapRailPortalFooter sessionUser={sessionUser} onSignOut={signOut} />
             </div>
           </nav>
           <div
@@ -2413,82 +2977,129 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
           >
             <div className="s7-inline-chat-header">
               <div className="sharp-avatar sharp-avatar-sm" title="Reina">R</div>
-              <span className="s7-inline-chat-title">AI Assistant</span>
+              <span className="s7-inline-chat-title">{showChatHistory ? 'History' : 'AI Assistant'}</span>
             </div>
-            {chatContent}
+            {activeChatContent}
           </div>
           <div
             className="s7-split-resize-handle"
             role="separator"
             aria-orientation="vertical"
             aria-label="Resize chat and canvas"
-            onMouseDown={handleSplitResizeStart}
+            onPointerDown={handleSplitResizeStart}
           />
           <div className="s7-canvas-column">
-          <div className="s7-canvas-topbar">
-            <div className="s7-view-toggle">
-              {['grid', 'swimlane'].map(m => (
-                <button key={m} type="button" className={`s7-view-btn${previewViewMode === m ? ' active' : ''}`} onClick={() => setPreviewViewMode(m)}>
-                  {m === 'grid' ? 'Grid' : 'Swimlane'}
+          {inlineReportId ? (
+            <>
+              <div className="s7-canvas-topbar s7-canvas-topbar--report">
+                <button type="button" className="s7-report-back-btn" onClick={() => setInlineReportId(null)}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                  </svg>
+                  Flow
                 </button>
-              ))}
-            </div>
-          </div>
-          <div ref={previewCanvasRef} className="s7-canvas">
-              <InteractiveFlowCanvas
-                process={{ ...processData, steps, handoffs: ensureHandoffs(steps, handoffs) }}
-                layout={previewViewMode}
-                darkTheme={theme === 'dark'}
-                onStepClick={handleFlowStepClick}
-                className="s7-interactive-flow"
-                storedPositions={storedPositions}
-                onPositionsChange={onFlowPositionsChange}
-                customEdges={flowCustomEdges}
-                onCustomEdgesChange={onFlowCustomEdgesChange}
-                deletedEdges={flowDeletedEdges}
-                onDeletedEdgesChange={onFlowDeletedEdgesChange}
-                onDeleteNode={handleDeleteNode}
-                onAddNodeBetween={(insertIdx, isDecisionEdgeInsert) => {
-                  const prevLen = steps.length;
-                  const oldKey = `${prevLen}`;
-                  insertStepWithRemap(insertIdx, isDecisionEdgeInsert);
-                  const newKey = `${prevLen + 1}`;
-                  const oldOffsets = flowNodePositions[oldKey] || {};
-                  const merged = {};
-                  for (let j = 0; j < insertIdx; j++) { const o = oldOffsets[`step-${j}`]; if (o) merged[`step-${j}`] = o; }
-                  for (let j = insertIdx; j < prevLen; j++) { const o = oldOffsets[`step-${j}`]; if (o) merged[`step-${j + 1}`] = o; }
-                  if (Object.keys(merged).length > 0) { setFlowNodePositions((p) => { const next = { ...p, [newKey]: merged }; queueMicrotask(() => updateProcessData({ flowNodePositions: next })); return next; }); }
-                  const bumpIdx = (n) => n >= insertIdx ? n + 1 : n;
-                  const remappedCustom = (flowCustomEdgesRef.current || []).map((ce) => {
-                    const remapStepId = (id) => { const mm = id?.match(/^step-(\d+)$/); return mm ? `step-${bumpIdx(parseInt(mm[1]))}` : id; };
-                    return { ...ce, source: remapStepId(ce.source), target: remapStepId(ce.target) };
-                  });
-                  const remappedDeleted = (flowDeletedEdgesRef.current || []).map((id) => {
-                    const seqM = id.match(/^e-seq-(\d+)-(\d+)$/);
-                    if (seqM) { const a = bumpIdx(parseInt(seqM[1])), b = bumpIdx(parseInt(seqM[2])); return `e-seq-${a}-${b}`; }
-                    const decM = id.match(/^e-dec-(\d+)-(\d+)-(\d+)$/);
-                    if (decM) return `e-dec-${bumpIdx(parseInt(decM[1]))}-${bumpIdx(parseInt(decM[2]))}-${decM[3]}`;
-                    const mergeM = id.match(/^e-merge-(\d+)-(\d+)$/);
-                    if (mergeM) return `e-merge-${bumpIdx(parseInt(mergeM[1]))}-${bumpIdx(parseInt(mergeM[2]))}`;
-                    return id;
-                  });
-                  const newDeleted = [...new Set(remappedDeleted)];
-                  flowCustomEdgesRef.current = remappedCustom;
-                  setFlowCustomEdges(remappedCustom);
-                  flowDeletedEdgesRef.current = newDeleted;
-                  setFlowDeletedEdges(newDeleted);
-                  queueMicrotask(() => updateProcessData({ flowCustomEdges: remappedCustom, flowDeletedEdges: newDeleted }));
-                }}
-              />
-          </div>
+                <a
+                  href={`/report?id=${inlineReportId}&portal=1`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="s7-report-newtab-link"
+                >
+                  Open in new tab
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+                    <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                  </svg>
+                </a>
+              </div>
+              <div className="s7-canvas s7-canvas--report">
+                <iframe
+                  src={`/report?id=${encodeURIComponent(inlineReportId)}&embed=1`}
+                  title="Report"
+                  className="s7-report-iframe"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="s7-canvas-topbar">
+                <div className="s7-view-toggle">
+                  {['grid', 'swimlane'].map(m => (
+                    <button key={m} type="button" className={`s7-view-btn${previewViewMode === m ? ' active' : ''}`} onClick={() => setPreviewViewMode(m)}>
+                      {m === 'grid' ? 'Grid' : 'Swimlane'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div ref={previewCanvasRef} className="s7-canvas">
+                <InteractiveFlowCanvas
+                  process={{ ...processData, steps, handoffs: ensureHandoffs(steps, handoffs) }}
+                  layout={previewViewMode}
+                  darkTheme={theme === 'dark'}
+                  onStepClick={handleFlowStepClick}
+                  className="s7-interactive-flow"
+                  storedPositions={storedPositions}
+                  onPositionsChange={onFlowPositionsChange}
+                  customEdges={flowCustomEdges}
+                  onCustomEdgesChange={onFlowCustomEdgesChange}
+                  deletedEdges={flowDeletedEdges}
+                  onDeletedEdgesChange={onFlowDeletedEdgesChange}
+                  onDeleteNode={handleDeleteNode}
+                  onAddNodeBetween={(insertIdx, isDecisionEdgeInsert) => {
+                    const prevLen = steps.length;
+                    const oldKey = `${prevLen}`;
+                    insertStepWithRemap(insertIdx, isDecisionEdgeInsert);
+                    const newKey = `${prevLen + 1}`;
+                    const oldOffsets = flowNodePositions[oldKey] || {};
+                    const merged = {};
+                    for (let j = 0; j < insertIdx; j++) { const o = oldOffsets[`step-${j}`]; if (o) merged[`step-${j}`] = o; }
+                    for (let j = insertIdx; j < prevLen; j++) { const o = oldOffsets[`step-${j}`]; if (o) merged[`step-${j + 1}`] = o; }
+                    if (Object.keys(merged).length > 0) { setFlowNodePositions((p) => { const next = { ...p, [newKey]: merged }; queueMicrotask(() => updateProcessData({ flowNodePositions: next })); return next; }); }
+                    const bumpIdx = (n) => n >= insertIdx ? n + 1 : n;
+                    const remappedCustom = (flowCustomEdgesRef.current || []).map((ce) => {
+                      const remapStepId = (id) => { const mm = id?.match(/^step-(\d+)$/); return mm ? `step-${bumpIdx(parseInt(mm[1]))}` : id; };
+                      return { ...ce, source: remapStepId(ce.source), target: remapStepId(ce.target) };
+                    });
+                    const remappedDeleted = (flowDeletedEdgesRef.current || []).map((id) => {
+                      const seqM = id.match(/^e-seq-(\d+)-(\d+)$/);
+                      if (seqM) { const a = bumpIdx(parseInt(seqM[1])), b = bumpIdx(parseInt(seqM[2])); return `e-seq-${a}-${b}`; }
+                      const decM = id.match(/^e-dec-(\d+)-(\d+)-(\d+)$/);
+                      if (decM) return `e-dec-${bumpIdx(parseInt(decM[1]))}-${bumpIdx(parseInt(decM[2]))}-${decM[3]}`;
+                      const mergeM = id.match(/^e-merge-(\d+)-(\d+)$/);
+                      if (mergeM) return `e-merge-${bumpIdx(parseInt(mergeM[1]))}-${bumpIdx(parseInt(mergeM[2]))}`;
+                      return id;
+                    });
+                    const newDeleted = [...new Set(remappedDeleted)];
+                    flowCustomEdgesRef.current = remappedCustom;
+                    setFlowCustomEdges(remappedCustom);
+                    flowDeletedEdgesRef.current = newDeleted;
+                    setFlowDeletedEdges(newDeleted);
+                    queueMicrotask(() => updateProcessData({ flowCustomEdges: remappedCustom, flowDeletedEdges: newDeleted }));
+                  }}
+                />
+              </div>
+            </>
+          )}
           </div>
         </div>
         ) : (
         <div className="s7-canvas-area s7-canvas-area--with-rail">
           <nav className="s7-split-rail" data-theme={theme} aria-label="Mapping tools">
             <div className="s7-split-rail-body">
-              <MapRailPrimaryTools onOpenSaveModal={onOpenSaveModal} editingReportId={editingReportId} onHandover={editingReportId ? undefined : openHandoverModal} />
+              <MapRailPrimaryTools
+                onOpenSaveModal={onOpenSaveModal}
+                editingReportId={editingReportId}
+                onViewReport={(id) => setInlineReportId(id)}
+                onHandover={editingReportId ? undefined : openHandoverModal}
+                onContinue={editingReportId ? undefined : handleContinue}
+                onSaveToReport={editingReportId ? handleSaveToReport : undefined}
+                savingToReport={savingToReport}
+                sessionUser={sessionUser}
+              />
               <div className="s7-split-rail-sep" role="separator" aria-hidden />
+              <button type="button" className={`s7-split-rail-btn${showChatHistory ? ' active' : ''}`} onClick={() => setShowChatHistory((v) => !v)} title="Chat history">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="13" y2="14"/></svg>
+              </button>
               <button type="button" className="s7-split-rail-btn" onClick={() => setShowFloatingFlow(true)} title="Expand flow in window">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/><path d="M10 5H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-5"/></svg>
               </button>
@@ -2507,11 +3118,11 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
               )}
             </div>
             <div className="s7-split-rail-footer">
-              <MapRailPortalFooter sessionUser={sessionUser} />
+              <MapRailPortalFooter sessionUser={sessionUser} onSignOut={signOut} />
             </div>
           </nav>
           <div className="s7-map-landing" data-theme={theme}>
-            {chatContent}
+            {activeChatContent}
           </div>
         </div>
         )}

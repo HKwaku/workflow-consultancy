@@ -7,6 +7,7 @@ import { calculateAutomationScore, generateRuleBasedRecommendations, calculatePr
 import { withRetry } from '@/lib/ai-retry';
 import { runRecommendationsAgent } from '@/lib/agents/recommendations/graph';
 import { runFlowConsistencyAgent } from '@/lib/agents/flow/graph';
+import { getModule } from '@/lib/modules/index';
 import { NextResponse } from 'next/server';
 
 export const maxDuration = 120;
@@ -31,7 +32,9 @@ export async function POST(request) {
     return NextResponse.json({ error: msg, details: err }, { status: 400 });
   }
 
-  const { processes: rawProcesses, contact, qualityScore, timestamp } = parsed.data;
+  const { processes: rawProcesses, contact, moduleId, qualityScore, timestamp } = parsed.data;
+  // Resolve module config — used to supply module-specific AI system prompt
+  const moduleConfig = moduleId ? getModule(moduleId) : null;
   const reqId = getRequestId(request);
   const encoder = new TextEncoder();
 
@@ -101,7 +104,8 @@ export async function POST(request) {
               processes,
               contact,
               (msg) => send('progress', { message: msg, stage: 'recommendations' }),
-              reqId
+              reqId,
+              moduleConfig
             ),
             { maxAttempts: 2, baseDelayMs: 1000, label: 'AI recommendations agent', logger }
           );

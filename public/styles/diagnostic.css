@@ -12670,11 +12670,124 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   color: #fff;
 }
 
-/* Wide hit target; hairline drawn with ::after (Claude-style) */
+/* ── Account menu popover (anchored to rail account button) ── */
+.s7-account-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: transparent;
+}
+.s7-account-menu {
+  position: fixed;
+  z-index: 901;
+  min-width: 240px;
+  max-width: 280px;
+  padding: 6px;
+  border-radius: 10px;
+  background: var(--bg, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18), 0 2px 6px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.s7-account-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 8px;
+}
+.s7-account-menu-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--accent, #0d9488);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.s7-account-menu-identity {
+  min-width: 0;
+  flex: 1;
+}
+.s7-account-menu-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.s7-account-menu-email {
+  font-size: 12px;
+  color: var(--text-mid, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.s7-account-menu-sep {
+  height: 1px;
+  background: var(--border, #e2e8f0);
+  margin: 4px 2px;
+}
+.s7-account-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text, #0f172a);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s, color 0.12s;
+}
+.s7-account-menu-item:hover {
+  background: rgba(13, 148, 136, 0.08);
+  color: var(--accent, #0d9488);
+}
+.s7-account-menu-item--danger {
+  color: #dc2626;
+}
+.s7-account-menu-item--danger:hover {
+  background: rgba(220, 38, 38, 0.08);
+  color: #dc2626;
+}
+.s7-account-menu[data-theme="dark"] {
+  background: #1e293b;
+  border-color: rgba(148, 163, 184, 0.2);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+.s7-account-menu[data-theme="dark"] .s7-account-menu-name { color: #f1f5f9; }
+.s7-account-menu[data-theme="dark"] .s7-account-menu-email { color: #94a3b8; }
+.s7-account-menu[data-theme="dark"] .s7-account-menu-sep { background: rgba(148, 163, 184, 0.2); }
+.s7-account-menu[data-theme="dark"] .s7-account-menu-item { color: #e2e8f0; }
+.s7-account-menu[data-theme="dark"] .s7-account-menu-item:hover {
+  background: rgba(20, 184, 166, 0.15);
+  color: #5eead4;
+}
+.s7-account-menu[data-theme="dark"] .s7-account-menu-item--danger { color: #f87171; }
+.s7-account-menu[data-theme="dark"] .s7-account-menu-item--danger:hover {
+  background: rgba(248, 113, 113, 0.12);
+  color: #f87171;
+}
+
+/* Hit target matches visible width — no negative-margin overlap into the
+   adjacent chat/canvas columns, which was activating the resize on clicks
+   that were actually meant for the neighbouring content. */
 .s7-split-resize-handle {
-  flex: 0 0 8px;
-  width: 8px;
-  margin: 0 -2px;
+  flex: 0 0 6px;
+  width: 6px;
+  margin: 0;
   padding: 0;
   cursor: col-resize;
   align-self: stretch;
@@ -12682,6 +12795,19 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   border: none;
   position: relative;
   flex-shrink: 0;
+  touch-action: none;
+  user-select: none;
+}
+
+/* While the user is dragging the split handle, stop the iframe (report
+   embed) and react-flow canvas from capturing pointer events. Without
+   this, the cursor crossing into the iframe swallows mousemove and the
+   resize stutters or freezes mid-drag. */
+[data-resizing="1"] .s7-report-iframe,
+[data-resizing="1"] .s7-canvas iframe,
+[data-resizing="1"] .react-flow,
+[data-resizing="1"] .s7-canvas-column iframe {
+  pointer-events: none !important;
 }
 .s7-split-resize-handle::after {
   content: '';
@@ -13253,3 +13379,942 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   border-color: rgba(232, 168, 124, 0.35) !important;
   color: #fde8d4 !important;
 }
+
+/* Deal confidentiality notice */
+.audit-gate-deal-notice {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: #0d948810; border: 1px solid #0d948840;
+  border-radius: 8px; padding: 12px 14px; margin-top: 10px; text-align: left;
+}
+.audit-gate-deal-notice-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+.audit-gate-deal-notice-text { font-size: 0.82rem; color: #0a7270; margin: 0 0 4px; line-height: 1.45; }
+.audit-gate-deal-notice-role { font-size: 0.78rem; color: #0a7270; margin: 0; line-height: 1.45; }
+
+/* Deal code entry */
+.audit-gate-deal-code-section { margin: 16px 0 0; text-align: center; }
+.audit-gate-deal-code-toggle {
+  background: none; border: none; cursor: pointer; font-size: 0.82rem;
+  color: var(--text-light, #94a3b8); text-decoration: underline;
+}
+.audit-gate-deal-code-toggle:hover { color: var(--accent, #0d9488); }
+.audit-gate-deal-code-form { text-align: left; margin-top: 8px; }
+.audit-gate-deal-code-label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-mid, #64748b); margin-bottom: 6px; }
+.audit-gate-deal-code-row { display: flex; gap: 8px; }
+.audit-gate-deal-code-input {
+  flex: 1; padding: 9px 12px; border-radius: 8px; border: 1.5px solid var(--border, #e2e8f0);
+  font-size: 0.9rem; font-family: monospace; letter-spacing: 0.08em;
+  background: var(--bg, #fff); color: var(--text, #0f172a);
+}
+.audit-gate-deal-code-btn {
+  padding: 9px 16px; border-radius: 8px; border: none;
+  background: var(--accent, #0d9488); color: #fff; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  white-space: nowrap;
+}
+.audit-gate-deal-code-btn:disabled { opacity: 0.6; cursor: default; }
+.audit-gate-deal-code-error { font-size: 0.78rem; color: #ef4444; margin: 6px 0 0; }
+
+/* Confirmed deal from code */
+.audit-gate-deal-confirmed {
+  display: flex; align-items: center; gap: 12px;
+  background: #0d948812; border: 1px solid #0d948840;
+  border-radius: 8px; padding: 10px 14px; margin-top: 14px;
+}
+.audit-gate-deal-confirmed-icon { font-size: 1.1rem; color: #0d9488; flex-shrink: 0; }
+.audit-gate-deal-confirmed-name { font-size: 0.88rem; font-weight: 700; color: var(--text, #0f172a); margin: 0; }
+.audit-gate-deal-confirmed-meta { font-size: 0.75rem; color: var(--text-mid, #64748b); margin: 1px 0 0; }
+.audit-gate-deal-confirmed-clear { background: none; border: none; cursor: pointer; color: var(--text-light, #94a3b8); font-size: 1rem; margin-left: auto; flex-shrink: 0; }
+
+/* ===== PE Roll-up Deal Setup Screen ===== */
+.pe-deal-setup {
+  max-width: 600px;
+  margin: 0 auto;
+}
+.pe-deal-setup-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.pe-deal-setup-header .screen-title { margin: 8px 0 6px; }
+.pe-deal-setup-header .screen-subtitle { margin: 0; }
+.pe-deal-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(217,119,6,0.1);
+  color: #d97706;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.pe-deal-optional {
+  font-weight: 400;
+  color: var(--text-light, #94a3b8);
+  font-size: 0.85em;
+}
+.pe-deal-divider {
+  border: none;
+  border-top: 1px solid var(--border-light, #f1f5f9);
+  margin: 20px 0;
+}
+.pe-deal-setup-form .form-group { margin-bottom: 18px; }
+.pe-deal-setup-form .form-group label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-mid, #64748b);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.pe-deal-setup-form input[type="text"],
+.pe-deal-setup-form input[type="email"] {
+  width: 100%;
+  padding: 10px 13px;
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  font-size: 0.93rem;
+  background: var(--bg, #fff);
+  color: var(--text, #0f172a);
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+.pe-deal-setup-form input:focus {
+  outline: none;
+  border-color: var(--accent, #0d9488);
+  box-shadow: 0 0 0 3px rgba(13,148,136,0.08);
+}
+
+/* Platform / target entity rows */
+.pe-deal-entity {
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.pe-deal-entity--platform {
+  border-color: rgba(217,119,6,0.3);
+  background: rgba(217,119,6,0.02);
+}
+.pe-deal-entity-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.pe-deal-entity-you {
+  font-size: 0.72rem;
+  color: var(--text-light, #94a3b8);
+  font-style: italic;
+}
+.pe-deal-role-pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.pe-deal-role-pill--platform {
+  background: rgba(217,119,6,0.12);
+  color: #d97706;
+}
+.pe-deal-role-pill--target {
+  background: rgba(99,102,241,0.1);
+  color: #6366f1;
+}
+
+/* Targets section */
+.pe-deal-targets-section { margin-bottom: 20px; }
+.pe-deal-targets-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.pe-deal-targets-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-mid, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.pe-deal-add-btn {
+  flex-shrink: 0;
+  background: none;
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent, #0d9488);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.pe-deal-add-btn:hover {
+  border-color: var(--accent, #0d9488);
+  background: var(--accent-muted, rgba(13,148,136,0.05));
+}
+.pe-deal-target-row {
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.pe-deal-target-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.pe-deal-remove-btn {
+  background: none;
+  border: none;
+  font-size: 0.85rem;
+  color: var(--text-light, #94a3b8);
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+}
+.pe-deal-remove-btn:hover { color: var(--danger, #ef4444); }
+.pe-deal-target-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Error + submit */
+.pe-deal-error {
+  font-size: 0.83rem;
+  color: var(--danger, #ef4444);
+  margin: 0 0 14px;
+  padding: 8px 12px;
+  background: rgba(239,68,68,0.06);
+  border-radius: 6px;
+}
+.pe-deal-submit-btn { width: 100%; margin-top: 4px; }
+.pe-deal-signin-btn { display: block; text-align: center; text-decoration: none; margin-top: 24px; }
+.pe-deal-signup-hint {
+  text-align: center;
+  margin-top: 12px;
+  font-size: 0.82rem;
+  color: var(--text-mid, #64748b);
+}
+.pe-deal-signup-hint a { color: var(--accent, #0d9488); }
+
+/* Chat variant of deal setup */
+.pe-deal-setup--chat {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+.pe-deal-setup-chat-header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border-light, #f1f5f9);
+  flex-shrink: 0;
+}
+.pe-deal-chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.pe-deal-chat .guided-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px 8px;
+}
+.pe-deal-chat .guided-chat-input-area {
+  border-top: 1px solid var(--border-light, #f1f5f9);
+  padding: 12px 16px;
+  flex-shrink: 0;
+}
+
+/* ===== Screen 6 — PE Roll-up completion ===== */
+.sc6-pe-deal-card {
+  background: rgba(217,119,6,0.04);
+  border: 1.5px solid rgba(217,119,6,0.2);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin: 16px 0 20px;
+}
+.sc6-pe-deal-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #d97706;
+  margin-bottom: 6px;
+}
+.sc6-pe-deal-desc {
+  font-size: 0.9rem;
+  color: var(--text-mid, #64748b);
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+.sc6-pe-deal-desc:last-child { margin-bottom: 0; }
+.sc6-pe-targets { display: flex; flex-direction: column; gap: 8px; }
+.sc6-pe-target-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  background: #fff;
+  border: 1px solid var(--border-light, #f1f5f9);
+  border-radius: 7px;
+}
+.sc6-pe-target-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text, #0f172a);
+}
+.sc6-pe-copy-btn {
+  flex-shrink: 0;
+  background: none;
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent, #0d9488);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.sc6-pe-copy-btn:hover { border-color: var(--accent, #0d9488); }
+.sc6-pe-target-status {
+  font-size: 0.78rem;
+  color: var(--text-light, #94a3b8);
+}
+
+/* ===== Chat workspace — mirrors Screen2's s7-workspace structure exactly ===== */
+
+/* Main content area inside the chat workspace — transparent, no card */
+.chat-main-panel {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Guided chat fills the panel height */
+.chat-main-panel .guided-chat-screen,
+.chat-main-panel .s7-chat-inner {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Center the chat content at a comfortable reading width */
+.chat-workspace .s7-chat-inner {
+  max-width: 700px;
+  width: 100%;
+  align-self: center;
+}
+
+/* s7-chat-messages used in guided chat screens: set vars for process-list indentation */
+.chat-main-panel .s7-chat-messages {
+  --process-list-inset: calc(26px + 0.4rem);
+  --process-list-max: 24rem;
+  padding: 1rem 1rem;
+  gap: 0.75rem;
+  background: transparent;
+}
+
+/* Process list indented to align under avatar */
+.s7-chat-messages .process-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0.65rem 0 0.5rem;
+  margin-left: var(--process-list-inset, 0);
+  align-self: flex-start;
+  width: min(var(--process-list-max, 24rem), calc(100% - var(--process-list-inset, 0px)));
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Margins for mode/process visuals inside s7-chat-messages */
+.s7-chat-messages .welcome-paths,
+.s7-chat-messages .mode-cards,
+.s7-chat-messages .process-list { margin-top: 0.75rem; }
+.s7-chat-messages .welcome-need { margin-top: 1.25rem; }
+.s7-chat-messages .guided-chat-cta-wrap { padding: 0.5rem 0; }
+
+/* Chips inside s7-chat-input-area (above composer) */
+.s7-chat-input-area .guided-chat-chips {
+  padding: 0.5rem 0.1rem 0.4rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+.s7-chat-input-area .guided-chat-chip-or { font-size: 0.78rem; color: var(--text-light); margin-left: 0.1rem; }
+
+/* Inline composer (within message area for custom process input) */
+.s7-chat-composer-inline {
+  margin-top: 0.5rem;
+  max-width: 28rem;
+}
+
+/* Form/list screens fill remaining height and scroll */
+.chat-main-panel .screen.active {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.chat-main-panel .screen.active > .screen-card {
+  flex: 1;
+  min-height: 0;
+  max-width: none;
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+  background: #fff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  overflow-y: auto;
+}
+
+/* Template select fills the panel */
+.chat-main-panel .screen-template-select {
+  flex: 1;
+  overflow-y: auto;
+  max-width: none;
+}
+
+[data-theme="dark"] .chat-main-panel .screen.active > .screen-card {
+  background: var(--bg-alt, #1e293b);
+}
+
+/* ── Chat History Panel ──────────────────────────────────────────────────── */
+.chat-history-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.chat-history-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-light, #f1f5f9);
+  flex-shrink: 0;
+}
+
+.chat-history-hd-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-mid, #64748b);
+}
+
+.chat-history-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  color: var(--text-mid, #64748b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.chat-history-close-btn:hover {
+  background: var(--bg-alt, #f1f5f9);
+  color: var(--dark, #0f172a);
+}
+
+.chat-history-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chat-history-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: var(--text-mid, #94a3b8);
+}
+.chat-history-empty p {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.chat-history-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 2rem 1.5rem;
+  justify-content: center;
+  color: var(--text-mid, #94a3b8);
+  font-size: 0.85rem;
+}
+.chat-history-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-light, #e2e8f0);
+  border-top-color: var(--accent, #0d9488);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.chat-history-item {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  padding: 0.6rem 0.65rem;
+  border-radius: 8px;
+  transition: background 0.12s;
+}
+.chat-history-item:hover {
+  background: var(--accent-muted, rgba(13,148,136,0.07));
+}
+
+.chat-history-item-inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.chat-history-item-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--text-mid, #94a3b8);
+}
+
+.chat-history-item-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-history-item-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--dark, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.35;
+}
+
+.chat-history-item-meta {
+  font-size: 0.775rem;
+  color: var(--text-mid, #94a3b8);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-history-item-aside {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.chat-history-item-date {
+  font-size: 0.72rem;
+  color: var(--text-light, #94a3b8);
+  white-space: nowrap;
+}
+
+.chat-history-item-tag {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--accent, #0d9488);
+  background: var(--accent-muted, rgba(13,148,136,0.1));
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.chat-history-footer {
+  padding: 0.6rem 1rem;
+  border-top: 1px solid var(--border-light, #f1f5f9);
+  flex-shrink: 0;
+}
+.chat-history-portal-link {
+  font-size: 0.78rem;
+  color: var(--accent, #0d9488);
+  text-decoration: none;
+  font-weight: 500;
+}
+.chat-history-portal-link:hover { text-decoration: underline; }
+
+/* History tabs (Recents / Projects) */
+.chat-history-hd-tabs { display: flex; gap: 2px; flex: 1; }
+.chat-history-tab {
+  background: none; border: none; cursor: pointer; padding: 4px 10px;
+  font-size: 0.78rem; color: var(--text-mid, #64748b); border-radius: 6px; font-weight: 500;
+}
+.chat-history-tab.active { background: var(--bg-alt, #f1f5f9); color: var(--text, #1e293b); }
+.chat-history-tab:hover:not(.active) { color: var(--text, #1e293b); }
+
+/* New chat button row */
+.chat-history-new-btn-row { padding: 8px 10px 4px; flex-shrink: 0; }
+.chat-history-new-btn {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  padding: 7px 10px; border-radius: 8px; font-size: 0.8rem; font-weight: 500;
+  color: var(--text-mid, #64748b); text-decoration: none;
+  border: 1px dashed var(--border, #e2e8f0); transition: background 0.15s;
+}
+.chat-history-new-btn:hover { background: var(--bg-alt, #f8fafc); color: var(--text, #1e293b); }
+
+/* Group labels */
+.chat-history-group { margin-bottom: 4px; }
+.chat-history-group-label {
+  padding: 8px 12px 3px; font-size: 0.72rem; font-weight: 600;
+  color: var(--text-mid, #94a3b8); text-transform: uppercase; letter-spacing: 0.05em;
+}
+
+/* Simplified item layout */
+.chat-history-item-row { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+
+/* Sign in link */
+.chat-history-signin-link {
+  font-size: 0.8rem; color: var(--accent, #0d9488); text-decoration: none; font-weight: 500;
+}
+.chat-history-signin-link:hover { text-decoration: underline; }
+
+/* In-chat PE deal setup card */
+.s7-deal-setup-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 14px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  background: var(--bg-alt, #f8fafc);
+  max-width: 420px;
+}
+.s7-deal-setup-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.s7-deal-setup-label {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-mid, #64748b);
+}
+.s7-deal-setup-input {
+  padding: 8px 10px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  background: var(--bg, #ffffff);
+  color: var(--text, #0f172a);
+  width: 100%;
+  box-sizing: border-box;
+}
+.s7-deal-setup-input:focus {
+  outline: none;
+  border-color: var(--accent, #0d9488);
+  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.15);
+}
+.s7-deal-setup-input:disabled { opacity: 0.6; cursor: not-allowed; }
+.s7-deal-setup-platform {
+  font-size: 0.78rem;
+  color: var(--text-mid, #64748b);
+}
+.s7-deal-setup-error {
+  font-size: 0.8rem;
+  color: #dc2626;
+}
+.s7-deal-setup-submit {
+  align-self: flex-start;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent, #0d9488);
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.s7-deal-setup-submit:hover:not(:disabled) { background: var(--accent-dark, #0f766e); }
+.s7-deal-setup-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+.s7-deal-setup-card--done {
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  color: #059669;
+  background: rgba(5, 150, 105, 0.08);
+  border-color: rgba(5, 150, 105, 0.25);
+}
+[data-theme="dark"] .s7-deal-setup-card {
+  background: rgba(30, 41, 59, 0.6);
+  border-color: rgba(148, 163, 184, 0.2);
+}
+[data-theme="dark"] .s7-deal-setup-label { color: #94a3b8; }
+[data-theme="dark"] .s7-deal-setup-input {
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.25);
+  color: #e2e8f0;
+}
+[data-theme="dark"] .s7-deal-setup-platform { color: #94a3b8; }
+[data-theme="dark"] .s7-deal-setup-error { color: #f87171; }
+[data-theme="dark"] .s7-deal-setup-card--done {
+  color: #6ee7b7;
+  background: rgba(5, 150, 105, 0.15);
+  border-color: rgba(5, 150, 105, 0.35);
+}
+
+/* Report action buttons in chat */
+.s7-report-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.s7-report-action-btn {
+  padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 500;
+  text-decoration: none; border: 1px solid var(--border, #e2e8f0);
+  color: var(--text-mid, #64748b); background: transparent; cursor: pointer;
+  transition: background 0.15s;
+}
+.s7-report-action-btn:hover { background: var(--bg-alt, #f1f5f9); color: var(--text, #1e293b); }
+.s7-report-action-btn--primary {
+  background: var(--accent, #0d9488); color: #fff; border-color: var(--accent, #0d9488);
+}
+.s7-report-action-btn--primary:hover { background: #0f766e; }
+
+/* Accent rail button (Generate report) */
+.s7-split-rail-btn--accent { color: var(--accent, #0d9488) !important; }
+.s7-split-rail-btn--accent:hover { background: rgba(13,148,136,0.1) !important; }
+
+/* Dark theme */
+[data-theme="dark"] .chat-history-hd { border-color: rgba(255,255,255,0.07); }
+[data-theme="dark"] .chat-history-hd-title { color: var(--text-mid, #94a3b8); }
+[data-theme="dark"] .chat-history-close-btn:hover { background: rgba(255,255,255,0.07); color: #e2e8f0; }
+[data-theme="dark"] .chat-history-item:hover { background: rgba(255,255,255,0.05); }
+[data-theme="dark"] .chat-history-item-title { color: #e2e8f0; }
+[data-theme="dark"] .chat-history-footer { border-color: rgba(255,255,255,0.07); }
+[data-theme="dark"] .chat-history-tab.active { background: rgba(255,255,255,0.08); color: #e2e8f0; }
+[data-theme="dark"] .chat-history-tab:hover:not(.active) { color: #e2e8f0; }
+[data-theme="dark"] .chat-history-new-btn { border-color: rgba(255,255,255,0.12); color: var(--text-mid, #94a3b8); }
+[data-theme="dark"] .chat-history-new-btn:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
+[data-theme="dark"] .s7-report-action-btn { border-color: rgba(255,255,255,0.12); color: #94a3b8; }
+[data-theme="dark"] .s7-report-action-btn:hover { background: rgba(255,255,255,0.07); color: #e2e8f0; }
+
+/* ReportReadyHero, report view controls, breadcrumb, containers → lib/modules/report/report.css */
+/* CostCopilotPanel → lib/modules/cost/cost.css */
+
+/* ── Chat history item actions (edit / redesign) ── */
+.chat-history-item-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-radius: 8px;
+}
+.chat-history-item-wrap .chat-history-item {
+  flex: 1;
+  min-width: 0;
+}
+.chat-history-item-actions {
+  display: none;
+  align-items: center;
+  gap: 2px;
+  padding-right: 4px;
+  flex-shrink: 0;
+}
+.chat-history-item-wrap:hover .chat-history-item-actions {
+  display: flex;
+}
+.chat-history-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--text-mid, #94a3b8);
+  transition: background 0.12s, color 0.12s;
+}
+.chat-history-action-btn:hover {
+  background: var(--accent-muted, rgba(13,148,136,0.1));
+  color: var(--accent, #0d9488);
+}
+[data-theme="dark"] .chat-history-action-btn:hover {
+  background: rgba(255,255,255,0.08);
+  color: #e2e8f0;
+}
+.chat-history-action-btn.active {
+  color: var(--accent, #0d9488);
+  background: var(--accent-muted, rgba(13,148,136,0.1));
+}
+[data-theme="dark"] .chat-history-action-btn.active {
+  color: #5eead4;
+  background: rgba(94,234,212,0.12);
+}
+
+/* ── Search + status tabs (rewritten ChatHistoryPanel) ── */
+.chat-history-search-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px 4px;
+  flex-shrink: 0;
+}
+.chat-history-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--bg, #fff);
+  color: var(--text-mid, #64748b);
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.chat-history-search:focus-within {
+  border-color: var(--accent, #0d9488);
+  box-shadow: 0 0 0 2px var(--accent-muted, rgba(13,148,136,0.15));
+}
+.chat-history-search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text, #1e293b);
+}
+.chat-history-search-input::placeholder { color: var(--text-mid, #94a3b8); }
+.chat-history-search-hint {
+  font-size: 10px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--bg-alt, #f1f5f9);
+  color: var(--text-mid, #94a3b8);
+  flex-shrink: 0;
+}
+.chat-history-status-tabs {
+  display: flex;
+  gap: 4px;
+}
+.chat-history-status-tab {
+  flex: 1;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--text-mid, #64748b);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.chat-history-status-tab:hover:not(.active) {
+  background: var(--bg-alt, #f8fafc);
+  color: var(--text, #1e293b);
+}
+.chat-history-status-tab.active {
+  background: var(--accent-muted, rgba(13,148,136,0.1));
+  color: var(--accent, #0d9488);
+  border-color: var(--accent-muted, rgba(13,148,136,0.2));
+}
+[data-theme="dark"] .chat-history-search {
+  border-color: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.03);
+}
+[data-theme="dark"] .chat-history-search:focus-within {
+  border-color: #5eead4;
+  box-shadow: 0 0 0 2px rgba(94,234,212,0.15);
+}
+[data-theme="dark"] .chat-history-search-input { color: #e2e8f0; }
+[data-theme="dark"] .chat-history-search-hint {
+  background: rgba(255,255,255,0.06);
+  color: #94a3b8;
+}
+[data-theme="dark"] .chat-history-status-tab:hover:not(.active) {
+  background: rgba(255,255,255,0.05);
+  color: #e2e8f0;
+}
+[data-theme="dark"] .chat-history-status-tab.active {
+  background: rgba(94,234,212,0.12);
+  color: #5eead4;
+  border-color: rgba(94,234,212,0.2);
+}
+
+/* ── Item preview + metadata (rewritten ChatHistoryPanel) ── */
+.chat-history-item-preview {
+  font-size: 12px;
+  color: var(--text-mid, #64748b);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  line-height: 1.4;
+}
+.chat-history-item-pinmark {
+  margin-right: 4px;
+  font-size: 10px;
+}
+.chat-history-item-kind {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--bg-alt, #f1f5f9);
+  color: var(--text-mid, #64748b);
+  text-transform: capitalize;
+}
+.chat-history-item-count {
+  font-size: 11px;
+  color: var(--text-mid, #94a3b8);
+}
+.chat-history-item-wrap.is-pinned {
+  background: linear-gradient(90deg, rgba(13,148,136,0.04), transparent 40%);
+}
+.chat-history-item-wrap.is-archived {
+  opacity: 0.55;
+}
+.chat-history-item-wrap.is-archived:hover {
+  opacity: 1;
+}
+[data-theme="dark"] .chat-history-item-preview { color: #94a3b8; }
+[data-theme="dark"] .chat-history-item-kind {
+  background: rgba(255,255,255,0.06);
+  color: #94a3b8;
+}
+[data-theme="dark"] .chat-history-item-wrap.is-pinned {
+  background: linear-gradient(90deg, rgba(94,234,212,0.06), transparent 40%);
+}
+
+/* Report extras, floating report viewer (.frv-*), inline canvas report (.s7-report-*, .s7-canvas--report) → lib/modules/report/report.css */
+

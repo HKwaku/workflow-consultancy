@@ -60,6 +60,8 @@ function diagnosticReducer(state, action) {
       const arr = [...(state.completedProcesses || [])];
       if (idx >= 0 && idx < arr.length) arr[idx] = action.payload.process;
       return { ...state, completedProcesses: arr };
+    case 'SET_MODULE_ID':
+      return { ...state, moduleId: action.payload };
     case 'SET_DIAGNOSTIC_MODE':
       return { ...state, diagnosticMode: action.payload };
     case 'SET_CUSTOM_DEPARTMENTS':
@@ -107,6 +109,18 @@ function diagnosticReducer(state, action) {
       return { ...state, auditTrail: [...(state.auditTrail || []), action.payload] };
     case 'SET_AUDIT_TRAIL':
       return { ...state, auditTrail: action.payload };
+    case 'SET_DEAL':
+      return {
+        ...state,
+        dealId: action.payload.dealId || null,
+        dealCode: action.payload.dealCode || null,
+        dealRole: action.payload.dealRole || null,
+        dealName: action.payload.dealName || null,
+        dealParticipants: action.payload.dealParticipants || [],
+        dealCanonicalProcessName: action.payload.canonicalProcessName || null,
+        dealCanonicalStart: action.payload.canonicalStart || null,
+        dealCanonicalEnd: action.payload.canonicalEnd || null,
+      };
     case 'RESTORE':
       return { ...state, ...action.payload };
     default:
@@ -126,14 +140,22 @@ const initialState = {
   editingRedesign: false,
   aiRedesignMode: false,
   editingProcessIndex: null,
+  moduleId: null,
   diagnosticMode: 'comprehensive',
   pendingPath: 'individual',
   teamMode: false,
   authUser: null,
   contact: null,
-  chatMessages: [
-    { role: 'assistant', content: "Hi! I'm your process mapping assistant. Describe your workflow and I'll help build the steps, or ask me anything about process audits." },
-  ],
+  // Deal context (PE Roll-up and M&A multi-participant flows)
+  dealId: null,
+  dealCode: null,
+  dealRole: null,
+  dealName: null,
+  dealParticipants: [],
+  dealCanonicalProcessName: null,
+  dealCanonicalStart: null,
+  dealCanonicalEnd: null,
+  chatMessages: [],
   chatOpen: false,
   auditTrail: [],
 };
@@ -164,10 +186,19 @@ export function DiagnosticProvider({ children }) {
         customDepartments: state.customDepartments || [],
         stepCount: state.stepCount ?? 0,
         editingReportId: state.editingReportId || null,
+        moduleId: state.moduleId || null,
         diagnosticMode: state.diagnosticMode || 'comprehensive',
         teamMode: state.teamMode && state.teamMode.code ? { code: state.teamMode.code } : null,
         authUser: state.authUser || null,
         contact: state.contact || null,
+        dealId: state.dealId || null,
+        dealCode: state.dealCode || null,
+        dealRole: state.dealRole || null,
+        dealName: state.dealName || null,
+        dealParticipants: state.dealParticipants || [],
+        dealCanonicalProcessName: state.dealCanonicalProcessName || null,
+        dealCanonicalStart: state.dealCanonicalStart || null,
+        dealCanonicalEnd: state.dealCanonicalEnd || null,
         auditTrail: (state.auditTrail || []).slice(-50),
         ...(chatPersist?.length ? { chatMessages: chatPersist } : {}),
         timestamp: new Date().toISOString(),
@@ -183,10 +214,19 @@ export function DiagnosticProvider({ children }) {
     state.customDepartments,
     state.stepCount,
     state.editingReportId,
+    state.moduleId,
     state.diagnosticMode,
     state.teamMode,
     state.authUser,
     state.contact,
+    state.dealId,
+    state.dealCode,
+    state.dealRole,
+    state.dealName,
+    state.dealParticipants,
+    state.dealCanonicalProcessName,
+    state.dealCanonicalStart,
+    state.dealCanonicalEnd,
     state.auditTrail,
     state.chatMessages,
   ]);
@@ -232,6 +272,10 @@ export function DiagnosticProvider({ children }) {
 
   const setCompletedProcesses = useCallback((arr) => {
     dispatch({ type: 'SET_COMPLETED_PROCESSES', payload: arr || [] });
+  }, []);
+
+  const setModuleId = useCallback((id) => {
+    dispatch({ type: 'SET_MODULE_ID', payload: id });
   }, []);
 
   const setDiagnosticMode = useCallback((mode) => {
@@ -303,6 +347,10 @@ export function DiagnosticProvider({ children }) {
     dispatch({ type: 'SET_CHAT_OPEN', payload: open });
   }, []);
 
+  const setDeal = useCallback((deal) => {
+    dispatch({ type: 'SET_DEAL', payload: deal || {} });
+  }, []);
+
   const addAuditEvent = useCallback((event) => {
     if (!state.authUser && !state.contact?.email) return;
     dispatch({ type: 'ADD_AUDIT_EVENT', payload: { ...event, timestamp: event.timestamp || new Date().toISOString(), id: Math.random().toString(36).slice(2, 10) } });
@@ -343,10 +391,19 @@ export function DiagnosticProvider({ children }) {
         stepCount: data.stepCount ?? 0,
         editingReportId: data.editingReportId || null,
         editingRedesign: !!data.editingRedesign,
+        moduleId: data.moduleId || null,
         diagnosticMode: data.diagnosticMode || 'comprehensive',
         teamMode: data.teamMode || false,
         authUser: data.authUser || null,
         contact: data.contact || null,
+        dealId: data.dealId || null,
+        dealCode: data.dealCode || null,
+        dealRole: data.dealRole || null,
+        dealName: data.dealName || null,
+        dealParticipants: data.dealParticipants || [],
+        dealCanonicalProcessName: data.dealCanonicalProcessName || null,
+        dealCanonicalStart: data.dealCanonicalStart || null,
+        dealCanonicalEnd: data.dealCanonicalEnd || null,
         auditTrail: trail,
         ...(restoredChat?.length ? { chatMessages: restoredChat } : {}),
       },
@@ -363,6 +420,7 @@ export function DiagnosticProvider({ children }) {
       completedProcesses: state.completedProcesses,
       customDepartments: state.customDepartments || [],
       stepCount: state.stepCount ?? 0,
+      moduleId: state.moduleId || null,
       diagnosticMode: state.diagnosticMode || 'comprehensive',
       teamMode: state.teamMode && state.teamMode.code ? { code: state.teamMode.code } : undefined,
       contact: state.contact || null,
@@ -435,6 +493,7 @@ export function DiagnosticProvider({ children }) {
   const value = {
     ...state,
     // Actions
+    setModuleId,
     goToScreen,
     updateProcessData,
     setProcessData,
@@ -464,6 +523,7 @@ export function DiagnosticProvider({ children }) {
     toggleChatOpen,
     setChatOpen,
     addAuditEvent,
+    setDeal,
     // Constants (for convenience)
     TOTAL_SCREENS,
     MAP_ONLY_SCREENS,

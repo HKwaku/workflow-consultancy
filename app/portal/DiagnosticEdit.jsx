@@ -5,6 +5,7 @@ import Link from 'next/link';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/components/ThemeProvider';
 import InteractiveFlowCanvas from '@/components/flow/InteractiveFlowCanvas';
+import { resolveStoredPositions, writeLayoutKey } from '@/lib/flows';
 import { getSupabaseClient, getSessionSafe } from '@/lib/supabase';
 
 const PHASES = [
@@ -926,8 +927,8 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
                         darkTheme={theme === 'dark'}
                         onWrapToggle={handleWrapToggle}
                         isWrapped={isWrapped}
-                        storedPositions={proc.flowNodePositions?.[`${proc.steps.length}-${flowView}`] || null}
-                        onPositionsChange={(positions, layout) => updateProc('flowNodePositions', { ...proc.flowNodePositions, [`${proc.steps.length}-${layout}`]: positions })}
+                        storedPositions={resolveStoredPositions(proc.flowNodePositions, proc.steps.length, flowView)}
+                        onPositionsChange={(positions, layout) => updateProc('flowNodePositions', { ...proc.flowNodePositions, [writeLayoutKey(proc.steps.length, layout)]: positions })}
                         customEdges={proc.flowCustomEdges}
                         onCustomEdgesChange={(edges) => updateProc('flowCustomEdges', edges)}
                         deletedEdges={proc.flowDeletedEdges}

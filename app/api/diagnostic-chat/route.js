@@ -4,6 +4,8 @@ import { DiagnosticChatInputSchema } from '@/lib/ai-schemas';
 import { runChatAgent } from '@/lib/agents/chat/graph';
 import { runRedesignChatAgent } from '@/lib/agents/redesign-chat/graph';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
+import { buildSessionContext } from '@/lib/chatPersistence';
+import { verifySupabaseSession } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 
 export const maxDuration = 60;
@@ -28,6 +30,24 @@ export async function POST(request) {
   const { message, currentSteps, currentHandoffs, processName, history, incompleteInfo, attachments, editingReportId, editingRedesign, redesignContext, segment } = parsed.data;
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured.' }, { status: 500 });
 
+  // Authenticated users get cross-session memory injected into the system
+  // prompt — prior processes, recent conversations. Anonymous flows run
+  // without context, same as before. Failures are swallowed: missing
+  // context is a soft downgrade, never a reason to block the chat.
+  let sessionContext = null;
+  try {
+    const session = await verifySupabaseSession(request);
+    if (session) {
+      sessionContext = await buildSessionContext({
+        email: session.email,
+        userId: session.userId,
+        excludeReportId: editingReportId,
+      });
+    }
+  } catch (err) {
+    logger.warn('Session context build failed', { error: err.message });
+  }
+
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -39,12 +59,14 @@ export async function POST(request) {
         if (editingRedesign) {
           ({ reply, actions } = await runRedesignChatAgent({
             message, currentSteps, currentHandoffs, processName, history, redesignContext, segment,
+            sessionContext,
             onEmit: (event, data) => send(event, data),
           }));
         } else {
           ({ reply, actions } = await runChatAgent({
             message, currentSteps, currentHandoffs, processName, history, incompleteInfo, attachments,
             editingReportId, editingRedesign, redesignContext,
+            sessionContext,
             onEmit: (event, data) => send(event, data),
           }));
         }

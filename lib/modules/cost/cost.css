@@ -1,0 +1,122 @@
+/**
+ * Cost module CSS — cost analysis page, editor, co-pilot panel.
+ *
+ * Owned selectors:
+ *   .cost-*                         (cost analysis page — lives in
+ *                                    app/cost-analysis/cost-analysis.css;
+ *                                    will be migrated here later)
+ *   .cost-copilot-*                 (co-pilot floating panel)
+ *   .cost-tooltip                   (cost drill tooltip)
+ */
+
+/* ── CostCopilotPanel ── */
+.cost-copilot-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 1000;
+  display: flex; align-items: flex-end; justify-content: flex-end;
+}
+.cost-copilot-panel {
+  width: 380px; max-width: 100vw; height: 520px; max-height: 90vh;
+  background: var(--bg, #fff); border-radius: 14px 14px 0 0;
+  box-shadow: 0 -4px 32px rgba(0,0,0,0.12); display: flex; flex-direction: column;
+  margin: 0 24px;
+}
+.cost-copilot-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid var(--border, #e2e8f0); flex-shrink: 0;
+}
+.cost-copilot-header-left { display: flex; align-items: center; gap: 8px; }
+.cost-copilot-title { font-size: 0.9rem; font-weight: 600; color: var(--text, #1e293b); }
+.cost-copilot-close {
+  background: none; border: none; cursor: pointer; padding: 4px;
+  color: var(--text-mid, #64748b); border-radius: 6px;
+}
+.cost-copilot-close:hover { background: var(--bg-alt, #f1f5f9); color: var(--text, #1e293b); }
+.cost-copilot-messages { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.cost-copilot-msg { display: flex; gap: 8px; align-items: flex-start; }
+.cost-copilot-msg--user { flex-direction: row-reverse; }
+.cost-copilot-bubble {
+  max-width: 85%; padding: 9px 12px; border-radius: 10px; font-size: 0.85rem;
+  line-height: 1.5; background: var(--bg-alt, #f1f5f9); color: var(--text, #1e293b);
+}
+.cost-copilot-msg--user .cost-copilot-bubble { background: var(--accent, #0d9488); color: #fff; }
+.cost-copilot-bubble--typing { display: flex; gap: 4px; align-items: center; padding: 12px 14px; }
+.cost-copilot-bubble--typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--text-mid, #94a3b8); animation: copilot-bounce 1.2s infinite; }
+.cost-copilot-bubble--typing span:nth-child(2) { animation-delay: 0.2s; }
+.cost-copilot-bubble--typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes copilot-bounce { 0%,80%,100% { transform: scale(0.7); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }
+.cost-copilot-input-row {
+  display: flex; gap: 8px; padding: 12px 14px;
+  border-top: 1px solid var(--border, #e2e8f0); flex-shrink: 0;
+}
+.cost-copilot-input {
+  flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border, #e2e8f0);
+  font-size: 0.85rem; background: var(--bg, #fff); color: var(--text, #1e293b); outline: none;
+}
+.cost-copilot-input:focus { border-color: var(--accent, #0d9488); }
+.cost-copilot-send {
+  padding: 8px 12px; border-radius: 8px; background: var(--accent, #0d9488);
+  color: #fff; border: none; cursor: pointer; flex-shrink: 0;
+}
+.cost-copilot-send:disabled { opacity: 0.4; cursor: default; }
+[data-theme="dark"] .cost-copilot-panel { background: var(--bg, #1a1a1a); }
+[data-theme="dark"] .cost-copilot-header { border-color: rgba(255,255,255,0.08); }
+[data-theme="dark"] .cost-copilot-bubble { background: rgba(255,255,255,0.07); color: #e2e8f0; }
+[data-theme="dark"] .cost-copilot-input { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #e2e8f0; }
+[data-theme="dark"] .cost-copilot-input-row { border-color: rgba(255,255,255,0.08); }
+
+/* ── CostAccessPanel (components/CostAccessPanel.jsx) ───────────────────── */
+.cap-root {
+  border: 1px solid var(--border, rgba(15, 23, 42, 0.08));
+  border-radius: 10px;
+  padding: 16px 18px;
+  background: var(--bg-surface, #ffffff);
+}
+[data-theme="dark"] .cap-root { background: var(--bg-surface, #0f172a); border-color: rgba(255,255,255,0.08); }
+.cap-header { margin-bottom: 12px; }
+.cap-title { margin: 0 0 2px; font-size: 15px; font-weight: 600; color: var(--text, #0f172a); }
+.cap-subtitle { margin: 0; font-size: 12px; color: var(--text-mid, #64748b); }
+[data-theme="dark"] .cap-title { color: #f1f5f9; }
+[data-theme="dark"] .cap-subtitle { color: #94a3b8; }
+.cap-loading { margin: 0; font-size: 13px; color: var(--text-mid, #64748b); }
+.cap-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.cap-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg-mute, rgba(15,23,42,0.03));
+  border-radius: 6px;
+  font-size: 13px;
+}
+[data-theme="dark"] .cap-item { background: rgba(255,255,255,0.04); }
+.cap-item--owner { background: var(--accent-muted, rgba(13,148,136,0.08)); }
+[data-theme="dark"] .cap-item--owner { background: rgba(45, 212, 191, 0.1); }
+.cap-item--empty { justify-content: center; color: var(--text-mid, #64748b); font-style: italic; }
+.cap-item-email { color: var(--text, #0f172a); }
+[data-theme="dark"] .cap-item-email { color: #e2e8f0; }
+.cap-item-role { font-size: 11px; color: var(--accent, #0d9488); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.cap-item-remove {
+  border: none;
+  background: none;
+  color: var(--text-mid, #64748b);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.cap-item-remove:hover:not(:disabled) { background: rgba(220, 38, 38, 0.1); color: #dc2626; }
+.cap-item-remove:disabled { opacity: 0.5; cursor: not-allowed; }
+.cap-add-form { display: flex; gap: 8px; }
+.cap-add-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border, rgba(15, 23, 42, 0.12));
+  border-radius: 6px;
+  font-size: 13px;
+  background: var(--bg-surface, #ffffff);
+  color: var(--text, #0f172a);
+}
+.cap-add-input:focus { outline: none; border-color: var(--accent, #0d9488); }
+[data-theme="dark"] .cap-add-input { background: rgba(255,255,255,0.04); color: #f1f5f9; border-color: rgba(255,255,255,0.1); }
+.cap-add-btn { padding: 8px 16px; font-size: 13px; }
+.cap-error { margin: 8px 0 0; font-size: 12px; color: #dc2626; }
