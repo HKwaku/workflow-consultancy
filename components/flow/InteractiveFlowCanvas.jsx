@@ -199,13 +199,6 @@ function FlowCanvasInner({
   const instanceRef = useRef(null);
   const containerRef = useRef(null);
   const initialNodesRef = useRef(initialNodes);
-  const [mobileAccepted, setMobileAccepted] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    if (window.innerWidth >= 768) return true;
-    try { return sessionStorage.getItem('flow-mobile-accepted') === '1'; } catch { return false; }
-  });
-
-
   const isSwimlane = layout === 'swimlane' && lanes?.length > 0;
   const isGridOrWrap = layout === 'grid' || layout === 'wrap';
   const flowNodes = isSwimlane ? nodes.filter((n) => !n.id.match(/^lane-\d+$/)) : nodes;
@@ -914,30 +907,6 @@ function FlowCanvasInner({
       )}
     </ReactFlow>
   );
-
-  if (!mobileAccepted) {
-    return (
-      <div ref={containerRef} className={`interactive-flow-canvas ${className}`} data-theme={darkTheme ? 'dark' : 'light'}>
-        <div className="flow-mobile-prompt">
-          <svg className="flow-mobile-prompt-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1"/>
-          </svg>
-          <p className="flow-mobile-prompt-title">Best viewed on desktop</p>
-          <p className="flow-mobile-prompt-body">This flow chart is designed for a larger screen. For the full experience, open this page on a desktop or laptop.</p>
-          <button
-            type="button"
-            className="flow-mobile-prompt-btn"
-            onClick={() => {
-              try { sessionStorage.setItem('flow-mobile-accepted', '1'); } catch {}
-              setMobileAccepted(true);
-            }}
-          >
-            View anyway
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div ref={containerRef} className={`interactive-flow-canvas ${className}`} data-theme={darkTheme ? 'dark' : 'light'}>
