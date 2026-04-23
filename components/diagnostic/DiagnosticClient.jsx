@@ -71,14 +71,13 @@ function buildAiRedesignGreeting(raw, processName) {
 }
 
 /* Lazy load heavy screens and panels – diagnostic opens with minimal bundle */
-const Screen2MapSteps = dynamic(() => import('./screens/Screen2MapSteps'), {
+const DiagnosticWorkspace = dynamic(() => import('./screens/DiagnosticWorkspace'), {
   ssr: false,
-  loading: () => <div className="loading-state"><div className="loading-spinner" /><p>Loading step editor...</p></div>,
+  loading: () => <div className="loading-state"><div className="loading-spinner" /><p>Loading workspace...</p></div>,
 });
 const ScreenLoading = () => <div className="loading-state"><div className="loading-spinner" /><p>Loading...</p></div>;
 const Screen1SelectTemplate = dynamic(() => import('./screens/Screen1SelectTemplate'), { ssr: false, loading: ScreenLoading });
 const Screen6Complete = dynamic(() => import('./screens/Screen6Complete'), { ssr: false, loading: ScreenLoading });
-const SaveProgressModal = dynamic(() => import('./SaveProgressModal'), { ssr: false });
 const AuditTrailPanel = dynamic(() => import('./AuditTrailPanel'), { ssr: false });
 const AUDIT_SEGMENTS = [
   {
@@ -344,25 +343,12 @@ function AuditGate({ onComplete, dealContext, onDealCodeResolved, sessionUser })
 
 /** Shared workspace shell for all pre-map-steps chat screens.
  *  Matches Screen2's s7-workspace / s7-workspace-main / s7-split-rail structure exactly. */
-function ChatWorkspaceShell({ children, sessionUser, onSave }) {
+function ChatWorkspaceShell({ children, sessionUser }) {
   return (
     <div className="s7-workspace chat-workspace">
       <div className="s7-workspace-main">
         <nav className="s7-split-rail" aria-label="Chat tools">
-          <div className="s7-split-rail-body">
-            <button
-              type="button"
-              className="s7-split-rail-btn"
-              onClick={onSave}
-              title="Save progress and get link"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
-                <polyline points="17 21 17 13 7 13 7 21" />
-                <polyline points="7 3 7 8 15 8" />
-              </svg>
-            </button>
-          </div>
+          <div className="s7-split-rail-body" />
           <div className="s7-split-rail-footer">
             <a
               href="/portal"
@@ -396,7 +382,6 @@ function DiagnosticContent() {
   } = useDiagnostic();
   const [showResume, setShowResume] = useState(false);
   const [savedData, setSavedData] = useState(null);
-  const [showSaveModal, setShowSaveModal] = useState(false);
   const [resumeChecked, setResumeChecked] = useState(false);
   const [initialStepIdx, setInitialStepIdx] = useState(null);
   const [editLoading, setEditLoading] = useState(false);
@@ -494,6 +479,7 @@ function DiagnosticContent() {
   const urlEditEmail = searchParams.get('email');
   const urlEditRedesign = searchParams.get('editRedesign') === '1';
   const urlAiRedesign = searchParams.get('aiRedesign') === '1';
+  const urlViewCost = searchParams.get('view') === 'cost';
   const editLoadedRef = useRef(false);
 
   // Handle re-audit: seed process names from original report, store parentReportId
@@ -541,28 +527,60 @@ function DiagnosticContent() {
     }
     chatSessionLoadedRef.current = true;
     setGateCompleted(true);
-    apiFetch(`/api/chat-sessions/${encodeURIComponent(urlChatSession)}`, {}, accessToken)
-      .then(async (r) => (r.ok ? r.json() : null))
-      .then((data) => {
+    (async () => {
+      try {
+        const r = await apiFetch(`/api/chat-sessions/${encodeURIComponent(urlChatSession)}`, {}, accessToken);
+        const data = r.ok ? await r.json() : null;
         if (!data?.success || !Array.isArray(data.messages)) {
           setEditError('Could not load this chat. It may have been deleted.');
           return;
         }
-        // Hydrate processData from the session snapshot so steps, handoffs,
-        // contact, etc. all come back — not just the chat thread. localStorage
-        // is primed so subsequent saves reuse this session id.
         const snapshot = data.session?.process_snapshot;
-        if (snapshot && typeof snapshot === 'object') {
+        const hasSnapshot = snapshot && typeof snapshot === 'object' && snapshot.processData && typeof snapshot.processData === 'object';
+        const reportId = data.session?.report_id || null;
+
+        if (hasSnapshot) {
+          restoreProgress(snapshot);
+        } else if (snapshot && typeof snapshot === 'object') {
           updateProcessData(snapshot);
+        } else if (reportId) {
+          // No snapshot (older session) — hydrate from the report's rawProcesses.
+          try {
+            const rep = await apiFetch(`/api/get-diagnostic?id=${encodeURIComponent(reportId)}`, {}, accessToken);
+            const repData = rep.ok ? await rep.json() : null;
+            const report = repData?.report;
+            const dd = report?.diagnosticData || {};
+            const raw = (report?.rawProcesses || dd.rawProcesses || [])[0];
+            if (raw) {
+              restoreProgress({
+                currentScreen: 2,
+                processData: {
+                  processType: raw.processType || '',
+                  processName: raw.processName || '',
+                  definition: raw.definition || { startsWhen: '', completesWhen: '', complexity: '', departments: [] },
+                  steps: raw.steps || [],
+                  handoffs: raw.handoffs || [],
+                  systems: raw.systems || [],
+                  flowCustomEdges: raw.flowCustomEdges || [],
+                  flowDeletedEdges: raw.flowDeletedEdges || [],
+                  flowNodePositions: raw.flowNodePositions || {},
+                  frequency: raw.frequency || { type: '', annual: 0 },
+                  costs: raw.costs || { hourlyRate: 50, teamSize: 1 },
+                },
+                contact: dd.contact || report.contact || null,
+                diagnosticMode: report?.diagnosticMode || dd.diagnosticMode || 'comprehensive',
+                editingReportId: reportId,
+              });
+            }
+          } catch { /* best-effort */ }
         }
-        if (data.session?.report_id) {
-          setEditingReportId(data.session.report_id);
+
+        if (reportId) {
+          setEditingReportId(reportId);
           if (data.session.kind === 'redesign') setEditingRedesign(true);
         }
         try {
-          const key = data.session?.report_id
-            ? `vesno_chat_session_${data.session.report_id}`
-            : 'vesno_chat_session_active';
+          const key = reportId ? `vesno_chat_session_${reportId}` : 'vesno_chat_session_active';
           localStorage.setItem(key, urlChatSession);
         } catch { /* ignore */ }
         setChatMessages(
@@ -574,9 +592,11 @@ function DiagnosticContent() {
           }))
         );
         goToScreen(2);
-      })
-      .catch(() => setEditError('Could not load this chat.'));
-  }, [urlChatSession, accessToken, authLoading, setChatMessages, goToScreen, updateProcessData, setEditingReportId, setEditingRedesign]);
+      } catch {
+        setEditError('Could not load this chat.');
+      }
+    })();
+  }, [urlChatSession, accessToken, authLoading, setChatMessages, goToScreen, updateProcessData, restoreProgress, setEditingReportId, setEditingRedesign]);
 
   useEffect(() => {
     if (!urlEdit || editLoadedRef.current) return;
@@ -661,6 +681,8 @@ function DiagnosticContent() {
         setEditingRedesign(isEditRedesign);
         const editGreeting = urlAiRedesign
           ? buildAiRedesignGreeting(raw, raw.processName)
+          : urlViewCost
+          ? "You're working on the cost analysis for this process. Update labour rates, non-labour costs, or implementation investment on the right — or ask me to adjust figures, explain the payback/ROI math, or call out where the biggest savings are. What would you like to do?"
           : isEditRedesign
           ? "You're editing your redesigned flow. I can help you refine steps, add details, or adjust the process. What would you like to change?"
           : "You're editing your process audit. I can help you refine steps, add details, or adjust the process. What would you like to change?";
@@ -780,12 +802,6 @@ function DiagnosticContent() {
     setSavedData(null);
   };
 
-  useEffect(() => {
-    const handler = () => setShowSaveModal(true);
-    window.addEventListener('open-save-modal', handler);
-    return () => window.removeEventListener('open-save-modal', handler);
-  }, []);
-
   /*
    * Mobile layout uses CSS to drop html/body min-height for chat steps. Browser back/forward
    * (BFCache) can restore a snapshot where :has() doesn’t re-match — set a real attribute so
@@ -844,11 +860,10 @@ function DiagnosticContent() {
         return <Screen1SelectTemplate />;
       case 2:
         return (
-          <Screen2MapSteps
+          <DiagnosticWorkspace
             initialStepIdx={initialStepIdx}
             onAuditTrailToggle={() => setShowAuditTrail((v) => !v)}
             auditTrailOpen={showAuditTrail}
-            onOpenSaveModal={() => setShowSaveModal(true)}
             reportToLoad={reportToLoad}
             onReportLoaded={() => setReportToLoad(null)}
             redesignReportId={redesignReportId}
@@ -859,11 +874,10 @@ function DiagnosticContent() {
         return <Screen6Complete onComplete={handleScreen6Complete} />;
       default:
         return (
-          <Screen2MapSteps
+          <DiagnosticWorkspace
             initialStepIdx={initialStepIdx}
             onAuditTrailToggle={() => setShowAuditTrail((v) => !v)}
             auditTrailOpen={showAuditTrail}
-            onOpenSaveModal={() => setShowSaveModal(true)}
             reportToLoad={reportToLoad}
             onReportLoaded={() => setReportToLoad(null)}
             redesignReportId={redesignReportId}
@@ -940,7 +954,7 @@ function DiagnosticContent() {
         {editError ? (
           <>
             <p style={{ color: 'var(--red, #dc2626)', marginBottom: 16 }}>{editError}</p>
-            <a href="/portal" style={{ color: 'var(--accent)', fontWeight: 500 }}>Back to Portal</a>
+            <a href="/portal" style={{ color: 'var(--accent)', fontWeight: 500 }}>Back to Dashboard</a>
           </>
         ) : (
           <>
@@ -956,12 +970,10 @@ function DiagnosticContent() {
     <>
       <div className="diagnostic-shell container container-wide">
         <DiagnosticNavProvider>
-          <SaveProgressModal isOpen={showSaveModal} onClose={() => setShowSaveModal(false)} />
-
           {currentScreen === 2 ? (
             renderScreen()
           ) : (
-            <ChatWorkspaceShell sessionUser={sessionUser} onSave={() => setShowSaveModal(true)}>
+            <ChatWorkspaceShell sessionUser={sessionUser}>
               <>
                 {showResume && savedData && (
                   savedData.handoverSender ? (

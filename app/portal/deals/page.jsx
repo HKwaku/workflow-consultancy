@@ -60,7 +60,7 @@ function PortalDealsContent() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <Link href="/" className="header-logo">Vesno<span style={{ color: 'var(--gold)' }}>.</span></Link>
             <div className="header-divider" />
-            <span className="header-title">Portal deals</span>
+            <span className="header-title">Dashboard deals</span>
           </div>
           <ThemeToggle className="header-theme-btn" />
         </header>

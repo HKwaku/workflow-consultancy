@@ -138,7 +138,7 @@ export default function DealPage() {
 function DealNav({ deal }) {
   return (
     <nav className="deal-page-breadcrumb">
-      <Link href="/portal" className="deal-breadcrumb-link">Portal</Link>
+      <Link href="/portal" className="deal-breadcrumb-link">Dashboard</Link>
       <span className="deal-breadcrumb-sep">›</span>
       <Link href="/portal?tab=deals" className="deal-breadcrumb-link">Deals</Link>
       {deal && (

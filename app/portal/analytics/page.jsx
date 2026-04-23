@@ -60,7 +60,7 @@ function PortalAnalyticsContent() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <Link href="/" className="header-logo">Vesno<span style={{ color: 'var(--gold)' }}>.</span></Link>
             <div className="header-divider" />
-            <span className="header-title">Portal analytics</span>
+            <span className="header-title">Dashboard analytics</span>
           </div>
           <ThemeToggle className="header-theme-btn" />
         </header>

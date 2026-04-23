@@ -18,8 +18,10 @@ import { loadSnippets, saveSnippet, deleteSnippet } from '@/lib/diagnostic/saved
 import { getWaitProfile } from '@/lib/flows/flowModel';
 import { repairFlow } from '@/lib/flows/normalizer';
 import { reconcileDecisionBranches } from '@/lib/flows/reconcileEdges';
+import { computePhaseState } from '@/lib/diagnostic/intakePhases';
 import FloatingFlowViewer from '../FloatingFlowViewer';
 import ChatHistoryPanel from '../ChatHistoryPanel';
+import ChatMessageContent, { CopyButton } from '../ChatMessageContent';
 
 const MAP_SPLIT_RAIL_PX = 48;
 const MAP_SPLIT_HANDLE_PX = 8;
@@ -96,21 +98,9 @@ const GUIDE_TOUR = [
     cta: "Show me around →",
   },
   {
-    title: "Save & continue later",
-    desc: "Save your progress and get a shareable link at any time. Come back later or send it to your team.",
-    selector: '[title="Save progress and get link"]',
-    cta: "Next →",
-  },
-  {
-    title: "Handover to a colleague",
-    desc: "Pass this process audit to a colleague. They'll get a unique link and can pick up exactly where you left off.",
-    selector: '[title="Handover to a colleague"]',
-    cta: "Next →",
-  },
-  {
-    title: "Expand the flow",
-    desc: "Open the process diagram in a floating window for a full-screen view. Useful once your steps are mapped.",
-    selector: '[title="Expand flow in window"]',
+    title: "Chat history",
+    desc: "Every conversation is autosaved. Open this panel to jump back into any prior audit — your flow, chat, and progress all come back exactly as you left them.",
+    selector: '[title="Chat history"]',
     cta: "Next →",
   },
   {
@@ -120,15 +110,45 @@ const GUIDE_TOUR = [
     cta: "Next →",
   },
   {
+    title: "Snippets",
+    desc: "Save reusable step templates — approvals, reviews, onboarding chunks — and drop them into any flow. Great for processes you map over and over.",
+    selector: '[title="Snippets"]',
+    cta: "Next →",
+  },
+  {
+    title: "Expand the flow",
+    desc: "Open the process diagram in a floating window for a full-screen view. Useful once your steps are mapped.",
+    selector: '[title="Expand flow in window"]',
+    cta: "Next →",
+  },
+  {
     title: "Activity log",
     desc: "Every change is tracked. Open the activity log to see a full audit trail of edits made during this session.",
     selector: '[title="Activity log"]',
     cta: "Next →",
   },
   {
+    title: "Cost analysis",
+    desc: "See the financial impact of this process — annual cost, estimated savings, payback, and ROI. Available once a report has been generated.",
+    selector: '[title="Cost analysis"]',
+    cta: "Next →",
+  },
+  {
+    title: "Handover to a colleague",
+    desc: "Pass this process audit to a colleague. They'll get a unique link and can pick up exactly where you left off — your flow, chat history, and notes travel with it.",
+    selector: '[title="Handover to a colleague"]',
+    cta: "Next →",
+  },
+  {
+    title: "Generate report",
+    desc: "When the flow is complete, click here to generate your diagnostic report — bottlenecks, automation opportunities, and cost impact.",
+    selector: '[title="Generate report"]',
+    cta: "Next →",
+  },
+  {
     title: "Dashboard / sign in",
     desc: "Access your dashboard to view saved reports, manage process audits, and track completed work.",
-    selector: '[title="Dashboard"],[title="Sign in"]',
+    selector: '[title="Dashboard"],[title="Sign in"],[title="Account"]',
     cta: "Next →",
   },
   {
@@ -149,7 +169,12 @@ function MapGuide({ onDismiss }) {
   useEffect(() => {
     if (!current.selector) { setSpotlightStyle(null); return; }
     const el = document.querySelector(current.selector);
-    if (!el) { setSpotlightStyle(null); return; }
+    if (!el) {
+      // Selector didn't match — skip this stop so we don't show a pointer to nothing.
+      setSpotlightStyle(null);
+      if (step < GUIDE_TOUR.length - 1) setStep((s) => s + 1);
+      return;
+    }
     const r = el.getBoundingClientRect();
     const PAD = 8;
     setSpotlightStyle({
@@ -291,7 +316,7 @@ function DealSetupCard({ platformCompany, onSubmit }) {
 }
 
 /** Save + optional view report — top of icon rail */
-function MapRailPrimaryTools({ onOpenSaveModal, editingReportId, onViewReport, onHandover, onContinue, onSaveToReport, savingToReport, sessionUser }) {
+function MapRailPrimaryTools({ editingReportId, onViewReport, onViewCost, onHandover, onContinue, onSaveToReport, savingToReport, sessionUser, hasCostAccess }) {
   return (
     <>
       <a
@@ -306,13 +331,19 @@ function MapRailPrimaryTools({ onOpenSaveModal, editingReportId, onViewReport, o
           <rect x="14" y="14" width="7" height="7" rx="1" />
         </svg>
       </a>
-      <button type="button" className="s7-split-rail-btn" onClick={() => onOpenSaveModal?.()} title="Save progress and get link">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
-          <polyline points="17 21 17 13 7 13 7 21" />
-          <polyline points="7 3 7 8 15 8" />
-        </svg>
-      </button>
+      {hasCostAccess && editingReportId && (
+        <button
+          type="button"
+          className="s7-split-rail-btn"
+          onClick={() => onViewCost?.(editingReportId)}
+          title="Cost analysis"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <line x1="12" y1="1" x2="12" y2="23" />
+            <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+          </svg>
+        </button>
+      )}
       {onHandover && (
         <button type="button" className="s7-split-rail-btn" onClick={onHandover} title="Handover to a colleague">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -428,12 +459,12 @@ function MapRailPortalFooter({ sessionUser, onSignOut }) {
   );
 }
 
-export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, onAuditTrailToggle, auditTrailOpen, onOpenSaveModal, reportToLoad, onReportLoaded, redesignReportId, onRedesignConsumed }) {
+export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp, onAuditTrailToggle, auditTrailOpen, reportToLoad, onReportLoaded, redesignReportId, onRedesignConsumed }) {
   const {
     processData, updateProcessData, goToScreen,
     customDepartments, addCustomDepartment,
     diagnosticMode, teamMode, chatMessages, addChatMessage,
-    saveProgressToCloud, editingReportId, editingRedesign, aiRedesignMode, contact, authUser, setContact,
+    saveProgressToCloud, buildFullSnapshot, editingReportId, editingRedesign, aiRedesignMode, contact, authUser, setContact,
     addAuditEvent,
     moduleId, setModuleId, dealCanonicalProcessName, dealName, dealRole, dealId, setDeal,
   } = useDiagnostic();
@@ -442,10 +473,35 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
 
   /* ── Cloud chat persistence ── */
   const chatSessionIdRef = useRef(null);
+  const sessionCreateInFlightRef = useRef(false);
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const key = editingReportId ? `vesno_chat_session_${editingReportId}` : 'vesno_chat_session_active';
     try { chatSessionIdRef.current = localStorage.getItem(key) || null; } catch { /* ignore */ }
+  }, [editingReportId]);
+
+  /* ── Cost-analysis entitlement: platform admin OR any membership with cost_analyst ── */
+  useEffect(() => {
+    if (!accessToken) { setHasCostAccess(false); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await apiFetch('/api/organizations', {}, accessToken);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (cancelled) return;
+        const fromMembership = (data.memberships || []).some((m) => m?.entitlements?.cost_analyst);
+        setHasCostAccess(Boolean(data.platformAdmin) || fromMembership);
+      } catch { /* ignore — icon just won't render */ }
+    })();
+    return () => { cancelled = true; };
+  }, [accessToken]);
+
+  /* ── Auto-open inline cost panel when ?view=cost is present in URL ── */
+  useEffect(() => {
+    if (!editingReportId || typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view') === 'cost') setInlineCostReportId(editingReportId);
   }, [editingReportId]);
 
   const persistMessageToCloud = useCallback(async ({ role, content, actions, attachments: attachmentsArg, snapshot }) => {
@@ -467,7 +523,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
           sessionId: chatSessionIdRef.current || undefined,
           reportId: editingReportId || undefined,
           kind: editingRedesign ? 'redesign' : 'map',
-          title: (snapshot?.processName || processData.processName) || undefined,
+          title: (snapshot?.processData?.processName || snapshot?.processName || processData.processName) || undefined,
           role,
           content: typeof content === 'string' ? content : String(content ?? ''),
           actions: actions || undefined,
@@ -496,15 +552,47 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
   }, [accessToken, editingReportId, editingRedesign, processData]);
 
   const syncSnapshotToSession = useCallback(async (snapshot) => {
-    if (!accessToken || !chatSessionIdRef.current) return;
+    if (!accessToken) return;
+    const currentId = chatSessionIdRef.current;
+    if (currentId) {
+      try {
+        await apiFetch(`/api/chat-sessions/${encodeURIComponent(currentId)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ processSnapshot: snapshot }),
+        }, accessToken);
+      } catch { /* best-effort */ }
+      return;
+    }
+    // No session yet — create one carrying the snapshot so autosave
+    // produces recoverable state before the first chat message is sent.
+    if (sessionCreateInFlightRef.current) return;
+    sessionCreateInFlightRef.current = true;
     try {
-      await apiFetch(`/api/chat-sessions/${encodeURIComponent(chatSessionIdRef.current)}`, {
-        method: 'PATCH',
+      const resp = await apiFetch('/api/chat-sessions', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ processSnapshot: snapshot }),
+        body: JSON.stringify({
+          reportId: editingReportId || undefined,
+          kind: editingRedesign ? 'redesign' : 'map',
+          title: (snapshot?.processData?.processName || snapshot?.processName || processData.processName) || undefined,
+          processSnapshot: snapshot,
+        }),
       }, accessToken);
-    } catch { /* best-effort */ }
-  }, [accessToken]);
+      if (resp.ok) {
+        const data = await resp.json().catch(() => null);
+        if (data?.sessionId) {
+          chatSessionIdRef.current = data.sessionId;
+          if (typeof window !== 'undefined') {
+            const key = editingReportId ? `vesno_chat_session_${editingReportId}` : 'vesno_chat_session_active';
+            try { localStorage.setItem(key, data.sessionId); } catch { /* ignore */ }
+          }
+        }
+      }
+    } catch { /* best-effort */ } finally {
+      sessionCreateInFlightRef.current = false;
+    }
+  }, [accessToken, editingReportId, editingRedesign, processData]);
 
   /* ═══════ Step state ═══════ */
   const initialSteps = useMemo(() => {
@@ -547,6 +635,8 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
   const [checklistInputs, setChecklistInputs] = useState({});
   const [showFloatingFlow, setShowFloatingFlow] = useState(false);
   const [inlineReportId, setInlineReportId] = useState(null);
+  const [inlineCostReportId, setInlineCostReportId] = useState(null);
+  const [hasCostAccess, setHasCostAccess] = useState(false);
   const [snippets, setSnippets] = useState(() => { try { return loadSnippets(null); } catch { return []; } });
   const [showSnippetPicker, setShowSnippetPicker] = useState(false);
   const [showDepsModal, setShowDepsModal] = useState(false);
@@ -809,6 +899,9 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
   const chatFileRef = useRef(null);
   const chatTextareaRef = useRef(null);
   const lastFailedChatPayloadRef = useRef(null);
+  const chatAbortRef = useRef(null);
+  const chatHistoryStackRef = useRef([]); // Undo stack for chat-applied mutations
+  const costIframeRef = useRef(null);
   const previewCanvasRef = useRef(null);
   const stepsSyncTimerRef = useRef(null);
   const stepsSyncMountedRef = useRef(false);
@@ -846,20 +939,20 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
       snapshotSyncMountedRef.current = true;
       return;
     }
-    if (!accessToken || !chatSessionIdRef.current) return;
+    if (!accessToken) return;
     clearTimeout(snapshotSyncTimerRef.current);
     snapshotSyncTimerRef.current = setTimeout(() => {
-      syncSnapshotToSession({
+      syncSnapshotToSession(buildFullSnapshot({
         ...processData,
         steps,
         handoffs,
         flowCustomEdges: flowCustomEdgesRef.current || [],
         flowDeletedEdges: flowDeletedEdgesRef.current || [],
         flowNodePositions: flowNodePositionsRef.current || {},
-      });
+      }));
     }, 600);
     return () => clearTimeout(snapshotSyncTimerRef.current);
-  }, [steps, handoffs, flowCustomEdges, flowDeletedEdges, flowNodePositions, accessToken, syncSnapshotToSession]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [steps, handoffs, flowCustomEdges, flowDeletedEdges, flowNodePositions, accessToken, syncSnapshotToSession, buildFullSnapshot]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => () => { if (validationToastTimerRef.current) clearTimeout(validationToastTimerRef.current); }, []);
 
@@ -1413,6 +1506,24 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
     if (!actions || actions.length === 0) return [];
     const addedNames = [];
 
+    // Capture one snapshot per batch for undo — chat actions often come in
+    // groups (e.g. replace_all_steps + multiple add_step tool calls in one
+    // agent turn). A single undo reverts the whole turn rather than rolling
+    // back tool-call-by-tool-call.
+    const MUTATING = new Set(['replace_all_steps', 'add_step', 'update_step', 'remove_step', 'set_handoff', 'add_custom_department']);
+    const turnMutates = actions.some((a) => MUTATING.has(a.name));
+    if (turnMutates) {
+      chatHistoryStackRef.current.push({
+        steps: steps.map((s) => ({ ...s, checklist: (s.checklist || []).map((c) => ({ ...c })) })),
+        handoffs: handoffs.map((h) => ({ ...h })),
+        flowCustomEdges: (flowCustomEdgesRef.current || []).map((e) => ({ ...e })),
+        flowDeletedEdges: (flowDeletedEdgesRef.current || []).map((e) => ({ ...e })),
+        at: Date.now(),
+      });
+      // Cap history depth
+      if (chatHistoryStackRef.current.length > 20) chatHistoryStackRef.current.shift();
+    }
+
     for (const action of actions) {
       switch (action.name) {
         case 'replace_all_steps': {
@@ -1536,12 +1647,54 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
           if (name && isCustomDepartment(name)) addCustomDepartment(name);
           break;
         }
+        case 'highlight_step': {
+          const idx = (action.input?.stepNumber || 0) - 1;
+          if (idx >= 0) {
+            setActiveIdx(idx);
+            setExpandedStepIdx(idx);
+          }
+          break;
+        }
+        case 'open_panel': {
+          const panel = action.input?.panel;
+          if (panel === 'flow') {
+            setInlineReportId(null);
+            setInlineCostReportId(null);
+          } else if (panel === 'report' && editingReportId) {
+            setInlineCostReportId(null);
+            setInlineReportId(editingReportId);
+          } else if (panel === 'cost' && editingReportId) {
+            setInlineReportId(null);
+            setInlineCostReportId(editingReportId);
+          }
+          break;
+        }
+        case 'undo_last_action': {
+          const snap = chatHistoryStackRef.current.pop();
+          if (!snap) break;
+          setSteps(snap.steps);
+          setHandoffs(snap.handoffs);
+          flowCustomEdgesRef.current = snap.flowCustomEdges || [];
+          flowDeletedEdgesRef.current = snap.flowDeletedEdges || [];
+          setFlowCustomEdges(snap.flowCustomEdges || []);
+          setFlowDeletedEdges(snap.flowDeletedEdges || []);
+          queueMicrotask(() => addAuditEvent({ type: 'step_edit', detail: 'AI undid last chat action' }));
+          break;
+        }
+        case 'set_labour_rate':
+        case 'set_non_labour_cost':
+        case 'set_investment':
+        case 'propose_change':
+        case 'ask_discovery':
+          // No client-side state change — the agent's natural-language reply
+          // (built from the tool result text) is the user-facing surface.
+          break;
         default:
           break;
       }
     }
     return addedNames;
-  }, [addStep, removeStep, addCustomDepartment, updateProcessData, addAuditEvent]);
+  }, [addStep, removeStep, addCustomDepartment, updateProcessData, addAuditEvent, steps, handoffs, editingReportId]);
 
   const processFiles = useCallback((files) => {
     if (!files.length) return;
@@ -1621,7 +1774,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
     // Build a live snapshot of the workspace (steps + handoffs from local
     // state which may be ahead of processData's debounced copy, plus the
     // flow canvas metadata which lives only on this screen).
-    const buildLiveSnapshot = () => ({
+    const buildLiveSnapshot = () => buildFullSnapshot({
       ...processData,
       steps,
       handoffs,
@@ -1643,6 +1796,15 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
     setChatStreamedText('');
     if (attachmentsToSend.length > 0) setChatProgress('Sending files to the assistant…');
 
+    // Abort any in-flight request before starting a new one.
+    if (chatAbortRef.current) {
+      try { chatAbortRef.current.abort(); } catch {}
+    }
+    const controller = new AbortController();
+    chatAbortRef.current = controller;
+    let streamedSoFar = '';
+    let aborted = false;
+
     const incompleteSummary = steps
       .map((s, i) => {
         const w = stepWarnings[i] || [];
@@ -1650,6 +1812,8 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
       })
       .filter(Boolean)
       .join('\n');
+
+    const phaseState = computePhaseState({ steps, handoffs });
 
     const historyForRequest = isRetry ? chatMessages : [...chatMessages, { role: 'user', content: userContent }];
 
@@ -1660,6 +1824,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
       processName: processData.processName || '',
       history: historyForRequest.map((m) => ({ role: m.role, content: m.content })),
       incompleteInfo: incompleteSummary || null,
+      phaseState,
       attachments: attachmentsToSend.length > 0 ? attachmentsToSend : undefined,
       editingReportId: editingReportId || undefined,
       editingRedesign: editingRedesign || undefined,
@@ -1678,6 +1843,7 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
           ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
         body,
+        signal: controller.signal,
       });
 
       const contentType = resp.headers.get('content-type') || '';
@@ -1705,7 +1871,10 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
             try {
               const parsed = JSON.parse(raw);
               if (event === 'progress') setChatProgress(parsed.message || '');
-              else if (event === 'delta') setChatStreamedText((prev) => prev + (parsed.text || ''));
+              else if (event === 'delta') {
+                streamedSoFar += (parsed.text || '');
+                setChatStreamedText((prev) => prev + (parsed.text || ''));
+              }
               else if (event === 'done') data = parsed;
               else if (event === 'error') throw new Error(parsed.error || 'Chat failed');
             } catch (e) { if (e.message !== 'Chat failed' && !e.message.startsWith('Chat failed')) continue; throw e; }
@@ -1716,7 +1885,14 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
         if (!resp.ok) throw new Error(data.error || 'Chat failed');
       }
 
-      addChatMessage({ role: 'assistant', content: data.reply });
+      const costProposals = (data.actions || [])
+        .filter((a) => a.name === 'set_labour_rate' || a.name === 'set_non_labour_cost' || a.name === 'set_investment')
+        .map((a) => ({ kind: a.name, ...a.input }));
+      addChatMessage({
+        role: 'assistant',
+        content: data.reply,
+        ...(costProposals.length ? { costProposals } : {}),
+      });
       persistMessageToCloud({ role: 'assistant', content: data.reply, actions: data.actions, snapshot: buildLiveSnapshot() });
       if (data.actions?.length > 0) {
         const addedNames = processActions(data.actions);
@@ -1733,6 +1909,17 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
         lastErr = null;
         break;
       } catch (err) {
+        if (err?.name === 'AbortError' || controller.signal.aborted) {
+          aborted = true;
+          lastErr = null;
+          const partial = streamedSoFar.trim();
+          if (partial) {
+            const flushed = `${partial}\n\n_(stopped)_`;
+            addChatMessage({ role: 'assistant', content: flushed });
+            persistMessageToCloud({ role: 'assistant', content: flushed, snapshot: buildLiveSnapshot() });
+          }
+          break;
+        }
         lastErr = err;
         const canRetry = isRetryableError(err) && attempt < maxAttempts - 1;
         if (canRetry) {
@@ -1748,12 +1935,46 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
       }
     }
 
+    if (chatAbortRef.current === controller) chatAbortRef.current = null;
     setChatLoading(false);
     setChatProgress('');
     setChatStreamedText('');
   };
 
+  const stopChat = useCallback(() => {
+    const c = chatAbortRef.current;
+    if (!c) return;
+    try { c.abort(); } catch {}
+    chatAbortRef.current = null;
+  }, []);
+
+  const applyCostProposal = useCallback((proposal) => {
+    if (!editingReportId) return;
+    // Ensure the cost panel is open so the iframe exists to receive the message
+    setInlineReportId(null);
+    setInlineCostReportId(editingReportId);
+    // The iframe may have just been mounted; give it a tick to attach its
+    // message listener before posting. Retry a few times if not ready.
+    let attempts = 0;
+    const post = () => {
+      const iframe = costIframeRef.current;
+      if (!iframe || !iframe.contentWindow) {
+        if (attempts++ < 12) return setTimeout(post, 250);
+        return;
+      }
+      iframe.contentWindow.postMessage(
+        { type: 'reina:cost-change', payload: proposal },
+        window.location.origin,
+      );
+    };
+    setTimeout(post, 150);
+  }, [editingReportId]);
+
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatMessages]);
+  useEffect(() => {
+    if (!chatStreamedText) return;
+    chatEndRef.current?.scrollIntoView({ behavior: 'auto' });
+  }, [chatStreamedText]);
 
   /* ═══════ Computed ═══════ */
   const namedSteps = steps.filter((s) => s.name.trim());
@@ -2242,11 +2463,30 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
           const isLast = i === chatMessages.length - 1;
           const showSuggestions = isLast && m.role === 'assistant' && m.suggestions?.length > 0 && !chatLoading;
           const showChips = isLast && m.role === 'assistant' && m.chips?.length > 0 && !chatLoading;
+          const isAssistant = m.role === 'assistant';
+          const showActions = isAssistant && !!m.content && !(isLast && chatLoading);
           return (
             <div key={i} className={`s7-msg s7-msg-${m.role}`}>
-              {m.role === 'assistant' && <div className="sharp-avatar sharp-avatar-sm" title="Reina">R</div>}
+              {isAssistant && <div className="sharp-avatar sharp-avatar-sm" title="Reina">R</div>}
               <div className="s7-msg-content">
-                <div className="s7-msg-bubble">{m.content}</div>
+                <div className={`s7-msg-bubble${isAssistant ? ' s7-msg-bubble--md' : ''}`}>
+                  {isAssistant ? <ChatMessageContent content={m.content} /> : m.content}
+                </div>
+                {showActions && (
+                  <div className="s7-msg-actions">
+                    <CopyButton text={m.content} className="s7-msg-action-btn" label="Copy" copiedLabel="Copied" />
+                    {isLast && (
+                      <button
+                        type="button"
+                        className="s7-msg-action-btn"
+                        onClick={() => sendChat(null, true)}
+                        aria-label="Regenerate response"
+                      >
+                        Regenerate
+                      </button>
+                    )}
+                  </div>
+                )}
                 {showSuggestions && (
                   <div className="s7-redesign-suggestions">
                     {m.suggestions.map((s, si) => (
@@ -2285,6 +2525,33 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
                     </a>
                   </div>
                 )}
+                {Array.isArray(m.costProposals) && m.costProposals.length > 0 && editingReportId && (
+                  <div className="s7-report-actions">
+                    {m.costProposals.map((p, pi) => {
+                      let label = '';
+                      if (p.kind === 'set_labour_rate') {
+                        const unit = p.rateType === 'annual' ? '/yr' : '/hr';
+                        label = `Apply: ${p.department} → ${p.rateInput}${unit}`;
+                      } else if (p.kind === 'set_non_labour_cost') {
+                        label = `Apply: ${p.key} → ${p.amount}`;
+                      } else if (p.kind === 'set_investment') {
+                        label = `Apply: investment → ${p.amount}`;
+                      } else {
+                        label = 'Apply';
+                      }
+                      return (
+                        <button
+                          key={pi}
+                          type="button"
+                          className="s7-report-action-btn s7-report-action-btn--primary"
+                          onClick={() => applyCostProposal(p)}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
                 {m.dealSetup && !dealId && (
                   <DealSetupCard
                     platformCompany={m.dealSetup.platformCompany}
@@ -2295,7 +2562,32 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
             </div>
           );
         })}
-        {chatLoading && <div className="s7-msg s7-msg-assistant"><div className="sharp-avatar sharp-avatar-sm" title="Reina">R</div><div className={`s7-msg-bubble ${chatStreamedText ? '' : 's7-typing'}`}>{chatStreamedText ? <span className="s7-typing-text">{chatStreamedText}</span> : chatProgress ? <span className="s7-typing-text">{chatProgress}</span> : <><span /><span /><span /></>}</div></div>}
+        {chatLoading && (
+          <div className="s7-msg s7-msg-assistant">
+            <div className="sharp-avatar sharp-avatar-sm" title="Reina">R</div>
+            <div className="s7-msg-content">
+              <div className={`s7-msg-bubble${chatStreamedText ? ' s7-msg-bubble--md' : ' s7-typing'}`}>
+                {chatStreamedText ? (
+                  <ChatMessageContent content={chatStreamedText} streaming />
+                ) : chatProgress ? (
+                  <span className="s7-typing-text">{chatProgress}</span>
+                ) : (
+                  <><span /><span /><span /></>
+                )}
+              </div>
+              <div className="s7-msg-actions">
+                <button
+                  type="button"
+                  className="s7-msg-action-btn s7-msg-action-btn--stop"
+                  onClick={stopChat}
+                  aria-label="Stop generating"
+                >
+                  Stop
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <div ref={chatEndRef} />
       </div>
       {chatError && (
@@ -2935,14 +3227,15 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
           <nav className="s7-split-rail" data-theme={theme} aria-label="Mapping tools">
             <div className="s7-split-rail-body">
             <MapRailPrimaryTools
-              onOpenSaveModal={onOpenSaveModal}
               editingReportId={editingReportId}
-              onViewReport={(id) => setInlineReportId(id)}
+              onViewReport={(id) => { setInlineCostReportId(null); setInlineReportId(id); }}
+              onViewCost={(id) => { setInlineReportId(null); setInlineCostReportId(id); }}
               onHandover={editingReportId ? undefined : openHandoverModal}
               onContinue={editingReportId ? undefined : handleContinue}
               onSaveToReport={editingReportId ? handleSaveToReport : undefined}
               savingToReport={savingToReport}
               sessionUser={sessionUser}
+              hasCostAccess={hasCostAccess}
             />
             <div className="s7-split-rail-sep" role="separator" aria-hidden />
             <button type="button" className={`s7-split-rail-btn${showChatHistory ? ' active' : ''}`} onClick={() => setShowChatHistory((v) => !v)} title="Chat history">
@@ -2989,7 +3282,39 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
             onPointerDown={handleSplitResizeStart}
           />
           <div className="s7-canvas-column">
-          {inlineReportId ? (
+          {inlineCostReportId ? (
+            <>
+              <div className="s7-canvas-topbar s7-canvas-topbar--report">
+                <button type="button" className="s7-report-back-btn" onClick={() => setInlineCostReportId(null)}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                  </svg>
+                  Flow
+                </button>
+                <a
+                  href={`/cost-analysis?id=${inlineCostReportId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="s7-report-newtab-link"
+                >
+                  Open in new tab
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+                    <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                  </svg>
+                </a>
+              </div>
+              <div className="s7-canvas s7-canvas--report">
+                <iframe
+                  ref={costIframeRef}
+                  src={`/cost-analysis?id=${encodeURIComponent(inlineCostReportId)}&embed=1`}
+                  title="Cost analysis"
+                  className="s7-report-iframe"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                />
+              </div>
+            </>
+          ) : inlineReportId ? (
             <>
               <div className="s7-canvas-topbar s7-canvas-topbar--report">
                 <button type="button" className="s7-report-back-btn" onClick={() => setInlineReportId(null)}>
@@ -3087,14 +3412,15 @@ export default function Screen2MapSteps({ initialStepIdx: initialStepIdxProp, on
           <nav className="s7-split-rail" data-theme={theme} aria-label="Mapping tools">
             <div className="s7-split-rail-body">
               <MapRailPrimaryTools
-                onOpenSaveModal={onOpenSaveModal}
                 editingReportId={editingReportId}
-                onViewReport={(id) => setInlineReportId(id)}
+                onViewReport={(id) => { setInlineCostReportId(null); setInlineReportId(id); }}
+                onViewCost={(id) => { setInlineReportId(null); setInlineCostReportId(id); }}
                 onHandover={editingReportId ? undefined : openHandoverModal}
                 onContinue={editingReportId ? undefined : handleContinue}
                 onSaveToReport={editingReportId ? handleSaveToReport : undefined}
                 savingToReport={savingToReport}
                 sessionUser={sessionUser}
+                hasCostAccess={hasCostAccess}
               />
               <div className="s7-split-rail-sep" role="separator" aria-hidden />
               <button type="button" className={`s7-split-rail-btn${showChatHistory ? ' active' : ''}`} onClick={() => setShowChatHistory((v) => !v)} title="Chat history">

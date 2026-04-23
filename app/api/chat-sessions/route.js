@@ -68,6 +68,7 @@ export async function POST(request) {
       reportId: body.reportId,
       kind: body.kind,
       title: body.title,
+      processSnapshot: body.processSnapshot,
     });
     return NextResponse.json({ success: true, sessionId });
   } catch (err) {

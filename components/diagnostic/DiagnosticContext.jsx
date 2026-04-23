@@ -410,11 +410,13 @@ export function DiagnosticProvider({ children }) {
     });
   }, []);
 
-  /** POST to /api/progress - save progress to cloud, get resume link. Options: step, processDataOverride, isHandover, senderName, comments. */
-  const saveProgressToCloud = useCallback(async (email = null, { step, processDataOverride, isHandover, senderName, comments } = {}) => {
+  /** Snapshot of full diagnostic state — shape matches `progressData` from
+   *  saveProgressToCloud so `restoreProgress` can rehydrate it verbatim.
+   *  Used by the chat-session autosave so resume-from-history achieves
+   *  parity with the legacy Save & continue later flow (minus email). */
+  const buildFullSnapshot = useCallback((processDataOverride) => {
     const pd = processDataOverride || state.processData;
-    const chatPersist = sanitizeChatMessagesForPersist(state.chatMessages);
-    const progressData = {
+    return {
       currentScreen: state.currentScreen,
       processData: pd,
       completedProcesses: state.completedProcesses,
@@ -425,7 +427,26 @@ export function DiagnosticProvider({ children }) {
       teamMode: state.teamMode && state.teamMode.code ? { code: state.teamMode.code } : undefined,
       contact: state.contact || null,
       authUser: state.authUser || null,
+      editingReportId: state.editingReportId || null,
+      editingRedesign: !!state.editingRedesign,
+      dealId: state.dealId || null,
+      dealCode: state.dealCode || null,
+      dealRole: state.dealRole || null,
+      dealName: state.dealName || null,
+      dealParticipants: state.dealParticipants || [],
+      dealCanonicalProcessName: state.dealCanonicalProcessName || null,
+      dealCanonicalStart: state.dealCanonicalStart || null,
+      dealCanonicalEnd: state.dealCanonicalEnd || null,
       auditTrail: (state.auditTrail || []).slice(-50),
+    };
+  }, [state.currentScreen, state.processData, state.completedProcesses, state.customDepartments, state.stepCount, state.moduleId, state.diagnosticMode, state.teamMode, state.contact, state.authUser, state.editingReportId, state.editingRedesign, state.dealId, state.dealCode, state.dealRole, state.dealName, state.dealParticipants, state.dealCanonicalProcessName, state.dealCanonicalStart, state.dealCanonicalEnd, state.auditTrail]);
+
+  /** POST to /api/progress - save progress to cloud, get resume link. Options: step, processDataOverride, isHandover, senderName, comments. */
+  const saveProgressToCloud = useCallback(async (email = null, { step, processDataOverride, isHandover, senderName, comments } = {}) => {
+    const pd = processDataOverride || state.processData;
+    const chatPersist = sanitizeChatMessagesForPersist(state.chatMessages);
+    const progressData = {
+      ...buildFullSnapshot(pd),
       ...(chatPersist?.length ? { chatMessages: chatPersist } : {}),
     };
     const emailTrimmed = typeof email === 'string' ? email.trim() : '';
@@ -509,6 +530,7 @@ export function DiagnosticProvider({ children }) {
     loadProgress,
     restoreProgress,
     saveProgressToCloud,
+    buildFullSnapshot,
     sendDiagnosticReport,
     setStepCount,
     setEditingReportId,

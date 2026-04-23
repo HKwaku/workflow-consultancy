@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { getSupabaseHeaders, requireSupabase, fetchWithTimeout, checkOrigin, isValidUUID } from '@/lib/api-helpers';
 import { verifySupabaseSession } from '@/lib/auth';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { calculateProcessSavings } from '@/lib/costSavingsCalculator';
+import { isPlatformAdminEmail, userHasEntitlement } from '@/lib/orgAdmin';
+import { ENTITLEMENT_KEYS } from '@/lib/entitlements';
 
 export async function POST(request) {
   const originErr = checkOrigin(request);
@@ -36,8 +39,14 @@ export async function POST(request) {
   const costAuthorizedEmails = (dd.costAuthorizedEmails || []).map(e => e.toLowerCase());
   const isCostAuthorized = session && costAuthorizedEmails.includes(session.email.toLowerCase());
   const hasValidToken = token && storedToken && token === storedToken;
+  const isPlatformAdmin = session ? isPlatformAdminEmail(session.email) : false;
+  let hasCostEntitlement = false;
+  if (session && !isPlatformAdmin) {
+    const sb = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    hasCostEntitlement = await userHasEntitlement(sb, session.userId, ENTITLEMENT_KEYS.COST_ANALYST);
+  }
 
-  if (!isCostAuthorized && !hasValidToken) {
+  if (!isCostAuthorized && !hasValidToken && !isPlatformAdmin && !hasCostEntitlement) {
     return NextResponse.json({ error: 'Access denied.' }, { status: 403 });
   }
 

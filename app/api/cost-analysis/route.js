@@ -1,9 +1,21 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { getSupabaseHeaders, getSupabaseWriteHeaders, fetchWithTimeout, requireSupabase, checkOrigin, getRequestId, isValidUUID } from '@/lib/api-helpers';
 import { verifySupabaseSession } from '@/lib/auth';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 import { triggerWebhook } from '@/lib/triggerWebhook';
+import { isPlatformAdminEmail, userHasEntitlement } from '@/lib/orgAdmin';
+import { ENTITLEMENT_KEYS } from '@/lib/entitlements';
+
+async function resolveSessionAccess(session, supabaseUrl, supabaseKey) {
+  if (!session) return { isPlatformAdmin: false, hasCostEntitlement: false };
+  const isPlatformAdmin = isPlatformAdminEmail(session.email);
+  if (isPlatformAdmin) return { isPlatformAdmin: true, hasCostEntitlement: true };
+  const sb = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  const hasCostEntitlement = await userHasEntitlement(sb, session.userId, ENTITLEMENT_KEYS.COST_ANALYST);
+  return { isPlatformAdmin, hasCostEntitlement };
+}
 
 export async function GET(request) {
   const originErr = checkOrigin(request);
@@ -35,12 +47,14 @@ export async function GET(request) {
   const costAuthorizedEmails = (dd.costAuthorizedEmails || []).map(e => e.toLowerCase());
   const isCostAuthorized = session && costAuthorizedEmails.includes(session.email.toLowerCase());
   const hasValidToken = token && storedToken && token === storedToken && !tokenExpired;
+  const { isPlatformAdmin, hasCostEntitlement } = await resolveSessionAccess(session, supabaseUrl, supabaseKey);
+  const isAuthorized = isCostAuthorized || hasValidToken || isPlatformAdmin || hasCostEntitlement;
 
-  if (!isCostAuthorized && !hasValidToken) {
+  if (!isAuthorized) {
     return NextResponse.json({ error: 'Access denied. Use the link assigned to you by the cost analyst.', needsAuth: !session }, { status: 403 });
   }
 
-  if (costAnalysisStatus === 'complete' && !hasValidToken && !isCostAuthorized) {
+  if (costAnalysisStatus === 'complete' && !hasValidToken && !isCostAuthorized && !isPlatformAdmin && !hasCostEntitlement) {
     return NextResponse.json({ success: true, report: { id, costAnalysisStatus: 'complete', diagnosticData: dd }, redirectToReport: true });
   }
 
@@ -123,8 +137,9 @@ export async function POST(request) {
   const costAuthorizedEmails = (dd.costAuthorizedEmails || []).map(e => e.toLowerCase());
   const isCostAuthorized = session && costAuthorizedEmails.includes(session.email.toLowerCase());
   const hasValidToken = token && storedToken && token === storedToken && !tokenExpired;
+  const { isPlatformAdmin, hasCostEntitlement } = await resolveSessionAccess(session, supabaseUrl, supabaseKey);
 
-  if (!isCostAuthorized && !hasValidToken) {
+  if (!isCostAuthorized && !hasValidToken && !isPlatformAdmin && !hasCostEntitlement) {
     return NextResponse.json({ error: tokenExpired ? 'This cost analysis link has expired.' : 'Access denied. Use the link assigned to you by the cost analyst.' }, { status: 403 });
   }
 
@@ -378,8 +393,9 @@ export async function PATCH(request) {
   const costAuthorizedEmails = (dd.costAuthorizedEmails || []).map(e => e.toLowerCase());
   const isCostAuthorized = session && costAuthorizedEmails.includes(session.email.toLowerCase());
   const hasValidToken = token && storedToken && token === storedToken && !tokenExpired;
+  const { isPlatformAdmin, hasCostEntitlement } = await resolveSessionAccess(session, supabaseUrl, supabaseKey);
 
-  if (!hasValidToken && !isCostAuthorized) {
+  if (!hasValidToken && !isCostAuthorized && !isPlatformAdmin && !hasCostEntitlement) {
     return NextResponse.json({ error: 'Access denied.' }, { status: 403 });
   }
 

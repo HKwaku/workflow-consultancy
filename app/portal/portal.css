@@ -1739,6 +1739,12 @@ body:has(.dashboard-header) {
   color: var(--text-light);
   font-weight: 400;
 }
+.portal-report-chat-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+.portal-report-chat-link:hover { text-decoration: underline; }
 .portal-report-labels {
   display: flex;
   align-items: center;
@@ -4466,3 +4472,87 @@ body:has(.dashboard-header) {
 .deal-link-report-item input[type=radio] { flex-shrink: 0; accent-color: var(--accent); }
 .deal-link-report-name { flex: 1; font-size: 0.85rem; font-weight: 600; color: var(--text); }
 .deal-link-report-meta { font-size: 0.75rem; color: var(--text-mid); white-space: nowrap; }
+
+/* ───────────────────────── Organisation admin ───────────────────────── */
+.org-admin-wrap { padding-top: 24px; padding-bottom: 48px; }
+.org-admin-error-banner { margin-bottom: 16px; }
+
+.org-admin-card { padding: 20px 24px; }
+
+.org-admin-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.org-admin-panel-title { margin: 0 0 12px; font-size: 1rem; font-weight: 600; color: var(--text); }
+.org-admin-panel-header .org-admin-panel-title { margin: 0; }
+
+.org-admin-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-mid);
+  font-weight: 500;
+}
+.org-admin-selector .org-admin-input { width: auto; min-width: 220px; }
+
+.org-admin-body { margin: 0 0 12px; font-size: 0.9rem; color: var(--text); line-height: 1.5; }
+.org-admin-muted { font-size: 0.85rem; color: var(--text-mid); }
+.org-admin-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem;
+  padding: 1px 5px;
+  background: var(--bg-alt);
+  border-radius: 3px;
+}
+.org-admin-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8rem; color: var(--text-mid); }
+
+.org-admin-form { display: flex; flex-direction: column; gap: 12px; margin: 20px 0; }
+.org-admin-label { display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; font-weight: 500; color: var(--text); }
+.org-admin-input { width: 100%; }
+
+.org-admin-invite-row { display: flex; flex-wrap: wrap; gap: 16px; align-items: end; }
+.org-admin-invite-row .org-admin-label { flex: 1; min-width: 220px; }
+
+.org-admin-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 400;
+}
+.org-admin-check input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
+
+.org-admin-fieldset { border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px 10px; margin: 0; }
+.org-admin-legend { font-size: 0.78rem; font-weight: 600; color: var(--text-mid); padding: 0 4px; }
+.org-admin-ent-grid { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+
+.org-admin-form-actions { display: flex; justify-content: flex-start; }
+
+.org-admin-subtitle { margin: 20px 0 8px; font-size: 0.9rem; font-weight: 600; color: var(--text); }
+
+.org-admin-members-wrap { overflow-x: auto; margin-top: 8px; }
+.org-admin-members-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.org-admin-members-table th,
+.org-admin-members-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.org-admin-members-table th { font-weight: 600; color: var(--text-mid); font-size: 0.78rem; }
+.org-admin-empty-cell { color: var(--text-mid); font-size: 0.82rem; text-align: center; }
+
+@media (max-width: 900px) {
+  .org-admin-invite-row { flex-direction: column; align-items: stretch; gap: 10px; }
+  .org-admin-panel-header { flex-direction: column; align-items: flex-start; }
+  .org-admin-selector { width: 100%; }
+  .org-admin-selector .org-admin-input { width: 100%; min-width: 0; }
+}

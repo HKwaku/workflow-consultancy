@@ -616,7 +616,7 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
           <button type="button" className="edit-save-btn" onClick={handleSave} disabled={saving} style={{ padding: '6px 18px', fontSize: '0.78rem' }}>
             {saving ? 'Saving...' : 'Save'}
           </button>
-          <button type="button" onClick={onBack} className="header-btn">&larr; Portal</button>
+          <button type="button" onClick={onBack} className="header-btn">&larr; Dashboard</button>
         </div>
       </header>
 
@@ -1163,7 +1163,7 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
         )}
 
         <div className="edit-bottom-bar">
-          <button type="button" onClick={onBack} className="edit-cancel-btn">&larr; Portal</button>
+          <button type="button" onClick={onBack} className="edit-cancel-btn">&larr; Dashboard</button>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <Link href={`/report?id=${reportId}`} className="edit-view-report-btn">View Report</Link>
             <button type="button" className="edit-save-btn" onClick={handleSave} disabled={saving}>

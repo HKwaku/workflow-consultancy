@@ -1300,7 +1300,7 @@ function ReportContent() {
   const tokenFromUrl = searchParams.get('token');
   const isClientView = searchParams.get('view') === 'client';
   // ?embed=1 is set when this page is rendered inside the canvas iframe on
-  // Screen2MapSteps. We hide the global top-bar chrome so the embedded view
+  // DiagnosticWorkspace. We hide the global top-bar chrome so the embedded view
   // looks like a clean report, not a nested mini-browser.
   const isEmbedView = searchParams.get('embed') === '1';
   // Unified toggle state — both render contexts use the same pair:

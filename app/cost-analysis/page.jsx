@@ -411,8 +411,9 @@ function CostAnalysisHeader({ id, title, extra }) {
       <div className="header-right">
         <ThemeToggle className="header-theme-btn" />
         {extra}
+        {id && <Link href={`/process-audit?edit=${encodeURIComponent(id)}&view=cost`} className="header-nav-link">Open in chat</Link>}
         {id && <Link href={`/report?id=${id}`} className="header-nav-link">View report</Link>}
-        <Link href="/portal" className="header-nav-link">Portal</Link>
+        <Link href="/portal" className="header-nav-link">Dashboard</Link>
       </div>
     </header>
   );
@@ -749,6 +750,10 @@ function CostAnalysisContent() {
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
   const token = searchParams.get('token');
+  // ?embed=1 is set when this page is rendered inside the canvas iframe in
+  // DiagnosticWorkspace. We hide the top-bar so the embedded view looks like a
+  // clean panel, not a nested mini-browser.
+  const isEmbedView = searchParams.get('embed') === '1';
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -897,6 +902,45 @@ function CostAnalysisContent() {
     };
     try { localStorage.setItem(draftKey, JSON.stringify(draft)); } catch {}
   }, [labourRates, blendedRate, onCostMultiplier, nonLabour, driverSliders, redesignSliders, systemCosts, implementationCost, processCostDrivers, growthRate, currency]);
+
+  // Chat-driven cost proposals: Reina postMessages us when the user clicks
+  // "Apply" on a cost suggestion in the parent workspace. We mutate local
+  // state only — the user still sees the pending change and clicks Save.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onMsg = (event) => {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data;
+      if (!data || data.type !== 'reina:cost-change' || !data.payload) return;
+      const p = data.payload;
+      if (p.kind === 'set_labour_rate') {
+        const dept = (p.department || '').trim();
+        if (!dept) return;
+        const rateType = p.rateType === 'annual' ? 'annual' : 'hourly';
+        const rateInput = Number(p.rateInput);
+        if (!Number.isFinite(rateInput)) return;
+        setLabourRates((prev) => {
+          const idx = prev.findIndex((r) => (r.department || '').toLowerCase() === dept.toLowerCase());
+          if (idx === -1) return [...prev, { department: dept, rateType, rateInput, utilisation: 0.85 }];
+          return prev.map((r, i) => (i === idx ? { ...r, rateType, rateInput } : r));
+        });
+      } else if (p.kind === 'set_non_labour_cost') {
+        const amount = Number(p.amount);
+        if (!Number.isFinite(amount)) return;
+        const key = String(p.key || '').trim();
+        if (!key) return;
+        setNonLabour((prev) => ({ ...prev, [key]: amount }));
+      } else if (p.kind === 'set_investment') {
+        const amount = Number(p.amount);
+        if (!Number.isFinite(amount)) return;
+        // Default the proposal to the "platform" line — user can redistribute
+        // across setup/training/maintenance on screen.
+        setImplementationCost((prev) => ({ ...prev, platform: amount }));
+      }
+    };
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
 
   const processes = data?.processes || [];
 
@@ -1348,8 +1392,8 @@ function CostAnalysisContent() {
   if (saveDone) {
     const fm = savedFinancials || financials;
     return (
-      <div className="portal-viewport cost-analysis-page">
-        <CostAnalysisHeader id={id} title="Cost analysis — saved" />
+      <div className={`portal-viewport cost-analysis-page${isEmbedView ? ' cost-analysis-embedded' : ''}`}>
+        {!isEmbedView && <CostAnalysisHeader id={id} title="Cost analysis — saved" />}
         <div className="portal-wrap cost-analysis-wrap">
           <div className="portal-dashboard-layout cost-analysis-layout">
             <div className="dash-card portal-content-card cost-analysis-main-card" style={{ maxWidth: 720, margin: '0 auto' }}>
@@ -1471,10 +1515,12 @@ function CostAnalysisContent() {
   if (showReview) {
     const hasHiddenCosts = processBreakdown.some(p => p.errorCost > 0 || p.waitCost > 0);
     return (
-      <div className="portal-viewport cost-analysis-page">
-        <CostAnalysisHeader id={id} title="Cost analysis — review" extra={
-          <button type="button" className="cost-header-back-btn" onClick={() => setShowReview(false)}>← Back to edit</button>
-        } />
+      <div className={`portal-viewport cost-analysis-page${isEmbedView ? ' cost-analysis-embedded' : ''}`}>
+        {!isEmbedView && (
+          <CostAnalysisHeader id={id} title="Cost analysis — review" extra={
+            <button type="button" className="cost-header-back-btn" onClick={() => setShowReview(false)}>← Back to edit</button>
+          } />
+        )}
         <div className="portal-wrap cost-analysis-wrap">
           <div className="portal-dashboard-layout cost-analysis-layout">
             <div className="dash-card portal-content-card cost-analysis-main-card">
@@ -1632,8 +1678,8 @@ function CostAnalysisContent() {
 
   // ── Main form ───────────────────────────────────────────────────────────
   return (
-    <div className="portal-viewport cost-analysis-page">
-      <CostAnalysisHeader id={id} />
+    <div className={`portal-viewport cost-analysis-page${isEmbedView ? ' cost-analysis-embedded' : ''}`}>
+      {!isEmbedView && <CostAnalysisHeader id={id} />}
       <div className="portal-wrap cost-analysis-wrap">
         {error && <div className="cost-analysis-error cost-analysis-error-banner">{error}</div>}
         {validationWarnings.some(w => w.type === 'error') && (

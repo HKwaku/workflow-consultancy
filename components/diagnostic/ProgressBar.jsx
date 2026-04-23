@@ -3,7 +3,7 @@
 import { useDiagnostic } from './DiagnosticContext';
 import { calculateProcessQuality } from '@/lib/diagnostic';
 
-export default function ProgressBar({ onSaveClick, currentScreen: screenProp }) {
+export default function ProgressBar({ currentScreen: screenProp }) {
   const {
     currentScreen: ctxScreen,
     diagnosticMode,
@@ -54,25 +54,12 @@ export default function ProgressBar({ onSaveClick, currentScreen: screenProp }) 
     : null;
   const showHealthScore = currentScreen > 2 && healthScore !== null;
 
-  // Hidden on Screen 2 (left rail has it) and on chat screens 0/1/1.5 (ChatWorkspaceShell rail has it)
-  const hideSaveInProgressBar = currentScreen === 2 || currentScreen === 0 || currentScreen === 1 || currentScreen === 1.5;
-
   return (
     <div className="progress-bar">
       <div className="progress-bar-row">
         <div className="progress-track">
           <div className="progress-fill" style={{ width: pct + '%' }} />
         </div>
-        {!hideSaveInProgressBar && (
-        <button type="button" className="save-progress-btn" onClick={onSaveClick || (() => {})} title="Save progress and get link">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-            <polyline points="17 21 17 13 7 13 7 21" />
-            <polyline points="7 3 7 8 15 8" />
-          </svg>
-          Save &amp; get link
-        </button>
-        )}
       </div>
       {text && <div className="progress-text">{text}</div>}
       {showHealthScore && (

@@ -27,7 +27,7 @@ export async function POST(request) {
 
   const parsed = DiagnosticChatInputSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Message or attachments required.' }, { status: 400 });
-  const { message, currentSteps, currentHandoffs, processName, history, incompleteInfo, attachments, editingReportId, editingRedesign, redesignContext, segment } = parsed.data;
+  const { message, currentSteps, currentHandoffs, processName, history, incompleteInfo, phaseState, attachments, editingReportId, editingRedesign, redesignContext, segment } = parsed.data;
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured.' }, { status: 500 });
 
   // Authenticated users get cross-session memory injected into the system
@@ -35,9 +35,11 @@ export async function POST(request) {
   // without context, same as before. Failures are swallowed: missing
   // context is a soft downgrade, never a reason to block the chat.
   let sessionContext = null;
+  let sessionInfo = null;
   try {
     const session = await verifySupabaseSession(request);
     if (session) {
+      sessionInfo = { userId: session.userId, email: session.email };
       sessionContext = await buildSessionContext({
         email: session.email,
         userId: session.userId,
@@ -64,9 +66,9 @@ export async function POST(request) {
           }));
         } else {
           ({ reply, actions } = await runChatAgent({
-            message, currentSteps, currentHandoffs, processName, history, incompleteInfo, attachments,
+            message, currentSteps, currentHandoffs, processName, history, incompleteInfo, phaseState, attachments,
             editingReportId, editingRedesign, redesignContext,
-            sessionContext,
+            sessionContext, session: sessionInfo,
             onEmit: (event, data) => send(event, data),
           }));
         }

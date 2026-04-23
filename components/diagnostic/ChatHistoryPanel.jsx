@@ -219,34 +219,13 @@ export default function ChatHistoryPanel({ onClose, onLoadReport, onRedesignRepo
   const groups = groupMode === 'date' ? groupByDate(filtered) : groupByProject(filtered);
 
   /* Actions */
-  const handleSelect = useCallback(async (session) => {
-    // Chat-only session without a saved report — resume the conversation
-    // thread by loading messages from /api/chat-sessions/:id.
-    if (!session.report_id) {
-      window.location.href = `/process-audit?chatSession=${encodeURIComponent(session.id)}`;
-      return;
-    }
-    const reportId = session.report_id;
-    if (!onLoadReport) {
-      window.location.href = `/process-audit?edit=${encodeURIComponent(reportId)}`;
-      return;
-    }
-    setLoadingId(session.id);
-    try {
-      const resp = await apiFetch(`/api/get-diagnostic?id=${encodeURIComponent(reportId)}`, {}, accessToken);
-      const data = resp.ok ? await resp.json().catch(() => ({})) : {};
-      if (data.success && data.report) {
-        onLoadReport(data.report);
-        onClose();
-      } else {
-        window.location.href = `/process-audit?edit=${encodeURIComponent(reportId)}`;
-      }
-    } catch {
-      window.location.href = `/process-audit?edit=${encodeURIComponent(reportId)}`;
-    } finally {
-      setLoadingId(null);
-    }
-  }, [accessToken, onLoadReport, onClose]);
+  const handleSelect = useCallback((session) => {
+    // Route every session — with or without a linked report — through the
+    // ?chatSession resume path so the workflow snapshot (steps, handoffs,
+    // flow canvas) AND the message thread are both restored. The resume
+    // handler falls back to the report row when the snapshot is empty.
+    window.location.href = `/process-audit?chatSession=${encodeURIComponent(session.id)}`;
+  }, []);
 
   const handleEdit = useCallback(async (e, session) => {
     e.stopPropagation();

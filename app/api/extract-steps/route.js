@@ -57,6 +57,7 @@ Extract every process step and return a JSON array. Each step object must have:
 - owner: string — specific role or person if mentioned (e.g. "Finance Manager"), otherwise blank
 - systems: string[] — software tools or systems used in this step (e.g. ["SAP", "Slack", "Email"])
 - isDecision: boolean — true if this is a decision/branch point (e.g. "Approve or Reject?", "If X then Y")
+- isMerge: boolean — true if this step is a convergence point where two or more branches rejoin the main flow. In diagrams, this is any shape that has multiple incoming arrows, or a BPMN gateway labelled "join/merge". In text, phrases like "after [either/both/all] paths, do X" indicate that X is the merge.
 - branches: array — if isDecision is true, list the branch outcomes as [{label: "Yes"}, {label: "No"}] or use the actual branch labels from the source. Empty array otherwise.
 
 Rules:
@@ -64,9 +65,10 @@ Rules:
 - Preserve the original sequence order.
 - Include ALL steps — do not summarise or skip.
 - For decision steps, set isDecision: true and populate branches.
+- For rejoin / convergence steps, set isMerge: true. When two branches visibly reconnect onto the same step in a diagram, that step is a merge. Prefer over-flagging merges when branches rejoin — the diagram needs it to draw the reconnection arrows.
 
 Return ONLY the JSON array, no other text. Example:
-[{"name":"Submit request","department":"Procurement","owner":"Procurement Analyst","systems":["SAP"],"isDecision":false,"branches":[]},{"name":"Approve or reject?","department":"Finance Manager","owner":"","systems":[],"isDecision":true,"branches":[{"label":"Approved"},{"label":"Rejected"}]}]`,
+[{"name":"Submit request","department":"Procurement","owner":"Procurement Analyst","systems":["SAP"],"isDecision":false,"isMerge":false,"branches":[]},{"name":"Approve or reject?","department":"Finance Manager","owner":"","systems":[],"isDecision":true,"isMerge":false,"branches":[{"label":"Approved"},{"label":"Rejected"}]},{"name":"Archive decision","department":"Finance","owner":"","systems":[],"isDecision":false,"isMerge":true,"branches":[]}]`,
     });
 
     const response = await model.invoke([new HumanMessage({ content: contentParts })]);
@@ -90,7 +92,7 @@ Return ONLY the JSON array, no other text. Example:
       owner: String(s.owner || '').trim().slice(0, 100),
       systems: Array.isArray(s.systems) ? s.systems.map(String).slice(0, 10) : [],
       isDecision: !!s.isDecision,
-      isMerge: false,
+      isMerge: !!s.isMerge,
       isExternal: false,
       branches: (s.isDecision && Array.isArray(s.branches))
         ? s.branches.slice(0, 6).map((b) => ({ label: String(b?.label || '').trim(), target: null }))

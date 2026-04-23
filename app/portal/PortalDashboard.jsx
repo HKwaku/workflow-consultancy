@@ -824,7 +824,7 @@ export default function PortalDashboard({ user, accessToken, onSignOut, initialS
     const hasCostToken = !!(r.costAnalysisToken);
     // isCostAuthorized: get-dashboard nulls the token and zeros costs for unauthorized users
     const isCostAuthorized = hasCostToken || (r.metrics?.totalAnnualCost || 0) > 0;
-    const costEditUrl = r.id ? `/cost-analysis?id=${r.id}` : null;
+    const costEditUrl = r.id ? `/process-audit?edit=${encodeURIComponent(r.id)}&email=${encodeURIComponent(email)}&view=cost` : null;
 
     const displayLabel = r.displayCode || (r.id?.length > 8 ? r.id.slice(0, 8) + '…' : r.id);
     const segMeta = r.segment ? SEGMENT_META[r.segment] : null;
@@ -841,6 +841,14 @@ export default function PortalDashboard({ user, accessToken, onSignOut, initialS
         </span>
         <span className="portal-report-meta">
           #{displayLabel} · Created {createdDate} · Last updated {lastUpdated}
+          {' · '}
+          <Link
+            href={`/process-audit?edit=${encodeURIComponent(r.id)}&email=${encodeURIComponent(email)}`}
+            className="portal-report-chat-link"
+            onClick={(e) => e.stopPropagation()}
+          >
+            Open in chat
+          </Link>
         </span>
       </span>
     );

@@ -30,7 +30,7 @@ export default function OrgAdminClient({ user, accessToken, onSignOut }) {
   const [platformAdmin, setPlatformAdmin] = useState(false);
   const [allOrgs, setAllOrgs] = useState(null);
   const [selectedOrgId, setSelectedOrgId] = useState('');
-  const [activePanel, setActivePanel] = useState('users');
+  const [activePanel, setActivePanel] = useState('organisations');
   const [members, setMembers] = useState([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -164,6 +164,38 @@ export default function OrgAdminClient({ user, accessToken, onSignOut }) {
     setInviteEnt((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const [rowBusyId, setRowBusyId] = useState(null);
+  const patchMember = useCallback(async (member, patch) => {
+    if (!accessToken || !selectedOrgId) return;
+    setRowBusyId(member.user_id);
+    setError(null);
+    const prev = members;
+    // optimistic update
+    setMembers((list) => list.map((m) => (m.user_id === member.user_id
+      ? { ...m, ...('isOrgAdmin' in patch ? { is_org_admin: patch.isOrgAdmin } : {}),
+          ...(patch.entitlements ? { entitlements: { ...m.entitlements, ...patch.entitlements } } : {}) }
+      : m)));
+    try {
+      const resp = await apiFetch(
+        `/api/organizations/${selectedOrgId}/members/${member.user_id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(patch),
+        },
+        accessToken,
+      );
+      const data = await parseJsonResponse(resp);
+      if (!resp.ok) throw new Error(data.error || 'Update failed');
+      setMembers((list) => list.map((m) => (m.user_id === member.user_id ? { ...m, ...data.member } : m)));
+    } catch (err) {
+      setError(err.message || 'Update failed');
+      setMembers(prev);
+    } finally {
+      setRowBusyId(null);
+    }
+  }, [accessToken, selectedOrgId, members]);
+
   const orgOptions = platformAdmin && allOrgs?.length
     ? allOrgs
     : adminMemberships.map((m) => ({
@@ -172,10 +204,8 @@ export default function OrgAdminClient({ user, accessToken, onSignOut }) {
         slug: m.organization?.slug,
       }));
 
-  const selectedOrg = (orgOptions || []).find((o) => o.id === selectedOrgId) || null;
-
   return (
-    <div className="org-admin-shell portal-viewport dashboard-viewport">
+    <div className="portal-viewport">
       <header className="dashboard-header">
         <div className="header-left">
           <Link href="/" className="header-logo">
@@ -196,7 +226,7 @@ export default function OrgAdminClient({ user, accessToken, onSignOut }) {
         </div>
       </header>
 
-      <div className="portal-wrap dashboard-wrap org-admin-wrap">
+      <div className="portal-wrap org-admin-wrap">
         {error && (
           <div className="portal-error-banner org-admin-error-banner">
             <span>{error}</span>
@@ -214,216 +244,228 @@ export default function OrgAdminClient({ user, accessToken, onSignOut }) {
         ) : !canUse ? (
           <div className="dash-card portal-content-card org-admin-card">
             <p className="org-admin-body">
-              You don’t have organization admin access. Ask a platform administrator to assign you as an org admin, or set{' '}
-              <code className="org-admin-code">PLATFORM_ADMIN_EMAILS</code> for your account.
+              You don't have organisation admin access. Ask a platform administrator to assign you as an org admin, or add your email to{' '}
+              <code className="org-admin-code">PLATFORM_ADMIN_EMAILS</code>.
             </p>
             <Link href="/portal" className="portal-empty-cta org-admin-cta">
               Back to dashboard
             </Link>
           </div>
         ) : (
-          <div className="org-admin-layout">
-            <aside className="org-admin-sidebar" aria-label="Organisations and sections">
-              <h2 className="org-admin-sidebar-title">Organisations</h2>
-              <p className="org-admin-sidebar-hint">Select an organisation to manage it.</p>
-              <div className="org-admin-org-table-wrap">
-                <table className="org-admin-org-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Name</th>
-                      <th scope="col">Slug</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(orgOptions || []).length === 0 ? (
-                      <tr>
-                        <td colSpan={2} className="org-admin-empty-cell">
-                          No organisations yet.
-                          {platformAdmin && ' Create one under Organisation setup.'}
-                        </td>
-                      </tr>
-                    ) : (
-                      (orgOptions || []).map((o) => (
-                        <tr
-                          key={o.id}
-                          className={`org-admin-org-tr${selectedOrgId === o.id ? ' is-active' : ''}`}
-                          onClick={() => setSelectedOrgId(o.id)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              setSelectedOrgId(o.id);
-                            }
-                          }}
-                          tabIndex={0}
-                          role="button"
-                          aria-pressed={selectedOrgId === o.id}
-                          aria-label={`Select ${o.name}`}
-                        >
-                          <td>{o.name}</td>
-                          <td className="org-admin-mono">{o.slug || '—'}</td>
+          <>
+            <nav className="portal-section-tabs" role="tablist" aria-label="Admin sections">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activePanel === 'organisations'}
+                className={`portal-section-tab ${activePanel === 'organisations' ? 'active' : ''}`}
+                onClick={() => setActivePanel('organisations')}
+              >
+                Organisations
+                {(orgOptions || []).length > 0 && (
+                  <span className="portal-section-tab-badge">{orgOptions.length}</span>
+                )}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activePanel === 'members'}
+                className={`portal-section-tab ${activePanel === 'members' ? 'active' : ''}`}
+                onClick={() => setActivePanel('members')}
+              >
+                Members
+              </button>
+            </nav>
+
+            {activePanel === 'organisations' && (
+              <div className="dash-card portal-content-card org-admin-card">
+                <h3 className="org-admin-panel-title">Organisations</h3>
+                {(orgOptions || []).length === 0 ? (
+                  <p className="org-admin-muted">
+                    No organisations yet.{platformAdmin && ' Use the form below to create one.'}
+                  </p>
+                ) : (
+                  <div className="org-admin-members-wrap">
+                    <table className="org-admin-members-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Name</th>
+                          <th scope="col">Slug</th>
+                          <th scope="col" />
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      </thead>
+                      <tbody>
+                        {orgOptions.map((o) => (
+                          <tr key={o.id}>
+                            <td>{o.name}</td>
+                            <td className="org-admin-mono">{o.slug || '—'}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="portal-flow-btn compact"
+                                onClick={() => { setSelectedOrgId(o.id); setActivePanel('members'); }}
+                              >
+                                Manage members
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {platformAdmin && (
+                  <form className="org-admin-form" onSubmit={handleCreateOrg}>
+                    <h4 className="org-admin-subtitle">New organisation</h4>
+                    <label className="org-admin-label">
+                      Organisation name
+                      <input
+                        className="auth-input org-admin-input"
+                        value={newOrgName}
+                        onChange={(e) => setNewOrgName(e.target.value)}
+                        placeholder="Acme Ltd"
+                      />
+                    </label>
+                    <div className="org-admin-form-actions">
+                      <button type="submit" className="portal-flow-btn portal-flow-btn-primary" disabled={createBusy || !newOrgName.trim()}>
+                        {createBusy ? 'Creating…' : 'Create organisation'}
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
+            )}
 
-              <nav className="org-admin-section-nav" aria-label="Admin sections">
-                <button
-                  type="button"
-                  className={`org-admin-section-btn${activePanel === 'setup' ? ' is-active' : ''}`}
-                  onClick={() => setActivePanel('setup')}
-                >
-                  Organisation setup
-                </button>
-                <button
-                  type="button"
-                  className={`org-admin-section-btn${activePanel === 'users' ? ' is-active' : ''}`}
-                  onClick={() => setActivePanel('users')}
-                >
-                  Users
-                </button>
-              </nav>
-            </aside>
+            {activePanel === 'members' && (
+              <div className="dash-card portal-content-card org-admin-card">
+                <div className="org-admin-panel-header">
+                  <h3 className="org-admin-panel-title">Members</h3>
+                  {(orgOptions || []).length > 0 && (
+                    <label className="org-admin-selector">
+                      Organisation
+                      <select
+                        className="auth-input org-admin-input"
+                        value={selectedOrgId}
+                        onChange={(e) => setSelectedOrgId(e.target.value)}
+                      >
+                        {orgOptions.map((o) => (
+                          <option key={o.id} value={o.id}>{o.name}</option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </div>
 
-            <main className="org-admin-main">
-              {activePanel === 'setup' && (
-                <div className="dash-card portal-content-card org-admin-card">
-                  <h3 className="org-admin-panel-title">Organisation setup</h3>
-                  {platformAdmin && (
-                    <form className="org-admin-form" onSubmit={handleCreateOrg}>
-                      <p className="org-admin-panel-lead">
-                        Platform administrators can create a new organisation. The first admin is your account.
-                      </p>
-                      <label className="org-admin-label">
-                        Organisation name
-                        <input
-                          className="auth-input org-admin-input"
-                          value={newOrgName}
-                          onChange={(e) => setNewOrgName(e.target.value)}
-                          placeholder="Acme Ltd"
-                        />
-                      </label>
+                {!selectedOrgId ? (
+                  <p className="org-admin-body">Select an organisation to invite users and view members.</p>
+                ) : (
+                  <>
+                    <form className="org-admin-form" onSubmit={handleInvite}>
+                      <div className="org-admin-invite-row">
+                        <label className="org-admin-label">
+                          Email
+                          <input
+                            className="auth-input org-admin-input"
+                            type="email"
+                            value={inviteEmail}
+                            onChange={(e) => setInviteEmail(e.target.value)}
+                            placeholder="colleague@company.com"
+                            required
+                          />
+                        </label>
+                        <label className="org-admin-check">
+                          <input type="checkbox" checked={inviteOrgAdmin} onChange={(e) => setInviteOrgAdmin(e.target.checked)} />
+                          Org admin
+                        </label>
+                      </div>
+                      <fieldset className="org-admin-fieldset">
+                        <legend className="org-admin-legend">Entitlements</legend>
+                        <div className="org-admin-ent-grid">
+                          {[
+                            { key: ENTITLEMENT_KEYS.COST_ANALYST, label: 'Cost analyst' },
+                            { key: ENTITLEMENT_KEYS.PORTAL, label: 'Dashboard' },
+                            { key: ENTITLEMENT_KEYS.DEALS, label: 'Deals' },
+                            { key: ENTITLEMENT_KEYS.ANALYTICS, label: 'Analytics' },
+                          ].map(({ key, label }) => (
+                            <label key={key} className="org-admin-check">
+                              <input type="checkbox" checked={!!inviteEnt[key]} onChange={() => toggleEnt(key)} />
+                              {label}
+                            </label>
+                          ))}
+                        </div>
+                      </fieldset>
                       <div className="org-admin-form-actions">
-                        <button type="submit" className="portal-flow-btn portal-flow-btn-primary" disabled={createBusy || !newOrgName.trim()}>
-                          {createBusy ? 'Creating…' : 'Create organisation'}
+                        <button type="submit" className="portal-flow-btn portal-flow-btn-primary" disabled={inviteBusy}>
+                          {inviteBusy ? 'Sending…' : 'Invite / add user'}
                         </button>
                       </div>
                     </form>
-                  )}
-                  {selectedOrg && (
-                    <div className="org-admin-detail-block">
-                      <h4 className="org-admin-subtitle">Current organisation</h4>
-                      <dl className="org-admin-dl">
-                        <div>
-                          <dt>Name</dt>
-                          <dd>{selectedOrg.name}</dd>
-                        </div>
-                        <div>
-                          <dt>Slug</dt>
-                          <dd>{selectedOrg.slug || '—'}</dd>
-                        </div>
-                        <div>
-                          <dt>Id</dt>
-                          <dd className="org-admin-mono">{selectedOrg.id}</dd>
-                        </div>
-                      </dl>
-                    </div>
-                  )}
-                  {!selectedOrg && (orgOptions || []).length === 0 && !platformAdmin && (
-                    <p className="org-admin-muted">You are not assigned to any organisation yet.</p>
-                  )}
-                </div>
-              )}
 
-              {activePanel === 'users' && (
-                <div className="dash-card portal-content-card org-admin-card">
-                  <h3 className="org-admin-panel-title">Users</h3>
-                  {!selectedOrgId ? (
-                    <p className="org-admin-body">Select an organisation in the list on the left to invite users and view members.</p>
-                  ) : (
-                    <>
-                      <p className="org-admin-panel-lead">
-                        New users receive a Supabase invite email. Existing accounts are linked immediately.{' '}
-                        <strong className="org-admin-strong">Org admin</strong> can manage members and invites.
-                      </p>
-                      <form className="org-admin-form" onSubmit={handleInvite}>
-                        <div className="org-admin-invite-row">
-                          <label className="org-admin-label">
-                            Email
-                            <input
-                              className="auth-input org-admin-input"
-                              type="email"
-                              value={inviteEmail}
-                              onChange={(e) => setInviteEmail(e.target.value)}
-                              placeholder="colleague@company.com"
-                              required
-                            />
-                          </label>
-                          <label className="org-admin-check">
-                            <input type="checkbox" checked={inviteOrgAdmin} onChange={(e) => setInviteOrgAdmin(e.target.checked)} />
-                            Org admin
-                          </label>
-                        </div>
-                        <fieldset className="org-admin-fieldset">
-                          <legend className="org-admin-legend">Entitlements</legend>
-                          <div className="org-admin-ent-grid">
-                            {[
-                              { key: ENTITLEMENT_KEYS.COST_ANALYST, label: 'Cost analyst' },
-                              { key: ENTITLEMENT_KEYS.PORTAL, label: 'Portal' },
-                              { key: ENTITLEMENT_KEYS.DEALS, label: 'Deals' },
-                              { key: ENTITLEMENT_KEYS.ANALYTICS, label: 'Analytics' },
-                            ].map(({ key, label }) => (
-                              <label key={key} className="org-admin-check">
-                                <input type="checkbox" checked={!!inviteEnt[key]} onChange={() => toggleEnt(key)} />
-                                {label}
-                              </label>
-                            ))}
-                          </div>
-                        </fieldset>
-                        <div className="org-admin-form-actions">
-                          <button type="submit" className="portal-flow-btn portal-flow-btn-primary" disabled={inviteBusy}>
-                            {inviteBusy ? 'Sending…' : 'Invite / add user'}
-                          </button>
-                        </div>
-                      </form>
-
-                      <h4 className="org-admin-subtitle">Members</h4>
-                      {membersLoading ? (
-                        <p className="org-admin-muted">Loading members…</p>
-                      ) : (
-                        <div className="org-admin-members-wrap">
-                          <table className="org-admin-members-table">
-                            <thead>
-                              <tr>
-                                <th scope="col">Email</th>
-                                <th scope="col">Org admin</th>
-                                <th scope="col">Entitlements</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {members.map((m) => (
+                    {membersLoading ? (
+                      <p className="org-admin-muted">Loading members…</p>
+                    ) : (
+                      <div className="org-admin-members-wrap">
+                        <table className="org-admin-members-table">
+                          <thead>
+                            <tr>
+                              <th scope="col">Email</th>
+                              <th scope="col">Org admin</th>
+                              {[
+                                { key: ENTITLEMENT_KEYS.COST_ANALYST, label: 'Cost analyst' },
+                                { key: ENTITLEMENT_KEYS.PORTAL, label: 'Dashboard' },
+                                { key: ENTITLEMENT_KEYS.DEALS, label: 'Deals' },
+                                { key: ENTITLEMENT_KEYS.ANALYTICS, label: 'Analytics' },
+                              ].map(({ key, label }) => (
+                                <th key={key} scope="col">{label}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {members.length === 0 ? (
+                              <tr><td colSpan={6} className="org-admin-empty-cell">No members yet.</td></tr>
+                            ) : members.map((m) => {
+                              const busy = rowBusyId === m.user_id;
+                              return (
                                 <tr key={m.id}>
                                   <td>{m.email}</td>
-                                  <td>{m.is_org_admin ? 'Yes' : '—'}</td>
-                                  <td className="org-admin-mono org-admin-ent-cell">
-                                    {Object.entries(m.entitlements || {})
-                                      .filter(([, v]) => v)
-                                      .map(([k]) => k)
-                                      .join(', ') || '—'}
+                                  <td>
+                                    <input
+                                      type="checkbox"
+                                      checked={!!m.is_org_admin}
+                                      disabled={busy || !m.user_id}
+                                      onChange={(e) => patchMember(m, { isOrgAdmin: e.target.checked })}
+                                      aria-label={`Org admin for ${m.email}`}
+                                    />
                                   </td>
+                                  {[
+                                    ENTITLEMENT_KEYS.COST_ANALYST,
+                                    ENTITLEMENT_KEYS.PORTAL,
+                                    ENTITLEMENT_KEYS.DEALS,
+                                    ENTITLEMENT_KEYS.ANALYTICS,
+                                  ].map((key) => (
+                                    <td key={key}>
+                                      <input
+                                        type="checkbox"
+                                        checked={!!m.entitlements?.[key]}
+                                        disabled={busy || !m.user_id}
+                                        onChange={(e) => patchMember(m, { entitlements: { [key]: e.target.checked } })}
+                                        aria-label={`${key} for ${m.email}`}
+                                      />
+                                    </td>
+                                  ))}
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
-            </main>
-          </div>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

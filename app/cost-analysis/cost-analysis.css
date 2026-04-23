@@ -34,6 +34,15 @@
   margin: 0 auto;
   padding: 28px 24px 64px;
 }
+/* Embedded (inside DiagnosticWorkspace iframe): flatten page chrome */
+.cost-analysis-page.cost-analysis-embedded {
+  min-height: 100%;
+  background: transparent;
+}
+.cost-analysis-embedded .cost-analysis-wrap.portal-wrap {
+  padding: 16px 20px 32px;
+  max-width: none;
+}
 .cost-analysis-layout.portal-dashboard-layout {
   flex-direction: column;
   width: 100%;
