@@ -1,5 +1,5 @@
 /**
- * Report module CSS — report page, hero, view controls, extras, floating
+ * Report module CSS - report page, hero, view controls, extras, floating
  * viewer, inline-on-canvas report iframe.
  *
  * Owned selectors (prefixes):
@@ -27,7 +27,7 @@
   --report-glow: 0 0 0 1px rgba(91, 184, 212, 0.22), 0 8px 32px rgba(0,0,0,0.4);
 }
 
-/* Unified report surface — every render context (embed iframe, portal,
+/* Unified report surface - every render context (embed iframe, portal,
    standalone) shares the same dark-blue palette. The --embed/--portal
    modifiers only adjust chrome (padding, max-width, header visibility),
    never the base surface.
@@ -112,7 +112,7 @@
 /* Inner-tab content (Overview, Key Findings, Team Workload, Tracker,
    Next Steps, Methodology) needs horizontal padding so content doesn't
    sit flush against the tab-content box edges. Overview keeps its own
-   internal section padding via .report-summary-section — this rule is
+   internal section padding via .report-summary-section - this rule is
    safe to layer because padding combines predictably. */
 .report-page .report-summary-inner-tab {
   padding: 1.25rem 1.5rem;
@@ -121,7 +121,7 @@
   .report-page .report-summary-inner-tab { padding: 1rem 1rem; }
 }
 
-/* Tab bar on dark navy — idle tabs faded, hover lifts, active gets the
+/* Tab bar on dark navy - idle tabs faded, hover lifts, active gets the
    accent colour + underline. Override light-theme diagnostic.css rules. */
 .report-page .report-section-tabs,
 .report-page .report-section-tabs-wrap {
@@ -159,7 +159,7 @@
   color: var(--report-text);
 }
 
-/* Embed (iframe) chrome — condensed toggle bar, no top-bar. Iframe real
+/* Embed (iframe) chrome - condensed toggle bar, no top-bar. Iframe real
    estate is tight, so the toggle pills shrink and align inline rather than
    spanning a full row below the (absent) top-bar. */
 .report-view-controls--embed {
@@ -182,7 +182,7 @@
   box-shadow: none;
 }
 
-/* Embed ReportReadyHero — compact padding, no redundant border against
+/* Embed ReportReadyHero - compact padding, no redundant border against
    the view-controls bar above it. */
 .report-page--embed .report-ready-hero-shell { border-radius: 0; }
 .report-page--embed .report-ready-hero { padding: 12px 16px; }
@@ -239,7 +239,7 @@
 .report-summary-tab-content { }
 .report-summary-tab-content--embed { }
 
-/* Dark theme — ReportReadyHero + view controls */
+/* Dark theme - ReportReadyHero + view controls */
 [data-theme="dark"] .report-ready-hero { border-color: rgba(255,255,255,0.08); }
 [data-theme="dark"] .report-ready-hero-title { color: #e2e8f0; }
 [data-theme="dark"] .report-ready-detail-toggle { background: rgba(255,255,255,0.06); }
@@ -419,7 +419,7 @@
 }
 
 /* ============================================================
-   ODD section scaffolding — applies to Executive Summary,
+   ODD section scaffolding - applies to Executive Summary,
    Key Findings, Value Opportunity, Roadmap, Appendices.
    ============================================================ */
 
@@ -535,7 +535,7 @@
 }
 
 /* Overview tab uses .report-metric-grid. Flex-wrap + `flex: 1 1 <basis>`
-   so cards share each row equally — if row 1 holds 5 cards at ~175px
+   so cards share each row equally - if row 1 holds 5 cards at ~175px
    each and row 2 only holds 3 items, those 3 stretch to fill the full
    row width (no trailing white space). Basis sets the natural width
    before stretch kicks in. */
@@ -593,7 +593,7 @@
   margin-top: 0.75rem;
 }
 
-/* Top-of-page title block — darker header band that carries the process
+/* Top-of-page title block - darker header band that carries the process
    name and a "Process audit | Company" subtitle. Sits at the very top of
    the report body, above the cost-restricted notice and hero. */
 .report-page .report-page-title-block {
@@ -644,7 +644,7 @@
   }
 }
 
-/* Next Steps tab — three execution phases (Validate / Execute / Expand)
+/* Next Steps tab - three execution phases (Validate / Execute / Expand)
    rendered as grouped cards with numbered items. Replaces the old flat
    checklist that read as scattered lines. */
 .report-page .report-next-steps {
@@ -778,7 +778,7 @@
 .report-summary-stat--warn .report-summary-stat-value { color: #fbbf24; }
 .report-summary-stat--danger .report-summary-stat-value { color: #f87171; }
 
-/* Team pills — horizontal row of team names at the bottom of the
+/* Team pills - horizontal row of team names at the bottom of the
    Process Structure card, below the metric grid. */
 .report-summary-pills {
   display: flex;
@@ -812,7 +812,7 @@
   .report-summary-grid { grid-template-columns: 1fr; }
 }
 
-/* Override for the embed iframe — tighter padding so the card doesn't
+/* Override for the embed iframe - tighter padding so the card doesn't
    run flush against the iframe edges. */
 .report-page--embed .report-summary-section {
   padding: 1rem 1.1rem 1.5rem;
@@ -961,14 +961,14 @@
   padding: 1.25rem 0 0;
 }
 /* When rendered inside a process tab (instead of as its own top-level
-   section), drop the outer padding — the tab content wrapper already
+   section), drop the outer padding - the tab content wrapper already
    provides spacing. */
 .report-key-findings--inline {
   margin: 0;
   padding: 0;
 }
 
-/* Three sub-tabs inside Key Findings — Operational bottlenecks,
+/* Three sub-tabs inside Key Findings - Operational bottlenecks,
    Control & documentation, Handoff & integration. Styled to read as
    pills on dark-navy, with a count badge next to each label. */
 .report-findings-subtabs {
@@ -1103,7 +1103,7 @@
 .report-finding-item.risk-medium { border-left-color: #d97706; background: rgba(217,119,6,0.06); }
 .report-finding-item.risk-low    { border-left-color: #94a3b8; }
 
-/* Clickable variants — items with a stepIndex link to the step-edit
+/* Clickable variants - items with a stepIndex link to the step-edit
    dialogue in a new tab. The anchor covers the full card and carries
    the hover state. */
 .report-finding-item--link { padding: 0; }
@@ -1795,7 +1795,7 @@
 }
 @keyframes rcp-spin { to { transform: rotate(360deg); } }
 
-/* ── Automation tab — structured cards, not a wall of text ──
+/* ── Automation tab - structured cards, not a wall of text ──
    The JSX emits a rich structure (.report-auto-group-intro,
    .report-auto-step-row--detailed, .report-auto-step-head, chips,
    time pills, system pills) but the legacy CSS only styled the

@@ -12,7 +12,7 @@ import { logger } from '@/lib/logger';
  *
  * POST /api/chat-sessions
  *   Body: { id?, reportId?, kind?, title? }
- *   Idempotent — creates a session if `id` is missing, otherwise touches the
+ *   Idempotent - creates a session if `id` is missing, otherwise touches the
  *   existing row. Returns `{ sessionId }`.
  */
 

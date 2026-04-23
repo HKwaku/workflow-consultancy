@@ -87,17 +87,17 @@ export async function POST(request) {
     // Hidden cost flags from actual data
     const hiddenCostFlags = [];
     if (breakdown.totalWaitMins > breakdown.totalWorkMins * 0.3)
-      hiddenCostFlags.push('high wait ratio — significant idle time per run');
+      hiddenCostFlags.push('high wait ratio - significant idle time per run');
     if (emailHandoffs >= 2)
-      hiddenCostFlags.push('email handoffs — coordination overhead and delay');
+      hiddenCostFlags.push('email handoffs - coordination overhead and delay');
     if (approvalCount > 2)
-      hiddenCostFlags.push('multiple approval gates — SLA risk and exception overhead');
+      hiddenCostFlags.push('multiple approval gates - SLA risk and exception overhead');
     const multiSystemSteps = steps.filter(s => (s.systems || []).length >= 2).length;
     if (multiSystemSteps > 0)
-      hiddenCostFlags.push(`${multiSystemSteps} multi-system step${multiSystemSteps !== 1 ? 's' : ''} — manual re-entry error cost`);
+      hiddenCostFlags.push(`${multiSystemSteps} multi-system step${multiSystemSteps !== 1 ? 's' : ''} - manual re-entry error cost`);
     const errorRate = Number(raw.costs?.errorRate) || 0;
     if (errorRate > 0)
-      hiddenCostFlags.push(`${Math.round(errorRate * 100)}% error rate — hidden rework and double-handling cost`);
+      hiddenCostFlags.push(`${Math.round(errorRate * 100)}% error rate - hidden rework and double-handling cost`);
 
     return {
       processIndex: i,

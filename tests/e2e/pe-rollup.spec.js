@@ -1,5 +1,5 @@
 /**
- * E2E tests — PE Roll-up diagnostic flow
+ * E2E tests - PE Roll-up diagnostic flow
  *
  * Covers the rule: PE diagnostics must start with a deal (platform + targets).
  * API calls are intercepted so no real backend is required beyond the Next.js
@@ -166,7 +166,7 @@ async function completeChatSetup(page, opts = {}) {
       await page.keyboard.press('Enter');
     }
   } else {
-    // No confirmation chip — directly entering platform company
+    // No confirmation chip - directly entering platform company
     await page.fill('.guided-chat-input', platformCompany);
     await page.keyboard.press('Enter');
   }
@@ -205,7 +205,7 @@ async function completeChatSetup(page, opts = {}) {
 
 // ── Tests ───────────────────────────────────────────────────────────────────
 
-test.describe('PE Roll-up — deal setup gate', () => {
+test.describe('PE Roll-up - deal setup gate', () => {
   test.beforeEach(async ({ page }) => {
     // Seed auth and clear saved progress
     await seedAuthSession(page);
@@ -242,7 +242,7 @@ test.describe('PE Roll-up — deal setup gate', () => {
   // ── 2. Unauthenticated user sees sign-in gate ────────────────────────────
 
   test('shows sign-in gate when user is not authenticated', async ({ page }) => {
-    // This test does NOT seed auth — navigates fresh without session
+    // This test does NOT seed auth - navigates fresh without session
     // Re-create page without the seeded session by navigating directly
     // (beforeEach already seeded, so we clear it)
     await page.evaluate((key) => localStorage.removeItem(key), SUPABASE_STORAGE_KEY);
@@ -256,7 +256,7 @@ test.describe('PE Roll-up — deal setup gate', () => {
     await expect(page.locator('.pe-deal-signin-screen .guided-chat-chip')).toContainText('Sign in');
   });
 
-  // ── 3. Chat interaction — collect data ───────────────────────────────────
+  // ── 3. Chat interaction - collect data ───────────────────────────────────
 
   test('chat advances through deal name to platform confirmation', async ({ page }) => {
     await page.waitForSelector('.audit-gate-screen');
@@ -313,7 +313,7 @@ test.describe('PE Roll-up — deal setup gate', () => {
     await page.keyboard.press('Enter');
     await page.locator('.guided-chat-chip:has-text("Skip")').first().click();
 
-    // Done — summary should mention both companies
+    // Done - summary should mention both companies
     await page.locator('.guided-chat-chip:has-text("Done")').click();
     await expect(page.locator('.guided-chat-messages .s7-msg-bubble:has-text("Alpha Corp")')).toBeVisible({ timeout: 4000 });
     await expect(page.locator('.guided-chat-messages .s7-msg-bubble:has-text("Beta Ltd")')).toBeVisible({ timeout: 4000 });
@@ -330,10 +330,10 @@ test.describe('PE Roll-up — deal setup gate', () => {
 
     await completeChatSetup(page);
 
-    // Confirm chip — create the deal
+    // Confirm chip - create the deal
     await page.locator('.guided-chat-cta-chip:has-text("Create roll-up")').click();
 
-    // Should now be on the IntroChatScreen (screen 0) — PE badge is gone
+    // Should now be on the IntroChatScreen (screen 0) - PE badge is gone
     await expect(page.locator('.pe-deal-badge')).not.toBeVisible({ timeout: 8000 });
     await expect(page.locator('.diagnostic-shell')).toBeVisible({ timeout: 8000 });
   });
@@ -378,7 +378,7 @@ test.describe('PE Roll-up — deal setup gate', () => {
     // Start over chip
     await page.locator('.guided-chat-chip:has-text("Start over")').click();
 
-    // Should restart — ask for deal name again
+    // Should restart - ask for deal name again
     await expect(page.locator('.guided-chat-input')).toBeVisible({ timeout: 4000 });
     await expect(page.locator('.guided-chat-messages .s7-msg-bubble').last()).toContainText("What's the name of this deal");
   });
@@ -437,13 +437,13 @@ test.describe('PE Roll-up — deal setup gate', () => {
     await page.fill('#audit-gate-email', 'bob@targetco.com');
     await page.click('button[type="submit"]');
 
-    // Should go directly to diagnostic shell (screen 0) — PE badge not present
+    // Should go directly to diagnostic shell (screen 0) - PE badge not present
     await expect(page.locator('.pe-deal-badge')).not.toBeVisible({ timeout: 6000 });
     await expect(page.locator('.diagnostic-shell')).toBeVisible({ timeout: 8000 });
   });
 });
 
-test.describe('PE Roll-up — Screen 6 completion redirect', () => {
+test.describe('PE Roll-up - Screen 6 completion redirect', () => {
   /**
    * These tests validate that after a PE participant submits their process,
    * they are sent to the deal dashboard (/deals/[id]) rather than /report/[id].
@@ -496,7 +496,7 @@ test.describe('PE Roll-up — Screen 6 completion redirect', () => {
     await page.click('.audit-seg-btn--teal');   // Scaling Business (non-PE)
     await page.click('button[type="submit"]');
 
-    // Resume toast now shows — click Continue to restore the saved PE state
+    // Resume toast now shows - click Continue to restore the saved PE state
     await page.waitForSelector('.resume-toast', { timeout: 10000 });
     await page.click('.resume-toast-btn-primary');
     await page.waitForSelector('.diagnostic-shell');

@@ -31,7 +31,7 @@ export async function POST(request) {
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured.' }, { status: 500 });
 
   // Authenticated users get cross-session memory injected into the system
-  // prompt — prior processes, recent conversations. Anonymous flows run
+  // prompt - prior processes, recent conversations. Anonymous flows run
   // without context, same as before. Failures are swallowed: missing
   // context is a soft downgrade, never a reason to block the chat.
   let sessionContext = null;

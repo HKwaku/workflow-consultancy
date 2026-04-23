@@ -87,7 +87,7 @@ const METRIC_EXPLANATIONS = {
   },
   workWaitRatio: {
     title: 'Work / Wait ratio',
-    description: 'Active work time versus waiting/idle time across all steps. A high proportion of wait time indicates delays caused by handoffs, approvals, or queuing — prime targets for process improvement.',
+    description: 'Active work time versus waiting/idle time across all steps. A high proportion of wait time indicates delays caused by handoffs, approvals, or queuing - prime targets for process improvement.',
     formula: 'Sum of workMinutes across all steps vs sum of waitMinutes. Value-adding % = work ÷ (work + wait) × 100.',
   },
   complexity: {
@@ -97,7 +97,7 @@ const METRIC_EXPLANATIONS = {
   },
   externalDependencies: {
     title: 'External dependencies',
-    description: 'Steps owned or performed by a party outside your organisation — suppliers, clients, regulators, or third-party services. These steps sit outside your direct control, making them harder to automate, schedule, or improve without vendor cooperation.',
+    description: 'Steps owned or performed by a party outside your organisation - suppliers, clients, regulators, or third-party services. These steps sit outside your direct control, making them harder to automate, schedule, or improve without vendor cooperation.',
     formula: 'Count of steps where the owner is marked as external.',
   },
   timelineEstimate: {

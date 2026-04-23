@@ -37,7 +37,7 @@ METRICS:
 - Estimated hourly cost rate: £${hourlyRate}/hr
 - Estimated annual cost: £${Math.round(annualCost).toLocaleString()}
 - Estimated savings opportunity: ${savings.estimatedSavingsPercent || savings.percent || 0}%
-- Main bottleneck: ${bottleneck.reason || 'not identified'}${bottleneck.why ? ` — ${bottleneck.why}` : ''}
+- Main bottleneck: ${bottleneck.reason || 'not identified'}${bottleneck.why ? ` - ${bottleneck.why}` : ''}
 
 Answer the user's question about the cost figures. If you don't have enough data to answer precisely, give a best estimate and say what additional info would help.`;
 }

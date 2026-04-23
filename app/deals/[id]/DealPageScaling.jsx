@@ -3,7 +3,7 @@
 import Link from 'next/link';
 
 function fmt(val) {
-  if (val == null || val === 0) return '—';
+  if (val == null || val === 0) return '-';
   if (val >= 1_000_000) return '£' + (val / 1_000_000).toFixed(1) + 'M';
   if (val >= 1_000) return '£' + (val / 1_000).toFixed(0) + 'K';
   return '£' + Math.round(val);
@@ -31,7 +31,7 @@ export default function DealPageScaling({ deal, participants, summary }) {
           <span className={`scaling-status scaling-status--${p.status}`}>{statusLabel}</span>
         </div>
         {p.report?.reportUrl && (
-          <Link href={p.report.reportUrl} className="deal-btn deal-btn--primary" target="_blank">
+          <Link href={p.report.reportUrl} className="deal-btn deal-btn--primary" target="_blank" rel="noopener noreferrer">
             View full report →
           </Link>
         )}
@@ -55,7 +55,7 @@ export default function DealPageScaling({ deal, participants, summary }) {
             </div>
             <div className="scaling-metric">
               <span className="scaling-metric-val">
-                {p.report.automationPercentage != null ? p.report.automationPercentage + '%' : '—'}
+                {p.report.automationPercentage != null ? p.report.automationPercentage + '%' : '-'}
               </span>
               <span className="scaling-metric-lbl">Automation readiness</span>
             </div>
@@ -65,7 +65,7 @@ export default function DealPageScaling({ deal, participants, summary }) {
             </div>
             <div className="scaling-metric">
               <span className="scaling-metric-val">
-                {p.report.rawSteps?.length ?? p.report.processes?.[0]?.stepsCount ?? '—'}
+                {p.report.rawSteps?.length ?? p.report.processes?.[0]?.stepsCount ?? '-'}
               </span>
               <span className="scaling-metric-lbl">Process steps</span>
             </div>
@@ -93,7 +93,7 @@ export default function DealPageScaling({ deal, participants, summary }) {
             <p className="scaling-view-report-text">
               The full report includes detailed observations, bottleneck analysis, automation recommendations, and a redesign tool.
             </p>
-            <Link href={p.report.reportUrl} className="deal-btn deal-btn--primary" target="_blank">
+            <Link href={p.report.reportUrl} className="deal-btn deal-btn--primary" target="_blank" rel="noopener noreferrer">
               Open full report →
             </Link>
           </div>

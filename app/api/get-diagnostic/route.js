@@ -113,7 +113,7 @@ export async function GET(request) {
     let sbResp = await fetchWithTimeout(url, { method: 'GET', headers: sbHeaders });
 
     // If Supabase returns 400, optional columns (implementation_status, parent_report_id)
-    // may not exist yet — retry without them (migration-v2.sql not yet applied).
+    // may not exist yet - retry without them (migration-v2.sql not yet applied).
     if (sbResp.status === 400) {
       const errBody = await sbResp.text().catch(() => '');
       logger.warn('Get diagnostic: column error, falling back to minimal query', { requestId: getRequestId(request), sbError: errBody.slice(0, 200) });
@@ -157,13 +157,13 @@ export async function GET(request) {
     const costAuthorizedEmails = (diagData.costAuthorizedEmails || []).map(e => e.toLowerCase());
     const isCostAuthorized = session && costAuthorizedEmails.includes(session.email.toLowerCase());
 
-    // Always strip the raw cost analysis token from the response — it is only
+    // Always strip the raw cost analysis token from the response - it is only
     // needed for the /cost-analysis page and must not leak into the report view.
     delete diagData.costAnalysisToken;
 
     let costDataHidden = false;
     if (!isCostAuthorized) {
-      // User is not in the cost-authorized list — scrub all cost data
+      // User is not in the cost-authorized list - scrub all cost data
       costDataHidden = true;
       delete diagData.costAnalysis;
       delete diagData.financialModel;

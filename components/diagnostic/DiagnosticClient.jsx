@@ -58,7 +58,7 @@ function buildAiRedesignGreeting(raw, processName) {
   if (waitMins > 0) findings.push(`${waitMins} minutes of waiting time per run`);
 
   const detailClause = bottleneckDetail || biggestDelay
-    ? ` — "${bottleneckDetail || biggestDelay}"`
+    ? ` - "${bottleneckDetail || biggestDelay}"`
     : '';
 
   const savingsClause = savingsPct > 0 ? ` with a ~${savingsPct}% estimated saving opportunity` : '';
@@ -198,7 +198,7 @@ function AuditGate({ onComplete, dealContext, onDealCodeResolved, sessionUser })
               <p className="audit-gate-hero-lede">
                 <strong>{dealContext.dealName}</strong>
                 {dealContext.processName ? ` · ${dealContext.processName}` : ''}
-                {' — '}mapping for <strong>{dealContext.companyName}</strong>.
+                {' - '}mapping for <strong>{dealContext.companyName}</strong>.
               </p>
               <div className="audit-gate-deal-notice">
                 <span className="audit-gate-deal-notice-icon">🔒</span>
@@ -210,9 +210,9 @@ function AuditGate({ onComplete, dealContext, onDealCodeResolved, sessionUser })
                   {dealContext.role && (
                     <p className="audit-gate-deal-notice-role">
                       Your role: <strong>{ROLE_LABEL[dealContext.role] || dealContext.role}</strong>
-                      {dealContext.dealType === 'pe_rollup' && ' — your results will form part of the PE portfolio benchmark'}
-                      {dealContext.dealType === 'ma' && dealContext.role === 'target' && ' — your baseline will be used for integration planning'}
-                      {dealContext.dealType === 'ma' && dealContext.role === 'acquirer' && ' — your baseline will be compared with the target company'}
+                      {dealContext.dealType === 'pe_rollup' && ' - your results will form part of the PE portfolio benchmark'}
+                      {dealContext.dealType === 'ma' && dealContext.role === 'target' && ' - your baseline will be used for integration planning'}
+                      {dealContext.dealType === 'ma' && dealContext.role === 'acquirer' && ' - your baseline will be compared with the target company'}
                     </p>
                   )}
                 </div>
@@ -419,9 +419,82 @@ function DiagnosticContent() {
       .catch(() => {});
   }, [participantToken]);
 
+  // Resolve ?dealFlowId=UUID - authed flow slot opened from the portal.
+  // User is already logged in; skip the gate and seed authUser + dealContext,
+  // then jump straight to Screen2 (the mapping canvas).
+  const urlDealFlowId = searchParams.get('dealFlowId');
+  const flowLoadedRef = useRef(false);
+  useEffect(() => {
+    if (!urlDealFlowId || flowLoadedRef.current) return;
+    if (authLoading) return;
+    if (!accessToken) return; // wait for auth to finish - dealFlowId requires session
+    flowLoadedRef.current = true;
+    (async () => {
+      try {
+        const r = await apiFetch(`/api/deals/resolve?flowId=${encodeURIComponent(urlDealFlowId)}`, {}, accessToken);
+        const data = r.ok ? await r.json() : null;
+        if (!data?.flowId) {
+          setEditError(data?.error || 'Could not open this flow.');
+          return;
+        }
+        setDealContext({
+          participantToken: null,
+          dealFlowId: data.flowId,
+          dealId: data.dealId,
+          dealCode: data.dealCode,
+          dealType: data.dealType,
+          dealName: data.dealName,
+          processName: data.processName,
+          canonicalStart: data.canonicalStart || null,
+          canonicalEnd: data.canonicalEnd || null,
+          companyName: data.companyName,
+          role: data.role,
+          participantName: data.participantName,
+          flowLabel: data.flowLabel,
+          flowKind: data.flowKind,
+        });
+        const segment = dealRoleToSegment(data.dealType, data.role);
+        const resolvedModuleId = segment ? normaliseModuleId(segment) : null;
+        setAuthUser({
+          email: sessionUser?.email || '',
+          name: data.participantName || sessionUser?.user_metadata?.full_name || sessionUser?.email || '',
+          company: data.companyName || '',
+          title: '',
+          dealParticipantToken: null,
+          dealCode: data.dealCode || null,
+          dealFlowId: data.flowId,
+        });
+        if (resolvedModuleId) setModuleId(resolvedModuleId);
+        updateProcessData({
+          ...(resolvedModuleId ? { segment: resolvedModuleId } : {}),
+          dealId: data.dealId,
+          dealRole: data.role,
+          dealName: data.dealName,
+          dealProcessName: data.processName,
+          dealFlowId: data.flowId,
+        });
+        setDeal({
+          dealId: data.dealId,
+          dealCode: data.dealCode,
+          dealRole: data.role,
+          dealName: data.dealName,
+          dealParticipants: [],
+          canonicalProcessName: data.processName || null,
+          canonicalStart: data.canonicalStart || null,
+          canonicalEnd: data.canonicalEnd || null,
+        });
+        setGateCompleted(true);
+        setChatMessages([]);
+        goToScreen(2);
+      } catch (e) {
+        setEditError('Failed to open flow.');
+      }
+    })();
+  }, [urlDealFlowId, accessToken, authLoading]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Restore pending module context saved before a sign-in redirect
   // (e.g. a PE roll-up user who was sent to /portal?returnTo=/process-audit).
-  // Only skips the audit gate when there is a context to restore — plain signed-in
+  // Only skips the audit gate when there is a context to restore - plain signed-in
   // visits from the marketing page should still see the gate (module selection).
   useEffect(() => {
     if (!sessionUser?.email) return;
@@ -453,8 +526,10 @@ function DiagnosticContent() {
   // Skip gate for signed-in users arriving at /process-audit directly.
   // Segment selection happens via chips inside Screen2 so the gate isn't needed.
   // Deal participant flows still need the gate (they have a participantToken).
+  // Deal flow slot (dealFlowId) is handled by its own resolver above, which seeds
+  // authUser with the flow's company/role - don't race it here.
   useEffect(() => {
-    if (!sessionUser?.email || authLoading || gateCompleted || dealContext?.participantToken) return;
+    if (!sessionUser?.email || authLoading || gateCompleted || dealContext?.participantToken || urlDealFlowId) return;
     setAuthUser({
       email: sessionUser.email,
       name: sessionUser.user_metadata?.full_name || sessionUser.email,
@@ -463,7 +538,7 @@ function DiagnosticContent() {
     });
     setGateCompleted(true);
     goToScreen(2);
-  }, [sessionUser?.email, authLoading, gateCompleted, dealContext]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sessionUser?.email, authLoading, gateCompleted, dealContext, urlDealFlowId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sessionStartedRef = useRef(false);
   useEffect(() => {
@@ -513,7 +588,7 @@ function DiagnosticContent() {
     if (urlResume) setGateCompleted(true);
   }, [urlResume]);
 
-  // Resume a cloud chat session that has no saved report yet — fetch the
+  // Resume a cloud chat session that has no saved report yet - fetch the
   // message thread and repopulate the chat UI so the user can pick up
   // where they left off.
   const urlChatSession = searchParams.get('chatSession');
@@ -544,7 +619,7 @@ function DiagnosticContent() {
         } else if (snapshot && typeof snapshot === 'object') {
           updateProcessData(snapshot);
         } else if (reportId) {
-          // No snapshot (older session) — hydrate from the report's rawProcesses.
+          // No snapshot (older session) - hydrate from the report's rawProcesses.
           try {
             const rep = await apiFetch(`/api/get-diagnostic?id=${encodeURIComponent(reportId)}`, {}, accessToken);
             const repData = rep.ok ? await rep.json() : null;
@@ -583,13 +658,27 @@ function DiagnosticContent() {
           const key = reportId ? `vesno_chat_session_${reportId}` : 'vesno_chat_session_active';
           localStorage.setItem(key, urlChatSession);
         } catch { /* ignore */ }
+        const artefactsByMsg = {};
+        for (const a of (data.artefacts || [])) {
+          if (a.message_id) artefactsByMsg[a.message_id] = a;
+        }
         setChatMessages(
-          data.messages.map((m) => ({
-            role: m.role,
-            content: m.content,
-            actions: m.actions || undefined,
-            attachments: m.attachments || undefined,
-          }))
+          data.messages.map((m) => {
+            const artefact = m.artefact_id ? artefactsByMsg[m.artefact_id] : null;
+            return {
+              role: m.role,
+              content: m.content,
+              actions: m.actions || undefined,
+              attachments: m.attachments || undefined,
+              artefact: artefact ? {
+                id: artefact.id,
+                kind: artefact.kind,
+                refId: artefact.ref_id,
+                label: artefact.label,
+                snapshot: artefact.snapshot,
+              } : undefined,
+            };
+          })
         );
         goToScreen(2);
       } catch {
@@ -682,7 +771,7 @@ function DiagnosticContent() {
         const editGreeting = urlAiRedesign
           ? buildAiRedesignGreeting(raw, raw.processName)
           : urlViewCost
-          ? "You're working on the cost analysis for this process. Update labour rates, non-labour costs, or implementation investment on the right — or ask me to adjust figures, explain the payback/ROI math, or call out where the biggest savings are. What would you like to do?"
+          ? "You're working on the cost analysis for this process. Update labour rates, non-labour costs, or implementation investment on the right - or ask me to adjust figures, explain the payback/ROI math, or call out where the biggest savings are. What would you like to do?"
           : isEditRedesign
           ? "You're editing your redesigned flow. I can help you refine steps, add details, or adjust the process. What would you like to change?"
           : "You're editing your process audit. I can help you refine steps, add details, or adjust the process. What would you like to change?";
@@ -738,7 +827,7 @@ function DiagnosticContent() {
       });
   }, [urlEdit, urlEditEmail, urlEditRedesign, authLoading, accessToken, restoreProgress, setEditingReportId, setEditingRedesign, setChatMessages, setDiagnosticMode, addAuditEvent]);
 
-  // Handle ?resume=xxx — load from API; ?step=N deep-links to a specific step
+  // Handle ?resume=xxx - load from API; ?step=N deep-links to a specific step
   useEffect(() => {
     const resumeId = searchParams.get('resume');
     const stepParam = searchParams.get('step');
@@ -804,7 +893,7 @@ function DiagnosticContent() {
 
   /*
    * Mobile layout uses CSS to drop html/body min-height for chat steps. Browser back/forward
-   * (BFCache) can restore a snapshot where :has() doesn’t re-match — set a real attribute so
+   * (BFCache) can restore a snapshot where :has() doesn’t re-match - set a real attribute so
    * styles always apply after return navigation.
    */
   const currentScreenRef = useRef(currentScreen);
@@ -850,7 +939,7 @@ function DiagnosticContent() {
       if (data.success && data.report) {
         setReportToLoad(data.report);
       }
-    } catch { /* non-fatal — Screen2 will show an empty workspace */ }
+    } catch { /* non-fatal - Screen2 will show an empty workspace */ }
     goToScreen(2);
   }, [accessToken, goToScreen]);
 

@@ -47,7 +47,7 @@ async function supabase(method, path, body) {
   return text ? JSON.parse(text) : null;
 }
 
-// Dummy timing sets — varied to make reports interesting
+// Dummy timing sets - varied to make reports interesting
 const TIMING_PRESETS = [
   { workMinutes: 15,  waitMinutes: 60,  waitType: 'dependency', waitNote: 'Client data submission', waitExternal: true,  capacity: 1 },
   { workMinutes: 30,  waitMinutes: 240, waitType: 'capacity',   waitNote: 'Finance team',           waitExternal: false, capacity: 1 },
@@ -101,7 +101,7 @@ async function main() {
 
   await supabase('PATCH', `/diagnostic_reports?id=eq.${row.id}`, { diagnostic_data: data });
 
-  console.log(`✓ Done — ${totalStepsPatched} steps patched across ${processes.length} process(es)`);
+  console.log(`✓ Done - ${totalStepsPatched} steps patched across ${processes.length} process(es)`);
 }
 
 main().catch(err => { console.error(err); process.exit(1); });

@@ -3,15 +3,15 @@
 import { useRef, useEffect } from 'react';
 
 /**
- * Hero canvas — animated process-flow diagram.
+ * Hero canvas - animated process-flow diagram.
  *
  * Tells Vesno's story visually:
- *   1. CHAOS   — a multi-lane business-process pipeline with bottleneck nodes
+ *   1. CHAOS   - a multi-lane business-process pipeline with bottleneck nodes
  *                pulsing amber, particles queueing up before blocked steps.
- *   2. SCAN    — a diagnostic sweep moves left → right, "discovering" the issues.
- *   3. FIX     — as the sweep passes each stuck node it resolves (amber → teal),
+ *   2. SCAN    - a diagnostic sweep moves left → right, "discovering" the issues.
+ *   3. FIX     - as the sweep passes each stuck node it resolves (amber → teal),
  *                particles accelerate through the freed path.
- *   4. CLEAN   — the whole pipeline runs fast and clear.
+ *   4. CLEAN   - the whole pipeline runs fast and clear.
  *   Cycle repeats with fresh bottlenecks.
  */
 export default function HeroCanvas() {
@@ -58,7 +58,7 @@ export default function HeroCanvas() {
 
       nodes = []; edges = []; particles = [];
 
-      // Vertical positions — use upper ~60 % so they're visible above gradient overlay
+      // Vertical positions - use upper ~60 % so they're visible above gradient overlay
       const topY  = H * 0.04;
       const spanY = H * 0.50;
       const laneGap = numLanes > 1 ? spanY / (numLanes - 1) : 0;

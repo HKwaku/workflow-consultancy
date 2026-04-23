@@ -52,20 +52,20 @@ export async function POST(request) {
       text: `${textPrompt}
 
 Extract every process step and return a JSON array. Each step object must have:
-- name: string — concise step name (e.g. "Submit purchase request")
-- department: string — the team, role, or department responsible. Use the exact name from the source (e.g. "Finance", "Customer Success", "Account Manager", "IT Support"). Leave blank only if genuinely unknown.
-- owner: string — specific role or person if mentioned (e.g. "Finance Manager"), otherwise blank
-- systems: string[] — software tools or systems used in this step (e.g. ["SAP", "Slack", "Email"])
-- isDecision: boolean — true if this is a decision/branch point (e.g. "Approve or Reject?", "If X then Y")
-- isMerge: boolean — true if this step is a convergence point where two or more branches rejoin the main flow. In diagrams, this is any shape that has multiple incoming arrows, or a BPMN gateway labelled "join/merge". In text, phrases like "after [either/both/all] paths, do X" indicate that X is the merge.
-- branches: array — if isDecision is true, list the branch outcomes as [{label: "Yes"}, {label: "No"}] or use the actual branch labels from the source. Empty array otherwise.
+- name: string - concise step name (e.g. "Submit purchase request")
+- department: string - the team, role, or department responsible. Use the exact name from the source (e.g. "Finance", "Customer Success", "Account Manager", "IT Support"). Leave blank only if genuinely unknown.
+- owner: string - specific role or person if mentioned (e.g. "Finance Manager"), otherwise blank
+- systems: string[] - software tools or systems used in this step (e.g. ["SAP", "Slack", "Email"])
+- isDecision: boolean - true if this is a decision/branch point (e.g. "Approve or Reject?", "If X then Y")
+- isMerge: boolean - true if this step is a convergence point where two or more branches rejoin the main flow. In diagrams, this is any shape that has multiple incoming arrows, or a BPMN gateway labelled "join/merge". In text, phrases like "after [either/both/all] paths, do X" indicate that X is the merge.
+- branches: array - if isDecision is true, list the branch outcomes as [{label: "Yes"}, {label: "No"}] or use the actual branch labels from the source. Empty array otherwise.
 
 Rules:
 - If the source is a table (e.g. spreadsheet or Teams export), treat each row as a step. Map column headers like "Owner", "Team", "Responsible", "Assigned to" → department/owner.
 - Preserve the original sequence order.
-- Include ALL steps — do not summarise or skip.
+- Include ALL steps - do not summarise or skip.
 - For decision steps, set isDecision: true and populate branches.
-- For rejoin / convergence steps, set isMerge: true. When two branches visibly reconnect onto the same step in a diagram, that step is a merge. Prefer over-flagging merges when branches rejoin — the diagram needs it to draw the reconnection arrows.
+- For rejoin / convergence steps, set isMerge: true. When two branches visibly reconnect onto the same step in a diagram, that step is a merge. Prefer over-flagging merges when branches rejoin - the diagram needs it to draw the reconnection arrows.
 
 Return ONLY the JSON array, no other text. Example:
 [{"name":"Submit request","department":"Procurement","owner":"Procurement Analyst","systems":["SAP"],"isDecision":false,"isMerge":false,"branches":[]},{"name":"Approve or reject?","department":"Finance Manager","owner":"","systems":[],"isDecision":true,"isMerge":false,"branches":[{"label":"Approved"},{"label":"Rejected"}]},{"name":"Archive decision","department":"Finance","owner":"","systems":[],"isDecision":false,"isMerge":true,"branches":[]}]`,

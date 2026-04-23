@@ -91,10 +91,10 @@ export async function POST(request) {
       .join('\n');
 
     const SEGMENT_PLATFORM_HINTS = {
-      ma: 'This is an M&A integration context — prioritise platforms with strong governance, audit trails, and multi-entity support.',
-      pe: 'This is a private equity context — prioritise platforms with rapid ROI, minimal IT overhead, and clear cost tracking.',
-      highstakes: 'This is a high-stakes event context — prioritise platforms with reliability, rollback support, and fast onboarding.',
-      scaling: 'This is a scaling business context — prioritise platforms that handle high volume, support delegation, and integrate with existing tools.',
+      ma: 'This is an M&A integration context - prioritise platforms with strong governance, audit trails, and multi-entity support.',
+      pe: 'This is a private equity context - prioritise platforms with rapid ROI, minimal IT overhead, and clear cost tracking.',
+      highstakes: 'This is a high-stakes event context - prioritise platforms with reliability, rollback support, and fast onboarding.',
+      scaling: 'This is a scaling business context - prioritise platforms that handle high volume, support delegation, and integrate with existing tools.',
     };
     const segmentHint = reportSegment && SEGMENT_PLATFORM_HINTS[reportSegment] ? `\n${SEGMENT_PLATFORM_HINTS[reportSegment]}` : '';
 

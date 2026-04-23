@@ -21,7 +21,7 @@ UPDATE public.diagnostic_reports
   WHERE updated_at IS NULL;
 
 
--- ── 3. Add user_id columns (nullable — anonymous diagnostics won't have one)
+-- ── 3. Add user_id columns (nullable - anonymous diagnostics won't have one)
 ALTER TABLE public.diagnostic_reports
   ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL;
 

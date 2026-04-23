@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * ReportCanvasPane — right-pane canvas for the chat-first diagnostic.
+ * ReportCanvasPane - right-pane canvas for the chat-first diagnostic.
  *
  * Shows either the interactive Flow or the embedded Report, with four states:
  *   - preview:    empty state with a "Generate full report" call to action

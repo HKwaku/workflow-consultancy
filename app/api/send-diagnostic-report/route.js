@@ -28,7 +28,7 @@ export async function POST(request) {
       const msg = err.formErrors?.join?.(' ') || err.errors?.[0]?.message || 'Invalid request.';
       return NextResponse.json({ error: msg, details: err }, { status: 400 });
     }
-    let { editingReportId, contact, fallbackEmail, authToken, summary, recommendations, automationScore, roadmap, processes, rawProcesses, customDepartments, diagnosticMode, timestamp, userId, progressId, auditTrail, costAnalystEmail, parentReportId, dealParticipantToken, dealCode } = parsed.data;
+    let { editingReportId, contact, fallbackEmail, authToken, summary, recommendations, automationScore, roadmap, processes, rawProcesses, customDepartments, diagnosticMode, timestamp, userId, progressId, auditTrail, costAnalystEmail, parentReportId, dealParticipantToken, dealCode, dealFlowId } = parsed.data;
     let resolvedEmail = (contact?.email || '').trim() || (fallbackEmail || '').trim() || '';
     if (!resolvedEmail || !isValidEmail(resolvedEmail)) {
       const token = authToken || request.headers.get('Authorization')?.replace(/^Bearer\s+/i, '')?.trim();
@@ -58,7 +58,7 @@ export async function POST(request) {
     let supabaseError = null;
 
     if (!sbConfig) {
-      logger.warn('Supabase not configured — SUPABASE_URL or SUPABASE_SERVICE_KEY missing', { requestId: getRequestId(request) });
+      logger.warn('Supabase not configured - SUPABASE_URL or SUPABASE_SERVICE_KEY missing', { requestId: getRequestId(request) });
       supabaseError = 'Supabase not configured (missing env vars)';
     }
 
@@ -86,7 +86,7 @@ export async function POST(request) {
     const contributorEmailsToSave = [...autoContributors];
 
     // Resolve deal participant token → deal link data (non-fatal if missing/invalid)
-    let dealLink = null; // { dealId, dealRole, participantId }
+    let dealLink = null; // { dealId, dealRole, participantId, dealFlowId? }
     if (dealParticipantToken && sbConfig && !editingReportId) {
       try {
         const { url: supabaseUrl, key: supabaseKey } = sbConfig;
@@ -98,6 +98,35 @@ export async function POST(request) {
           const [dp] = await dpResp.json();
           if (dp && dp.status !== 'complete') {
             dealLink = { dealId: dp.deal_id, dealRole: dp.role, participantId: dp.id };
+          }
+        }
+      } catch { /* non-fatal */ }
+    }
+
+    // Resolve deal flow id → deal link data (new multi-flow slot per company)
+    if (!dealLink && dealFlowId && sbConfig && !editingReportId) {
+      try {
+        const { url: supabaseUrl, key: supabaseKey } = sbConfig;
+        const flowResp = await fetchWithTimeout(
+          `${supabaseUrl}/rest/v1/deal_flows?id=eq.${encodeURIComponent(dealFlowId)}&select=id,deal_id,participant_id,status,deal_participants(id,role,participant_email,status),deals(owner_email,collaborator_emails,status)`,
+          { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
+        );
+        if (flowResp.ok) {
+          const [flow] = await flowResp.json();
+          const flowDeal = flow?.deals || null;
+          const flowPart = flow?.deal_participants || null;
+          if (flow && flowPart && flowDeal && flowDeal.status !== 'complete' && flow.status !== 'complete') {
+            // Caller must be owner, collaborator, or the assigned participant email
+            const callerLower = resolvedEmailLower;
+            const ownerLower = (flowDeal.owner_email || '').toLowerCase();
+            const collabLower = Array.isArray(flowDeal.collaborator_emails)
+              ? flowDeal.collaborator_emails.map((e) => (typeof e === 'string' ? e.toLowerCase() : '')).filter(Boolean)
+              : [];
+            const partEmailLower = (flowPart.participant_email || '').toLowerCase();
+            const authorized = callerLower === ownerLower || collabLower.includes(callerLower) || (!!partEmailLower && partEmailLower === callerLower);
+            if (authorized) {
+              dealLink = { dealId: flow.deal_id, dealRole: flowPart.role, participantId: flowPart.id, dealFlowId: flow.id };
+            }
           }
         }
       } catch { /* non-fatal */ }
@@ -237,6 +266,9 @@ export async function POST(request) {
           linkProgressRecord(supabaseUrl, supabaseKey, progressId, reportId, getRequestId(request));
           if (dealLink) {
             completeDealParticipant(supabaseUrl, supabaseKey, dealLink.participantId, reportId, now, getRequestId(request));
+            if (dealLink.dealFlowId) {
+              completeDealFlow(supabaseUrl, supabaseKey, dealLink.dealFlowId, reportId, now, getRequestId(request));
+            }
           }
         }
       } catch (sbErr) {
@@ -277,7 +309,7 @@ export async function POST(request) {
     const costAnalysisPending = (summary?.totalAnnualCost || 0) === 0 && diagnosticMode === 'comprehensive';
     const costAnalysisUrl = costAnalysisPending ? `${baseUrl}/cost-analysis?id=${reportId}&token=${costAnalysisToken}` : null;
 
-    // Server-side COST_ANALYSIS_SHARE — fires for each notification target when the
+    // Server-side COST_ANALYSIS_SHARE - fires for each notification target when the
     // analysis is pending. Replaces the per-client call from Screen6Complete so the
     // email always goes out, even if the browser navigates away after save.
     if (costAnalysisPending && costAnalysisUrl && storedInSupabase) {
@@ -356,6 +388,21 @@ async function completeDealParticipant(supabaseUrl, supabaseKey, participantId, 
     );
   } catch (err) {
     logger.warn('Failed to mark deal participant complete', { requestId, message: err.message });
+  }
+}
+
+async function completeDealFlow(supabaseUrl, supabaseKey, dealFlowId, reportId, _now, requestId) {
+  try {
+    await fetchWithTimeout(
+      `${supabaseUrl}/rest/v1/deal_flows?id=eq.${encodeURIComponent(dealFlowId)}`,
+      {
+        method: 'PATCH',
+        headers: getSupabaseWriteHeaders(supabaseKey),
+        body: JSON.stringify({ report_id: reportId, status: 'complete' }),
+      }
+    );
+  } catch (err) {
+    logger.warn('Failed to mark deal flow complete', { requestId, message: err.message });
   }
 }
 

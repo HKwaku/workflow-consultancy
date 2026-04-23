@@ -1,7 +1,7 @@
 -- ============================================================
 -- chat_sessions.process_snapshot
 -- Stores the latest processData payload (steps, handoffs, processName, etc.)
--- so resuming a chat-only session reconstructs the full workspace —
+-- so resuming a chat-only session reconstructs the full workspace -
 -- not just the message thread.
 -- ============================================================
 

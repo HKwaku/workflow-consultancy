@@ -73,7 +73,7 @@ function SummaryStat({ value, label, sub, tone }) {
   const toneClass = tone ? ` report-summary-stat--${tone}` : '';
   return (
     <div className={`report-summary-stat${toneClass}`}>
-      <div className="report-summary-stat-value">{value ?? '—'}</div>
+      <div className="report-summary-stat-value">{value ?? '-'}</div>
       <div className="report-summary-stat-label">{label}</div>
       {sub && <div className="report-summary-stat-sub">{sub}</div>}
     </div>
@@ -106,11 +106,11 @@ export default function ReportAtAGlanceBody({
   return (
     <section className="report-summary-section">
       <div className="report-summary-body">
-        <SubGroup title="Process structure" sub="Shape of the work — steps, teams, and handoffs.">
+        <SubGroup title="Process structure" sub="Shape of the work - steps, teams, and handoffs.">
           <div className="report-summary-grid">
-            <SummaryStat value={stepCount || '—'} label="Steps mapped" />
-            <SummaryStat value={deptCount > 0 ? deptCount : '—'} label="Teams involved" />
-            <SummaryStat value={handoffCount > 0 ? handoffCount : '—'} label="Handoffs" />
+            <SummaryStat value={stepCount || '-'} label="Steps mapped" />
+            <SummaryStat value={deptCount > 0 ? deptCount : '-'} label="Teams involved" />
+            <SummaryStat value={handoffCount > 0 ? handoffCount : '-'} label="Handoffs" />
             {decisionCount > 0 && <SummaryStat value={decisionCount} label="Decision points" />}
             {externalCount > 0 && <SummaryStat value={externalCount} label="External steps" />}
           </div>
@@ -124,7 +124,7 @@ export default function ReportAtAGlanceBody({
         </SubGroup>
 
         {hasTime && (
-          <SubGroup title="Time &amp; efficiency" sub="Touch time vs. wait time — where the clock goes.">
+          <SubGroup title="Time &amp; efficiency" sub="Touch time vs. wait time - where the clock goes.">
             <div className="report-summary-grid">
               {timelineStr && (
                 <SummaryStat
@@ -168,7 +168,7 @@ export default function ReportAtAGlanceBody({
           <SubGroup title="Data confidence" sub="How much of this is evidence vs. inference.">
             <div className="report-summary-grid">
               <SummaryStat
-                value={quality.grade || '—'}
+                value={quality.grade || '-'}
                 label="Confidence"
                 tone={quality.grade === 'HIGH' ? 'positive' : quality.grade === 'LOW' ? 'danger' : 'warn'}
                 sub={quality.score != null ? `Score: ${quality.score}/100` : undefined}

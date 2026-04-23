@@ -1,4 +1,4 @@
-# Vesno — Competitive Analysis
+# Vesno - Competitive Analysis
 
 > Generated: 2026-04-01
 
@@ -6,12 +6,12 @@
 
 ## Where Vesno sits
 
-Vesno is a **consultancy-delivery tool** — not a process mining platform. The distinction matters enormously when positioning against the competitive field.
+Vesno is a **consultancy-delivery tool** - not a process mining platform. The distinction matters enormously when positioning against the competitive field.
 
 | Dimension | Process Mining tools (Celonis, UiPath, IBM…) | Vesno |
 |---|---|---|
 | **Data source** | System event logs (ERP, CRM, BPMS) | Guided interview + AI extraction |
-| **IT dependency** | High — requires log extraction, connectors, data pipeline | None — runs in a browser, zero IT involvement |
+| **IT dependency** | High - requires log extraction, connectors, data pipeline | None - runs in a browser, zero IT involvement |
 | **Time to first insight** | Weeks to months | 30–45 minutes |
 | **Who runs it** | Internal ops, data engineers, CoE teams | External consultant with a client |
 | **Output** | Conformance checking, variant analysis, bottleneck heatmaps | Process redesign, cost ROI, automation roadmap, platform export |
@@ -21,20 +21,20 @@ Vesno is a **consultancy-delivery tool** — not a process mining platform. The 
 
 ## Tier-by-tier breakdown
 
-### Enterprise / Market Leaders — not direct competitors
+### Enterprise / Market Leaders - not direct competitors
 
 **Celonis, SAP Signavio, IBM Process Mining, UiPath Process Mining, Microsoft Power Automate Process Mining, Automation Anywhere** all require:
 - Existing digital system logs to mine
 - IT/data engineering to set up connectors
 - Enterprise procurement cycles
 
-**Vesno wins on:** any process that lives in people's heads, email, spreadsheets, or informal handoffs — which is most of mid-market.
+**Vesno wins on:** any process that lives in people's heads, email, spreadsheets, or informal handoffs - which is most of mid-market.
 
 **Celonis/Signavio wins on:** complex ERP conformance analysis at scale where event logs exist.
 
 ---
 
-### Mid-Market / Specialist — real comparison zone
+### Mid-Market / Specialist - real comparison zone
 
 | Company | Approach | Vs Vesno |
 |---|---|---|
@@ -50,13 +50,13 @@ Vesno is a **consultancy-delivery tool** — not a process mining platform. The 
 
 ---
 
-### Lightweight / Analyst Tools — different buyer
+### Lightweight / Analyst Tools - different buyer
 
 Fluxicon Disco, Logpickr, process.science, StereoLOGIC, EverFlow all assume you already have event log data and a data analyst to run them. They are analyst tools, not client-facing consultancy tools. Different buyer entirely.
 
 ---
 
-### Open Source — not commercial competition
+### Open Source - not commercial competition
 
 PM4Py, ProM, bupaR are research/academic tools. Apromore Community is the open version of what Salesforce acquired. None are client-facing products.
 
@@ -68,7 +68,7 @@ Things none of the above do in combination:
 
 1. **Zero-log, zero-IT**: Works purely from a structured conversation. A consultant can run it in a client kick-off meeting with no prior data access.
 
-2. **Segment-aware framing (PE / M&A / High-stakes / Scaling)**: The output narrative, cost framing, and recommendations adapt to the deal context. No competitor does this — Celonis PE reports require custom configuration.
+2. **Segment-aware framing (PE / M&A / High-stakes / Scaling)**: The output narrative, cost framing, and recommendations adapt to the deal context. No competitor does this - Celonis PE reports require custom configuration.
 
 3. **Interview → cost model → automation roadmap → platform export in one flow**: Other tools stop at analysis. Vesno goes to "here's your n8n / Zapier / Power Automate workflow, ready to import."
 
@@ -86,13 +86,13 @@ Things none of the above do in combination:
 | **"ClearWork + cost modelling + workflow export"** | Most accurate technical comparison |
 | **"The process audit tool built for PE/M&A consultants"** | Sharpest niche |
 
-The third is the most defensible and hardest for enterprise vendors to replicate quickly — they are not structurally set up to sell to deal-context consultants at the speed Vesno works.
+The third is the most defensible and hardest for enterprise vendors to replicate quickly - they are not structurally set up to sell to deal-context consultants at the speed Vesno works.
 
 ---
 
 ## Gaps and boundary conditions
 
-These are not weaknesses to fix — they define the market segment.
+These are not weaknesses to fix - they define the market segment.
 
 - **No conformance checking**: If a client wants "are people actually following the documented process?" Vesno can't answer that without system logs.
 - **No continuous monitoring**: Vesno is point-in-time. Celonis/UiPath run ongoing.

@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 
 export default function CostCopilotPanel({ open, onClose, reportId, mode, getState }) {
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: "Hi! I can help you interpret the cost figures in this report. Ask me anything — e.g. \"Why is the annual cost so high?\" or \"What's driving the savings estimate?\"" },
+    { role: 'assistant', content: "Hi! I can help you interpret the cost figures in this report. Ask me anything - e.g. \"Why is the annual cost so high?\" or \"What's driving the savings estimate?\"" },
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);

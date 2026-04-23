@@ -412,7 +412,7 @@
   }
 }
 
-/* Labour rates table — responsive */
+/* Labour rates table - responsive */
 @media (max-width: 700px) {
   .cost-rates-table-header,
   .cost-rates-table-row {
@@ -464,7 +464,7 @@
   }
 }
 
-/* Non-labour systems table — responsive */
+/* Non-labour systems table - responsive */
 @media (max-width: 700px) {
   .cost-systems-table-header,
   .cost-systems-table-row {
@@ -496,7 +496,7 @@
   .cost-systems-table .cost-rates-input-wrap .cost-analysis-input { width: 100%; max-width: 120px; }
 }
 
-/* Implementation table — responsive */
+/* Implementation table - responsive */
 @media (max-width: 700px) {
   .cost-impl-table-header,
   .cost-impl-table-row {
@@ -707,7 +707,7 @@
   text-align: left;
 }
 
-/* Labour rates — table-style layout */
+/* Labour rates - table-style layout */
 /* ── Department rate list ──────────────────────────────────────────────── */
 .cost-dept-cards {
   display: flex;
@@ -958,7 +958,7 @@
   width: 100%;
 }
 
-/* Non-labour — systems table (mirrors Labour rates table) */
+/* Non-labour - systems table (mirrors Labour rates table) */
 .cost-systems-table {
   background: var(--bg-alt);
   border: 1px solid var(--border);
@@ -1006,7 +1006,7 @@
   min-width: 0;
 }
 
-/* Non-labour — other costs card (mirrors Defaults card) */
+/* Non-labour - other costs card (mirrors Defaults card) */
 .cost-nonlabour-other-card {
   background: var(--bg-alt);
   border: 1px solid var(--border);
@@ -1219,7 +1219,7 @@
   background: var(--white) !important;
 }
 
-/* Cost analysis — new styles */
+/* Cost analysis - new styles */
 .cost-tooltip {
   display: inline-flex;
   align-items: center;
@@ -1700,7 +1700,7 @@
   border: 1px solid var(--border);
 }
 
-/* Variable cost drivers — AI suggest */
+/* Variable cost drivers - AI suggest */
 .cost-variable-header {
   display: flex;
   align-items: flex-start;

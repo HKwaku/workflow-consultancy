@@ -26,7 +26,7 @@ export default function DealPage() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.replace(`/login?next=/deals/${id}`);
+      router.replace(`/portal?next=${encodeURIComponent(`/deals/${id}`)}`);
     }
   }, [user, authLoading, id, router]);
 
@@ -112,6 +112,7 @@ export default function DealPage() {
           participants={participants}
           summary={summary}
           accessToken={accessToken}
+          currentUserEmail={user?.email || ''}
           onRefresh={loadDeal}
         />
       )}
@@ -138,9 +139,9 @@ export default function DealPage() {
 function DealNav({ deal }) {
   return (
     <nav className="deal-page-breadcrumb">
-      <Link href="/portal" className="deal-breadcrumb-link">Dashboard</Link>
+      <Link href="/portal?dashboard=1" className="deal-breadcrumb-link">Dashboard</Link>
       <span className="deal-breadcrumb-sep">›</span>
-      <Link href="/portal?tab=deals" className="deal-breadcrumb-link">Deals</Link>
+      <Link href="/portal/deals" className="deal-breadcrumb-link">Deals</Link>
       {deal && (
         <>
           <span className="deal-breadcrumb-sep">›</span>

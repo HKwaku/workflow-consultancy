@@ -1,4 +1,4 @@
-# Diagnostics Flow — Capabilities Document
+# Diagnostics Flow - Capabilities Document
 
 > **Last updated:** 2026-04-05
 > This document describes the current diagnostic tool: screens, features, and client experience. The diagnostic is implemented as React components in `components/diagnostic/` and served from `app/process-audit/`. Update this doc when making changes.
@@ -58,7 +58,7 @@ The diagnostic tool has three primary paths, all beginning from a single chat-fi
               ├──────────────────────┼───────────────────────┘
               ▼                      ▼
      ┌─────────────────────────────────────────┐
-     │         Screen 2 — Map Steps            │
+     │         Screen 2 - Map Steps            │
      │  AI Chat  |  Step Editor  |  Flow View  │
      │  Handover modal, per-step save links    │
      └────────────────────┬────────────────────┘
@@ -67,20 +67,20 @@ The diagnostic tool has three primary paths, all beginning from a single chat-fi
           │ (map-only)    │ (comprehensive)│
           │               ▼                │
           │    ┌──────────────────┐        │
-          │    │ Screen 4 — Cost  │        │
+          │    │ Screen 4 - Cost  │        │
           │    │ & Impact         │        │
           │    └────────┬─────────┘        │
           │             │                  │
           └──────┬──────┘                  │
                  ▼                         │
      ┌─────────────────┐                   │
-     │ Screen 5 — Your │◄──────────────────┘
+     │ Screen 5 - Your │◄──────────────────┘
      │ Details (pre-    │
      │ filled from auth)│
      └────────┬────────┘
               ▼
      ┌─────────────────┐
-     │ Screen 6 —      │
+     │ Screen 6 -      │
      │ Auto-redirect    │
      │ to Report page   │
      └────────┬────────┘
@@ -131,29 +131,29 @@ The diagnostic is a **chat-first** experience powered by "Sharp", an AI process-
 
 ## Screen-by-Screen Breakdown
 
-### Screen 0 — Intro Chat (Sharp)
+### Screen 0 - Intro Chat (Sharp)
 
 `components/diagnostic/IntroChatScreen.jsx`
 
 The welcome screen is entirely chat-driven. Sharp (the chatbot avatar) greets the user and guides them through initial decisions.
 
 **Chat flow:**
-1. **Path selection** — "Process Map" or "Team Alignment" (rendered as large cards, not just chips).
-2. **Mode selection** (Process Map path) — "Map only (~15 min)" or "Full diagnostic (~30 min)" (rendered as detailed mode cards showing what each includes).
-3. **Process selection** — Grid of 9 templates (Customer Onboarding, Sales to Delivery, etc.) or free-text custom process name.
-4. **Process naming** — Refine the process name.
+1. **Path selection** - "Process Map" or "Team Alignment" (rendered as large cards, not just chips).
+2. **Mode selection** (Process Map path) - "Map only (~15 min)" or "Full diagnostic (~30 min)" (rendered as detailed mode cards showing what each includes).
+3. **Process selection** - Grid of 9 templates (Customer Onboarding, Sales to Delivery, etc.) or free-text custom process name.
+4. **Process naming** - Refine the process name.
 
 For comprehensive mode, additional prompts follow:
-5. **Last example** — Name of the last real instance.
-6. **Start/end dates** — Natural language date parsing (e.g. "started 3 Jan, finished 18 Jan" or "took about 2 weeks") → calculates `elapsedDays`.
-7. **Time spent** — Distinguishes hands-on work vs waiting time. Chips: Under 1 hour, 1-4 hours, Half a day, Full day, Multiple days. Parses to `hoursPerInstance`.
-8. **Performance** — Was this instance faster, typical, or slower than usual?
-9. **Frequency** — Daily, few per week, weekly, monthly.
-10. **Priority** — Critical, High, Medium, Low.
+5. **Last example** - Name of the last real instance.
+6. **Start/end dates** - Natural language date parsing (e.g. "started 3 Jan, finished 18 Jan" or "took about 2 weeks") → calculates `elapsedDays`.
+7. **Time spent** - Distinguishes hands-on work vs waiting time. Chips: Under 1 hour, 1-4 hours, Half a day, Full day, Multiple days. Parses to `hoursPerInstance`.
+8. **Performance** - Was this instance faster, typical, or slower than usual?
+9. **Frequency** - Daily, few per week, weekly, monthly.
+10. **Priority** - Critical, High, Medium, Low.
 
 All data collected in the chat is merged into `processData` in the diagnostic context and carried forward.
 
-### Screen -2 — Team Setup
+### Screen -2 - Team Setup
 
 `components/diagnostic/screens/ScreenTeam.jsx`
 
@@ -162,14 +162,14 @@ Team Alignment setup screen (accessed only via auth gate).
 **Create mode:**
 - Select a process from templates or enter a custom name.
 - Company name (optional).
-- Creator identity is taken from the authenticated Supabase user — no duplicate name/email fields.
+- Creator identity is taken from the authenticated Supabase user - no duplicate name/email fields.
 - Creates a team session via `POST /api/team?action=create` → returns team code and shareable join URL.
 
 **Join mode:**
 - Enter an existing team code (or auto-filled from `?team=CODE` URL).
 - Validates and joins via `GET /api/team?action=info`.
 
-### Screen 2 — Map Steps
+### Screen 2 - Map Steps
 
 `components/diagnostic/screens/Screen2MapSteps.jsx`
 
@@ -192,13 +192,13 @@ The most feature-rich screen. A three-panel layout with AI Chat, Step Editor, an
 - Per-step editing with progressive disclosure:
   - Step name and number.
   - **Decision point** (pill toggle Yes/No at the top of expanded details) with branch inputs.
-  - **Owner** — Department dropdown + Internal/External toggle.
-  - **Systems** — Tag/chip input with suggestions (Salesforce, HubSpot, etc.).
-  - **Handoff → Step N** — Tag/chip input with 5 core methods: Email, Slack/Teams, Meeting/call, Shared doc, They just knew.
-  - **Clarification needed?** — Frequency chips: No issues, Once, 2-3x, 4+x.
+  - **Owner** - Department dropdown + Internal/External toggle.
+  - **Systems** - Tag/chip input with suggestions (Salesforce, HubSpot, etc.).
+  - **Handoff → Step N** - Tag/chip input with 5 core methods: Email, Slack/Teams, Meeting/call, Shared doc, They just knew.
+  - **Clarification needed?** - Frequency chips: No issues, Once, 2-3x, 4+x.
 - Section headers (Owner, Systems, Handoff, Clarification) with light grey backgrounds for clear visual separation.
 - **Insert steps** between existing steps via `+` buttons in the step strip.
-- **Per-step save link** — "Save & get link" generates a cloud-saved resume URL for that specific step.
+- **Per-step save link** - "Save & get link" generates a cloud-saved resume URL for that specific step.
 - Step strip bar with numbered pills; horizontal scrolling for many steps.
 
 **Flow Preview panel:**
@@ -213,19 +213,19 @@ The most feature-rich screen. A three-panel layout with AI Chat, Step Editor, an
 - Saves to cloud with step index → generates deep-link URL (`?resume=ID&step=N`).
 - Option to copy link or send via email (n8n webhook).
 
-### Screen 4 — Cost & Impact
+### Screen 4 - Cost & Impact
 
 `components/diagnostic/screens/Screen4Cost.jsx`
 
 Comprehensive mode only. Combines data from several formerly separate screens.
 
 **Sections:**
-- **Frequency & volume** — Pre-filled from chat; editable dropdown + annual instances calculation.
-- **Person-hours per instance** — Pre-filled from chat (`hoursPerInstance`); label shows "Sharp estimated Xh based on your answers — adjust if needed".
-- **Hourly rate** — Number input (default £50).
-- **Calculated results** — Per-instance cost, annual cost, potential annual savings (grounded, not arbitrary).
-- **Cycle time badge** — Displays `elapsedDays` collected from chat date parsing.
-- **Bottleneck** — Radio buttons: Waiting for approvals, Manual data entry, Coordination overhead, System limitations, Knowledge gaps, Other. Optional detail input.
+- **Frequency & volume** - Pre-filled from chat; editable dropdown + annual instances calculation.
+- **Person-hours per instance** - Pre-filled from chat (`hoursPerInstance`); label shows "Sharp estimated Xh based on your answers - adjust if needed".
+- **Hourly rate** - Number input (default £50).
+- **Calculated results** - Per-instance cost, annual cost, potential annual savings (grounded, not arbitrary).
+- **Cycle time badge** - Displays `elapsedDays` collected from chat date parsing.
+- **Bottleneck** - Radio buttons: Waiting for approvals, Manual data entry, Coordination overhead, System limitations, Knowledge gaps, Other. Optional detail input.
 
 **Savings calculation:**
 `estimateSavingsPercent()` dynamically calculates potential savings (capped at 60%) based on:
@@ -234,7 +234,7 @@ Comprehensive mode only. Combines data from several formerly separate screens.
 - Bottleneck type (manual work and coordination overhead = higher savings).
 - Decision points (routing complexity).
 
-### Screen 5 — Your Details
+### Screen 5 - Your Details
 
 `components/diagnostic/screens/Screen5YourDetails.jsx`
 
@@ -244,18 +244,18 @@ Contact details form. Pre-populated from the authenticated Supabase user (`authU
 - Name * (required).
 - Email * (required).
 - Company (optional).
-- Department (optional — shown for team mode).
+- Department (optional - shown for team mode).
 - Job title (optional).
 - Team size (radio: 1-10, 11-50, 51-200, 201-500, 500+).
 - Industry (dropdown: Technology, Finance, Healthcare, etc.).
 
 Two-step submit confirmation: first click → "Confirm and Generate"; second click → submits. Auto-resets after 5 seconds.
 
-### Screen 6 — Complete
+### Screen 6 - Complete
 
 `components/diagnostic/screens/Screen6Complete.jsx`
 
-Auto-submits and redirects. No placeholder resting state — shows "Generating your report..." with a spinner, then automatically redirects to `/report?id=...` via `router.push`. The user never sees a "Diagnostic Complete!" page.
+Auto-submits and redirects. No placeholder resting state - shows "Generating your report..." with a spinner, then automatically redirects to `/report?id=...` via `router.push`. The user never sees a "Diagnostic Complete!" page.
 
 ---
 
@@ -264,8 +264,8 @@ Auto-submits and redirects. No placeholder resting state — shows "Generating y
 ### Auth Gate (`components/diagnostic/TeamAuthGate.jsx`)
 
 Supabase Auth is required for:
-- **Team Alignment** — sign in before accessing team setup.
-- **Comprehensive Diagnostic** — sign in before the process definition chat.
+- **Team Alignment** - sign in before accessing team setup.
+- **Comprehensive Diagnostic** - sign in before the process definition chat.
 
 The gate reuses `PortalAuth` (from `app/portal/PortalAuth.jsx`) with `getSupabaseClient()` from `lib/supabase.js`.
 
@@ -276,9 +276,9 @@ The gate reuses `PortalAuth` (from `app/portal/PortalAuth.jsx`) with `getSupabas
 4. On success → stores `{ name, email }` as `authUser` in `DiagnosticContext`.
 
 **Auth user data flows to:**
-- `ScreenTeam` — creator name/email sent to API (no duplicate fields).
-- `Screen5YourDetails` — name/email pre-populated.
-- `localStorage` — persisted in the save/restore cycle for session continuity.
+- `ScreenTeam` - creator name/email sent to API (no duplicate fields).
+- `Screen5YourDetails` - name/email pre-populated.
+- `localStorage` - persisted in the save/restore cycle for session continuity.
 
 **Environment variables required (client-side):**
 - `NEXT_PUBLIC_SUPABASE_URL`
@@ -293,9 +293,9 @@ The gate reuses `PortalAuth` (from `app/portal/PortalAuth.jsx`) with `getSupabas
 `components/diagnostic/ProgressBar.jsx`
 
 - Gradient progress bar at the top of every screen.
-- Text: "Step X of N — Screen Name" (e.g. "Step 2 of 5 — Map Steps").
+- Text: "Step X of N - Screen Name" (e.g. "Step 2 of 5 - Map Steps").
 - Progress percentage calculated from index position within the active screen list.
-- **Diagnostic Depth** score (formerly "Process Health") — a data-completeness percentage shown from screen 2 onward. Rewards granular data: step count, departments, handoffs, systems, cost data, cycle time, bottleneck, example name.
+- **Diagnostic Depth** score (formerly "Process Health") - a data-completeness percentage shown from screen 2 onward. Rewards granular data: step count, departments, handoffs, systems, cost data, cycle time, bottleneck, example name.
 
 ### Save & Get Link
 
@@ -311,7 +311,7 @@ The gate reuses `PortalAuth` (from `app/portal/PortalAuth.jsx`) with `getSupabas
 - **Continue →** button on all screens.
 - Rendered as siblings to the progress bar to prevent overlap.
 
-### Sharp — AI Chatbot Avatar
+### Sharp - AI Chatbot Avatar
 
 - Teal circular avatar with "S" letter, displayed on all assistant messages.
 - Greeting: "Hello, I'm Sharp! I'll help you map your process and find where time and money are leaking."
@@ -323,8 +323,8 @@ The gate reuses `PortalAuth` (from `app/portal/PortalAuth.jsx`) with `getSupabas
 ### Three-Panel Step Mapping (Screen 2)
 
 The map steps screen uses a flexible three-panel layout:
-- **Panel 1** — AI Chat or Step Editor (pill toggle).
-- **Panel 2** — Flow Preview (always visible).
+- **Panel 1** - AI Chat or Step Editor (pill toggle).
+- **Panel 2** - Flow Preview (always visible).
 - Column resize via drag handle between panels.
 - Float/dock toggle per panel for undocked mode.
 
@@ -367,7 +367,7 @@ Instead of asking users to guess hours directly, the chat flow:
 1. Asks for start and end dates of the last example → parses natural language into `elapsedDays`.
 2. Asks about actual hands-on work vs waiting → maps to `hoursPerInstance`.
 3. Pre-fills the cost screen with these values; users can refine if needed.
-4. Labels show "Sharp estimated Xh based on your answers — adjust if needed."
+4. Labels show "Sharp estimated Xh based on your answers - adjust if needed."
 
 ### Grounded Savings Calculation
 
@@ -491,7 +491,7 @@ Factory functions `getFastModel(overrides)` and `getDeepModel(overrides)` create
 All system prompts share a common identity defined in `lib/prompts.js`:
 
 ```
-You are Vesno's AI operating-model consultant — concise, expert, and actionable.
+You are Vesno's AI operating-model consultant - concise, expert, and actionable.
 ```
 
 The chat agent uses a separate persona: "Sharp, a friendly process mapping assistant."
@@ -589,7 +589,7 @@ Return ONLY valid JSON: { "executiveSummary": "...", "implementationPriority": [
 
 ---
 
-### Agent 2: Chat Agent — Sharp (LangGraph StateGraph)
+### Agent 2: Chat Agent - Sharp (LangGraph StateGraph)
 
 **Files:** `lib/agents/chat/graph.js`, `lib/agents/chat/tools.js`
 **API route:** `POST /api/diagnostic-chat` (`maxDuration: 60`)
@@ -626,7 +626,7 @@ Return ONLY valid JSON: { "executiveSummary": "...", "implementationPriority": [
 | `add_custom_department` | Add a department to the picklist |
 | `replace_all_steps` | Replace the entire step list (bulk creation) |
 
-Tools return confirmation strings. Actual state mutation happens client-side — the API returns `{ reply, actions[] }` and the client's `processActions()` callback applies each action to local React state.
+Tools return confirmation strings. Actual state mutation happens client-side - the API returns `{ reply, actions[] }` and the client's `processActions()` callback applies each action to local React state.
 
 **System prompt (dynamic, built per request):**
 
@@ -688,7 +688,7 @@ All prompt text is centralized in `lib/prompts.js`:
 
 | Export | Used By |
 |--------|---------|
-| `redesignSystemPrompt()` | (Legacy — kept for reference. Active redesign uses agent-specific prompts in `lib/agents/redesign/graph.js`) |
+| `redesignSystemPrompt()` | (Legacy - kept for reference. Active redesign uses agent-specific prompts in `lib/agents/redesign/graph.js`) |
 | `redesignUserPrompt(context)` | (Legacy) |
 | `chatSystemPrompt({ processName, stepsDesc, incompleteBlock })` | Chat agent (`lib/agents/chat/graph.js`) |
 | `recommendationsSystemPrompt()` | `/api/process-diagnostic` |
@@ -705,7 +705,7 @@ All prompt text is centralized in `lib/prompts.js`:
 | `lib/agents/models.js` | Shared `ChatAnthropic` factory functions (`getFastModel`, `getDeepModel`) |
 | `lib/agents/redesign/graph.js` | Redesign agent: planner + validation + repair + summarizer |
 | `lib/agents/redesign/tools.js` | 3 LangChain tools (`optimize_process`, `record_change`, `calculate_cost_summary`) + `validateRedesign()` |
-| `lib/agents/redesign/state.js` | LangGraph `Annotation.Root` state schema (legacy — from initial multi-node graph, retained for reference) |
+| `lib/agents/redesign/state.js` | LangGraph `Annotation.Root` state schema (legacy - from initial multi-node graph, retained for reference) |
 | `lib/agents/chat/graph.js` | Chat agent: LangGraph `StateGraph` with agent + `ToolNode` loop |
 | `lib/agents/chat/tools.js` | 6 LangChain tools (`add_step`, `update_step`, `remove_step`, `set_handoff`, `add_custom_department`, `replace_all_steps`) |
 | `lib/agents/workflow-export/` | Workflow export: N8N JSON, Unqork definition, platform-specific instructions |
@@ -749,7 +749,7 @@ Calculated per-process using `estimateSavingsPercent()` based on actual process 
 
 ### Workflow Automation Exports (Post-Redesign)
 
-After the user **accepts** the redesigned operating model, a **Build this** button appears on the dashboard and report. This leads to `/build?id=REPORT_ID` — a page with integration tiles for each supported platform.
+After the user **accepts** the redesigned operating model, a **Build this** button appears on the dashboard and report. This leads to `/build?id=REPORT_ID` - a page with integration tiles for each supported platform.
 
 | Platform | Output | Use Case |
 |----------|--------|----------|
@@ -761,14 +761,14 @@ After the user **accepts** the redesigned operating model, a **Build this** butt
 | **Pipedream** | Workflow build guide JSON | Trigger + steps per action, suggested components. |
 
 - **API:** `POST /api/generate-workflow-export` with `{ reportId, platform }`
-- **Agent:** `lib/agents/workflow-export/` — deterministic generators (no LLM)
+- **Agent:** `lib/agents/workflow-export/` - deterministic generators (no LLM)
 - **UI:** `/build` page with tiles; "Build this" on dashboard (when redesign accepted) and in report finalised banner
 
 ---
 
 ## Team Alignment
 
-Formerly "Team Diagnostics" — renamed throughout the application.
+Formerly "Team Diagnostics" - renamed throughout the application.
 
 ### Flow
 
@@ -790,12 +790,12 @@ Formerly "Team Diagnostics" — renamed throughout the application.
 
 ### Deduplication
 
-- **Submit:** Upsert logic — checks for existing response by email (or name). Updates if found, inserts if new.
+- **Submit:** Upsert logic - checks for existing response by email (or name). Updates if found, inserts if new.
 - **Results:** Client-side deduplication keeps only the most recent response per respondent.
 
 ### Results Page
 
-`/team-results` — standalone HTML page showing:
+`/team-results` - standalone HTML page showing:
 - Team consensus score with progress bar.
 - Respondent cards with avatars.
 - Aggregated metrics.

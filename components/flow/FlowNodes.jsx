@@ -138,12 +138,12 @@ export function StepNode({ data, selected }) {
       >
         <div className="flow-node-step-bar" style={{ background: barColor }} />
 
-        {/* Step number — top-left */}
+        {/* Step number - top-left */}
         <span className="flow-node-step-num" style={{ position: 'absolute', top: 6, left: 8 }}>
           {stepIndex + 1}
         </span>
 
-        {/* Automation letter — large, centered in node body */}
+        {/* Automation letter - large, centered in node body */}
         {auto && (
           <div
             style={{
@@ -172,7 +172,7 @@ export function StepNode({ data, selected }) {
           </div>
         )}
 
-        {/* Corner badges — approval + timing */}
+        {/* Corner badges - approval + timing */}
         {(isApproval || workLabel || waitLabel) && (
           <div style={{ position: 'absolute', top: 5, right: 6, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
             {isApproval && (

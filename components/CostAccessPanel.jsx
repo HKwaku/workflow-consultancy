@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * CostAccessPanel — report owner UI to manage who can see cost data.
+ * CostAccessPanel - report owner UI to manage who can see cost data.
  *
  * Reads/writes the `costAuthorizedEmails` list for a report via
  * `/api/cost-authorized-emails`. The owner is always authorised and

@@ -50,7 +50,7 @@ const signals = [
   },
 ];
 
-/* ── Where we work — segment cards (context + typical problems) ── */
+/* ── Where we work - segment cards (context + typical problems) ── */
 const segments = [
   {
     color: 'teal', num: '01',
@@ -401,7 +401,7 @@ export default function MarketingClient() {
         </div>
       </section>
 
-      {/* Where we work — segment contexts */}
+      {/* Where we work - segment contexts */}
       <section className="services-section section--light" id="services">
         <div className="container">
           <div className="section-header section-header--center scroll-reveal">

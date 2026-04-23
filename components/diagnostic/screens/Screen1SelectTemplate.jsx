@@ -87,7 +87,7 @@ export default function Screen1SelectTemplate() {
             cursor: 'pointer',
           }}
         >
-          Skip — map steps manually
+          Skip - map steps manually
         </button>
       </div>
     </div>

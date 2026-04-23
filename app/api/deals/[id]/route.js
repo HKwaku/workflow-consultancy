@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSupabaseHeaders, getSupabaseWriteHeaders, fetchWithTimeout, requireSupabase, checkOrigin, getRequestId } from '@/lib/api-helpers';
 import { requireAuth } from '@/lib/auth';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
+import { resolveDealAccess, requireDealEditor, requireDealOwner } from '@/lib/dealAuth';
 import { logger } from '@/lib/logger';
 
 function buildBaseUrl(request) {
@@ -34,25 +35,12 @@ export async function GET(request, { params }) {
   const baseUrl = buildBaseUrl(request);
 
   try {
-    // Fetch deal
-    const dealResp = await fetchWithTimeout(
-      `${supabaseUrl}/rest/v1/deals?id=eq.${encodeURIComponent(id)}&select=*`,
-      { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
-    );
-    if (!dealResp.ok) return NextResponse.json({ error: 'Failed to fetch deal.' }, { status: 502 });
-    const [deal] = await dealResp.json();
-    if (!deal) return NextResponse.json({ error: 'Deal not found.' }, { status: 404 });
-
-    // Auth check: must be owner or participant
-    const isOwner = deal.owner_email === auth.email;
-    if (!isOwner) {
-      const partCheckResp = await fetchWithTimeout(
-        `${supabaseUrl}/rest/v1/deal_participants?deal_id=eq.${id}&participant_email=eq.${encodeURIComponent(auth.email)}&select=id`,
-        { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
-      );
-      const partRows = partCheckResp.ok ? await partCheckResp.json() : [];
-      if (!partRows.length) return NextResponse.json({ error: 'Access denied.' }, { status: 403 });
-    }
+    // Auth check: owner, collaborator, or participant
+    const access = await resolveDealAccess({ dealId: id, email: auth.email, userId: auth.userId });
+    if (!access) return NextResponse.json({ error: 'Access denied.' }, { status: 403 });
+    const deal = access.deal;
+    const isOwner = access.mode === 'owner';
+    const canSeePII = access.canManage; // owner or collaborator
 
     // Fetch participants
     const partResp = await fetchWithTimeout(
@@ -108,14 +96,55 @@ export async function GET(request, { params }) {
       id: p.id,
       role: p.role,
       companyName: p.company_name,
-      participantEmail: isOwner ? p.participant_email : undefined, // hide emails from non-owners
+      participantEmail: canSeePII ? p.participant_email : undefined,
       participantName: p.participant_name,
       status: p.status,
-      inviteUrl: isOwner ? `${baseUrl}/process-audit?participant=${p.invite_token}` : undefined,
+      inviteUrl: canSeePII ? `${baseUrl}/process-audit?participant=${p.invite_token}` : undefined,
       reportId: p.report_id,
       report: p.report_id ? reportSummaries[p.report_id] || null : null,
       invitedAt: p.invited_at,
       completedAt: p.completed_at,
+    }));
+
+    // Fetch flows for this deal and join with report summaries
+    const flowsResp = await fetchWithTimeout(
+      `${supabaseUrl}/rest/v1/deal_flows?deal_id=eq.${encodeURIComponent(id)}&select=*&order=created_at.asc`,
+      { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
+    );
+    const flowRows = flowsResp.ok ? await flowsResp.json() : [];
+    const flowReportIds = flowRows.map((f) => f.report_id).filter(Boolean).filter((rid) => !reportSummaries[rid]);
+    if (flowReportIds.length) {
+      const extraResp = await fetchWithTimeout(
+        `${supabaseUrl}/rest/v1/diagnostic_reports?id=in.(${flowReportIds.map(encodeURIComponent).join(',')})&select=id,total_annual_cost,potential_savings,automation_percentage,automation_grade,created_at,updated_at,diagnostic_data`,
+        { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
+      );
+      if (extraResp.ok) {
+        for (const r of await extraResp.json()) {
+          reportSummaries[r.id] = {
+            id: r.id,
+            totalAnnualCost: r.total_annual_cost,
+            potentialSavings: r.potential_savings,
+            automationPercentage: r.automation_percentage,
+            automationGrade: r.automation_grade,
+            reportUrl: `/report?id=${r.id}`,
+            createdAt: r.created_at,
+            updatedAt: r.updated_at,
+          };
+        }
+      }
+    }
+    const flows = flowRows.map((f) => ({
+      id: f.id,
+      participantId: f.participant_id,
+      label: f.label,
+      flowKind: f.flow_kind,
+      reportId: f.report_id,
+      status: f.status,
+      createdAt: f.created_at,
+      updatedAt: f.updated_at,
+      report: f.report_id ? reportSummaries[f.report_id] || null : null,
+      startUrl: f.report_id ? null : `/process-audit?dealFlowId=${encodeURIComponent(f.id)}`,
+      openUrl: f.report_id ? `/process-audit?dealFlowId=${encodeURIComponent(f.id)}&resume=1` : null,
     }));
 
     return NextResponse.json({
@@ -128,12 +157,18 @@ export async function GET(request, { params }) {
         status: deal.status,
         settings: deal.settings || {},
         stepDecisions: (deal.settings || {}).stepDecisions || {},
-        ownerEmail: isOwner ? deal.owner_email : undefined,
+        ownerEmail: canSeePII ? deal.owner_email : undefined,
+        collaboratorEmails: canSeePII ? (deal.collaborator_emails || []) : undefined,
         isOwner,
+        accessMode: access.mode,
+        canEdit: !!access.canEdit,
+        canManage: !!access.canManage,
+        canDelete: !!access.canDelete,
         createdAt: deal.created_at,
         updatedAt: deal.updated_at,
       },
       participants: enrichedParticipants,
+      flows,
       summary: buildDealSummary(deal.type, enrichedParticipants),
     });
   } catch (err) {
@@ -168,16 +203,11 @@ export async function PATCH(request, { params }) {
   const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
   try {
-    // Verify ownership
-    const checkResp = await fetchWithTimeout(
-      `${supabaseUrl}/rest/v1/deals?id=eq.${encodeURIComponent(id)}&select=id,owner_email`,
-      { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
-    );
-    const [deal] = checkResp.ok ? await checkResp.json() : [];
-    if (!deal) return NextResponse.json({ error: 'Deal not found.' }, { status: 404 });
-    if (deal.owner_email !== auth.email) return NextResponse.json({ error: 'Only the deal owner can update it.' }, { status: 403 });
+    // Owner or collaborator may edit
+    const guard = await requireDealEditor({ dealId: id, email: auth.email, userId: auth.userId });
+    if (guard.error) return NextResponse.json(guard.error, { status: guard.status });
 
-    // Build update payload — only allow safe fields
+    // Build update payload - only allow safe fields
     const update = {};
     if (body.name && typeof body.name === 'string') update.name = body.name.trim().slice(0, 200);
     if (typeof body.processName === 'string') update.process_name = body.processName.trim().slice(0, 200) || null;
@@ -211,6 +241,47 @@ export async function PATCH(request, { params }) {
   } catch (err) {
     logger.error('Update deal error', { requestId: getRequestId(request), error: err.message });
     return NextResponse.json({ error: 'Failed to update deal.' }, { status: 500 });
+  }
+}
+
+/**
+ * DELETE /api/deals/[id]
+ * Auth required (owner only). Cascades to participants, flows, and analyses
+ * via ON DELETE CASCADE. Linked diagnostic_reports are not removed (the FK
+ * is SET NULL on deal_flows.report_id), so the underlying artefacts stay.
+ */
+export async function DELETE(request, { params }) {
+  const originErr = checkOrigin(request);
+  if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
+
+  const rl = await checkRateLimit(getRateLimitKey(request));
+  if (!rl.allowed) return NextResponse.json({ error: 'Too many requests.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter || 60) } });
+
+  const auth = await requireAuth(request);
+  if (auth.error) return NextResponse.json(auth.error.body, { status: auth.error.status });
+
+  const { id } = await params;
+  if (!id) return NextResponse.json({ error: 'Deal ID required.' }, { status: 400 });
+
+  const sbConfig = requireSupabase();
+  if (!sbConfig) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+  const { url: supabaseUrl, key: supabaseKey } = sbConfig;
+
+  try {
+    const guard = await requireDealOwner({ dealId: id, email: auth.email, userId: auth.userId });
+    if (guard.error) return NextResponse.json(guard.error, { status: guard.status });
+
+    const delResp = await fetchWithTimeout(
+      `${supabaseUrl}/rest/v1/deals?id=eq.${encodeURIComponent(id)}`,
+      { method: 'DELETE', headers: getSupabaseWriteHeaders(supabaseKey) }
+    );
+    if (!delResp.ok && delResp.status !== 204) {
+      return NextResponse.json({ error: 'Failed to delete deal.' }, { status: 502 });
+    }
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    logger.error('Delete deal error', { requestId: getRequestId(request), error: err.message });
+    return NextResponse.json({ error: 'Failed to delete deal.' }, { status: 500 });
   }
 }
 
@@ -257,6 +328,19 @@ function buildDealSummary(type, participants) {
       acquirerCost: acquirer?.report?.totalAnnualCost || null,
       targetCost: target?.report?.totalAnnualCost || null,
       combinedBaseline: (acquirer?.report?.totalAnnualCost || 0) + (target?.report?.totalAnnualCost || 0),
+    };
+  }
+
+  if (type === 'scaling') {
+    const totalProcesses = completed.reduce((sum, p) => sum + (p.report?.processCount || 0), 0);
+    const totalRawSteps = completed.reduce((sum, p) => sum + ((p.report?.rawSteps?.length) || 0), 0);
+    return {
+      ...base,
+      totalProcesses,
+      totalRawSteps,
+      topOpportunity: completed
+        .map((p) => ({ participantId: p.id, companyName: p.companyName, savings: p.report?.potentialSavings || 0 }))
+        .sort((a, b) => b.savings - a.savings)[0] || null,
     };
   }
 

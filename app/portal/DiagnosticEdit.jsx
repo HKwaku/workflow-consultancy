@@ -669,7 +669,7 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
             {contact.segment && (
               <div className="edit-stage-card">
                 <h3 className="edit-stage-title">Audit Context</h3>
-                <p className="edit-stage-desc">Segment captured at sign-up — shapes AI recommendations.</p>
+                <p className="edit-stage-desc">Segment captured at sign-up - shapes AI recommendations.</p>
                 {(() => {
                   const SEGMENT_LABELS = { scaling: 'Scaling Business', ma: 'M&A Integration', pe: 'Private Equity', highstakes: 'High-stakes Event' };
                   const SEGMENT_COLORS = { scaling: '#0d9488', ma: '#6366f1', pe: '#8b5cf6', highstakes: '#d97706' };
@@ -1165,7 +1165,7 @@ export default function DiagnosticEdit({ reportId, email, onBack }) {
         <div className="edit-bottom-bar">
           <button type="button" onClick={onBack} className="edit-cancel-btn">&larr; Dashboard</button>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <Link href={`/report?id=${reportId}`} className="edit-view-report-btn">View Report</Link>
+            <Link href={`/report?id=${reportId}`} className="edit-view-report-btn" target="_blank" rel="noopener noreferrer">View Report</Link>
             <button type="button" className="edit-save-btn" onClick={handleSave} disabled={saving}>
               {saving ? 'Saving...' : 'Save All Changes'}
             </button>

@@ -19,7 +19,7 @@
     --text-light: #475569;
     --bg: #0a0a0a;
     --bg-alt: #141414;
-    /* Elevated surfaces — barely above --bg for subtle, low-contrast panels */
+    /* Elevated surfaces - barely above --bg for subtle, low-contrast panels */
     --bg-panel: #18181a;
     --white: #171717;
     --border: #262626;
@@ -58,7 +58,7 @@ body {
 }
 
 /* ── Headings ────────────────────────────────────── */
-/* Use primary text colour — default page is dark; marketing / light sections override locally */
+/* Use primary text colour - default page is dark; marketing / light sections override locally */
 h1, h2, h3, h4 {
     font-family: 'Cormorant Garamond', serif;
     font-weight: 600;

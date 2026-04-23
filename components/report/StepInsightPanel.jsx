@@ -77,7 +77,7 @@ export default function StepInsightPanel({ stepIndex, process, onClose }) {
           {handoff && (
             <div className="step-insight-row">
               <span className="step-insight-label">Handoff to next step</span>
-              <span className="step-insight-value">{handoff.method || '—'}</span>
+              <span className="step-insight-value">{handoff.method || '-'}</span>
               {(handoff.clarity === 'yes-multiple' || handoff.clarity === 'yes-major') && (
                 <span className="step-insight-badge warning">Clarity issue</span>
               )}
@@ -87,14 +87,14 @@ export default function StepInsightPanel({ stepIndex, process, onClose }) {
           {prevHandoff && stepIndex > 0 && (
             <div className="step-insight-row">
               <span className="step-insight-label">Handoff from previous</span>
-              <span className="step-insight-value">{prevHandoff.method || '—'}</span>
+              <span className="step-insight-value">{prevHandoff.method || '-'}</span>
             </div>
           )}
 
           {isBottleneck && (
             <div className="step-insight-row step-insight-bottleneck">
               <span className="step-insight-label">Bottleneck</span>
-              <span className="step-insight-value">Highest wait time — {step.waitMinutes}m</span>
+              <span className="step-insight-value">Highest wait time - {step.waitMinutes}m</span>
             </div>
           )}
 

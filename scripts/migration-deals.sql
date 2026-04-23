@@ -46,9 +46,9 @@ CREATE TABLE IF NOT EXISTS deals (
   -- Short human-readable code shown in the portal and shared links
   deal_code      TEXT        NOT NULL DEFAULT generate_deal_code() UNIQUE,
 
-  -- 'pe_rollup'  — PE firm / platform co maps process across portfolio companies
-  -- 'ma'         — Acquirer + Target each map their version; decision layer follows
-  -- 'scaling'    — Single company, kept here for future grouping / multi-process
+  -- 'pe_rollup'  - PE firm / platform co maps process across portfolio companies
+  -- 'ma'         - Acquirer + Target each map their version; decision layer follows
+  -- 'scaling'    - Single company, kept here for future grouping / multi-process
   type           TEXT        NOT NULL
                    CHECK (type IN ('pe_rollup', 'ma', 'scaling')),
 
@@ -58,9 +58,9 @@ CREATE TABLE IF NOT EXISTS deals (
   owner_email    TEXT        NOT NULL,   -- PE firm / acquirer email
   owner_user_id  UUID        REFERENCES auth.users(id) ON DELETE SET NULL,
 
-  -- 'draft'      — created, not yet shared
-  -- 'collecting' — invites sent, participants mapping
-  -- 'complete'   — all participants done; deal-level analysis available
+  -- 'draft'      - created, not yet shared
+  -- 'collecting' - invites sent, participants mapping
+  -- 'complete'   - all participants done; deal-level analysis available
   status         TEXT        NOT NULL DEFAULT 'collecting'
                    CHECK (status IN ('draft', 'collecting', 'complete')),
 
@@ -103,16 +103,16 @@ CREATE TABLE IF NOT EXISTS deal_participants (
   participant_email  TEXT,                   -- email to send invite to (nullable until known)
   participant_name   TEXT,
 
-  -- 36-char hex token; lives only in the invite URL — unguessable, URL-safe
+  -- 36-char hex token; lives only in the invite URL - unguessable, URL-safe
   invite_token       TEXT        NOT NULL UNIQUE
                        DEFAULT encode(gen_random_bytes(18), 'hex'),
 
   -- Set when participant completes their diagnostic
   report_id          TEXT        REFERENCES diagnostic_reports(id) ON DELETE SET NULL,
 
-  -- 'invited'     — email sent, not yet started
-  -- 'in_progress' — opened invite link, started mapping
-  -- 'complete'    — diagnostic submitted, report_id populated
+  -- 'invited'     - email sent, not yet started
+  -- 'in_progress' - opened invite link, started mapping
+  -- 'complete'    - diagnostic submitted, report_id populated
   status             TEXT        NOT NULL DEFAULT 'invited'
                        CHECK (status IN ('invited', 'in_progress', 'complete')),
 

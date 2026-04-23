@@ -2,7 +2,7 @@
 
 /**
  * Operational-due-diligence style executive summary.
- * Renders at the very top of the Full report — sets the thesis in one glance.
+ * Renders at the very top of the Full report - sets the thesis in one glance.
  */
 
 function formatCurrency(val, currency = 'GBP') {

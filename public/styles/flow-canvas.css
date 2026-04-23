@@ -69,7 +69,7 @@
   cursor: crosshair !important;
   transition: background 0.12s !important;
   pointer-events: all !important;
-  /* No transform on hover — prevents handle position jumping */
+  /* No transform on hover - prevents handle position jumping */
 }
 .flow-handle:hover {
   background: #a3a3a3 !important;
@@ -253,7 +253,7 @@
   align-items: center;
   gap: 4px;
 }
-/* Hide toolbar in the floating viewer — it has its own header controls */
+/* Hide toolbar in the floating viewer - it has its own header controls */
 .ffv-canvas-wrap .flow-canvas-toolbar,
 .ffv-flow-canvas .flow-canvas-toolbar {
   display: none;

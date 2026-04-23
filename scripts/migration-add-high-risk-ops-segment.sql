@@ -1,6 +1,6 @@
 -- Migration: add 'high-risk-ops' to the segment CHECK constraint
 -- The original migration-add-segment.sql only allowed ('scaling', 'ma', 'pe', 'highstakes').
--- 'highstakes' was renamed to 'high-risk-ops' in the UI — this migration adds it to the DB.
+-- 'highstakes' was renamed to 'high-risk-ops' in the UI - this migration adds it to the DB.
 --
 -- Run in Supabase SQL editor.
 
@@ -15,7 +15,7 @@ ALTER TABLE public.diagnostic_reports
   CHECK (segment IN ('scaling', 'ma', 'pe', 'highstakes', 'high-risk-ops'));
 
 -- 3. Backfill: normalise any stored 'highstakes' rows to 'high-risk-ops'
---    (optional — only needed if old reports should show the new module banner)
+--    (optional - only needed if old reports should show the new module banner)
 -- UPDATE public.diagnostic_reports
 --   SET segment = 'high-risk-ops'
 --   WHERE segment = 'highstakes';

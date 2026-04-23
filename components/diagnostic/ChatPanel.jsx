@@ -30,7 +30,7 @@ export default function ChatPanel() {
   const persistMessageToCloud = useCallback(async ({ role, content, actions, attachments: attachmentsArg }) => {
     if (!accessToken) {
       if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
-        console.warn('[chat-save] skipped — no accessToken (user not signed in)');
+        console.warn('[chat-save] skipped - no accessToken (user not signed in)');
       }
       return;
     }

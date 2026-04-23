@@ -495,6 +495,7 @@ export default function PortalDashboard({ user, accessToken, onSignOut, initialS
   const [settingsOpenId, setSettingsOpenId] = useState(null);
   const [processPage, setProcessPage] = useState(1);
   const [showOrgAdminLink, setShowOrgAdminLink] = useState(false);
+  const [dealsEntitlement, setDealsEntitlement] = useState(false); // entitlements.deals or platform-admin
   const settingsOpenRef = useRef(null);
 
   const PROCESSES_PER_PAGE = 8;
@@ -513,8 +514,10 @@ export default function PortalDashboard({ user, accessToken, onSignOut, initialS
         if (cancelled) return;
         const orgAdmins = (data.memberships || []).filter((m) => m.is_org_admin);
         setShowOrgAdminLink(!!data.platformAdmin || orgAdmins.length > 0);
+        const hasDealsEnt = (data.memberships || []).some((m) => m?.entitlements?.deals === true);
+        setDealsEntitlement(!!data.platformAdmin || hasDealsEnt);
       } catch {
-        /* API missing or not JSON — hide link */
+        /* API missing or not JSON - hide link */
       }
     })();
     return () => { cancelled = true; };
@@ -860,17 +863,17 @@ export default function PortalDashboard({ user, accessToken, onSignOut, initialS
       return (
       <div className="portal-flow-actions-row">
         {variant === 'current' ? (
-          <Link href={'/report?id=' + reportId + '&portal=1'} className="portal-flow-btn portal-flow-btn-primary">View Full Report</Link>
+          <Link href={'/report?id=' + reportId + '&portal=1'} className="portal-flow-btn portal-flow-btn-primary" target="_blank" rel="noopener noreferrer">View Full Report</Link>
         ) : variant === 'redesigned' && displayVersion ? (
           <span className="portal-redesign-version-inline">
-            <Link href={`/report?id=${reportId}&redesignId=${displayVersion.id}&portal=1`} className="portal-flow-btn portal-flow-btn-primary">View Full Report</Link>
+            <Link href={`/report?id=${reportId}&redesignId=${displayVersion.id}&portal=1`} className="portal-flow-btn portal-flow-btn-primary" target="_blank" rel="noopener noreferrer">View Full Report</Link>
             <span className="portal-redesign-version-label">
               <span className="portal-redesign-version-name">{displayVersion.name || `Redesign ${displayVersion.version || ''}`}</span>
               {displayVersion.status === 'accepted' && <span className="portal-redesign-accepted-badge">Accepted</span>}
             </span>
           </span>
         ) : (
-          <Link href={'/report?id=' + reportId + '&portal=1'} className="portal-flow-btn portal-flow-btn-primary">View Full Report</Link>
+          <Link href={'/report?id=' + reportId + '&portal=1'} className="portal-flow-btn portal-flow-btn-primary" target="_blank" rel="noopener noreferrer">View Full Report</Link>
         )}
         <Link href={`/process-audit?edit=${encodeURIComponent(reportId)}&email=${encodeURIComponent(email)}`} className="portal-flow-btn">Edit</Link>
         <Link href={`/process-audit?reaudit=${encodeURIComponent(reportId)}`} className="portal-flow-btn" title="Run a new audit and compare results to this one">Re-audit</Link>
@@ -1234,16 +1237,18 @@ export default function PortalDashboard({ user, accessToken, onSignOut, initialS
             >
               Analytics
             </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeSection === 'deals'}
-              className={`portal-section-tab ${activeSection === 'deals' ? 'active' : ''}`}
-              onClick={() => setActiveSection('deals')}
-            >
-              Deals
-              {deals && deals.length > 0 && <span className="portal-section-tab-badge">{deals.length}</span>}
-            </button>
+            {(dealsEntitlement || (deals && deals.length > 0)) && (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeSection === 'deals'}
+                className={`portal-section-tab ${activeSection === 'deals' ? 'active' : ''}`}
+                onClick={() => setActiveSection('deals')}
+              >
+                Deals
+                {deals && deals.length > 0 && <span className="portal-section-tab-badge">{deals.length}</span>}
+              </button>
+            )}
           </nav>
 
           <main className="portal-content">
@@ -1360,7 +1365,7 @@ export default function PortalDashboard({ user, accessToken, onSignOut, initialS
                 <PortalAnalyticsPanel reportList={reportList} teamSessions={teamSessions} loading={loading} activeSection={activeSection} onSectionChange={setActiveSection} metrics={{ totalProcs, avgAuto, autoColor, redesignedCount, totalCost }} onMetricDrill={setMetricDrill} />
               </div>
             )}
-            {activeSection === 'deals' && (
+            {activeSection === 'deals' && (dealsEntitlement || (deals && deals.length > 0)) && (
               <DealsPanel
                 deals={deals}
                 loading={dealsLoading}

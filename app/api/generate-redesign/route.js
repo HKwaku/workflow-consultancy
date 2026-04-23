@@ -181,7 +181,7 @@ export async function POST(request) {
 
     const timeoutId = setTimeout(() => {
       try {
-        send('timeout', { message: 'Taking longer than expected — please try again if this does not complete.' });
+        send('timeout', { message: 'Taking longer than expected - please try again if this does not complete.' });
       } catch {}
     }, 110000);
 

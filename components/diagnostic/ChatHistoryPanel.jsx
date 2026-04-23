@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/useAuth';
 import { apiFetch } from '@/lib/api-fetch';
 
 /**
- * Chat history panel — lists every chat_sessions row the user can see,
+ * Chat history panel - lists every chat_sessions row the user can see,
  * with fuzzy search, status filters (all / pinned / archived), last-message
  * preview, and pin/archive/delete actions.
  *
@@ -63,6 +63,18 @@ function getTitle(item) {
     || item.processes?.[0]?.name
     || item.company
     || (item.kind ? `${item.kind} session` : 'Diagnostic');
+}
+
+function formatArtefactTooltip(kinds) {
+  if (!kinds || typeof kinds !== 'object') return 'Artefacts attached';
+  const labels = {
+    flow_snapshot: 'flow snapshot',
+    report: 'report',
+    cost_analysis: 'cost analysis',
+    deal_analysis: 'deal analysis',
+  };
+  const parts = Object.entries(kinds).map(([k, n]) => `${n} ${labels[k] || k}${n === 1 ? '' : 's'}`);
+  return parts.length ? parts.join(', ') : 'Artefacts attached';
 }
 
 function formatDate(dateStr) {
@@ -220,7 +232,7 @@ export default function ChatHistoryPanel({ onClose, onLoadReport, onRedesignRepo
 
   /* Actions */
   const handleSelect = useCallback((session) => {
-    // Route every session — with or without a linked report — through the
+    // Route every session - with or without a linked report - through the
     // ?chatSession resume path so the workflow snapshot (steps, handoffs,
     // flow canvas) AND the message thread are both restored. The resume
     // handler falls back to the report row when the snapshot is empty.
@@ -405,6 +417,11 @@ export default function ChatHistoryPanel({ onClose, onLoadReport, onRedesignRepo
                       {session.message_count > 0 && (
                         <span className="chat-history-item-count">{session.message_count} msg{session.message_count === 1 ? '' : 's'}</span>
                       )}
+                      {session.artefact_count > 0 && (
+                        <span className="chat-history-item-artefacts" title={formatArtefactTooltip(session.artefact_kinds)}>
+                          ◫ {session.artefact_count}
+                        </span>
+                      )}
                       {session.redesignStatus === 'accepted' && <span className="chat-history-item-tag">Redesigned</span>}
                     </div>
                   </button>
@@ -456,7 +473,7 @@ export default function ChatHistoryPanel({ onClose, onLoadReport, onRedesignRepo
 
       {accessToken && !loading && filtered.length > 0 && (
         <div className="chat-history-footer">
-          <a href="/portal?dashboard=1" className="chat-history-portal-link">View all in dashboard →</a>
+          <a href="/portal?dashboard=1" className="chat-history-portal-link" target="_blank" rel="noopener noreferrer">View all in dashboard →</a>
         </div>
       )}
     </div>

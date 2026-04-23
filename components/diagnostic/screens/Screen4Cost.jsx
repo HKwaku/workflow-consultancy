@@ -172,7 +172,7 @@ export default function Screen4Cost() {
       savings: { percent: savingsPct },
       ...peFields,
     });
-    addAuditEvent({ type: 'navigate', detail: `Completed cost & impact — bottleneck: "${bottleneckReason || 'none'}", frequency: ${freq || 'unset'} (${annual}/yr), ${hoursPerInstance}h/instance, ${teamSize} people${isPE && peSopStatus ? `, SOP: ${peSopStatus}` : ''}` });
+    addAuditEvent({ type: 'navigate', detail: `Completed cost & impact - bottleneck: "${bottleneckReason || 'none'}", frequency: ${freq || 'unset'} (${annual}/yr), ${hoursPerInstance}h/instance, ${teamSize} people${isPE && peSopStatus ? `, SOP: ${peSopStatus}` : ''}` });
     goToScreen(5);
   }, [freq, annual, inFlight, bottleneckReason, bottleneckDetail, hoursPerInstance, cycleDays, teamSize, savingsPct, peSopStatus, peKeyPerson, peReportingImpact, isPE, updateProcessData, goToScreen, addAuditEvent]);
 
@@ -198,7 +198,7 @@ export default function Screen4Cost() {
           Let&apos;s size the cost of &quot;<span className="process-ref">{processData.processName || 'your process'}</span>&quot;
         </p>
 
-        {/* Bottleneck — now asked after mapping */}
+        {/* Bottleneck - now asked after mapping */}
         <div className="merged-section">
           <h3 className="merged-section-title">Biggest Bottleneck</h3>
           <p className="screen-subtitle" style={{ marginBottom: '0.75rem', fontSize: '0.9rem' }}>
@@ -242,7 +242,7 @@ export default function Screen4Cost() {
           </div>
         </div>
 
-        {/* Operational inputs (no £ — manager completes cost analysis separately) */}
+        {/* Operational inputs (no £ - manager completes cost analysis separately) */}
         <div className="merged-section">
           <h3 className="merged-section-title">Process Volume &amp; Effort</h3>
           {cycleDays > 0 && (
@@ -284,9 +284,9 @@ export default function Screen4Cost() {
               <label>Is there a documented SOP for this process?</label>
               <div className="radio-group">
                 {[
-                  { id: 'documented', label: 'Yes — fully documented' },
+                  { id: 'documented', label: 'Yes - fully documented' },
                   { id: 'partial', label: 'Partial / informal notes exist' },
-                  { id: 'undocumented', label: "No — it lives in people's heads" },
+                  { id: 'undocumented', label: "No - it lives in people's heads" },
                 ].map(({ id, label }) => (
                   <label key={id} className={`radio-option ${peSopStatus === id ? 'selected' : ''}`}>
                     <input
@@ -306,9 +306,9 @@ export default function Screen4Cost() {
               <label>Is there a key-person dependency in this process?</label>
               <div className="radio-group">
                 {[
-                  { id: 'yes', label: 'Yes — one person is critical and has no backup' },
-                  { id: 'partial', label: 'Partial — one person leads but others can cover' },
-                  { id: 'no', label: 'No — fully distributable across the team' },
+                  { id: 'yes', label: 'Yes - one person is critical and has no backup' },
+                  { id: 'partial', label: 'Partial - one person leads but others can cover' },
+                  { id: 'no', label: 'No - fully distributable across the team' },
                 ].map(({ id, label }) => (
                   <label key={id} className={`radio-option ${peKeyPerson === id ? 'selected' : ''}`}>
                     <input
@@ -328,8 +328,8 @@ export default function Screen4Cost() {
               <label>Does this process feed into investor or board reporting?</label>
               <div className="radio-group">
                 {[
-                  { id: 'yes-direct', label: 'Yes — directly produces reporting data' },
-                  { id: 'yes-indirect', label: 'Yes — indirectly (upstream input)' },
+                  { id: 'yes-direct', label: 'Yes - directly produces reporting data' },
+                  { id: 'yes-indirect', label: 'Yes - indirectly (upstream input)' },
                   { id: 'no', label: 'No' },
                 ].map(({ id, label }) => (
                   <label key={id} className={`radio-option ${peReportingImpact === id ? 'selected' : ''}`}>

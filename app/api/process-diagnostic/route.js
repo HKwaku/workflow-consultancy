@@ -33,7 +33,7 @@ export async function POST(request) {
   }
 
   const { processes: rawProcesses, contact, moduleId, qualityScore, timestamp } = parsed.data;
-  // Resolve module config — used to supply module-specific AI system prompt
+  // Resolve module config - used to supply module-specific AI system prompt
   const moduleConfig = moduleId ? getModule(moduleId) : null;
   const reqId = getRequestId(request);
   const encoder = new TextEncoder();

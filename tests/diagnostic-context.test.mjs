@@ -1,5 +1,5 @@
 /**
- * Unit tests — DiagnosticContext reducer (deal state)
+ * Unit tests - DiagnosticContext reducer (deal state)
  *
  * Tests the SET_DEAL action and related state transitions.
  * Run with: node --test tests/diagnostic-context.test.mjs
@@ -161,7 +161,7 @@ describe('SET_DEAL action', () => {
       payload: { currentScreen: 1, moduleId: 'pe' },
     });
     // Fields missing from restore payload fall through to initialState defaults
-    // (state spread means they retain whatever was already there — null from initialState)
+    // (state spread means they retain whatever was already there - null from initialState)
     assert.equal(restored.dealId, null);
     assert.equal(restored.dealCode, null);
   });

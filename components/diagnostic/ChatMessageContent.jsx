@@ -14,7 +14,7 @@ function CopyButton({ text, label = 'Copy', copiedLabel = 'Copied', className = 
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      // Silently ignore — clipboard may be unavailable
+      // Silently ignore - clipboard may be unavailable
     }
   };
   return (

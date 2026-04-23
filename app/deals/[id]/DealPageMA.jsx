@@ -14,7 +14,7 @@ const DECISION_OPTIONS = [
 ];
 
 function fmt(val) {
-  if (val == null || val === 0) return '—';
+  if (val == null || val === 0) return '-';
   if (val >= 1_000_000) return '£' + (val / 1_000_000).toFixed(1) + 'M';
   if (val >= 1_000) return '£' + (val / 1_000).toFixed(0) + 'K';
   return '£' + Math.round(val);
@@ -47,12 +47,12 @@ function ParticipantCard({ p }) {
           </div>
           <div className="ma-side-metric">
             <span className="ma-side-metric-val">
-              {p.report.automationPercentage != null ? p.report.automationPercentage + '%' : '—'}
+              {p.report.automationPercentage != null ? p.report.automationPercentage + '%' : '-'}
             </span>
             <span className="ma-side-metric-lbl">Automation</span>
           </div>
           <div className="ma-side-metric">
-            <span className="ma-side-metric-val">{p.report.rawSteps?.length ?? '—'}</span>
+            <span className="ma-side-metric-val">{p.report.rawSteps?.length ?? '-'}</span>
             <span className="ma-side-metric-lbl">Steps</span>
           </div>
           <div className="ma-side-metric">
@@ -64,7 +64,7 @@ function ParticipantCard({ p }) {
         <p className="ma-side-no-report">Process map not yet submitted.</p>
       )}
       {p.report?.reportUrl && (
-        <Link href={p.report.reportUrl} className="deal-btn deal-btn--sm ma-report-link" target="_blank">
+        <Link href={p.report.reportUrl} className="deal-btn deal-btn--sm ma-report-link" target="_blank" rel="noopener noreferrer">
           View full report →
         </Link>
       )}
@@ -143,7 +143,7 @@ function StepDecisionLayer({ acquirerSteps, targetSteps, stepDecisions, onDecisi
                       {aStep.department && <span className="ma-step-dept">{aStep.department}</span>}
                     </>
                   ) : (
-                    <span className="ma-step-none">—</span>
+                    <span className="ma-step-none">-</span>
                   )}
                 </div>
                 <div className="ma-step-decisions">
@@ -177,7 +177,7 @@ function StepDecisionLayer({ acquirerSteps, targetSteps, stepDecisions, onDecisi
                       {tStep.department && <span className="ma-step-dept">{tStep.department}</span>}
                     </>
                   ) : (
-                    <span className="ma-step-none">—</span>
+                    <span className="ma-step-none">-</span>
                   )}
                 </div>
               </div>

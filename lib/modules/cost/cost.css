@@ -1,8 +1,8 @@
 /**
- * Cost module CSS — cost analysis page, editor, co-pilot panel.
+ * Cost module CSS - cost analysis page, editor, co-pilot panel.
  *
  * Owned selectors:
- *   .cost-*                         (cost analysis page — lives in
+ *   .cost-*                         (cost analysis page - lives in
  *                                    app/cost-analysis/cost-analysis.css;
  *                                    will be migrated here later)
  *   .cost-copilot-*                 (co-pilot floating panel)

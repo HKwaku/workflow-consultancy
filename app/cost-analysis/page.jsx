@@ -480,7 +480,7 @@ function DriverDetail({ driverKey, raw, breakdown }) {
         />
         {(alreadyDone.length > 0 || breakdown?.automationMins > 0) && (
           <div className="cost-driver-detail-footer">
-            {alreadyDone.length > 0 && <span>{alreadyDone.length} step{alreadyDone.length !== 1 ? 's' : ''} already automated — excluded from saving.</span>}
+            {alreadyDone.length > 0 && <span>{alreadyDone.length} step{alreadyDone.length !== 1 ? 's' : ''} already automated - excluded from saving.</span>}
             {breakdown?.automationMins > 0 && <span>{breakdown.automationMins}min work time across automatable steps.</span>}
           </div>
         )}
@@ -520,8 +520,8 @@ function DriverDetail({ driverKey, raw, breakdown }) {
   if (driverKey === 'redundancy') {
     const decisions = steps.filter(s => s.isDecision);
     const flags = [
-      steps.length > 12 && 'Large step count — consolidation opportunity',
-      decisions.length > 2 && `${decisions.length} approvals — consider rule-based consolidation`,
+      steps.length > 12 && 'Large step count - consolidation opportunity',
+      decisions.length > 2 && `${decisions.length} approvals - consider rule-based consolidation`,
     ].filter(Boolean);
     return (
       <div className="cost-driver-detail">
@@ -723,7 +723,7 @@ function ProcessCostCard({ p, i, aiSuggestionData, processCostDrivers, onSetDriv
           <div className="cost-analysis-field">
             <label>
               Wait / idle time %
-              <Tip text="% of labour cost tied up in waiting — for approvals, data, or handoffs. E.g. 0.15 = 15% of cost is idle time." />
+              <Tip text="% of labour cost tied up in waiting - for approvals, data, or handoffs. E.g. 0.15 = 15% of cost is idle time." />
             </label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <input
@@ -905,7 +905,7 @@ function CostAnalysisContent() {
 
   // Chat-driven cost proposals: Reina postMessages us when the user clicks
   // "Apply" on a cost suggestion in the parent workspace. We mutate local
-  // state only — the user still sees the pending change and clicks Save.
+  // state only - the user still sees the pending change and clicks Save.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const onMsg = (event) => {
@@ -933,7 +933,7 @@ function CostAnalysisContent() {
       } else if (p.kind === 'set_investment') {
         const amount = Number(p.amount);
         if (!Number.isFinite(amount)) return;
-        // Default the proposal to the "platform" line — user can redistribute
+        // Default the proposal to the "platform" line - user can redistribute
         // across setup/training/maintenance on screen.
         setImplementationCost((prev) => ({ ...prev, platform: amount }));
       }
@@ -1006,7 +1006,7 @@ function CostAnalysisContent() {
       }
       const savingsPct = trueAnnualCost > 0 ? Math.round(savings / trueAnnualCost * 100) : 0;
 
-      // Redesign cost impact — driven by redesignSliders (auto-seeded from redesign coverage %)
+      // Redesign cost impact - driven by redesignSliders (auto-seeded from redesign coverage %)
       const processName = p.name || `Process ${i + 1}`;
       const rdSliders = redesignSliders[i] || {};
       let redesignSavings;
@@ -1184,16 +1184,16 @@ function CostAnalysisContent() {
 
         const hiddenCostFlags = [];
         if (breakdown.totalWaitMins > breakdown.totalWorkMins * 0.3)
-          hiddenCostFlags.push('high wait ratio — significant idle time per run');
+          hiddenCostFlags.push('high wait ratio - significant idle time per run');
         if (emailHandoffs >= 2)
-          hiddenCostFlags.push('email handoffs — coordination overhead and delay');
+          hiddenCostFlags.push('email handoffs - coordination overhead and delay');
         if (approvalCount > 2)
-          hiddenCostFlags.push('multiple approval gates — SLA risk and exception overhead');
+          hiddenCostFlags.push('multiple approval gates - SLA risk and exception overhead');
         if (externalSteps.length > 0)
-          hiddenCostFlags.push(`${externalSteps.length} external step${externalSteps.length !== 1 ? 's' : ''} — vendor dependency, SLA risk, costs estimated from internal rates`);
+          hiddenCostFlags.push(`${externalSteps.length} external step${externalSteps.length !== 1 ? 's' : ''} - vendor dependency, SLA risk, costs estimated from internal rates`);
         const multiSystemSteps = steps.filter(s => (s.systems || []).length >= 2).length;
         if (multiSystemSteps > 0)
-          hiddenCostFlags.push(`${multiSystemSteps} multi-system step${multiSystemSteps !== 1 ? 's' : ''} — manual re-entry error cost`);
+          hiddenCostFlags.push(`${multiSystemSteps} multi-system step${multiSystemSteps !== 1 ? 's' : ''} - manual re-entry error cost`);
 
         newSuggestions[i] = {
           processIndex: i,
@@ -1393,7 +1393,7 @@ function CostAnalysisContent() {
     const fm = savedFinancials || financials;
     return (
       <div className={`portal-viewport cost-analysis-page${isEmbedView ? ' cost-analysis-embedded' : ''}`}>
-        {!isEmbedView && <CostAnalysisHeader id={id} title="Cost analysis — saved" />}
+        {!isEmbedView && <CostAnalysisHeader id={id} title="Cost analysis - saved" />}
         <div className="portal-wrap cost-analysis-wrap">
           <div className="portal-dashboard-layout cost-analysis-layout">
             <div className="dash-card portal-content-card cost-analysis-main-card" style={{ maxWidth: 720, margin: '0 auto' }}>
@@ -1443,7 +1443,7 @@ function CostAnalysisContent() {
             <div className="cost-share-card">
               <h3>Share with report owner?</h3>
               <p className="cost-share-desc">
-                Cost data includes salary rates and redundancy savings — <strong>confidential by default</strong>. Only share if the owner needs the full breakdown to make a decision.
+                Cost data includes salary rates and redundancy savings - <strong>confidential by default</strong>. Only share if the owner needs the full breakdown to make a decision.
               </p>
               {shareError && <div className="cost-analysis-error" style={{ marginBottom: 12 }}>{shareError}</div>}
               {shared ? (
@@ -1517,7 +1517,7 @@ function CostAnalysisContent() {
     return (
       <div className={`portal-viewport cost-analysis-page${isEmbedView ? ' cost-analysis-embedded' : ''}`}>
         {!isEmbedView && (
-          <CostAnalysisHeader id={id} title="Cost analysis — review" extra={
+          <CostAnalysisHeader id={id} title="Cost analysis - review" extra={
             <button type="button" className="cost-header-back-btn" onClick={() => setShowReview(false)}>← Back to edit</button>
           } />
         )}
@@ -1542,7 +1542,7 @@ function CostAnalysisContent() {
 
             {/* Current state */}
             <div className="cost-bc-section">
-              <div className="cost-bc-section-title">Current state — annual process cost</div>
+              <div className="cost-bc-section-title">Current state - annual process cost</div>
               {processBreakdown.map((p, i) => (
                 <div key={i} className="cost-bc-process-row">
                   <div className="cost-bc-process-name">{p.name}</div>
@@ -1599,7 +1599,7 @@ function CostAnalysisContent() {
               <div className="cost-bc-fte-row">
                 FTE equivalent freed: <strong>{financials.fteEquivalent}</strong> FTE
                 <span className="cost-tooltip" title="FTE equivalent = automation savings ÷ (default hourly rate × 2,080 hours/year). Represents the number of full-time employees whose time could be freed.">ⓘ</span>
-                {financials.fteEquivalent > 0 && <span className="cost-bc-fte-note"> — capacity available for redeployment or growth</span>}
+                {financials.fteEquivalent > 0 && <span className="cost-bc-fte-note"> - capacity available for redeployment or growth</span>}
               </div>
               <div className="cost-bc-residual">
                 Residual annual cost post-automation: {formatCurrencyFn(financials.totalAnnualCost - financials.potentialSavings)}
@@ -1772,7 +1772,7 @@ function CostAnalysisContent() {
                       </div>
                       <p className="cost-overview-desc">
                         Build a complete financial case: true process cost, automation savings by scenario, FTE impact, and ROI.
-                        Data entered here is <strong>confidential by default</strong> — not visible to the report owner unless you choose to share it.
+                        Data entered here is <strong>confidential by default</strong> - not visible to the report owner unless you choose to share it.
                       </p>
 
                       {(() => {
@@ -1860,7 +1860,7 @@ function CostAnalysisContent() {
                           {hasImpl ? (
                             <>
                               <div className="portal-analytics-metric cost-metric-item">
-                                <span className="portal-analytics-metric-val">{financials.paybackMonths > 0 ? `${financials.paybackMonths} mo` : '—'}</span>
+                                <span className="portal-analytics-metric-val">{financials.paybackMonths > 0 ? `${financials.paybackMonths} mo` : '-'}</span>
                                 <span className="portal-analytics-metric-lbl">Payback period</span>
                               </div>
                               <div className="portal-analytics-metric cost-metric-item">
@@ -1908,7 +1908,7 @@ function CostAnalysisContent() {
                               {hasImpl ? (
                                 <>
                                   <div className="portal-analytics-metric cost-metric-item">
-                                    <span className="portal-analytics-metric-val">{financials.rdPaybackMonths > 0 ? `${financials.rdPaybackMonths} mo` : '—'}</span>
+                                    <span className="portal-analytics-metric-val">{financials.rdPaybackMonths > 0 ? `${financials.rdPaybackMonths} mo` : '-'}</span>
                                     <span className="portal-analytics-metric-lbl">Payback period</span>
                                     <span className="cost-metric-sub">based on redesign savings</span>
                                   </div>
@@ -2014,7 +2014,7 @@ function CostAnalysisContent() {
                         </div>
                       </div>
                       <p className="cost-overview-desc">
-                        Theoretical maximum savings from automating this process. Each driver is calculated from your actual process data — use the sliders to adjust how much of each saving you expect to realise.
+                        Theoretical maximum savings from automating this process. Each driver is calculated from your actual process data - use the sliders to adjust how much of each saving you expect to realise.
                       </p>
 
                       {processBreakdown.map((p, i) => {
@@ -2095,7 +2095,7 @@ function CostAnalysisContent() {
                                   <p className="cost-driver-empty">Add work and wait minutes to each step in the process audit for driver-level analysis.</p>
                                 )}
                                 <div className="cost-driver-total">
-                                  <span>Total savings — {p.name}</span>
+                                  <span>Total savings - {p.name}</span>
                                   <strong>{formatCurrencyFn(processTotalSavings)}/yr</strong>
                                 </div>
                               </div>
@@ -2250,7 +2250,7 @@ function CostAnalysisContent() {
                               </div>
                               {p.redesignSavings > 0 && (
                                 <div className="cost-driver-total">
-                                  <span>Total redesign savings{processBreakdown.length > 1 ? ` — ${p.name}` : ''}</span>
+                                  <span>Total redesign savings{processBreakdown.length > 1 ? ` - ${p.name}` : ''}</span>
                                   <strong>{formatCurrencyFn(p.redesignSavings)}/yr</strong>
                                 </div>
                               )}
@@ -2597,7 +2597,7 @@ function CostAnalysisContent() {
                               <div className="cost-analysis-field">
                                 <label>
                                   External cost per instance ({currencySymbol})
-                                  <Tip text="Variable cost per process run — e.g. courier fees, contractor rates, third-party API calls. Multiplied by annual volume." />
+                                  <Tip text="Variable cost per process run - e.g. courier fees, contractor rates, third-party API calls. Multiplied by annual volume." />
                                 </label>
                                 <div className="cost-rates-input-wrap">
                                   <span className="cost-rates-currency">{currencySymbol}</span>
@@ -2653,11 +2653,11 @@ function CostAnalysisContent() {
                                 <div className="cost-impl-metrics">
                                   <div className="cost-impl-metric">
                                     <div className="cost-impl-metric-label">Payback</div>
-                                    <div className="cost-impl-metric-val">{financials.paybackMonths > 0 ? `${financials.paybackMonths} mo` : '—'}</div>
+                                    <div className="cost-impl-metric-val">{financials.paybackMonths > 0 ? `${financials.paybackMonths} mo` : '-'}</div>
                                   </div>
                                   <div className="cost-impl-metric cost-impl-metric-highlight">
                                     <div className="cost-impl-metric-label">3-year ROI</div>
-                                    <div className="cost-impl-metric-val">{financials.roi3yr != null ? `${financials.roi3yr}%` : '—'}</div>
+                                    <div className="cost-impl-metric-val">{financials.roi3yr != null ? `${financials.roi3yr}%` : '-'}</div>
                                   </div>
                                   <div className="cost-impl-metric">
                                     <div className="cost-impl-metric-label">3-year NPV</div>
@@ -2674,7 +2674,7 @@ function CostAnalysisContent() {
                             </div>
                             {[
                               { key: 'platform', label: 'Platform / tooling', tip: 'Annual or one-time cost of the automation platform (e.g. Power Automate, Zapier, Make, Workato).' },
-                              { key: 'setup', label: 'Setup & build', tip: 'One-time cost to design, build, and deploy the automation — includes developer or consultant time.' },
+                              { key: 'setup', label: 'Setup & build', tip: 'One-time cost to design, build, and deploy the automation - includes developer or consultant time.' },
                               { key: 'training', label: 'Training & change management', tip: 'Cost to train staff and manage the transition to the automated process.' },
                               { key: 'maintenanceAnnual', label: `Maintenance (${currencySymbol}/yr)`, tip: 'Ongoing cost to maintain, update, and support the automation post-launch.' },
                             ].map(({ key, label, tip }) => (

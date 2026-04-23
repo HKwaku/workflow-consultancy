@@ -1,22 +1,54 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { checkOrigin, getRequestId } from '@/lib/api-helpers';
-import { fetchMessagesForSession, patchChatSession, deleteChatSession, getChatSession } from '@/lib/chatPersistence';
+import { fetchMessagesForSession, patchChatSession, deleteChatSession, getChatSession, fetchArtefactsForSession } from '@/lib/chatPersistence';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { resolveDealAccess } from '@/lib/dealAuth';
 import { logger } from '@/lib/logger';
 
 async function verifyOwnership(sessionId, auth) {
   const sb = getSupabaseAdmin();
   const { data } = await sb
     .from('chat_sessions')
-    .select('id,user_id,email')
+    .select('id,user_id,email,report_id')
     .eq('id', sessionId)
     .maybeSingle();
   if (!data) return false;
   const emailLower = (auth.email || '').toLowerCase();
-  if (auth.userId && data.user_id === auth.userId) return true;
-  if (emailLower && (data.email || '').toLowerCase() === emailLower) return true;
-  return false;
+  const sessionOwned =
+    (auth.userId && data.user_id === auth.userId) ||
+    (emailLower && (data.email || '').toLowerCase() === emailLower);
+  if (!sessionOwned) return false;
+
+  // If the session's report is linked to a deal (via deal_flows or
+  // deal_participants) the caller must still have deal access. A participant
+  // removed from a deal should not be able to resume an old session against
+  // that deal's report.
+  if (data.report_id) {
+    try {
+      const { data: flowRows } = await sb
+        .from('deal_flows')
+        .select('deal_id')
+        .eq('report_id', data.report_id)
+        .limit(1);
+      let dealId = flowRows?.[0]?.deal_id || null;
+      if (!dealId) {
+        const { data: partRows } = await sb
+          .from('deal_participants')
+          .select('deal_id')
+          .eq('report_id', data.report_id)
+          .limit(1);
+        dealId = partRows?.[0]?.deal_id || null;
+      }
+      if (dealId) {
+        const access = await resolveDealAccess({ dealId, email: auth.email, userId: auth.userId });
+        if (!access) return false;
+      }
+    } catch {
+      /* tables may be missing pre-migration - don't block base ownership */
+    }
+  }
+  return true;
 }
 
 export async function GET(request, { params }) {
@@ -31,11 +63,12 @@ export async function GET(request, { params }) {
   }
 
   try {
-    const [messages, session] = await Promise.all([
+    const [messages, session, artefacts] = await Promise.all([
       fetchMessagesForSession(id),
       getChatSession(id),
+      fetchArtefactsForSession(id),
     ]);
-    return NextResponse.json({ success: true, messages, session });
+    return NextResponse.json({ success: true, messages, session, artefacts });
   } catch (err) {
     logger.error('chat-sessions fetch failed', { requestId: getRequestId(request), error: err.message });
     return NextResponse.json({ error: 'Failed to load messages.' }, { status: 500 });

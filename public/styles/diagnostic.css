@@ -204,7 +204,7 @@ body { line-height: 1.65; }
             font-weight: 500;
         }
 
-        /* "Getting Started" on screen 0 — make it a proper step badge */
+        /* "Getting Started" on screen 0 - make it a proper step badge */
         #screen0 ~ * .progress-text { /* fallback, real override below */ }
 
         .progress-bar.is-step-zero .progress-text { display: none; }
@@ -1156,7 +1156,7 @@ body { line-height: 1.65; }
             .welcome-paths { grid-template-columns: 1fr; }
         }
 
-        /* ========== AUDIT GATE (pre–intro chat — matches guided-chat / welcome-path rhythm) ========== */
+        /* ========== AUDIT GATE (pre–intro chat - matches guided-chat / welcome-path rhythm) ========== */
         .audit-gate-screen {
             min-height: 100dvh;
             display: flex;
@@ -1393,7 +1393,7 @@ body { line-height: 1.65; }
             overflow: hidden;
         }
 
-        /* Decorative corner circle — mirrors welcome cards */
+        /* Decorative corner circle - mirrors welcome cards */
         .mode-card::after {
             content: '';
             position: absolute;
@@ -1406,7 +1406,7 @@ body { line-height: 1.65; }
         .mode-card:hover::after { opacity: 0.25; transform: scale(1.1); }
         .mode-card:hover { transform: translateY(-3px); }
 
-        /* Teal — Map Process Only */
+        /* Teal - Map Process Only */
         .mode-card-map {
             background: #f0fdf9;
             box-shadow: 0 1px 4px rgba(0,0,0,0.06);
@@ -1425,7 +1425,7 @@ body { line-height: 1.65; }
             box-shadow: 0 0 0 3px rgba(13,148,136,0.15), 0 4px 16px rgba(13,148,136,0.12);
         }
 
-        /* Violet — Comprehensive */
+        /* Violet - Comprehensive */
         .mode-card-full {
             background: #f5f3ff;
             box-shadow: 0 1px 4px rgba(0,0,0,0.06);
@@ -1577,7 +1577,7 @@ body { line-height: 1.65; }
             flex-shrink: 0;
         }
 
-        /* ===== Process List (intro — under bubble; capped width, not full chat panel) ===== */
+        /* ===== Process List (intro - under bubble; capped width, not full chat panel) ===== */
         .guided-chat-messages .process-list {
             display: flex;
             flex-direction: column;
@@ -2203,7 +2203,7 @@ body { line-height: 1.65; }
             transition: box-shadow 0.2s;
         }
 
-        /* Pinned state — sticks just below progress bar */
+        /* Pinned state - sticks just below progress bar */
         .live-flow-preview.is-pinned {
             position: sticky;
             top: 112px;          /* top-bar(52) + progress-bar(~60) */
@@ -2964,7 +2964,7 @@ body { line-height: 1.65; }
                 height: auto !important;
             }
 
-            /* Container always fills the viewport — chat, template, and form screens all grow into it via flex:1 */
+            /* Container always fills the viewport - chat, template, and form screens all grow into it via flex:1 */
             .container:not(.container-wide) {
                 min-height: 100dvh;
                 display: flex;
@@ -2975,7 +2975,7 @@ body { line-height: 1.65; }
                 box-sizing: border-box;
             }
 
-            /* These must not grow — only the screen content should fill remaining space */
+            /* These must not grow - only the screen content should fill remaining space */
             .container:not(.container-wide) > .progress-bar,
             .container:not(.container-wide) > .diagnostic-screen-nav,
             .container:not(.container-wide) > .resume-toast {
@@ -3739,7 +3739,7 @@ body { line-height: 1.65; }
             border-color: var(--accent);
         }
 
-        /* Step name input — bigger and more prominent */
+        /* Step name input - bigger and more prominent */
         #stepsList .list-item-content > input[type="text"]:first-child {
             font-size: 0.97rem;
             font-weight: 500;
@@ -3984,7 +3984,7 @@ body { line-height: 1.65; }
         }
 
         /* ============================================
-           Screen 7 — Three-column process mapper
+           Screen 7 - Three-column process mapper
            ============================================ */
 
         .s7-layout {
@@ -4032,7 +4032,7 @@ body { line-height: 1.65; }
         .s7-col:first-child { margin-left: 0; }
         .s7-col:last-child { margin-right: 0; }
 
-        /* Edit steps tab — when editor collapsed */
+        /* Edit steps tab - when editor collapsed */
         .s7-edit-steps-tab {
             position: absolute;
             left: 0;
@@ -4115,7 +4115,7 @@ body { line-height: 1.65; }
         .s7-col-chat .s7-pane-hdr { background: #fafafa; }
         .s7-col-preview .s7-pane-hdr { background: #f8f9ff; border-bottom-color: rgba(99,102,241,0.08); }
 
-        /* Pill toggle — AI Chat | Edit steps */
+        /* Pill toggle - AI Chat | Edit steps */
         .s7-pill-toggle {
             display: inline-flex;
             align-items: center;
@@ -4601,7 +4601,7 @@ body { line-height: 1.65; }
             margin: 0;
         }
 
-        /* ── Decision bar — top of expanded area ── */
+        /* ── Decision bar - top of expanded area ── */
         .s7-decision-bar {
             display: flex;
             align-items: center;
@@ -5283,7 +5283,7 @@ body { line-height: 1.65; }
             background: rgba(13,148,136,0.08);
         }
 
-        /* Handoff variant — indigo */
+        /* Handoff variant - indigo */
         .s7-tag-handoff {
             background: rgba(99,102,241,0.1);
             color: #6366f1;
@@ -5299,7 +5299,7 @@ body { line-height: 1.65; }
             color: #4f46e5;
         }
 
-        /* Clarity variant — amber */
+        /* Clarity variant - amber */
         .s7-tag-clarity {
             background: rgba(245,158,11,0.1);
             color: #d97706;
@@ -6060,7 +6060,7 @@ body { line-height: 1.65; }
             overflow: hidden;
         }
 
-        /* ── Screen 2 left rail — vertical stack (aligned column, Claude-style); 75% of original 44px ── */
+        /* ── Screen 2 left rail - vertical stack (aligned column, Claude-style); 75% of original 44px ── */
         .s7-floating-icons {
             position: absolute;
             top: 12px;
@@ -6533,7 +6533,7 @@ body { line-height: 1.65; }
         }
 
         /* ============================================
-           Report Page — Diagnostic Complete layout
+           Report Page - Diagnostic Complete layout
            ============================================ */
         .report-page { min-height: 100vh; background: var(--bg, #f8fafc); overflow-x: hidden; }
         .report-container { max-width: 1400px; width: 100%; margin: 0 auto; padding: 0 1.5rem 2rem; box-sizing: border-box; }
@@ -7542,7 +7542,7 @@ body { line-height: 1.65; }
         .report-redesign-changelog li,
         .report-redesign-gains li { margin-bottom: 6px; }
 
-        /* Implementation Roadmap — phased cards */
+        /* Implementation Roadmap - phased cards */
         .report-roadmap {
             display: flex;
             flex-direction: column;
@@ -7603,7 +7603,7 @@ body { line-height: 1.65; }
             margin: 0;
         }
 
-        /* Decision bar — stats + bulk actions + save */
+        /* Decision bar - stats + bulk actions + save */
         .report-redesign-decision-bar {
             display: flex;
             align-items: center;
@@ -8087,7 +8087,7 @@ body { line-height: 1.65; }
             z-index: 2000;
         }
 
-        /* Spotlight — box-shadow creates the darkened surround when backdrop is transparent */
+        /* Spotlight - box-shadow creates the darkened surround when backdrop is transparent */
         .s7-guide-spotlight {
             position: fixed;
             border-radius: 10px;
@@ -8506,7 +8506,7 @@ body { line-height: 1.65; }
   background: var(--bg) !important;
 }
 
-/* Screen 2 floating icons & panels — dark */
+/* Screen 2 floating icons & panels - dark */
 [data-theme="dark"] .s7-floating-icon-btn {
   background: var(--bg-alt) !important;
   border-color: var(--border);
@@ -8589,7 +8589,7 @@ body { line-height: 1.65; }
   background: rgba(13,148,136,0.2) !important;
   color: var(--accent);
 }
-/* Path cards — dark */
+/* Path cards - dark */
 [data-theme="dark"] .welcome-path-btn-individual {
   background: var(--primary-light);
   border-color: rgba(13,148,136,0.3);
@@ -8626,7 +8626,7 @@ body { line-height: 1.65; }
   border-color: rgba(139,92,246,0.3);
 }
 
-/* Mode cards — dark */
+/* Mode cards - dark */
 [data-theme="dark"] .mode-card-map {
   background: var(--primary-light);
   border-color: rgba(13,148,136,0.3);
@@ -8683,7 +8683,7 @@ body { line-height: 1.65; }
   color: #c4b5fd;
 }
 
-/* Mode screen — remaining text & decorative elements */
+/* Mode screen - remaining text & decorative elements */
 [data-theme="dark"] .mode-eyebrow.is-team {
   color: #c4b5fd;
 }
@@ -8742,7 +8742,7 @@ body { line-height: 1.65; }
   background: var(--bg) !important;
 }
 
-/* Diagnostic Step 2 Map Steps — remove light elements */
+/* Diagnostic Step 2 Map Steps - remove light elements */
 [data-theme="dark"] .s7-layout {
   background: var(--bg) !important;
 }
@@ -8908,7 +8908,7 @@ body { line-height: 1.65; }
   background: var(--bg-panel) !important;
   border: none;
 }
-/* Chat composer — same grey panel as describe field */
+/* Chat composer - same grey panel as describe field */
 [data-theme="dark"] .s7-chat-composer {
   background: var(--bg-panel);
   border: none;
@@ -8990,7 +8990,7 @@ body { line-height: 1.65; }
   font-size: 0.58rem;
   letter-spacing: 0.01em;
 }
-/* Single-row chat (no composer) — grey pill, no border */
+/* Single-row chat (no composer) - grey pill, no border */
 [data-theme="dark"] .s7-chat-input-area:not(:has(.s7-chat-composer)) {
   border-top: none !important;
   background: var(--bg-panel);
@@ -9690,7 +9690,7 @@ body { line-height: 1.65; }
   overflow: hidden;
   position: relative;
 }
-/* Describe empty state can be taller than the pane — allow scroll instead of clipping */
+/* Describe empty state can be taller than the pane - allow scroll instead of clipping */
 .s7-canvas:has(.s7-describe-box) {
   overflow: auto;
   -webkit-overflow-scrolling: touch;
@@ -9974,7 +9974,7 @@ body { line-height: 1.65; }
   font-size: 12px !important;
 }
 
-/* Touch/Dwell inputs and h/d toggle — match heights (32px) */
+/* Touch/Dwell inputs and h/d toggle - match heights (32px) */
 .s7-ni-tab-pane .s7-timing-row {
   align-items: flex-end;
 }
@@ -10557,7 +10557,7 @@ body { line-height: 1.65; }
 [data-theme="dark"] .s7-sidebar-expand-btn:hover { background: rgba(13,148,136,0.1); border-color: rgba(13,148,136,0.35); }
 
 /* ======================================================
-   Floating Flow Viewer — sidebar (Steps / AI Chat)
+   Floating Flow Viewer - sidebar (Steps / AI Chat)
    ====================================================== */
 
 /* ffv-body-interactive becomes a row when sidebar is present */
@@ -10579,7 +10579,7 @@ body { line-height: 1.65; }
   min-height: 0;
 }
 
-/* Floating icons overlay — positioned over canvas, no sidebar */
+/* Floating icons overlay - positioned over canvas, no sidebar */
 .ffv-floating-icons {
   position: absolute;
   top: 56px;
@@ -10639,7 +10639,7 @@ body { line-height: 1.65; }
   justify-content: center;
 }
 
-/* Floating panel overlay — overlays canvas when icon clicked */
+/* Floating panel overlay - overlays canvas when icon clicked */
 .ffv-floating-panel {
   position: absolute;
   top: 108px;
@@ -10866,7 +10866,7 @@ body { line-height: 1.65; }
   border: none;
   color: var(--text);
 }
-/* Steps pane dark theme — match main panel styling */
+/* Steps pane dark theme - match main panel styling */
 .ffv-sidebar-wrap[data-theme="dark"] .s7-steps-toolbar { border-bottom-color: var(--border, #2e2e2e); }
 .ffv-sidebar-wrap[data-theme="dark"] .s7-steps-add-btn { background: rgba(13,148,136,0.12); border-color: rgba(13,148,136,0.25); }
 .ffv-sidebar-wrap[data-theme="dark"] .s7-steps-merge-btn { background: var(--bg, #141414); border-color: var(--border, #2e2e2e); color: var(--text-mid, #a0a0a0); }
@@ -10882,7 +10882,7 @@ body { line-height: 1.65; }
 .ffv-sidebar-wrap[data-theme="dark"] .s7-steps-pane { background: var(--bg-alt, #1e1e1e); }
 
 /* ======================================================
-   Step detail panel — consistent field sizes
+   Step detail panel - consistent field sizes
    All inputs, selects inside .s7-detail-panel use a
    unified height/font/padding so nothing looks mismatched.
    ====================================================== */
@@ -10975,7 +10975,7 @@ body { line-height: 1.65; }
   margin-bottom: 2px;
 }
 
-/* Work/wait timing inputs — fill their labeled wrapper, 2× taller than standard inputs */
+/* Work/wait timing inputs - fill their labeled wrapper, 2× taller than standard inputs */
 .s7-detail-panel .s7-input-work,
 .s7-detail-panel .s7-input-wait {
   flex: 1;
@@ -11000,7 +11000,7 @@ body { line-height: 1.65; }
   min-width: 55px;
 }
 
-/* Branch probability input — compact % field */
+/* Branch probability input - compact % field */
 .s7-detail-panel .s7-branch-prob {
   width: 48px;
   min-width: 40px;
@@ -11008,7 +11008,7 @@ body { line-height: 1.65; }
   text-align: right;
 }
 
-/* Capacity input — full width */
+/* Capacity input - full width */
 .s7-detail-panel .s7-input-capacity {
   flex: 1;
   min-width: 80px;
@@ -11067,7 +11067,7 @@ body { line-height: 1.65; }
   width: 100%;
 }
 
-/* Branch add/del buttons — align with row */
+/* Branch add/del buttons - align with row */
 .s7-detail-panel .s7-branch-add-step-btn {
   width: 24px;
   height: 24px;
@@ -11160,7 +11160,7 @@ body { line-height: 1.65; }
    Used in report, portal, and DiagnosticEdit
    ====================================================== */
 
-/* Report — toolbar row (Grid/Swimlane + legend + reset + float) */
+/* Report - toolbar row (Grid/Swimlane + legend + reset + float) */
 .report-flow-toolbar {
   display: flex;
   align-items: center;
@@ -11194,7 +11194,7 @@ body { line-height: 1.65; }
 .report-flow-float-btn .flow-reset-label,
 .report-flow-reset-btn .flow-reset-label { display: none; }
 
-/* Report — full-width flow diagram card */
+/* Report - full-width flow diagram card */
 .report-flow-canvas-wrap {
   height: 440px;
   position: relative;
@@ -11203,12 +11203,12 @@ body { line-height: 1.65; }
   overflow: hidden;
 }
 
-/* Report — side-by-side before/after comparison */
+/* Report - side-by-side before/after comparison */
 .report-flow-canvas-wrap.report-flow-canvas-compare {
   height: 360px;
 }
 
-/* Portal — process flow panel */
+/* Portal - process flow panel */
 .portal-flow-canvas-wrap {
   height: 400px;
   position: relative;
@@ -11218,7 +11218,7 @@ body { line-height: 1.65; }
   margin-bottom: 8px;
 }
 
-/* DiagnosticEdit — flow preview panel */
+/* DiagnosticEdit - flow preview panel */
 .edit-flow-canvas-wrap {
   height: 380px;
   position: relative;
@@ -11554,7 +11554,7 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
 [data-theme="dark"] .report-benchmark-good { color: #6ee7b7 !important; }
 [data-theme="dark"] .report-benchmark-warn { color: #fcd34d !important; }
 
-/* Bottleneck Analysis — collapsible section + accordion items */
+/* Bottleneck Analysis - collapsible section + accordion items */
 .report-bottleneck-section { margin-bottom: 1rem; }
 .report-bottleneck-collapsible {
   border: 1px solid var(--border, #e2e8f0);
@@ -11816,7 +11816,7 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
 .report-process-extra-section {
   margin-top: 1.25rem;
 }
-/* Inner summary tabs — flatten nesting, remove double borders/backgrounds */
+/* Inner summary tabs - flatten nesting, remove double borders/backgrounds */
 .report-summary-inner-tab .report-process-extra-section { margin-top: 0; }
 .report-summary-inner-tab .report-section-heading { margin-top: 0; }
 .report-process-summary-block .report-section-tabs-wrap { margin-bottom: 0; }
@@ -11826,7 +11826,7 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   padding: 1rem 0 0 0;
 }
 
-/* Cost — systems per-system inputs */
+/* Cost - systems per-system inputs */
 .cost-systems-section {
   margin-bottom: 8px;
 }
@@ -11873,7 +11873,7 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   border: 1px solid var(--border);
 }
 
-/* Cost — AI suggest button and reasoning */
+/* Cost - AI suggest button and reasoning */
 .cost-variable-header {
   display: flex;
   align-items: flex-start;
@@ -11944,7 +11944,7 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   font-weight: 600;
 }
 
-/* Cost tooltip — ? style */
+/* Cost tooltip - ? style */
 .cost-tooltip {
   display: inline-flex;
   align-items: center;
@@ -12039,7 +12039,7 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   color: var(--text-mid, #64748b);
   font-size: 0.78rem;
 }
-.s7-redesign-mode-name::before { content: '—'; margin-right: 0.4rem; opacity: 0.5; }
+.s7-redesign-mode-name::before { content: '-'; margin-right: 0.4rem; opacity: 0.5; }
 
 /* Full-screen loading overlay while redesign agent runs */
 .s7-redesign-overlay {
@@ -12984,7 +12984,7 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   color: #f87171;
 }
 
-/* Hit target matches visible width — no negative-margin overlap into the
+/* Hit target matches visible width - no negative-margin overlap into the
    adjacent chat/canvas columns, which was activating the resize on clicks
    that were actually meant for the neighbouring content. */
 .s7-split-resize-handle {
@@ -13196,7 +13196,7 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   margin: 0;
 }
 
-/* Dark theme for inline chat — soft panel edges (Claude-style) */
+/* Dark theme for inline chat - soft panel edges (Claude-style) */
 [data-theme="dark"] .s7-inline-chat {
   background: #12141a;
   border-right: 1px solid rgba(255, 255, 255, 0.05);
@@ -13298,7 +13298,7 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   gap: 28px;
   animation: s7MsgIn 0.35s ease;
 }
-/* Single line; smaller type — scroll horizontally if the process name is very long */
+/* Single line; smaller type - scroll horizontally if the process name is very long */
 .s7-describe-heading {
   display: block;
   margin: 0 auto;
@@ -13492,7 +13492,7 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
 }
 .s7-describe-manual:hover { color: #64748b; text-decoration: underline; text-underline-offset: 3px; }
 
-/* Dark theme — matte charcoal, thin borders, warm kicker */
+/* Dark theme - matte charcoal, thin borders, warm kicker */
 [data-theme="dark"] .s7-workspace-main:has(.s7-describe-box),
 [data-theme="dark"] .s7-canvas-area:has(.s7-describe-box) {
   background: var(--bg);
@@ -13566,7 +13566,7 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
 [data-theme="dark"] .s7-describe-manual:hover {
   color: #a3a3a3;
 }
-/* Floating steps icon — softer on Claude-style empty canvas */
+/* Floating steps icon - softer on Claude-style empty canvas */
 [data-theme="dark"] .s7-canvas-area:has(.s7-describe-box) .s7-floating-icon-btn {
   background: rgba(26, 26, 26, 0.92) !important;
   border-color: rgba(255, 255, 255, 0.1) !important;
@@ -13836,7 +13836,7 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   flex-shrink: 0;
 }
 
-/* ===== Screen 6 — PE Roll-up completion ===== */
+/* ===== Screen 6 - PE Roll-up completion ===== */
 .sc6-pe-deal-card {
   background: rgba(217,119,6,0.04);
   border: 1.5px solid rgba(217,119,6,0.2);
@@ -13893,9 +13893,9 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   color: var(--text-light, #94a3b8);
 }
 
-/* ===== Chat workspace — mirrors Screen2's s7-workspace structure exactly ===== */
+/* ===== Chat workspace - mirrors Screen2's s7-workspace structure exactly ===== */
 
-/* Main content area inside the chat workspace — transparent, no card */
+/* Main content area inside the chat workspace - transparent, no card */
 .chat-main-panel {
   flex: 1;
   min-width: 0;
@@ -14501,6 +14501,15 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   font-size: 11px;
   color: var(--text-mid, #94a3b8);
 }
+.chat-history-item-artefacts {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary, #14b8a6);
+  background: rgba(20,184,166,0.12);
+  padding: 2px 7px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
 .chat-history-item-wrap.is-pinned {
   background: linear-gradient(90deg, rgba(13,148,136,0.04), transparent 40%);
 }
@@ -14520,4 +14529,197 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
 }
 
 /* Report extras, floating report viewer (.frv-*), inline canvas report (.s7-report-*, .s7-canvas--report) → lib/modules/report/report.css */
+
+/* ── Chat artefact pills + read-only snapshot preview ── */
+.s7-artefact-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary, #14b8a6);
+  background: rgba(20,184,166,0.10);
+  border: 1.5px solid var(--primary, #14b8a6);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease;
+}
+.s7-artefact-pill:hover {
+  background: var(--primary, #14b8a6);
+  color: #fff;
+  transform: translateY(-1px);
+}
+.s7-artefact-pill:hover .s7-artefact-pill-icon { opacity: 1; }
+.s7-artefact-pill-icon { font-size: 14px; line-height: 1; opacity: 0.9; }
+.s7-artefact-pill-label { white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+.s7-artefact-pill::after {
+  content: '→';
+  margin-left: 2px;
+  font-size: 14px;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+.s7-artefact-preview {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+.s7-artefact-preview-card {
+  background: var(--bg, #fff);
+  border: 1px solid var(--border, rgba(148,163,184,0.28));
+  border-radius: 12px;
+  max-width: 640px;
+  width: 100%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 48px -16px rgba(15,23,42,0.4);
+}
+.s7-artefact-preview-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border, rgba(148,163,184,0.2));
+  font-size: 14px;
+}
+.s7-artefact-preview-close {
+  background: transparent;
+  border: 0;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-muted, #64748b);
+}
+.s7-artefact-preview-body { padding: 14px 16px; overflow: auto; }
+.s7-artefact-preview-empty { color: var(--text-muted, #64748b); font-size: 13px; margin: 0; }
+.s7-artefact-preview-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.s7-artefact-preview-list li {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px;
+  background: var(--bg-muted, rgba(148,163,184,0.08));
+  border-radius: 6px;
+  font-size: 13px;
+}
+.s7-artefact-preview-step-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px; border-radius: 6px;
+  background: var(--primary, #14b8a6); color: #fff;
+  font-size: 11px; font-weight: 600;
+}
+.s7-artefact-preview-step-name { flex: 1; }
+.s7-artefact-preview-step-dept { font-size: 11px; color: var(--text-muted, #64748b); }
+.s7-artefact-preview-step-tag {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--primary, #14b8a6);
+  background: rgba(20,184,166,0.12);
+  padding: 2px 6px; border-radius: 999px;
+}
+.s7-artefact-preview-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border, rgba(148,163,184,0.2));
+  background: var(--bg-muted, rgba(148,163,184,0.04));
+}
+.s7-artefact-preview-count { font-size: 12px; color: var(--text-muted, #64748b); }
+.s7-artefact-preview-actions { display: flex; gap: 8px; }
+.s7-artefact-preview-btn {
+  padding: 7px 14px; font-size: 13px; font-weight: 600;
+  border-radius: 8px; cursor: pointer; border: 1px solid transparent;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.s7-artefact-preview-btn--ghost {
+  background: transparent;
+  color: var(--text, #1e293b);
+  border-color: var(--border, rgba(148,163,184,0.3));
+}
+.s7-artefact-preview-btn--ghost:hover { border-color: var(--text-muted, #64748b); }
+.s7-artefact-preview-btn--primary {
+  background: var(--primary, #14b8a6);
+  color: #fff;
+  border-color: var(--primary, #14b8a6);
+}
+.s7-artefact-preview-btn--primary:hover { background: var(--primary-strong, #0d9488); border-color: var(--primary-strong, #0d9488); }
+.s7-artefact-preview-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Artefacts panel (rail sidebar) ── */
+.s7-artefacts-panel { display: flex; flex-direction: column; height: 100%; }
+.s7-artefacts-panel-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border, rgba(148,163,184,0.2));
+}
+.s7-artefacts-panel-title {
+  font-size: 14px; font-weight: 600; color: var(--text, #1e293b);
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.s7-artefacts-panel-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; padding: 0 6px; height: 20px;
+  background: var(--primary, #14b8a6); color: #fff;
+  font-size: 11px; font-weight: 700; border-radius: 999px;
+}
+.s7-artefacts-panel-actions { display: inline-flex; align-items: center; gap: 8px; }
+.s7-artefacts-panel-pin {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px; font-size: 12px; font-weight: 600;
+  background: rgba(20,184,166,0.08); color: var(--primary, #0f766e);
+  border: 1px solid rgba(20,184,166,0.35); border-radius: 6px;
+  cursor: pointer; transition: background 120ms ease, border-color 120ms ease;
+}
+.s7-artefacts-panel-pin:hover { background: var(--primary, #14b8a6); color: #fff; border-color: var(--primary, #14b8a6); }
+.s7-artefacts-panel-close {
+  background: transparent; border: 0; cursor: pointer;
+  font-size: 20px; line-height: 1; color: var(--text-muted, #64748b);
+}
+.s7-artefacts-panel-body { flex: 1; overflow: auto; padding: 12px; }
+.s7-artefacts-panel-empty { text-align: center; padding: 32px 16px; color: var(--text-muted, #64748b); }
+.s7-artefacts-panel-empty p { margin: 0 0 8px; font-size: 13px; }
+.s7-artefacts-panel-empty-hint { font-size: 12px; opacity: 0.75; }
+.s7-artefacts-panel-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.s7-artefacts-panel-item {
+  width: 100%;
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px;
+  background: var(--bg-muted, rgba(148,163,184,0.08));
+  border: 1px solid var(--border, rgba(148,163,184,0.22));
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+.s7-artefacts-panel-item:hover {
+  background: rgba(20,184,166,0.08);
+  border-color: var(--primary, #14b8a6);
+  transform: translateY(-1px);
+}
+.s7-artefacts-panel-item-icon {
+  font-size: 18px; line-height: 1;
+  color: var(--primary, #14b8a6);
+  flex: 0 0 auto;
+}
+.s7-artefacts-panel-item-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.s7-artefacts-panel-item-label {
+  font-size: 13px; font-weight: 600; color: var(--text, #1e293b);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.s7-artefacts-panel-item-kind {
+  font-size: 11px; color: var(--text-muted, #64748b);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.s7-artefacts-panel-item-arrow {
+  font-size: 16px; color: var(--text-muted, #64748b);
+  flex: 0 0 auto;
+}
+.s7-artefacts-panel-item:hover .s7-artefacts-panel-item-arrow { color: var(--primary, #14b8a6); }
+[data-theme="dark"] .s7-artefacts-panel-item-label { color: var(--text, #f1f5f9); }
 

@@ -80,7 +80,7 @@ export async function PUT(request) {
       const rp = Array.isArray(dd.rawProcesses) ? [...dd.rawProcesses] : [];
       for (const fl of updates.flowLayouts) {
         if (typeof fl.processIndex !== 'number' || fl.processIndex < 0) continue;
-        // Ensure the target process entry exists — create a stub if rawProcesses
+        // Ensure the target process entry exists - create a stub if rawProcesses
         // doesn't have one yet (e.g. older reports or summary-only diagnostics)
         if (!rp[fl.processIndex]) {
           const summaryProc = Array.isArray(dd.processes) ? dd.processes[fl.processIndex] : null;
@@ -186,7 +186,7 @@ export async function PUT(request) {
       dd.redesign = { ...(dd.redesign || {}), ...sanitizeForJson(updates.redesign) };
     }
 
-    // Redesign flow layout saves — patch only the flow fields on processes within report_redesigns
+    // Redesign flow layout saves - patch only the flow fields on processes within report_redesigns
     if (updates.redesignFlowLayouts && Array.isArray(updates.redesignFlowLayouts)) {
       for (const fl of updates.redesignFlowLayouts) {
         const { redesignId: flRedesignId, processIndex: flIdx, flowNodePositions, flowCustomEdges, flowDeletedEdges } = fl;
@@ -236,6 +236,21 @@ export async function PUT(request) {
       const t = await writeResp.text();
       logger.error('Update diagnostic: Supabase write failed', { requestId: getRequestId(request), status: writeResp.status, body: t?.slice(0, 500) });
       return NextResponse.json({ error: 'Write failed: ' + (t || writeResp.statusText) }, { status: 502 });
+    }
+
+    // If this report is linked to a deal_flow, bump its updated_at so the
+    // DealsPanel surfaces the edit as recent activity. Non-fatal.
+    try {
+      await fetchWithTimeout(
+        `${supabaseUrl}/rest/v1/deal_flows?report_id=eq.${encodeURIComponent(reportIdTrimmed)}`,
+        {
+          method: 'PATCH',
+          headers: getSupabaseWriteHeaders(supabaseKey),
+          body: JSON.stringify({ updated_at: new Date().toISOString() }),
+        }
+      );
+    } catch (touchErr) {
+      logger.warn('deal_flows touch on edit failed', { requestId: getRequestId(request), message: touchErr.message });
     }
 
     return NextResponse.json({ success: true, message: 'Report updated.' });

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const css = `
    /* ═══════════════════════════════════════════════════
-      PORTAL CAROUSEL — light theme product preview slides
+      PORTAL CAROUSEL - light theme product preview slides
       ═══════════════════════════════════════════════════ */
 
    .portal-carousel {
@@ -59,7 +59,7 @@ const css = `
    }
 
    /* ────────────────────
-      SLIDE 1 — DIAGNOSTIC
+      SLIDE 1 - DIAGNOSTIC
       ──────────────────── */
 
    .ps-d-top { display: flex; align-items: center; gap: 10px; }
@@ -102,7 +102,7 @@ const css = `
    .ps-d-opp   { font-size: 0.58rem; color: #0d9488; font-weight: 600; }
 
    /* ──────────────────────
-      SLIDE 2 — FLOW CANVAS
+      SLIDE 2 - FLOW CANVAS
       ────────────────────── */
 
    .ps-body--canvas {
@@ -134,7 +134,7 @@ const css = `
    .ps-lane-stripe--approval  .ps-lane-body-bg { background: rgba(59,130,246,0.03); }
    .ps-lane-stripe--ops       .ps-lane-body-bg { background: rgba(245,158,11,0.03); }
 
-   /* Flow grid — overlaid on swimlane bg */
+   /* Flow grid - overlaid on swimlane bg */
    .ps-flow-grid {
      position: absolute; inset: 0;
      display: grid;
@@ -235,7 +235,7 @@ const css = `
    .ps-cf-warn { color: #d97706; font-size: 0.48rem; }
 
    /* ──────────────────────────
-      SLIDE 3 — COST ANALYSIS
+      SLIDE 3 - COST ANALYSIS
       ────────────────────────── */
 
    .ps-cost-head  { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; flex-shrink: 0; }

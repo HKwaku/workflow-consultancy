@@ -275,7 +275,7 @@ const TEST_CASES = [
       mkProcess(
         'New Client Onboarding',
         [
-          step('Proposal accepted — notification to ops', 'Sales', ['HubSpot', 'Email'], { work: 10, wait: 0 }),
+          step('Proposal accepted - notification to ops', 'Sales', ['HubSpot', 'Email'], { work: 10, wait: 0 }),
           step('Conflict of interest check', 'Compliance', ['Email', 'Excel'], { work: 30, wait: 480, isBottleneck: true }),
           step('Engagement letter prepared in Word', 'Admin', ['Word', 'Email'], { work: 45, wait: 0 }),
           step('Partner review & signature', 'Leadership', ['DocuSign', 'Email'], { isApproval: true, work: 20, wait: 1440 }),
@@ -287,7 +287,7 @@ const TEST_CASES = [
         ],
         { type: 'twice-monthly', annual: 24 },
         { hours: 3.8, team: 3, cycleDays: 14 },
-        { reason: 'handoffs', why: '5 different people involved; no central tracking — items frequently lost between teams' }
+        { reason: 'handoffs', why: '5 different people involved; no central tracking - items frequently lost between teams' }
       ),
       mkProcess(
         'Monthly Timesheet Submission & Approval',
@@ -398,7 +398,7 @@ const TEST_CASES = [
         ],
         { type: 'weekly', annual: 104 },
         { hours: 4.3, team: 3, cycleDays: 12 },
-        { reason: 'waiting', why: 'Client decision on variations averages 7 days; no portal — all via email with no version control' }
+        { reason: 'waiting', why: 'Client decision on variations averages 7 days; no portal - all via email with no version control' }
       ),
     ],
   },
@@ -473,7 +473,7 @@ const TEST_CASES = [
           step('First review & redline in Word', 'Legal', ['Word', 'Email'], { work: 120, wait: 0 }),
           step('Internal commercial sign-off', 'Commercial', ['Email', 'Word'], { isApproval: true, work: 30, wait: 1440, isBottleneck: true }),
           step('Negotiate redlines with counterparty', 'Legal', ['Email', 'Word'], { work: 60, wait: 2880, isBottleneck: true }),
-          step('Final approval — partner review', 'Legal', ['Email', 'Word'], { isApproval: true, work: 20, wait: 480 }),
+          step('Final approval - partner review', 'Legal', ['Email', 'Word'], { isApproval: true, work: 20, wait: 480 }),
           step('Execution via DocuSign or wet ink', 'Legal', ['DocuSign', 'Email'], { work: 15, wait: 1440 }),
           step('Executed contract filed and logged', 'Legal', ['SharePoint', 'Excel'], { work: 15, wait: 0 }),
         ],
@@ -505,7 +505,7 @@ const TEST_CASES = [
         ],
         { type: 'weekly', annual: 52 },
         { hours: 3.3, team: 3, cycleDays: 7 },
-        { reason: 'handoffs', why: 'Event data manually re-entered from email into Opera PMS and then again into Word BEOs — triple entry' }
+        { reason: 'handoffs', why: 'Event data manually re-entered from email into Opera PMS and then again into Word BEOs - triple entry' }
       ),
     ],
   },

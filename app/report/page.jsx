@@ -197,7 +197,7 @@ function normalizeRecommendations(recs) {
 }
 
 const OBS_EFFORT_GROUPS = [
-  { key: 'quick-win', label: 'Quick Wins',   icon: '⚡', desc: 'Low effort, high impact — do these first.', defaultOpen: true  },
+  { key: 'quick-win', label: 'Quick Wins',   icon: '⚡', desc: 'Low effort, high impact - do these first.', defaultOpen: true  },
   { key: 'medium',    label: 'Medium-term',  icon: '🎯', desc: 'Worth planning into the next cycle.',      defaultOpen: false },
   { key: 'project',   label: 'Longer-term',  icon: '🔧', desc: 'Require more planning or investment.',     defaultOpen: false },
   { key: 'other',     label: 'Other',        icon: '📋', desc: '',                                         defaultOpen: false },
@@ -218,7 +218,7 @@ function ObservationsContent({ recs, isMapOnly, rawProcesses, segment }) {
     return <p className="report-obs-empty">Review your process map and share with your team to validate the steps.</p>;
   }
 
-  // Map-only mode: observations don't have effort levels — show flat list
+  // Map-only mode: observations don't have effort levels - show flat list
   if (isMapOnly) {
     return (
       <div className="report-obs-list">
@@ -1031,7 +1031,7 @@ function RedesignSection({ redesign, rawProcesses, processes, reportId, redesign
 
   const effectiveMetrics = useMemo(() => {
     if (!hasNewFormat) {
-      // No changes array — derive step counts directly from processes
+      // No changes array - derive step counts directly from processes
       const origCount = rawProcesses?.reduce((s, p) => s + (p.steps?.length ?? 0), 0) ?? 0;
       const optCount = redesign.optimisedProcesses?.reduce((s, p) => s + (p.steps?.filter(st => st.status !== 'removed').length ?? 0), 0) ?? 0;
       if (origCount === 0 && optCount === 0) return null;
@@ -1117,7 +1117,7 @@ function RedesignSection({ redesign, rawProcesses, processes, reportId, redesign
             )}
             {hasNewFormat && pendingCount > 0 && (
               <p className="redesign-savings-breakdown-line redesign-savings-breakdown-pending" style={{ marginTop: 12 }}>
-                {pendingCount} change{pendingCount !== 1 ? 's' : ''} still pending — review in the Proposed changes tab.
+                {pendingCount} change{pendingCount !== 1 ? 's' : ''} still pending - review in the Proposed changes tab.
               </p>
             )}
         </>
@@ -1229,7 +1229,7 @@ function RedesignSection({ redesign, rawProcesses, processes, reportId, redesign
         {finalised && (
           <div className="report-redesign-finalised-banner">
             <span className="redesign-finalised-icon">&#10003;</span>
-            <span>Redesign accepted{redesign.acceptedAt ? ` on ${new Date(redesign.acceptedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}. View both flows in your <Link href="/portal">Dashboard</Link>. <Link href={`/build?id=${reportId}`}>Build this</Link>  -  generate workflow definitions for N8N, Unqork, Make, Zapier, and more.</span>
+            <span>Redesign accepted{redesign.acceptedAt ? ` on ${new Date(redesign.acceptedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}. View both flows in your <Link href="/portal" target="_blank" rel="noopener noreferrer">Dashboard</Link>. <Link href={`/build?id=${reportId}`} target="_blank" rel="noopener noreferrer">Build this</Link>  -  generate workflow definitions for N8N, Unqork, Make, Zapier, and more.</span>
           </div>
         )}
 
@@ -1239,6 +1239,8 @@ function RedesignSection({ redesign, rawProcesses, processes, reportId, redesign
               href={`/process-audit?edit=${encodeURIComponent(reportId)}&email=${encodeURIComponent(contactEmail)}&aiRedesign=1&regenerate=1`}
               className="button button-secondary report-redesign-regenerate-btn"
               title="Generate a new AI redesign for this process"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               New redesign
             </Link>
@@ -1303,9 +1305,9 @@ function ReportContent() {
   // DiagnosticWorkspace. We hide the global top-bar chrome so the embedded view
   // looks like a clean report, not a nested mini-browser.
   const isEmbedView = searchParams.get('embed') === '1';
-  // Unified toggle state — both render contexts use the same pair:
-  //   • Report   vs.  Flow     (what to show)     — 'reportView'
-  //   • Summary  vs.  Full     (how much to show) — 'detailLevel'
+  // Unified toggle state - both render contexts use the same pair:
+  //   • Report   vs.  Flow     (what to show)     - 'reportView'
+  //   • Summary  vs.  Full     (how much to show) - 'detailLevel'
   // The iframe only uses `?detail=full` as an initial-state hint (canvas "Full
   // report" tab seeds it); after mount, local toggles work identically to the
   // standalone page so structure and style stay consistent across contexts.
@@ -1552,7 +1554,7 @@ function ReportContent() {
       : null;
     const workWaitRatio = workPct !== null ? `${workPct}%` : 'N/A';
     const workWaitDrill = workPct !== null
-      ? `${workPct}% touch time — ${Math.round(totalWork)}m touch, ${Math.round(totalWait)}m wait (item age)`
+      ? `${workPct}% touch time - ${Math.round(totalWork)}m touch, ${Math.round(totalWait)}m wait (item age)`
       : 'N/A';
 
     const procAuto = calculateAutomationScore([raw]);
@@ -1572,7 +1574,7 @@ function ReportContent() {
         : `${Math.round(totalMinutes)}m`)
       : null;
 
-    /* Summary metrics — grouped by theme */
+    /* Summary metrics - grouped by theme */
     const summaryMetrics = (
       <div className="report-metric-groups">
         {/* Group 1: Process Structure */}
@@ -1605,7 +1607,7 @@ function ReportContent() {
           <p className="report-metric-group-label">Assessment</p>
           <div className="report-metric-grid">
             <MetricCard metricKey="automationReadiness" value={`${procAuto.percentage ?? 0}%`} drillValue={`${procAuto.percentage ?? 0}% (${procAuto.grade || 'N/A'})`} label="Automation readiness" title={procAuto.insight} onClick={setMetricDrill} valueStyle={{ color: getAutomationReadinessColor(procAuto.percentage ?? 0) }} />
-            <MetricCard metricKey="complexity" value={complexityLabel} drillValue={`${complexityLabel} (score: ${complexityRaw})`} label="Complexity" title={`Score: ${complexityRaw} — decisions×2 + bottlenecks×2 + teams + handoffs×0.5 + external steps`} onClick={setMetricDrill} valueStyle={{ color: complexityColor }} />
+            <MetricCard metricKey="complexity" value={complexityLabel} drillValue={`${complexityLabel} (score: ${complexityRaw})`} label="Complexity" title={`Score: ${complexityRaw} - decisions×2 + bottlenecks×2 + teams + handoffs×0.5 + external steps`} onClick={setMetricDrill} valueStyle={{ color: complexityColor }} />
             {(!isMapOnly && !costAnalysisPending) && (
               <MetricCard
                 metricKey="confidence"
@@ -1630,7 +1632,7 @@ function ReportContent() {
           tone: vac === 'stops' ? 'risk' : 'watch',
           label: 'Key-person risk',
           detail: vac === 'stops'
-            ? 'Process halts when the primary operator is unavailable — no documented backup.'
+            ? 'Process halts when the primary operator is unavailable - no documented backup.'
             : 'Process slows meaningfully when the primary operator is unavailable.',
         });
       }
@@ -1639,7 +1641,7 @@ function ReportContent() {
         signals.push({
           tone: 'watch',
           label: 'Handoff clarity',
-          detail: 'Handoffs rely on tacit knowledge — specific context is not documented.',
+          detail: 'Handoffs rely on tacit knowledge - specific context is not documented.',
         });
       }
       const method = raw.handoff?.method;
@@ -1647,7 +1649,7 @@ function ReportContent() {
         signals.push({
           tone: 'watch',
           label: 'Handoff method',
-          detail: `Handoff method is informal (${method}) — not traceable.`,
+          detail: `Handoff method is informal (${method}) - not traceable.`,
         });
       }
       const qFlags = Array.isArray(raw.quality?.flags) ? raw.quality.flags : [];
@@ -1664,28 +1666,28 @@ function ReportContent() {
         signals.push({
           tone: 'risk',
           label: 'Low confidence',
-          detail: `Capture confidence rated ${qGrade} (${raw.quality?.score ?? '—'}/100) — validate figures before acting on them.`,
+          detail: `Capture confidence rated ${qGrade} (${raw.quality?.score ?? '-'}/100) - validate figures before acting on them.`,
         });
       }
       if (sysCount === 0 && steps.length >= 3) {
         signals.push({
           tone: 'watch',
           label: 'Systems not captured',
-          detail: 'No systems recorded against any step — automation and data-flow analysis is incomplete.',
+          detail: 'No systems recorded against any step - automation and data-flow analysis is incomplete.',
         });
       }
       if (steps.length > 0 && steps.length < 4) {
         signals.push({
           tone: 'watch',
           label: 'Thin process map',
-          detail: `Only ${steps.length} step${steps.length === 1 ? '' : 's'} captured — recommendations will be directional until more detail is added.`,
+          detail: `Only ${steps.length} step${steps.length === 1 ? '' : 's'} captured - recommendations will be directional until more detail is added.`,
         });
       }
       if (proc.elapsedDays == null || proc.elapsedDays === 0) {
         signals.push({
           tone: 'watch',
           label: 'Cycle time missing',
-          detail: 'No end-to-end elapsed time recorded — benchmark comparison is unavailable.',
+          detail: 'No end-to-end elapsed time recorded - benchmark comparison is unavailable.',
         });
       }
       return signals;
@@ -1734,7 +1736,7 @@ function ReportContent() {
       <div className={`report-health-indicator health-${healthStatus}`}>
         <span className="report-health-dot" />
         <span className="report-health-label">{healthLabel}</span>
-        <span className="report-health-reason">— {healthReason}</span>
+        <span className="report-health-reason">- {healthReason}</span>
       </div>
     );
 
@@ -1774,7 +1776,7 @@ function ReportContent() {
                     if (!meta) return null;
                     const barPct = Math.round(b.waitMinutes / maxWait * 100);
                     const sharePct = totalWait > 0 ? Math.round(b.waitMinutes / totalWait * 100) : 0;
-                    // Auto-expand the top 3 drivers by default — the user should
+                    // Auto-expand the top 3 drivers by default - the user should
                     // see why they're flagged without having to click into each row.
                     return (
                       <details key={bi} className="report-bottleneck-item" open={bi < 3}>
@@ -1788,10 +1790,10 @@ function ReportContent() {
                               )}
                               {b.waitType && (
                                 <span className={`report-bn-dwell-type report-bn-dwell-${b.waitType}`} title={
-                                  b.waitType === 'dependency' ? 'Dependency — item is with another person/team; cannot proceed until they finish' :
-                                  b.waitType === 'blocked'    ? 'Blocked — item cannot proceed (missing info, unclear input, process issue)' :
-                                  b.waitType === 'capacity'   ? 'Capacity — right person identifiable but unavailable' :
-                                  'WIP — person available but context-switched to other concurrent work'
+                                  b.waitType === 'dependency' ? 'Dependency - item is with another person/team; cannot proceed until they finish' :
+                                  b.waitType === 'blocked'    ? 'Blocked - item cannot proceed (missing info, unclear input, process issue)' :
+                                  b.waitType === 'capacity'   ? 'Capacity - right person identifiable but unavailable' :
+                                  'WIP - person available but context-switched to other concurrent work'
                                 }>{b.waitType === 'wip' ? 'WIP' : b.waitType.charAt(0).toUpperCase() + b.waitType.slice(1)}</span>
                               )}
                               <span className="report-bottleneck-risk" style={{ background: meta.bg, color: meta.color }}>
@@ -1852,8 +1854,8 @@ function ReportContent() {
       'multi-agent': { label: 'Multi-Agent System',  badge: 'M', color: '#be185d', bg: '#fdf2f8', desc: 'Requires coordinated agents across multiple teams or systems.' },
       'agent':       { label: 'AI Agent',             badge: 'A', color: '#7c3aed', bg: '#f5f3ff', desc: 'An autonomous AI agent can handle this end-to-end.' },
       'human-loop':  { label: 'Agent + Human Review', badge: 'H', color: '#ea580c', bg: '#fff7ed', desc: 'Agent does the work; human reviews or approves.' },
-      'simple':      { label: 'Simple Automation',    badge: 'S', color: '#0891b2', bg: '#ecfeff', desc: 'Rule-based or workflow automation — no AI needed.' },
-      null:          { label: 'Manual',               badge: '—', color: '#94a3b8', bg: '#f8fafc', desc: 'No automation opportunity identified for these steps.' },
+      'simple':      { label: 'Simple Automation',    badge: 'S', color: '#0891b2', bg: '#ecfeff', desc: 'Rule-based or workflow automation - no AI needed.' },
+      null:          { label: 'Manual',               badge: '-', color: '#94a3b8', bg: '#f8fafc', desc: 'No automation opportunity identified for these steps.' },
     };
 
     const autoGroups = {};
@@ -1864,12 +1866,12 @@ function ReportContent() {
       autoGroups[key].push({ step, si, cat });
     });
 
-    // Implementation hints per category — point to concrete tooling so the
+    // Implementation hints per category - point to concrete tooling so the
     // reader knows *how* to act on the opportunity, not just that one exists.
     const AUTO_IMPL_HINT = {
       'simple':      'Implement with workflow tools: Zapier, n8n, Power Automate, or native webhooks/APIs between source and target systems.',
       'agent':       'Implement with an LLM-driven agent (e.g. Claude / GPT via function-calling) wired to the relevant systems and a small action toolset.',
-      'human-loop':  'Implement as an agent that prepares context, flags edge cases and routes a one-click approval to the reviewer — approvals land in Slack / email / a review queue.',
+      'human-loop':  'Implement as an agent that prepares context, flags edge cases and routes a one-click approval to the reviewer - approvals land in Slack / email / a review queue.',
       'multi-agent': 'Implement an orchestrator (LangGraph / Claude agents SDK) that delegates to specialist agents per department, with shared state + status tracking.',
       null:          'No clear automation pattern. Re-examine once upstream inputs are structured or the step is decomposed into measurable sub-actions.',
     };
@@ -1987,7 +1989,7 @@ function ReportContent() {
       });
 
     const REC_GROUP_META = {
-      'quick-win': { label: 'Quick Wins',        icon: '⚡', desc: 'Low effort, high impact — do these first.' },
+      'quick-win': { label: 'Quick Wins',        icon: '⚡', desc: 'Low effort, high impact - do these first.' },
       'medium':    { label: 'Medium-term',        icon: '🎯', desc: 'Worth planning into the next cycle.' },
       'project':   { label: 'Longer-term',        icon: '🔧', desc: 'Require more planning or investment.' },
       'other':     { label: 'Other',              icon: '📋', desc: '' },
@@ -2100,7 +2102,7 @@ function ReportContent() {
                 entries={deptEntries}
                 getValue={(d) => d.work}
                 getTotal={() => totalWork}
-                fmtValue={(v) => v > 0 ? fmtMin(v) : '—'}
+                fmtValue={(v) => v > 0 ? fmtMin(v) : '-'}
                 barColor={(di) => DEPT_PALETTE[di % DEPT_PALETTE.length]}
               />
             )}
@@ -2110,7 +2112,7 @@ function ReportContent() {
                 entries={deptEntries}
                 getValue={(d) => d.wait}
                 getTotal={() => totalWait}
-                fmtValue={(v) => v > 0 ? fmtMin(v) : '—'}
+                fmtValue={(v) => v > 0 ? fmtMin(v) : '-'}
                 barColor="#f59e0b"
               />
             )}
@@ -2187,7 +2189,7 @@ function ReportContent() {
     ];
 
     /* Report-level tabs (Key Findings + tracker + next) render only in Full
-       mode on the first process — they're cross-process synthesis, not
+       mode on the first process - they're cross-process synthesis, not
        per-process content. Summary stays the four core tabs
        (Overview…Automation) in every context so the iframe and standalone
        page match. Key Findings is pulled out separately so it can be
@@ -2239,7 +2241,7 @@ function ReportContent() {
       const stepCountForNext = (firstProcessForNext?.steps || []).length;
       const undocumented = stepCountForNext > 0 && stepCountForNext < 4;
 
-      // Three execution phases — each item is tagged with its group so we
+      // Three execution phases - each item is tagged with its group so we
       // can render grouped cards instead of a flat checklist. Keeps copy
       // the same but gives the reader a clear "do this, then this" arc.
       const nextItems = [];
@@ -2256,10 +2258,10 @@ function ReportContent() {
         });
       }
       if (bottleneckReason) {
-        nextItems.push({ key: 'bottleneck', group: 'validate', text: `Validate the bottleneck with the team: "${bottleneckReason}" — confirm root cause before investing in a fix.` });
+        nextItems.push({ key: 'bottleneck', group: 'validate', text: `Validate the bottleneck with the team: "${bottleneckReason}" - confirm root cause before investing in a fix.` });
       }
       if (hasKnowledgeRisk) {
-        nextItems.push({ key: 'knowledge', group: 'validate', text: 'Document the process in a shared runbook and cross-train a backup — the process currently ' + (knowledgeRisk === 'stops' ? 'stops' : 'slows down') + ' when the key person is unavailable.' });
+        nextItems.push({ key: 'knowledge', group: 'validate', text: 'Document the process in a shared runbook and cross-train a backup - the process currently ' + (knowledgeRisk === 'stops' ? 'stops' : 'slows down') + ' when the key person is unavailable.' });
       }
       if (undocumented) {
         nextItems.push({ key: 'flesh', group: 'validate', text: 'Add more steps, systems, and handoff detail so the next run of this diagnostic can surface specific recommendations.' });
@@ -2374,7 +2376,7 @@ function ReportContent() {
     );
 
     /* When there's only one process, the top-of-page title already
-       carries the name — drop the per-process h3 to avoid duplication.
+       carries the name - drop the per-process h3 to avoid duplication.
        Multi-process reports still get per-block titles for orientation. */
     const showBlockTitle = (processes || []).length > 1;
     return (
@@ -2402,7 +2404,7 @@ function ReportContent() {
      legacy light layout; keep styling consistent for Report vs Flow. */
   return (
     <div className={`report-page report-page--embed${!isEmbedView ? ' report-page--portal' : ''}${isFlowView ? ' report-page--flow' : ''}`}>
-      {/* Top bar — hidden in embed mode so the iframe-on-canvas view stays clean */}
+      {/* Top bar - hidden in embed mode so the iframe-on-canvas view stays clean */}
       {!isEmbedView && (
         <div className="top-bar top-bar--report">
           <div className="top-bar-inner">
@@ -2413,7 +2415,7 @@ function ReportContent() {
             </div>
             <div className="top-bar-nav">
               <ThemeToggle className="top-bar-theme-btn" />
-              {!isClientView && id && <Link href={processAuditOpenInChatHref} className="top-bar-link">Edit</Link>}
+              {!isClientView && id && <Link href={processAuditOpenInChatHref} className="top-bar-link" target="_blank" rel="noopener noreferrer">Edit</Link>}
               {!isClientView && (sessionUser?.email ? (
                 <>
                   <Link href="/portal" className="top-bar-link">Dashboard</Link>
@@ -2428,7 +2430,7 @@ function ReportContent() {
         </div>
       )}
 
-      {/* Report vs Flow toggle — rendered in every context (standalone + embed)
+      {/* Report vs Flow toggle - rendered in every context (standalone + embed)
           so the iframe has toggle parity with the full page. Summary/Full lives
           in ReportReadyHero below. */}
       {id && (
@@ -2477,7 +2479,7 @@ function ReportContent() {
         {/* "Save and continue later" only makes sense mid-audit, i.e. when
             the report is rendered inside the audit-flow iframe. Once the
             user opens the standalone page (new tab, portal, shared link)
-            the report is already finalised — hide the bar everywhere else. */}
+            the report is already finalised - hide the bar everywhere else. */}
         {!isSummaryView && isEmbedView && !sessionUser && (
           <div className="report-progress-bar">
             <div className="report-progress-row">
@@ -2492,7 +2494,7 @@ function ReportContent() {
         )}
 
         <div className="report-card">
-          {/* Dashboard-origin breadcrumb — gives users a one-click path back
+          {/* Dashboard-origin breadcrumb - gives users a one-click path back
               to where they came from. Only shown when the report was opened
               from the dashboard and not inside an iframe. */}
           {fromPortal && !isEmbedView && (
@@ -2515,7 +2517,7 @@ function ReportContent() {
             </div>
           )}
 
-          {/* Single top-of-page title — one source of truth for the
+          {/* Single top-of-page title - one source of truth for the
               process name, with a darker header band and a
               "Process audit | Company" subtitle underneath. */}
           {(processes[0]?.name || rawProcesses[0]?.processName) && (
@@ -2541,7 +2543,7 @@ function ReportContent() {
             </div>
           )}
 
-          {/* Same header as chat canvas — before lens blocks and report body.
+          {/* Same header as chat canvas - before lens blocks and report body.
               Rendered in embed too so the iframe exposes the Summary/Full
               toggle and stays structurally identical to the standalone page. */}
           {!isFlowView && reportView === 'report' && (
@@ -2556,13 +2558,13 @@ function ReportContent() {
               />
               {!isClientView && (
                 <div className="report-ai-disclaimer report-ai-disclaimer--under-ready">
-                  AI-generated from the information you provided — a starting point, not a final recommendation. <a href="mailto:hope@vesno.ai?subject=Redesign%20consultation">Book a free consultation</a> to validate with our team.
+                  AI-generated from the information you provided - a starting point, not a final recommendation. <a href="mailto:hope@vesno.ai?subject=Redesign%20consultation">Book a free consultation</a> to validate with our team.
                 </div>
               )}
             </div>
           )}
 
-          {/* Flow view — full-canvas process flow diagram. Rendered in place of
+          {/* Flow view - full-canvas process flow diagram. Rendered in place of
               the report body when the user toggles "Flow" in the view
               controls above. All other report-body sections (segment lens,
               benchmarks, metric grid, tabs) are suppressed. */}
@@ -2585,23 +2587,23 @@ function ReportContent() {
             </div>
           )}
 
-          {/* Module-specific insight box — full report only; summary matches chat embed (tabs only) */}
+          {/* Module-specific insight box - full report only; summary matches chat embed (tabs only) */}
           {!isFlowView && !isSummaryView && segmentMeta && (() => {
             const SEGMENT_INSIGHTS = {
               pe: {
                 icon: '📊',
                 heading: 'Private Equity Lens',
                 items: [
-                  'Review the redesign savings estimates for data-room readiness — each saving should be defensible with a clear formula.',
+                  'Review the redesign savings estimates for data-room readiness - each saving should be defensible with a clear formula.',
                   'Automation-ready steps (flagged above) represent the fastest path to EBITDA improvement within your investment horizon.',
-                  'Cross-department handoffs are a common source of margin leakage — prioritise eliminating them before exit.',
+                  'Cross-department handoffs are a common source of margin leakage - prioritise eliminating them before exit.',
                 ],
               },
               ma: {
                 icon: '🔗',
                 heading: 'M&A Integration Lens',
                 items: [
-                  'Steps with undocumented ownership are integration risks — flag these for your Day 1 readiness checklist.',
+                  'Steps with undocumented ownership are integration risks - flag these for your Day 1 readiness checklist.',
                   'Manual handoffs between teams are the most common source of process failure during entity integration.',
                   'Use the handover feature to capture both entity perspectives on any shared process before integration.',
                 ],
@@ -2610,8 +2612,8 @@ function ReportContent() {
                 icon: '🛡',
                 heading: 'High Risk Ops Lens',
                 items: [
-                  'Flag any step with a single responsible person and no documented backup — these are your highest-severity single points of failure.',
-                  'Undocumented decision steps are the most common source of compliance gaps — prioritise capturing them explicitly.',
+                  'Flag any step with a single responsible person and no documented backup - these are your highest-severity single points of failure.',
+                  'Undocumented decision steps are the most common source of compliance gaps - prioritise capturing them explicitly.',
                   'Quick-win recommendations above can reduce operational exposure without requiring large-scale investment.',
                 ],
               },
@@ -2619,8 +2621,8 @@ function ReportContent() {
                 icon: '📈',
                 heading: 'Scaling Lens',
                 items: [
-                  'High-frequency steps with manual work will compound as volume grows — prioritise automating these first.',
-                  'Steps with cross-department handoffs create bottlenecks at scale — consolidate or automate the handoff.',
+                  'High-frequency steps with manual work will compound as volume grows - prioritise automating these first.',
+                  'Steps with cross-department handoffs create bottlenecks at scale - consolidate or automate the handoff.',
                   'Processes where one person is responsible for multiple steps are delegation blockers as the team grows.',
                 ],
               },
@@ -2647,7 +2649,7 @@ function ReportContent() {
             );
           })()}
 
-          {/* PE Data-Room Readiness Checklist — full report only */}
+          {/* PE Data-Room Readiness Checklist - full report only */}
           {!isFlowView && !isSummaryView && segment === 'pe' && (() => {
             const DR_CHECKS = [
               {
@@ -2699,7 +2701,7 @@ function ReportContent() {
               {
                 key: 'automation',
                 label: 'Automation readiness',
-                desc: 'Manual process steps that could be automated represent trapped value — buyers discount these.',
+                desc: 'Manual process steps that could be automated represent trapped value - buyers discount these.',
                 score: (proc) => {
                   const pct = auto?.percentage ?? 0;
                   if (pct >= 60) return 'green';
@@ -2718,7 +2720,7 @@ function ReportContent() {
             const reviews = checks.filter(c => c.status === 'amber').length;
             return (
               <Collapsible
-                title={`Data-Room Readiness${blockers > 0 ? ` — ${blockers} risk${blockers > 1 ? 's' : ''}` : reviews > 0 ? ` — ${reviews} to review` : ' — All clear'}`}
+                title={`Data-Room Readiness${blockers > 0 ? ` - ${blockers} risk${blockers > 1 ? 's' : ''}` : reviews > 0 ? ` - ${reviews} to review` : ' - All clear'}`}
                 defaultOpen={blockers > 0}
               >
                 <p style={{ fontSize: 13, color: 'var(--text-mid)', marginBottom: 14 }}>
@@ -2742,7 +2744,7 @@ function ReportContent() {
             );
           })()}
 
-          {/* Re-audit delta — compare this audit to the original — full report only */}
+          {/* Re-audit delta - compare this audit to the original - full report only */}
           {!isFlowView && !isSummaryView && parentReport && (() => {
             const pd = parentReport.diagnosticData || {};
             const ps = pd.summary || {};
@@ -2774,7 +2776,7 @@ function ReportContent() {
                   <div className="report-delta-item">
                     <span className="report-delta-item-label">Original audit</span>
                     <span className="report-delta-item-value report-delta-item-value--sm">
-                      <a href={`/report?id=${parentReport.id}`} className="report-delta-link">View →</a>
+                      <a href={`/report?id=${parentReport.id}`} className="report-delta-link" target="_blank" rel="noopener noreferrer">View →</a>
                     </span>
                   </div>
                 </div>
@@ -2782,7 +2784,7 @@ function ReportContent() {
             );
           })()}
 
-          {/* Feature 8: Redesign Delta — before/after summary when redesign exists — full report only */}
+          {/* Feature 8: Redesign Delta - before/after summary when redesign exists - full report only */}
           {!isFlowView && !isSummaryView && redesign && (() => {
             // Use effectiveMetrics from RedesignSection (synced via onEffectiveMetrics callback)
             // so this stays consistent with the Summary & Metrics tab which respects decisions
@@ -2829,7 +2831,7 @@ function ReportContent() {
             );
           })()}
 
-          {/* Main report body — single render path for every context. Embed
+          {/* Main report body - single render path for every context. Embed
               iframe and standalone now share the same structure; the hero
               above carries the disclaimer and Summary/Full toggle. */}
           {!isFlowView && reportView === 'report' && (
@@ -2892,7 +2894,7 @@ function ReportContent() {
               </div>
             </div>
           )}
-          {/* Full-report extras — content not in the main tab strip (tracker &
+          {/* Full-report extras - content not in the main tab strip (tracker &
               next steps live as tabs after Automation). Hidden in Summary +
               Flow + embed modes. */}
           {!isSummaryView && !isFlowView && (() => {
@@ -2936,7 +2938,7 @@ function ReportContent() {
                 content: (
                   <div className="report-full-extra-body">
                     <p className="report-full-extra-intro">
-                      Benchmarks for <strong>{industry}</strong> — internal reference only, not shown to clients.
+                      Benchmarks for <strong>{industry}</strong> - internal reference only, not shown to clients.
                     </p>
                     <div className="report-full-bench-grid">
                       {[
@@ -2971,7 +2973,7 @@ function ReportContent() {
               </div>
             );
           })()}
-          {/* Create Account card — full-page full report only (embed + summary match chat) */}
+          {/* Create Account card - full-page full report only (embed + summary match chat) */}
           {!sessionUser && !isEmbedView && !isSummaryView && (
             <div className="report-gate-card">
               <div className="report-gate-icon">&#128274;</div>
@@ -2984,7 +2986,7 @@ function ReportContent() {
             </div>
           )}
 
-          {/* Green banner — full report only; hidden in embed and in summary (same as chat embed) */}
+          {/* Green banner - full report only; hidden in embed and in summary (same as chat embed) */}
           {isMapOnly && !isEmbedView && !isSummaryView && (
             <div className="report-upgrade-banner">
               <span className="report-upgrade-icon">&#128202;</span>

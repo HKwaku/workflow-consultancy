@@ -51,7 +51,7 @@ describe('reconcileDecisionBranches', () => {
 
   // ── Deletion ─────────────────────────────────────────────────────────────
 
-  test('removes branch when its auto-generated edge is deleted — "Step N" target format', () => {
+  test('removes branch when its auto-generated edge is deleted - "Step N" target format', () => {
     const steps = makeSteps([
       { name: 'Check', isDecision: true, branches: [
         { label: 'Yes', target: 'Step 2' },   // → step idx 1
@@ -67,7 +67,7 @@ describe('reconcileDecisionBranches', () => {
     assert.equal(result[0].branches[0].target, 'Step 3');
   });
 
-  test('removes branch when its auto-generated edge is deleted — NAME-BASED target (AI upload format)', () => {
+  test('removes branch when its auto-generated edge is deleted - NAME-BASED target (AI upload format)', () => {
     // This is the primary bug fix: AI often sets target to step names, not "Step N"
     const steps = makeSteps([
       { name: 'Check eligibility', isDecision: true, branches: [

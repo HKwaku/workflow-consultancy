@@ -173,7 +173,7 @@ export default function PortalAnalyticsPanel({
           items.push({
             id: r.id,
             label: (r.processes || []).map(p => p.name).join(', ') || r.displayCode || r.id?.slice(0, 8),
-            action: `${pct}% automation readiness — ${70 - pct}% from optimised threshold`,
+            action: `${pct}% automation readiness - ${70 - pct}% from optimised threshold`,
             type: 'process',
             badge: 'Automation-ready',
             badgeColor: '#3b82f6',
@@ -527,11 +527,11 @@ export default function PortalAnalyticsPanel({
                         </div>
                         {item.action && <span className="portal-quick-why">{item.action}</span>}
                         <div className="portal-quick-actions">
-                          <Link href={`/report?id=${item.id}&portal=1`} className="portal-quick-action-link">
+                          <Link href={`/report?id=${item.id}&portal=1`} className="portal-quick-action-link" target="_blank" rel="noopener noreferrer">
                             Review &rarr;
                           </Link>
                           {item.hasRedesign && (
-                            <Link href={`/report?id=${item.id}&portal=1&tab=redesign`} className="portal-quick-action-link portal-quick-action-link--redesign">
+                            <Link href={`/report?id=${item.id}&portal=1&tab=redesign`} className="portal-quick-action-link portal-quick-action-link--redesign" target="_blank" rel="noopener noreferrer">
                               View redesign &rarr;
                             </Link>
                           )}
@@ -551,13 +551,13 @@ export default function PortalAnalyticsPanel({
             <section className="portal-analytics-section portal-three-col-section">
               <span className="portal-analytics-section-title">High Risk Processes</span>
               {highRisk.length === 0 ? (
-                <p className="portal-analytics-empty">No high-risk processes — all processes are on track.</p>
+                <p className="portal-analytics-empty">No high-risk processes - all processes are on track.</p>
               ) : (
                 <>
                   <ul className="portal-risk-list">
                     {(showAllHighRisk ? highRisk : highRisk.slice(0, 3)).map((item) => (
                       <li key={item.id}>
-                        <Link href={`/report?id=${item.id}&portal=1`} className="portal-risk-link">
+                        <Link href={`/report?id=${item.id}&portal=1`} className="portal-risk-link" target="_blank" rel="noopener noreferrer">
                           {item.label}
                         </Link>
                         <span className="portal-risk-why">
@@ -584,7 +584,7 @@ export default function PortalAnalyticsPanel({
                   <ul className="portal-recent-list">
                     {(showAllActivity ? recentActivity : recentActivity.slice(0, 3)).map((item) => (
                       <li key={item.id}>
-                        <Link href={`/report?id=${item.id}&portal=1`} className="portal-recent-link">
+                        <Link href={`/report?id=${item.id}&portal=1`} className="portal-recent-link" target="_blank" rel="noopener noreferrer">
                           {item.label}
                         </Link>
                         <span className="portal-recent-what">{item.what}</span>

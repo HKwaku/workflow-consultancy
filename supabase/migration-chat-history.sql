@@ -2,8 +2,8 @@
 -- Chat history: real-time persistence + organised history
 --
 -- Two tables:
---   chat_sessions  — one row per conversation (user × process/redesign)
---   chat_messages  — one row per turn, FK'd to chat_sessions
+--   chat_sessions  - one row per conversation (user × process/redesign)
+--   chat_messages  - one row per turn, FK'd to chat_sessions
 --
 -- Flow: each time the user sends or the assistant replies, the client
 -- POSTs to /api/chat-messages which upserts the session and appends

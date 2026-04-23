@@ -1,7 +1,7 @@
 -- =============================================================================
 -- Schema additions migration (part 3)
 -- Adds columns that were defined after migration-schema-fixes-2.sql was run.
--- Safe to run multiple times — all statements use IF NOT EXISTS.
+-- Safe to run multiple times - all statements use IF NOT EXISTS.
 -- =============================================================================
 
 -- Cost analysis token expiry (30-day validity for manager cost-analysis links)

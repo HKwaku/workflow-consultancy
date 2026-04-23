@@ -186,7 +186,7 @@ function FlowCanvasInner({
   }, [initialEdges, filteredCustomEdges, deletedSet]);
 
   useEffect(() => {
-    // Skip on initial mount — a newly-created canvas instance (e.g. floating viewer) must
+    // Skip on initial mount - a newly-created canvas instance (e.g. floating viewer) must
     // not clear custom edges just because they're already baked into initialEdges.
     if (isInitialMount.current) return;
     if (onCustomEdgesChange && filteredCustomEdges.length < (customEdges || []).length) {
@@ -223,7 +223,7 @@ function FlowCanvasInner({
   // even if React batches prop updates after the layout change.
   const storedPositionsRef = useRef(storedPositions);
   storedPositionsRef.current = storedPositions;
-  // Positions as they were when the page first loaded — never updated after mount.
+  // Positions as they were when the page first loaded - never updated after mount.
   // Reset uses this so it always goes back to the original report state, not the bare layout.
   const mountStoredPositionsRef = useRef(storedPositions);
   const originalEdgesRef = useRef(null);
@@ -238,7 +238,7 @@ function FlowCanvasInner({
 
   initialNodesRef.current = initialNodes;
 
-  // Only sync edges when content actually changes — allEdges gets new ref every render
+  // Only sync edges when content actually changes - allEdges gets new ref every render
   // because process prop is recreated by parent, which would cause infinite setEdges loop.
   // Include type and handles so layout-driven type changes (e.g. default→wrapConnector)
   // are detected and trigger a setEdges call.
@@ -274,7 +274,7 @@ function FlowCanvasInner({
             ...initN,
             position: {
               x: initN.position.x + (stored.dx ?? 0),
-              // In swimlane mode, lanes control vertical positioning — don't apply dy.
+              // In swimlane mode, lanes control vertical positioning - don't apply dy.
               // Grid-mode Y offsets would push nodes above lane.y + LANE_PAD, causing
               // recomputeSwimlaneLanesFromNodes to unnecessarily expand lane heights.
               y: initN.position.y + (isSwimlaneRef.current ? 0 : (stored.dy ?? 0)),
@@ -382,7 +382,7 @@ function FlowCanvasInner({
       const positionChanges = changes.filter((c) => c.type === 'position' && c.dragging === false);
       if (positionChanges.length > 0 && onPositionsChange) {
         // Only update offsets for nodes the user actually dragged.
-        // In swimlane mode, non-dragged nodes are cascade-shifted to track their lane —
+        // In swimlane mode, non-dragged nodes are cascade-shifted to track their lane -
         // saving those shifted positions as offsets would cause lane heights to grow
         // permanently on every drag, since the offsets would re-push nodes outside
         // their lane bounds on the next load.
@@ -395,7 +395,7 @@ function FlowCanvasInner({
           offsets[n.id] = initN
             ? {
                 dx: n.position.x - initN.position.x,
-                // Don't store dy in swimlane — lanes control Y, and stored dy would
+                // Don't store dy in swimlane - lanes control Y, and stored dy would
                 // be ignored on re-apply anyway (see withOffsets above).
                 dy: isSwimlane ? 0 : n.position.y - initN.position.y,
               }
@@ -519,7 +519,7 @@ function FlowCanvasInner({
     const ti = parseInt(n[1], 10);
     if (si < 0 || ti < 0) return false;
     // Custom edges, decision branch edges, and merge edges can span non-consecutive
-    // indices — always allow insertion on them
+    // indices - always allow insertion on them
     return isCustomEdge || isDecisionEdge || Math.abs(si - ti) === 1;
   }, []);
 
@@ -539,7 +539,7 @@ function FlowCanvasInner({
       const insertIdx = isDecisionSource || isMergeTarget ? ti : Math.min(si, ti) + 1;
 
       const edgeId = edges.find((e) => e.source === sourceId && e.target === targetId)?.id;
-      // Fix 3: don't touch edges when inserting after a decision/parallel node —
+      // Fix 3: don't touch edges when inserting after a decision/parallel node -
       // branch connections must stay intact so the user can rewire manually.
       if (edgeId && !isDecisionSource) {
         const isCustom = edgeId?.startsWith('e-custom-');
@@ -552,7 +552,7 @@ function FlowCanvasInner({
         setEdges((eds) => eds.filter((e) => e.id !== edgeId));
       }
 
-      // processToReactFlow handles all layout automatically after insertion —
+      // processToReactFlow handles all layout automatically after insertion -
       // the new node takes the target's former slot and subsequent nodes shift
       // one position right. No position override or shiftX needed here.
       onAddNodeBetween(insertIdx, isDecisionSource);
@@ -631,7 +631,7 @@ function FlowCanvasInner({
     (_, node) => {
       if (node.type !== 'decision') return;
       const selectedNodes = nodes.filter((n) => n.selected);
-      if (selectedNodes.length > 1) return; // user has a custom selection — don't override
+      if (selectedNodes.length > 1) return; // user has a custom selection - don't override
 
       const di = node.data?.stepIndex;
       if (typeof di !== 'number') return;

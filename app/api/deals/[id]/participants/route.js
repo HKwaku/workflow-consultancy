@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSupabaseHeaders, getSupabaseWriteHeaders, fetchWithTimeout, requireSupabase, checkOrigin, getRequestId } from '@/lib/api-helpers';
 import { requireAuth } from '@/lib/auth';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
+import { requireDealEditor } from '@/lib/dealAuth';
 import { logger } from '@/lib/logger';
 
 /**
@@ -34,14 +35,8 @@ export async function PATCH(request, { params }) {
   const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
   try {
-    // Verify deal ownership
-    const dealResp = await fetchWithTimeout(
-      `${supabaseUrl}/rest/v1/deals?id=eq.${encodeURIComponent(id)}&select=id,owner_email,type`,
-      { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
-    );
-    const [deal] = dealResp.ok ? await dealResp.json() : [];
-    if (!deal) return NextResponse.json({ error: 'Deal not found.' }, { status: 404 });
-    if (deal.owner_email !== auth.email) return NextResponse.json({ error: 'Only the deal owner can link reports.' }, { status: 403 });
+    const guard = await requireDealEditor({ dealId: id, email: auth.email, userId: auth.userId });
+    if (guard.error) return NextResponse.json(guard.error, { status: guard.status });
 
     // Verify participant belongs to this deal
     const partResp = await fetchWithTimeout(

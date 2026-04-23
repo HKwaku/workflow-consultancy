@@ -22,12 +22,25 @@ import { logger } from '@/lib/logger';
  *
  * Returns `{ sessionId, messageId, createdAt }`.
  *
- * Called in real time from the chat client — each user send + each
+ * Called in real time from the chat client - each user send + each
  * assistant reply POSTs once, so history survives a cleared browser
  * and syncs across devices.
  */
 
 const MAX_CONTENT_BYTES = 256 * 1024; // 256 KB per message body
+const ALLOWED_ARTEFACT_KINDS = new Set(['flow_snapshot', 'report', 'cost_analysis', 'deal_analysis']);
+
+function sanitizeArtefactInput(input, createdByEmail) {
+  if (!input || typeof input !== 'object') return null;
+  if (!ALLOWED_ARTEFACT_KINDS.has(input.kind)) return null;
+  return {
+    kind: input.kind,
+    refId: typeof input.refId === 'string' ? input.refId : null,
+    snapshot: input.snapshot ?? null,
+    label: typeof input.label === 'string' ? input.label.slice(0, 240) : null,
+    createdByEmail: createdByEmail || null,
+  };
+}
 
 export async function POST(request) {
   const originErr = checkOrigin(request);
@@ -64,7 +77,7 @@ export async function POST(request) {
         .eq('id', sessionId)
         .maybeSingle();
       if (!row) {
-        // sessionId supplied but does not exist — create it under the
+        // sessionId supplied but does not exist - create it under the
         // authenticated user with that exact id.
         sessionId = await upsertChatSession({
           sessionId,
@@ -104,6 +117,8 @@ export async function POST(request) {
       });
     }
 
+    const artefactInput = sanitizeArtefactInput(body.artefact, auth.email);
+
     const msg = await appendChatMessage({
       sessionId,
       role,
@@ -111,6 +126,7 @@ export async function POST(request) {
       actions: body.actions,
       suggestions: body.suggestions,
       attachments: body.attachments,
+      artefact: artefactInput,
     });
 
     return NextResponse.json({
@@ -118,6 +134,7 @@ export async function POST(request) {
       sessionId,
       messageId: msg.id,
       createdAt: msg.created_at,
+      artefactId: msg.artefactId || null,
     });
   } catch (err) {
     logger.error('chat-messages append failed', { requestId: getRequestId(request), error: err.message });

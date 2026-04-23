@@ -298,6 +298,7 @@ export default function Screen6Complete({ onComplete }) {
           costAnalystEmail: contact?.costAnalystEmail || null,
           dealParticipantToken: authUser?.dealParticipantToken || null,
           dealCode: authUser?.dealCode || null,
+          dealFlowId: authUser?.dealFlowId || null,
         };
 
         const reportData = await sendDiagnosticReport(reportPayload, { accessToken: accessToken || undefined });
@@ -477,7 +478,7 @@ export default function Screen6Complete({ onComplete }) {
               )}
 
               {!pendingUrl && onComplete && (
-                <p className="sc6-redirect-hint">Report ready — loading in your workspace…</p>
+                <p className="sc6-redirect-hint">Report ready - loading in your workspace…</p>
               )}
               {pendingUrl && (
                 <p className="sc6-redirect-hint">Redirecting automatically in a few seconds…</p>

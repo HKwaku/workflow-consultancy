@@ -18,7 +18,10 @@ import { loadSnippets, saveSnippet, deleteSnippet } from '@/lib/diagnostic/saved
 import { getWaitProfile } from '@/lib/flows/flowModel';
 import { repairFlow } from '@/lib/flows/normalizer';
 import { reconcileDecisionBranches } from '@/lib/flows/reconcileEdges';
-import { computePhaseState } from '@/lib/diagnostic/intakePhases';
+import { computePhaseState, INTAKE_PHASES } from '@/lib/diagnostic/intakePhases';
+
+const INTAKE_PHASES_BY_ID = Object.fromEntries(INTAKE_PHASES.map((p) => [p.id, p]));
+import { generateReportInline } from '@/lib/diagnostic';
 import FloatingFlowViewer from '../FloatingFlowViewer';
 import ChatHistoryPanel from '../ChatHistoryPanel';
 import ChatMessageContent, { CopyButton } from '../ChatMessageContent';
@@ -99,7 +102,7 @@ const GUIDE_TOUR = [
   },
   {
     title: "Chat history",
-    desc: "Every conversation is autosaved. Open this panel to jump back into any prior audit — your flow, chat, and progress all come back exactly as you left them.",
+    desc: "Every conversation is autosaved. Open this panel to jump back into any prior audit - your flow, chat, and progress all come back exactly as you left them.",
     selector: '[title="Chat history"]',
     cta: "Next →",
   },
@@ -111,7 +114,7 @@ const GUIDE_TOUR = [
   },
   {
     title: "Snippets",
-    desc: "Save reusable step templates — approvals, reviews, onboarding chunks — and drop them into any flow. Great for processes you map over and over.",
+    desc: "Save reusable step templates - approvals, reviews, onboarding chunks - and drop them into any flow. Great for processes you map over and over.",
     selector: '[title="Snippets"]',
     cta: "Next →",
   },
@@ -129,19 +132,19 @@ const GUIDE_TOUR = [
   },
   {
     title: "Cost analysis",
-    desc: "See the financial impact of this process — annual cost, estimated savings, payback, and ROI. Available once a report has been generated.",
+    desc: "See the financial impact of this process - annual cost, estimated savings, payback, and ROI. Available once a report has been generated.",
     selector: '[title="Cost analysis"]',
     cta: "Next →",
   },
   {
     title: "Handover to a colleague",
-    desc: "Pass this process audit to a colleague. They'll get a unique link and can pick up exactly where you left off — your flow, chat history, and notes travel with it.",
+    desc: "Pass this process audit to a colleague. They'll get a unique link and can pick up exactly where you left off - your flow, chat history, and notes travel with it.",
     selector: '[title="Handover to a colleague"]',
     cta: "Next →",
   },
   {
     title: "Generate report",
-    desc: "When the flow is complete, click here to generate your diagnostic report — bottlenecks, automation opportunities, and cost impact.",
+    desc: "When the flow is complete, click here to generate your diagnostic report - bottlenecks, automation opportunities, and cost impact.",
     selector: '[title="Generate report"]',
     cta: "Next →",
   },
@@ -170,7 +173,7 @@ function MapGuide({ onDismiss }) {
     if (!current.selector) { setSpotlightStyle(null); return; }
     const el = document.querySelector(current.selector);
     if (!el) {
-      // Selector didn't match — skip this stop so we don't show a pointer to nothing.
+      // Selector didn't match - skip this stop so we don't show a pointer to nothing.
       setSpotlightStyle(null);
       if (step < GUIDE_TOUR.length - 1) setStep((s) => s + 1);
       return;
@@ -214,12 +217,12 @@ function MapGuide({ onDismiss }) {
       style={spotlightStyle ? { background: 'transparent' } : {}}
       onClick={onDismiss}
     >
-      {/* Spotlight ring — its box-shadow creates the dark overlay when active */}
+      {/* Spotlight ring - its box-shadow creates the dark overlay when active */}
       {spotlightStyle && (
         <div className="s7-guide-spotlight" style={spotlightStyle} />
       )}
 
-      {/* Tour card — positioned next to highlighted element */}
+      {/* Tour card - positioned next to highlighted element */}
       <div
         className={`s7-guide-card${spotlightStyle ? ' s7-guide-card--arrow' : ''}`}
         style={cardStyle}
@@ -250,7 +253,7 @@ function MapGuide({ onDismiss }) {
   );
 }
 
-/** In-chat PE deal setup card — rendered as part of an assistant message. */
+/** In-chat PE deal setup card - rendered as part of an assistant message. */
 function DealSetupCard({ platformCompany, onSubmit }) {
   const [dealName, setDealName] = useState('');
   const [targetCompany, setTargetCompany] = useState('');
@@ -315,7 +318,7 @@ function DealSetupCard({ platformCompany, onSubmit }) {
   );
 }
 
-/** Save + optional view report — top of icon rail */
+/** Save + optional view report - top of icon rail */
 function MapRailPrimaryTools({ editingReportId, onViewReport, onViewCost, onHandover, onContinue, onSaveToReport, savingToReport, sessionUser, hasCostAccess }) {
   return (
     <>
@@ -378,7 +381,37 @@ function MapRailPrimaryTools({ editingReportId, onViewReport, onViewCost, onHand
   );
 }
 
-/** Account menu — pinned to bottom of rail (Claude-style) */
+/** Account menu - pinned to bottom of rail (Claude-style) */
+function MapRailPortalNav() {
+  return (
+    <>
+      <a href="/portal" target="_blank" rel="noopener noreferrer" className="s7-split-rail-btn s7-split-rail-link" title="Your Processes (new tab)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="8" y1="13" x2="16" y2="13" />
+          <line x1="8" y1="17" x2="16" y2="17" />
+        </svg>
+      </a>
+      <a href="/portal/analytics" target="_blank" rel="noopener noreferrer" className="s7-split-rail-btn s7-split-rail-link" title="Analytics (new tab)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <line x1="4" y1="20" x2="4" y2="10" />
+          <line x1="10" y1="20" x2="10" y2="4" />
+          <line x1="16" y1="20" x2="16" y2="14" />
+          <line x1="20" y1="20" x2="20" y2="8" />
+        </svg>
+      </a>
+      <a href="/portal/deals" target="_blank" rel="noopener noreferrer" className="s7-split-rail-btn s7-split-rail-link" title="Deals (new tab)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+          <line x1="12" y1="22.08" x2="12" y2="12" />
+        </svg>
+      </a>
+    </>
+  );
+}
+
 function MapRailPortalFooter({ sessionUser, onSignOut }) {
   const { theme } = useTheme();
   const [open, setOpen] = useState(false);
@@ -459,6 +492,84 @@ function MapRailPortalFooter({ sessionUser, onSignOut }) {
   );
 }
 
+function ArtefactsPanel({ artefacts, onClose, onOpenReport, onOpenFlow, onPin }) {
+  const count = artefacts.length;
+  const labelFor = (kind) => (
+    kind === 'flow_snapshot' ? 'Flow snapshot'
+      : kind === 'report' ? 'Report'
+        : kind === 'cost_analysis' ? 'Cost analysis'
+          : kind === 'deal_analysis' ? 'Deal analysis'
+            : 'Artefact'
+  );
+  const iconFor = (kind) => (kind === 'flow_snapshot' ? '◫' : kind === 'report' ? '▤' : '◉');
+  const handle = (a) => {
+    if (a.kind === 'report' && a.refId) onOpenReport?.(a.refId);
+    else if (a.kind === 'flow_snapshot') onOpenFlow?.(a.snapshot);
+  };
+  return (
+    <div className="s7-chat-inner s7-artefacts-panel">
+      <div className="s7-artefacts-panel-hd">
+        <div className="s7-artefacts-panel-title">
+          <span aria-hidden>◫</span> Artefacts <span className="s7-artefacts-panel-count">{count}</span>
+        </div>
+        <div className="s7-artefacts-panel-actions">
+          {onPin ? (
+            <button type="button" className="s7-artefacts-panel-pin" onClick={onPin} title="Snapshot the current flow">
+              <span aria-hidden>📌</span> Pin current
+            </button>
+          ) : null}
+          <button type="button" className="s7-artefacts-panel-close" onClick={onClose} aria-label="Close">×</button>
+        </div>
+      </div>
+      <div className="s7-artefacts-panel-body">
+        {count === 0 ? (
+          <div className="s7-artefacts-panel-empty">
+            <p>No artefacts in this chat yet.</p>
+            <p className="s7-artefacts-panel-empty-hint">Redesigns, generated reports, and upload reshapes will show up here so you can jump back to them.</p>
+          </div>
+        ) : (
+          <ul className="s7-artefacts-panel-list">
+            {artefacts.map((a, i) => (
+              <li key={i}>
+                <button type="button" className="s7-artefacts-panel-item" onClick={() => handle(a)}>
+                  <span className="s7-artefacts-panel-item-icon" aria-hidden>{iconFor(a.kind)}</span>
+                  <span className="s7-artefacts-panel-item-body">
+                    <span className="s7-artefacts-panel-item-label">{a.label || labelFor(a.kind)}</span>
+                    <span className="s7-artefacts-panel-item-kind">{labelFor(a.kind)}</span>
+                  </span>
+                  <span className="s7-artefacts-panel-item-arrow" aria-hidden>→</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ArtefactPill({ artefact, onOpenReport, onOpenFlow }) {
+  if (!artefact || !artefact.kind) return null;
+  const label = artefact.label || (
+    artefact.kind === 'report' ? 'Diagnostic report'
+      : artefact.kind === 'flow_snapshot' ? 'Flow snapshot'
+        : artefact.kind === 'cost_analysis' ? 'Cost analysis'
+          : artefact.kind === 'deal_analysis' ? 'Deal analysis'
+            : 'Artefact'
+  );
+  const icon = artefact.kind === 'flow_snapshot' ? '◫' : artefact.kind === 'report' ? '▤' : '◉';
+  const handle = () => {
+    if (artefact.kind === 'report' && artefact.refId) onOpenReport?.(artefact.refId);
+    else if (artefact.kind === 'flow_snapshot') onOpenFlow?.(artefact.snapshot);
+  };
+  return (
+    <button type="button" className="s7-artefact-pill" onClick={handle} title={`Open ${label}`}>
+      <span className="s7-artefact-pill-icon" aria-hidden>{icon}</span>
+      <span className="s7-artefact-pill-label">{label}</span>
+    </button>
+  );
+}
+
 export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp, onAuditTrailToggle, auditTrailOpen, reportToLoad, onReportLoaded, redesignReportId, onRedesignConsumed }) {
   const {
     processData, updateProcessData, goToScreen,
@@ -467,6 +578,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     saveProgressToCloud, buildFullSnapshot, editingReportId, editingRedesign, aiRedesignMode, contact, authUser, setContact,
     addAuditEvent,
     moduleId, setModuleId, dealCanonicalProcessName, dealName, dealRole, dealId, setDeal,
+    completedProcesses, auditTrail, sendDiagnosticReport,
   } = useDiagnostic();
   const { accessToken, user: sessionUser, signOut } = useAuth();
   const { theme } = useTheme();
@@ -492,7 +604,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
         if (cancelled) return;
         const fromMembership = (data.memberships || []).some((m) => m?.entitlements?.cost_analyst);
         setHasCostAccess(Boolean(data.platformAdmin) || fromMembership);
-      } catch { /* ignore — icon just won't render */ }
+      } catch { /* ignore - icon just won't render */ }
     })();
     return () => { cancelled = true; };
   }, [accessToken]);
@@ -504,10 +616,10 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     if (params.get('view') === 'cost') setInlineCostReportId(editingReportId);
   }, [editingReportId]);
 
-  const persistMessageToCloud = useCallback(async ({ role, content, actions, attachments: attachmentsArg, snapshot }) => {
+  const persistMessageToCloud = useCallback(async ({ role, content, actions, attachments: attachmentsArg, snapshot, artefact }) => {
     if (!accessToken) {
       if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
-        console.warn('[chat-save] skipped — no accessToken (user not signed in)');
+        console.warn('[chat-save] skipped - no accessToken (user not signed in)');
       }
       return;
     }
@@ -531,6 +643,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
             ? attachmentsArg.map((a) => ({ name: a.name, type: a.type, size: a.content?.length || a.textContent?.length || 0 }))
             : undefined,
           processSnapshot,
+          artefact: artefact || undefined,
         }),
       }, accessToken);
       if (!resp.ok) {
@@ -539,6 +652,10 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
         return;
       }
       const data = await resp.json().catch(() => null);
+      if (artefact && process.env.NODE_ENV !== 'production') {
+        if (data?.artefactId) console.info('[chat-save] artefact saved', { kind: artefact.kind, artefactId: data.artefactId });
+        else console.warn('[chat-save] artefact sent but server returned no artefactId (migration chat_artefacts likely not applied)', { kind: artefact.kind });
+      }
       if (data?.sessionId && data.sessionId !== chatSessionIdRef.current) {
         chatSessionIdRef.current = data.sessionId;
         if (typeof window !== 'undefined') {
@@ -564,7 +681,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       } catch { /* best-effort */ }
       return;
     }
-    // No session yet — create one carrying the snapshot so autosave
+    // No session yet - create one carrying the snapshot so autosave
     // produces recoverable state before the first chat message is sent.
     if (sessionCreateInFlightRef.current) return;
     sessionCreateInFlightRef.current = true;
@@ -636,6 +753,10 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
   const [showFloatingFlow, setShowFloatingFlow] = useState(false);
   const [inlineReportId, setInlineReportId] = useState(null);
   const [inlineCostReportId, setInlineCostReportId] = useState(null);
+  const [inlineGenerateStatus, setInlineGenerateStatus] = useState('idle'); // 'idle' | 'generating' | 'error'
+  const [inlineGenerateProgress, setInlineGenerateProgress] = useState('');
+  const [inlineGenerateError, setInlineGenerateError] = useState('');
+  const [artefactPreview, setArtefactPreview] = useState(null); // flow_snapshot viewer payload
   const [hasCostAccess, setHasCostAccess] = useState(false);
   const [snippets, setSnippets] = useState(() => { try { return loadSnippets(null); } catch { return []; } });
   const [showSnippetPicker, setShowSnippetPicker] = useState(false);
@@ -651,6 +772,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
 
   /* ═══════ Chat history panel ═══════ */
   const [showChatHistory, setShowChatHistory] = useState(false);
+  const [showArtefactsPanel, setShowArtefactsPanel] = useState(false);
 
   /* Ref for first-paint context inside the one-shot chat seeding effect */
   const chatSeedCtxRef = useRef(null);
@@ -692,11 +814,11 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     const isPort = dRole === 'portfolio_company';
     const isPlat = dRole === 'platform_company';
     if (isPE && dName) {
-      if (isPlat) return `Your roll-up "${dName}" is set up.\n\nWhich process are you mapping first? Tell me the name, then describe the first step — what triggers it and who kicks it off?`;
-      if (isPort && canonical) return `Welcome! You're mapping the "${canonical}" process for the roll-up "${dName}".\n\nWhat's the very first step — what triggers it, and who kicks it off?`;
+      if (isPlat) return `Your roll-up "${dName}" is set up.\n\nWhich process are you mapping first? Tell me the name, then describe the first step - what triggers it and who kicks it off?`;
+      if (isPort && canonical) return `Welcome! You're mapping the "${canonical}" process for the roll-up "${dName}".\n\nWhat's the very first step - what triggers it, and who kicks it off?`;
       return `Hi, I'm Reina! Let's map your processes for "${dName}".\n\nWhat process are you focusing on, and what's the first step?`;
     }
-    return `Hi, I'm Reina! Let's map your process.\n\nWhat's the name of this process, and what's the very first thing that happens — what triggers it, and who kicks it off?`;
+    return `Hi, I'm Reina! Let's map your process.\n\nWhat's the name of this process, and what's the very first thing that happens - what triggers it, and who kicks it off?`;
   };
 
   // On first arrival with no steps: seed Reina's opening message (no guided prompt questionnaire)
@@ -709,7 +831,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
 
     // ── Restored session or already-seeded (any existing messages means
     //    we're either restoring a session or Screen2 remounted after the
-    //    user picked a pillar — don't seed another intro in either case) ──
+    //    user picked a pillar - don't seed another intro in either case) ──
     if (initialSteps.length > 0) return;
     if (ctxMsgs.length > 0) {
       hasSeededChatRef.current = true;
@@ -720,10 +842,10 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     hasSeededChatRef.current = true;
 
     if (!mid && !dName) {
-      // No segment selected yet — introduce Reina and ask which situation fits
+      // No segment selected yet - introduce Reina and ask which situation fits
       addChatMessage({
         role: 'assistant',
-        content: `Hi, I'm Reina — your process mapping assistant.\n\nTell me about any business process in plain language and I'll build the flow for you in real time — steps, handoffs, decision branches, timings, and systems. You can also drop in docs, spreadsheets, screenshots, or diagrams and I'll extract the process from them.\n\nOnce it's mapped, I'll spot bottlenecks, estimate the cost of the current flow, and generate a redesign with automation suggestions and projected savings.\n\nTo tailor the audit, which best describes your situation?`,
+        content: `Hi, I'm Reina - your process mapping assistant.\n\nTell me about any business process in plain language and I'll build the flow for you in real time - steps, handoffs, decision branches, timings, and systems. You can also drop in docs, spreadsheets, screenshots, or diagrams and I'll extract the process from them.\n\nOnce it's mapped, I'll spot bottlenecks, estimate the cost of the current flow, and generate a redesign with automation suggestions and projected savings.\n\nTo tailor the audit, which best describes your situation?`,
         chips: SEGMENT_CHIPS,
       });
       if (!editingReportId) setShowGuide(true);
@@ -782,7 +904,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       const platformCompany = (authUser?.company || '').trim() || 'your platform company';
       addChatMessage({
         role: 'assistant',
-        content: `Great — let's set up your roll-up. I'll create a deal for **${platformCompany}** and one portfolio company to start (you can invite more later).`,
+        content: `Great - let's set up your roll-up. I'll create a deal for **${platformCompany}** and one portfolio company to start (you can invite more later).`,
         dealSetup: {
           platformCompany,
         },
@@ -905,7 +1027,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
   const previewCanvasRef = useRef(null);
   const stepsSyncTimerRef = useRef(null);
   const stepsSyncMountedRef = useRef(false);
-  // Refs hold the LATEST canvas edge state synchronously — no stale closures
+  // Refs hold the LATEST canvas edge state synchronously - no stale closures
   const flowCustomEdgesRef = useRef(flowCustomEdges);
   const flowDeletedEdgesRef = useRef(flowDeletedEdges);
   const flowNodePositionsRef = useRef(flowNodePositions);
@@ -920,7 +1042,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
   useEffect(() => {
     if (!stepsSyncMountedRef.current) {
       stepsSyncMountedRef.current = true;
-      return; // skip initial mount — no change yet
+      return; // skip initial mount - no change yet
     }
     clearTimeout(stepsSyncTimerRef.current);
     stepsSyncTimerRef.current = setTimeout(() => {
@@ -929,7 +1051,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     return () => clearTimeout(stepsSyncTimerRef.current);
   }, [steps, handoffs]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Workspace snapshot sync — fires whenever steps/handoffs/flow canvas
+  // Workspace snapshot sync - fires whenever steps/handoffs/flow canvas
   // state changes. Catches updates from AI tool-calls that land after the
   // chat-message persist, so resuming restores the latest flow accurately.
   const snapshotSyncTimerRef = useRef(null);
@@ -1201,7 +1323,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
         const idx = resolveBranchTarget(t, oldSteps);
         // For decision-edge inserts the new node becomes the branch start (takes
         // the slot at insertIdx), so the original target at exactly insertIdx must
-        // NOT be bumped — it now correctly points to the new node.
+        // NOT be bumped - it now correctly points to the new node.
         // For sequential inserts the node at insertIdx shifted to insertIdx+1, so
         // any branch pointing there must be bumped.
         const shouldBump = isDecisionEdgeInsert ? idx > insertIdx : idx >= insertIdx;
@@ -1240,20 +1362,102 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     addAuditEvent({ type: 'step_add', detail: `Added suggested step "${suggestion}"` });
   };
 
+  const runInlineGenerate = useCallback(async (pd) => {
+    setInlineGenerateStatus('generating');
+    setInlineGenerateProgress('Starting analysis…');
+    setInlineGenerateError('');
+    try {
+      const processes = (completedProcesses && completedProcesses.length > 0) ? completedProcesses : [pd];
+      const effectiveEmail = contact?.email || authUser?.email || sessionUser?.email;
+      const effectiveContact = {
+        name: contact?.name || authUser?.name || sessionUser?.user_metadata?.full_name || sessionUser?.email || '',
+        email: effectiveEmail || '',
+        company: contact?.company || '',
+        title: contact?.title || '',
+        industry: contact?.industry || '',
+        teamSize: contact?.teamSize || '',
+        segment: moduleId || pd?.segment || '',
+      };
+      if (!effectiveContact.email) {
+        throw new Error('Contact email is required to generate a report.');
+      }
+      const out = await generateReportInline(
+        {
+          processes,
+          contact: effectiveContact,
+          moduleId: moduleId || pd?.segment || '',
+          diagnosticMode: diagnosticMode || 'comprehensive',
+          editingReportId,
+          customDepartments,
+          auditTrail,
+          authUser,
+          sessionUser,
+          accessToken,
+          costAnalystEmail: contact?.costAnalystEmail || null,
+        },
+        {
+          sendDiagnosticReport,
+          onProgress: (msg) => setInlineGenerateProgress(msg),
+        },
+      );
+      if (out.reportId) {
+        setInlineReportId(out.reportId);
+        addAuditEvent({ type: 'submit', detail: `Generated report inline (${out.reportId})` });
+        const readyMsg = 'Your diagnostic report is ready.';
+        const reportArtefact = {
+          kind: 'report',
+          refId: out.reportId,
+          label: pd?.processName ? `Report: ${pd.processName}` : 'Diagnostic report',
+        };
+        addChatMessage({
+          role: 'assistant',
+          content: readyMsg,
+          reportActions: { id: out.reportId, processName: pd?.processName || '' },
+          artefact: reportArtefact,
+        });
+        try {
+          persistMessageToCloud({
+            role: 'assistant',
+            content: readyMsg,
+            snapshot: buildFullSnapshot(pd),
+            artefact: reportArtefact,
+          });
+        } catch { /* best-effort */ }
+      }
+      setInlineGenerateStatus('idle');
+    } catch (err) {
+      setInlineGenerateError(err.message || 'Something went wrong. Please try again.');
+      setInlineGenerateStatus('error');
+    }
+  }, [completedProcesses, contact, authUser, sessionUser, moduleId, diagnosticMode, editingReportId, customDepartments, auditTrail, accessToken, sendDiagnosticReport, addAuditEvent, addChatMessage, buildFullSnapshot, persistMessageToCloud]);
+
   const commitAndNavigate = useCallback((deps) => {
     const valid = steps.filter((s) => s.name.trim());
     const reconciled = reconcileDecisionBranches(valid, flowCustomEdgesRef.current, flowDeletedEdgesRef.current);
     const { steps: repairedValid } = repairFlow(reconciled);
     const h = ensureHandoffs(repairedValid, handoffs);
     const allSys = [...new Set(repairedValid.flatMap((s) => s.systems || []).filter(Boolean))];
-    updateProcessData({ steps: repairedValid, handoffs: h, systems: allSys.length > 0 ? allSys : processData.systems, processDependencies: deps });
+    const updates = { steps: repairedValid, handoffs: h, systems: allSys.length > 0 ? allSys : processData.systems, processDependencies: deps };
+    updateProcessData(updates);
     if (authUser?.email && !contact?.email) {
       setContact({ name: authUser.name || '', email: authUser.email, company: authUser.company || '', title: authUser.title || '' });
     }
     setError('');
     addAuditEvent({ type: 'navigate', detail: `Completed step mapping with ${valid.length} steps` });
-    goToScreen(6);
-  }, [steps, handoffs, processData.systems, updateProcessData, goToScreen, addAuditEvent, authUser, contact, setContact]);
+
+    // PE roll-up deals and team-mode surveys still use the dedicated Screen6
+    // flow (deal dashboard redirect / team submit). Everything else generates
+    // the report inline and shows it in the canvas iframe.
+    const isPEDeal = moduleId === 'pe' && (dealId || processData?.dealId);
+    const isTeamSurvey = !!teamMode?.code;
+    if (isPEDeal || isTeamSurvey) {
+      goToScreen(6);
+      return;
+    }
+
+    const pd = { ...processData, ...updates };
+    runInlineGenerate(pd);
+  }, [steps, handoffs, processData, updateProcessData, goToScreen, addAuditEvent, authUser, contact, setContact, moduleId, dealId, teamMode, runInlineGenerate]);
 
   const handleContinue = useCallback(() => {
     const valid = steps.filter((s) => s.name.trim());
@@ -1284,7 +1488,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     return pd;
   }, [steps, handoffs, processData, updateProcessData]);
 
-  /* ═══════ AI redesign — apply output to canvas ═══════ */
+  /* ═══════ AI redesign - apply output to canvas ═══════ */
   const applyRedesign = useCallback((redesign) => {
     const proc = redesign.optimisedProcesses?.[0];
     if (!proc?.steps?.length) return;
@@ -1307,7 +1511,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     const newHandoffs = ensureHandoffs(newSteps, proc.handoffs || []);
     setSteps(newSteps);
     setHandoffs(newHandoffs);
-    // Clear canvas customisations — this is a new layout
+    // Clear canvas customisations - this is a new layout
     setFlowCustomEdges([]);
     setFlowDeletedEdges([]);
     flowCustomEdgesRef.current = [];
@@ -1359,8 +1563,83 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       implementationPriority: redesign.implementationPriority || [],
     }, null, 2);
 
-    addChatMessage({ role: 'assistant', content: msg, suggestions: suggestions.slice(0, 5) });
-  }, [addChatMessage]);
+    // Snapshot the optimised flow as a durable chat artefact so it survives
+    // later edits to the canvas and shows up in history.
+    let postSnapshot = null;
+    try {
+      postSnapshot = buildFullSnapshot({
+        ...processData,
+        steps: newSteps,
+        handoffs: newHandoffs,
+        flowCustomEdges: [],
+        flowDeletedEdges: [],
+        flowNodePositions: {},
+      });
+    } catch { /* best-effort */ }
+    const artefact = postSnapshot ? {
+      kind: 'flow_snapshot',
+      snapshot: postSnapshot,
+      label: processData?.processName ? `Optimised flowchart: ${processData.processName}` : 'Optimised flowchart',
+    } : undefined;
+    addChatMessage({ role: 'assistant', content: msg, suggestions: suggestions.slice(0, 5), artefact });
+    if (postSnapshot) {
+      try {
+        persistMessageToCloud({ role: 'assistant', content: msg, snapshot: postSnapshot, artefact });
+      } catch { /* best-effort */ }
+    }
+  }, [addChatMessage, buildFullSnapshot, persistMessageToCloud, processData]);
+
+  const snapshotCurrentFlow = useCallback(() => {
+    try {
+      return buildFullSnapshot({
+        ...processData,
+        steps,
+        handoffs,
+        flowCustomEdges: flowCustomEdgesRef.current || [],
+        flowDeletedEdges: flowDeletedEdgesRef.current || [],
+        flowNodePositions: flowNodePositionsRef.current || {},
+      });
+    } catch { return null; }
+  }, [buildFullSnapshot, processData, steps, handoffs]);
+
+  // Snapshot the flow when the intake phase advances (structure → owners →
+  // timings → ... ). Each transition is a natural "milestone" the user may
+  // want to roll back to.
+  const lastPhaseIdRef = useRef(null);
+  useEffect(() => {
+    const state = computePhaseState({ steps, handoffs });
+    const currId = state.current?.id || (state.overallComplete ? '__complete__' : null);
+    const prev = lastPhaseIdRef.current;
+    lastPhaseIdRef.current = currId;
+    if (!prev || !currId || prev === currId) return;
+    // Only snapshot when we have enough structure to be worth keeping.
+    const namedCount = steps.filter((s) => (s.name || '').trim()).length;
+    if (namedCount < 2) return;
+    const completedPhase = INTAKE_PHASES_BY_ID[prev];
+    if (!completedPhase) return;
+    const snap = snapshotCurrentFlow();
+    if (!snap) return;
+    const pn = processData?.processName ? `: ${processData.processName}` : '';
+    const artefact = {
+      kind: 'flow_snapshot',
+      snapshot: snap,
+      label: `After ${completedPhase.label.toLowerCase()}${pn}`,
+    };
+    addChatMessage({ role: 'assistant', content: `Phase complete: ${completedPhase.label}.`, artefact });
+    try { persistMessageToCloud({ role: 'assistant', content: `Phase complete: ${completedPhase.label}.`, snapshot: snap, artefact }); } catch { /* best-effort */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [steps, handoffs]);
+
+  const pinCurrentFlow = useCallback(() => {
+    const snap = snapshotCurrentFlow();
+    if (!snap) return;
+    const pn = processData?.processName ? `: ${processData.processName}` : '';
+    const namedCount = steps.filter((s) => (s.name || '').trim()).length;
+    const label = `Pinned snapshot${pn} (${namedCount} step${namedCount === 1 ? '' : 's'})`;
+    const artefact = { kind: 'flow_snapshot', snapshot: snap, label };
+    addChatMessage({ role: 'user', content: `Pinned current flow as artefact.`, artefact });
+    try { persistMessageToCloud({ role: 'user', content: `Pinned current flow as artefact.`, snapshot: snap, artefact }); } catch { /* best-effort */ }
+  }, [snapshotCurrentFlow, processData, steps, addChatMessage, persistMessageToCloud]);
 
   const triggerAiRedesign = useCallback(async () => {
     if (!editingReportId || !accessToken) return;
@@ -1477,11 +1756,11 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
         setStepSaveUrl((p) => ({ ...p, [stepIdx]: result.resumeUrl }));
         if (navigator.clipboard) navigator.clipboard.writeText(result.resumeUrl).catch(() => {});
       }
-    } catch { /* fallback — user can use main save */ }
+    } catch { /* fallback - user can use main save */ }
     setStepSaving((p) => ({ ...p, [stepIdx]: false }));
   }, [buildFreshProcessData, saveProgressToCloud]);
 
-  /* ═══════ Flow model — predicted wait times ═══════ */
+  /* ═══════ Flow model - predicted wait times ═══════ */
   const waitProfile = useMemo(() => getWaitProfile({ steps }), [steps]);
 
   /* ═══════ Step warnings ═══════ */
@@ -1506,7 +1785,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     if (!actions || actions.length === 0) return [];
     const addedNames = [];
 
-    // Capture one snapshot per batch for undo — chat actions often come in
+    // Capture one snapshot per batch for undo - chat actions often come in
     // groups (e.g. replace_all_steps + multiple add_step tool calls in one
     // agent turn). A single undo reverts the whole turn rather than rolling
     // back tool-call-by-tool-call.
@@ -1686,7 +1965,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
         case 'set_investment':
         case 'propose_change':
         case 'ask_discovery':
-          // No client-side state change — the agent's natural-language reply
+          // No client-side state change - the agent's natural-language reply
           // (built from the tool result text) is the user-facing surface.
           break;
         default:
@@ -1752,6 +2031,18 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     e.stopPropagation();
     setChatDragOver(false);
   }, []);
+
+  const handleChatPaste = useCallback((e) => {
+    const items = Array.from(e.clipboardData?.items || []);
+    const files = items
+      .filter((i) => i.kind === 'file')
+      .map((i) => i.getAsFile())
+      .filter(Boolean);
+    if (files.length) {
+      e.preventDefault();
+      processFiles(files);
+    }
+  }, [processFiles]);
 
   const removeChatAttachment = useCallback((idx) => {
     setChatAttachments((p) => p.filter((_, i) => i !== idx));
@@ -1888,20 +2179,41 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       const costProposals = (data.actions || [])
         .filter((a) => a.name === 'set_labour_rate' || a.name === 'set_non_labour_cost' || a.name === 'set_investment')
         .map((a) => ({ kind: a.name, ...a.input }));
+      // If the assistant's reply reshapes the canvas (replace_all_steps),
+      // snapshot the intended new flow as an artefact attached to this turn.
+      const reshapeAction = (data.actions || []).find((a) => a.name === 'replace_all_steps');
+      let artefactForTurn;
+      if (reshapeAction && Array.isArray(reshapeAction.input?.steps) && reshapeAction.input.steps.length) {
+        const snap = buildFullSnapshot({
+          ...processData,
+          steps: reshapeAction.input.steps,
+          handoffs: [],
+          flowCustomEdges: [],
+          flowDeletedEdges: [],
+          flowNodePositions: {},
+        });
+        const pn = processData?.processName || snap?.processData?.processName;
+        artefactForTurn = {
+          kind: 'flow_snapshot',
+          snapshot: snap,
+          label: pn ? `Flowchart: ${pn}` : `Flowchart (${reshapeAction.input.steps.length} steps)`,
+        };
+      }
       addChatMessage({
         role: 'assistant',
         content: data.reply,
         ...(costProposals.length ? { costProposals } : {}),
+        ...(artefactForTurn ? { artefact: artefactForTurn } : {}),
       });
-      persistMessageToCloud({ role: 'assistant', content: data.reply, actions: data.actions, snapshot: buildLiveSnapshot() });
+      persistMessageToCloud({ role: 'assistant', content: data.reply, actions: data.actions, snapshot: buildLiveSnapshot(), artefact: artefactForTurn });
       if (data.actions?.length > 0) {
         const addedNames = processActions(data.actions);
         if (!isSystem && addedNames.length > 0) {
           const lastReply = (data.reply || '').trim();
-          const replyWasMinimal = !lastReply || /^Done\s*[—\-]?\s*(added|updated|removed|set)/i.test(lastReply) || lastReply.length < 80;
+          const replyWasMinimal = !lastReply || /^Done\s*[-\-]?\s*(added|updated|removed|set)/i.test(lastReply) || lastReply.length < 80;
           if (replyWasMinimal) {
             setTimeout(() => {
-              sendChat(`[system] New steps were just added: ${addedNames.join(', ')}. Ask about 1-2 missing details (decision points, departments, or systems) for these steps. Do NOT repeat any question you already asked in your last message — check the conversation history. Keep it conversational.`);
+              sendChat(`[system] New steps were just added: ${addedNames.join(', ')}. Ask about 1-2 missing details (decision points, departments, or systems) for these steps. Do NOT repeat any question you already asked in your last message - check the conversation history. Keep it conversational.`);
             }, 600);
           }
         }
@@ -1978,7 +2290,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
 
   /* ═══════ Computed ═══════ */
   const namedSteps = steps.filter((s) => s.name.trim());
-  /** Flowchart / canvas artifact is present — switch to chat-left + canvas-right */
+  /** Flowchart / canvas artifact is present - switch to chat-left + canvas-right */
   const hasFlowArtifact = namedSteps.length > 0;
 
 
@@ -2006,12 +2318,12 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     // handle, even when the cursor crosses over the canvas iframe (whose
     // inner window would otherwise swallow mousemove). Pair it with a
     // data-resizing flag so CSS can disable pointer-events on the iframe
-    // and react-flow canvas while dragging — belt-and-braces against
+    // and react-flow canvas while dragging - belt-and-braces against
     // mid-drag stutter.
     try { handle.setPointerCapture(e.pointerId); } catch { /* ignore */ }
 
     // Require the pointer to travel past a small threshold before the drag
-    // "engages" — avoids micro-resizes from accidental clicks or hand jitter
+    // "engages" - avoids micro-resizes from accidental clicks or hand jitter
     // that make the splitter feel hair-trigger.
     const DRAG_THRESHOLD_PX = 4;
     let engaged = false;
@@ -2116,7 +2428,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     </div>
   );
 
-  /* ═══════ Step detail panel — 3-column node inspector ═══════ */
+  /* ═══════ Step detail panel - 3-column node inspector ═══════ */
   const activeStep = expandedStepIdx !== null ? steps[expandedStepIdx] : null;
 
   // Mini node card renderer for source / next columns
@@ -2194,7 +2506,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
             <button type="button" className="s7-detail-close" onClick={() => setExpandedStepIdx(null)} title="Close panel">×</button>
           </div>
 
-          {/* Step name + delete row — always visible */}
+          {/* Step name + delete row - always visible */}
           <div className="s7-detail-name-row">
             <input
               type="text"
@@ -2260,7 +2572,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                               {steps.map((st, si) => si !== i ? <option key={si} value={`Step ${st.number}`}>Step {st.number}{st.name ? `: ${st.name.slice(0, 22)}` : ''}</option> : null)}
                             </select>
                             {!s.parallel && (
-                              <input type="number" className="s7-input s7-branch-prob" placeholder="%" min={0} max={100} step={1} title="Probability % — used to weight wait time predictions for this branch" value={br.probability ?? ''} onChange={(e) => { const v = e.target.value; updateBranch(i, bi, 'probability', v === '' ? undefined : Math.max(0, Math.min(100, parseFloat(v) || 0))); }} />
+                              <input type="number" className="s7-input s7-branch-prob" placeholder="%" min={0} max={100} step={1} title="Probability % - used to weight wait time predictions for this branch" value={br.probability ?? ''} onChange={(e) => { const v = e.target.value; updateBranch(i, bi, 'probability', v === '' ? undefined : Math.max(0, Math.min(100, parseFloat(v) || 0))); }} />
                             )}
                             <button type="button" className="s7-branch-add-step-btn" onClick={() => addStepInBranch(i, bi)} disabled={steps.length >= MAX_STEPS} title="Add step in branch">+</button>
                             <button type="button" className="s7-branch-del" onClick={() => removeBranch(i, bi)}>×</button>
@@ -2334,7 +2646,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                         <div className="s7-timing-reason-row">
                           <label className="s7-timing-simple-label">Why it waits</label>
                           <select className="s7-input s7-timing-reason-select" value={s.waitType || ''} onChange={(e) => { updateStep(i, 'waitType', e.target.value || undefined); addAuditEvent({ type: 'step_edit', detail: `Set step ${i + 1} wait reason to ${e.target.value}` }); }}>
-                            <option value="">—</option>
+                            <option value="">-</option>
                             <option value="dependency">Waiting on someone</option>
                             <option value="blocked">Blocked: missing info</option>
                             <option value="capacity">Person unavailable</option>
@@ -2412,7 +2724,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                 )}
               </div>
 
-              {/* Save bar — always at bottom of current column */}
+              {/* Save bar - always at bottom of current column */}
               <div className="s7-detail-save-bar">
                 {stepSaveUrl[i] ? (
                   <div className="s7-step-save-link">
@@ -2525,6 +2837,9 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                     </a>
                   </div>
                 )}
+                {m.artefact && !(m.reportActions && m.artefact.kind === 'report') && (
+                  <ArtefactPill artefact={m.artefact} onOpenReport={(rid) => setInlineReportId(rid)} onOpenFlow={(snap) => setArtefactPreview(snap)} />
+                )}
                 {Array.isArray(m.costProposals) && m.costProposals.length > 0 && editingReportId && (
                   <div className="s7-report-actions">
                     {m.costProposals.map((p, pi) => {
@@ -2612,15 +2927,16 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
         </div>
       )}
       <div className="s7-chat-input-area">
-        <input type="file" ref={chatFileRef} className="s7-chat-file-input" multiple accept="image/*,.pdf,.xlsx,.xls,.csv,.doc,.docx,.txt,.json" onChange={handleChatFileSelect} />
+        <input type="file" ref={chatFileRef} className="s7-chat-file-input" multiple accept="image/*,application/pdf,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,.xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,.doc,.docx,application/vnd.openxmlformats-officedocument.presentationml.presentation,.pptx,application/vnd.ms-powerpoint,.ppt,.txt,text/plain,.json,application/json,.tsv,text/tab-separated-values,.md" onChange={handleChatFileSelect} />
         <div className="s7-chat-composer">
           <div className="s7-chat-composer-field">
             <textarea
               ref={chatTextareaRef}
               className="s7-chat-textarea"
-              placeholder={editingRedesign ? 'Ask about changes or request modifications…' : 'Describe your process flow...'}
+              placeholder={editingRedesign ? 'Ask about changes or request modifications…' : 'Describe your process flow (paste files or screenshots with Ctrl+V)'}
               value={chatInput}
               rows={1}
+              onPaste={handleChatPaste}
               onChange={(e) => {
                 setChatInput(e.target.value);
                 e.target.style.height = 'auto';
@@ -2670,10 +2986,43 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     </div>
   );
 
-  // Show chat history panel or regular chat depending on state
-  const activeChatContent = showChatHistory
-    ? <ChatHistoryPanel onClose={() => setShowChatHistory(false)} onLoadReport={handleLoadReport} onRedesignReport={handleRedesignInChat} />
-    : chatContent;
+  // Gather artefacts attached to this session's chat messages.
+  const sessionArtefacts = useMemo(() => {
+    const list = [];
+    chatMessages.forEach((m, idx) => {
+      if (m.artefact && m.artefact.kind) {
+        list.push({ ...m.artefact, messageIdx: idx, preview: (m.content || '').slice(0, 80) });
+      }
+      if (m.reportActions && m.reportActions.id && !m.artefact) {
+        list.push({
+          kind: 'report',
+          refId: m.reportActions.id,
+          label: m.reportActions.processName ? `Report: ${m.reportActions.processName}` : 'Diagnostic report',
+          messageIdx: idx,
+          preview: (m.content || '').slice(0, 80),
+        });
+      }
+    });
+    return list;
+  }, [chatMessages]);
+
+  // Show chat history panel, artefacts panel, or regular chat depending on state
+  let activeChatContent;
+  if (showChatHistory) {
+    activeChatContent = <ChatHistoryPanel onClose={() => setShowChatHistory(false)} onLoadReport={handleLoadReport} onRedesignReport={handleRedesignInChat} />;
+  } else if (showArtefactsPanel) {
+    activeChatContent = (
+      <ArtefactsPanel
+        artefacts={sessionArtefacts}
+        onClose={() => setShowArtefactsPanel(false)}
+        onOpenReport={(rid) => { setShowArtefactsPanel(false); setInlineReportId(rid); }}
+        onOpenFlow={(snap) => { setShowArtefactsPanel(false); setArtefactPreview(snap); }}
+        onPin={pinCurrentFlow}
+      />
+    );
+  } else {
+    activeChatContent = chatContent;
+  }
 
   const handleFlowStepClick = useCallback((idx) => {
     if (idx >= 0 && idx < steps.length) {
@@ -2686,8 +3035,8 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     }
   }, [steps.length]);
 
-  // Positions are stored as {dx, dy} offsets keyed by step count only — no layout
-  // — so the same manual adjustments apply in grid, wrap, and swimlane views.
+  // Positions are stored as {dx, dy} offsets keyed by step count only - no layout
+  // - so the same manual adjustments apply in grid, wrap, and swimlane views.
   const getFlowPositionsKey = () => `${steps.length}`;
   const storedPositions = flowNodePositions[getFlowPositionsKey()] || null;
   const onFlowPositionsChange = useCallback((offsets, _layout) => {
@@ -2702,7 +3051,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     // Update ref FIRST so the functional setSteps updater sees the latest value
     flowCustomEdgesRef.current = edges;
     setFlowCustomEdges(edges);
-    // Immediately reconcile decision branches — no async effect needed
+    // Immediately reconcile decision branches - no async effect needed
     setSteps((prev) => {
       const r = reconcileDecisionBranches(prev, flowCustomEdgesRef.current, flowDeletedEdgesRef.current);
       return r.every((s, i) => s === prev[i]) ? prev : r;
@@ -2713,7 +3062,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     // Update ref FIRST so the functional setSteps updater sees the latest value
     flowDeletedEdgesRef.current = ids;
     setFlowDeletedEdges(ids);
-    // Immediately reconcile decision branches — no async effect needed
+    // Immediately reconcile decision branches - no async effect needed
     setSteps((prev) => {
       const r = reconcileDecisionBranches(prev, flowCustomEdgesRef.current, flowDeletedEdgesRef.current);
       return r.every((s, i) => s === prev[i]) ? prev : r;
@@ -2746,7 +3095,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       const mm = id?.match(/^step-(\d+)$/);
       if (!mm) return id;
       const n = parseInt(mm[1]);
-      if (n === idx) return null; // edge touching deleted node — drop it
+      if (n === idx) return null; // edge touching deleted node - drop it
       return `step-${shiftIdx(n)}`;
     };
     const remappedCustom = (flowCustomEdgesRef.current || [])
@@ -2811,7 +3160,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
             const oldOffsets = flowNodePositions[oldKey] || {};
             // Remap stored position offsets: nodes before insertIdx keep their offset,
             // nodes at or after shift to the next index. processToReactFlow handles
-            // the actual layout — we just preserve any manual drag adjustments.
+            // the actual layout - we just preserve any manual drag adjustments.
             const merged = {};
             for (let j = 0; j < insertIdx; j++) {
               const o = oldOffsets[`step-${j}`];
@@ -2854,7 +3203,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
               return id;
             });
 
-            // Only carry forward remapped deletions — don't suppress the new
+            // Only carry forward remapped deletions - don't suppress the new
             // auto-generated edges touching the inserted node. processToReactFlow
             // skips sequential edges where the source is a decision or the target
             // is a branch target, so the correct in/out edges are always produced.
@@ -3119,6 +3468,24 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
           </div>
         )}
 
+        {/* ── Inline report-generate overlay ── */}
+        {inlineGenerateStatus === 'generating' && (
+          <div className="s7-redesign-overlay" role="status" aria-live="polite">
+            <div className="s7-redesign-overlay-card">
+              <div className="s7-redesign-spinner" />
+              <p className="s7-redesign-overlay-title">Generating your report</p>
+              <p className="s7-redesign-overlay-progress">{inlineGenerateProgress || 'Analysing your process…'}</p>
+            </div>
+          </div>
+        )}
+        {inlineGenerateStatus === 'error' && (
+          <div className="s7-redesign-error-bar" role="alert">
+            <span>{inlineGenerateError || 'Failed to generate report.'}</span>
+            <button type="button" onClick={() => { setInlineGenerateStatus('idle'); runInlineGenerate(processData); }}>Retry</button>
+            <button type="button" onClick={() => setInlineGenerateStatus('idle')}>Dismiss</button>
+          </div>
+        )}
+
         {/* ── Before flowchart: full-width describe + floating chat. After: rail + chat + resize + canvas ── */}
         {hasFlowArtifact ? (
         <div ref={splitAreaRef} className="s7-canvas-area s7-canvas-area--split">
@@ -3136,8 +3503,14 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
               hasCostAccess={hasCostAccess}
             />
             <div className="s7-split-rail-sep" role="separator" aria-hidden />
-            <button type="button" className={`s7-split-rail-btn${showChatHistory ? ' active' : ''}`} onClick={() => setShowChatHistory((v) => !v)} title="Chat history">
+            <MapRailPortalNav />
+            <div className="s7-split-rail-sep" role="separator" aria-hidden />
+            <button type="button" className={`s7-split-rail-btn${showChatHistory ? ' active' : ''}`} onClick={() => { setShowChatHistory((v) => !v); setShowArtefactsPanel(false); }} title="Chat history">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="13" y2="14"/></svg>
+            </button>
+            <button type="button" className={`s7-split-rail-btn${showArtefactsPanel ? ' active' : ''}`} onClick={() => { setShowArtefactsPanel((v) => !v); setShowChatHistory(false); }} title={`Artefacts${sessionArtefacts.length ? ` (${sessionArtefacts.length})` : ''}`}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+              {sessionArtefacts.length > 0 && <span className="s7-split-rail-count">{sessionArtefacts.length}</span>}
             </button>
             <button type="button" className="s7-split-rail-btn" onClick={() => setShowFloatingFlow(true)} title="Expand flow in window">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/><path d="M10 5H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-5"/></svg>
@@ -3168,7 +3541,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
           >
             <div className="s7-inline-chat-header">
               <div className="sharp-avatar sharp-avatar-sm" title="Reina">R</div>
-              <span className="s7-inline-chat-title">{showChatHistory ? 'History' : 'AI Assistant'}</span>
+              <span className="s7-inline-chat-title">{showChatHistory ? 'History' : showArtefactsPanel ? 'Artefacts' : 'AI Assistant'}</span>
             </div>
             {activeChatContent}
           </div>
@@ -3321,6 +3694,8 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                 hasCostAccess={hasCostAccess}
               />
               <div className="s7-split-rail-sep" role="separator" aria-hidden />
+              <MapRailPortalNav />
+              <div className="s7-split-rail-sep" role="separator" aria-hidden />
               <button type="button" className={`s7-split-rail-btn${showChatHistory ? ' active' : ''}`} onClick={() => setShowChatHistory((v) => !v)} title="Chat history">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="13" y2="14"/></svg>
               </button>
@@ -3361,7 +3736,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
         </div>{/* /s7-workspace-main */}
       </div>
 
-      {/* Floating panels (Steps list only — chat is always inline) */}
+      {/* Floating panels (Steps list only - chat is always inline) */}
 
       {floatingPanel === 'steps' && createPortal(
         <div className="s7-floating-panel" data-theme={theme}>
@@ -3619,6 +3994,60 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
           </div>
         </div>
       )}
+      {artefactPreview && (() => {
+        const pd = artefactPreview?.processData || artefactPreview || {};
+        const pdSteps = Array.isArray(pd.steps) ? pd.steps : [];
+        const pdHandoffs = Array.isArray(pd.handoffs) ? pd.handoffs : [];
+        const restore = () => {
+          if (!pdSteps.length) return;
+          if (!confirm(`Replace the current canvas with this ${pdSteps.length}-step snapshot? Your current flow will be overwritten.`)) return;
+          setSteps(pdSteps.map((s, i) => ({ ...s, number: i + 1 })));
+          setHandoffs(ensureHandoffs(pdSteps, pdHandoffs));
+          setFlowCustomEdges([]);
+          setFlowDeletedEdges([]);
+          flowCustomEdgesRef.current = [];
+          flowDeletedEdgesRef.current = [];
+          setFlowNodePositions(pd.flowNodePositions || {});
+          setArtefactPreview(null);
+          addChatMessage({ role: 'assistant', content: `Restored ${pdSteps.length}-step snapshot to the canvas.` });
+        };
+        return (
+          <div className="s7-artefact-preview" role="dialog" aria-modal="true" onClick={() => setArtefactPreview(null)}>
+            <div className="s7-artefact-preview-card" onClick={(e) => e.stopPropagation()}>
+              <div className="s7-artefact-preview-hd">
+                <strong>Flow snapshot{pd.processName ? ` - ${pd.processName}` : ''}</strong>
+                <button type="button" className="s7-artefact-preview-close" onClick={() => setArtefactPreview(null)} aria-label="Close">×</button>
+              </div>
+              <div className="s7-artefact-preview-body">
+                {!pdSteps.length ? (
+                  <p className="s7-artefact-preview-empty">No steps captured.</p>
+                ) : (
+                  <ol className="s7-artefact-preview-list">
+                    {pdSteps.map((s, i) => (
+                      <li key={i}>
+                        <span className="s7-artefact-preview-step-num">{i + 1}</span>
+                        <span className="s7-artefact-preview-step-name">{s.name || 'Untitled step'}</span>
+                        {s.department && <span className="s7-artefact-preview-step-dept">{s.department}</span>}
+                        {s.isDecision && <span className="s7-artefact-preview-step-tag">decision</span>}
+                        {s.isExternal && <span className="s7-artefact-preview-step-tag">external</span>}
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+              <div className="s7-artefact-preview-footer">
+                <span className="s7-artefact-preview-count">{pdSteps.length} step{pdSteps.length === 1 ? '' : 's'}</span>
+                <div className="s7-artefact-preview-actions">
+                  <button type="button" className="s7-artefact-preview-btn s7-artefact-preview-btn--ghost" onClick={() => setArtefactPreview(null)}>Close</button>
+                  <button type="button" className="s7-artefact-preview-btn s7-artefact-preview-btn--primary" onClick={restore} disabled={!pdSteps.length}>
+                    Restore to canvas
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </>
   );
 }

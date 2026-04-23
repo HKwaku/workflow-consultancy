@@ -119,7 +119,7 @@ export default function FloatingFlowViewer({ proc, onClose, initialViewMode = 'g
         </div>
 
         <div className="ffv-body ffv-body-interactive">
-          {/* Floating icons overlay — no sidebar, canvas stays full size */}
+          {/* Floating icons overlay - no sidebar, canvas stays full size */}
           {hasSidebar && (
             <div className="ffv-floating-icons" data-theme={darkTheme ? 'dark' : 'light'}>
               {chatContent && (
@@ -136,7 +136,7 @@ export default function FloatingFlowViewer({ proc, onClose, initialViewMode = 'g
               )}
             </div>
           )}
-          {/* Floating panel overlay when icon selected — overlays canvas, doesn't reduce it */}
+          {/* Floating panel overlay when icon selected - overlays canvas, doesn't reduce it */}
           {hasSidebar && ffvTab && (
             <div className="ffv-floating-panel" data-theme={darkTheme ? 'dark' : 'light'}>
               <div className="ffv-floating-panel-header">
@@ -181,7 +181,7 @@ export default function FloatingFlowViewer({ proc, onClose, initialViewMode = 'g
               <div className="ffv-empty">No flow data</div>
             )}
           </div>
-          {/* Right step detail panel — reuses s7-detail-panel styles exactly */}
+          {/* Right step detail panel - reuses s7-detail-panel styles exactly */}
           <div className={`s7-detail-panel${stepDetailContent ? ' open' : ''}`} data-theme={darkTheme ? 'dark' : 'light'}>
             {stepDetailContent}
           </div>

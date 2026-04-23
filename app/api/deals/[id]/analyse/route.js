@@ -5,15 +5,21 @@ import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { getChatModel } from '@/lib/agents/models';
 import { withRetry } from '@/lib/ai-retry';
 import { logger } from '@/lib/logger';
+import { buildAnalysisPrompt } from '@/lib/deal-analysis/prompts';
 
 export const maxDuration = 120;
 
+const SUPPORTED_MODES = new Set(['comparison', 'synergy', 'redesign']);
+
 /**
  * POST /api/deals/[id]/analyse
- * Owner only. Runs cross-company AI analysis for a PE roll-up deal.
- * Requires all participants to have completed their process maps.
+ * Owner or collaborator only. Runs cross-company AI analysis for a PE roll-up
+ * deal. Requires all participants to have completed their process maps.
  * Streams SSE: progress events → done event with structured analysis.
- * Saves result to deals.settings.analysis.
+ *
+ * Body: { mode?: 'comparison' | 'synergy' }  - default 'comparison'
+ * Writes a row to deal_analyses with the selected mode, plus a legacy copy
+ * to deals.settings.analysis for the comparison mode (backward compat).
  */
 export async function POST(request, { params }) {
   const originErr = checkOrigin(request);
@@ -27,6 +33,15 @@ export async function POST(request, { params }) {
 
   const { id } = await params;
   if (!id) return NextResponse.json({ error: 'Deal ID required.' }, { status: 400 });
+
+  // Parse mode from body (optional). Must be done before streaming starts.
+  let mode = 'comparison';
+  try {
+    const body = await request.json();
+    if (body && typeof body.mode === 'string' && SUPPORTED_MODES.has(body.mode)) {
+      mode = body.mode;
+    }
+  } catch { /* no body / not JSON is fine - default to comparison */ }
 
   const sbConfig = requireSupabase();
   if (!sbConfig) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
@@ -48,12 +63,14 @@ export async function POST(request, { params }) {
 
         // 1. Fetch deal
         const dealResp = await fetchWithTimeout(
-          `${supabaseUrl}/rest/v1/deals?id=eq.${encodeURIComponent(id)}&select=id,type,name,process_name,owner_email,status,settings`,
+          `${supabaseUrl}/rest/v1/deals?id=eq.${encodeURIComponent(id)}&select=id,type,name,process_name,owner_email,collaborator_emails,status,settings`,
           { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
         );
         const [deal] = dealResp.ok ? await dealResp.json() : [];
         if (!deal) { send('error', { error: 'Deal not found.' }); return; }
-        if (deal.owner_email !== auth.email) { send('error', { error: 'Only the deal owner can run analysis.' }); return; }
+        const isEditor = deal.owner_email === auth.email
+          || (Array.isArray(deal.collaborator_emails) && deal.collaborator_emails.some((e) => typeof e === 'string' && e.toLowerCase() === auth.email.toLowerCase()));
+        if (!isEditor) { send('error', { error: 'Only the deal owner or a collaborator can run analysis.' }); return; }
         if (deal.type !== 'pe_rollup') { send('error', { error: 'Analysis is only available for PE roll-up deals.' }); return; }
 
         // 2. Fetch participants
@@ -110,76 +127,24 @@ export async function POST(request, { params }) {
           return;
         }
 
-        send('progress', { message: 'Comparing process maps across companies…' });
+        send('progress', {
+          message: mode === 'synergy' ? 'Quantifying integration synergies…'
+            : mode === 'redesign' ? 'Designing the unified target process…'
+            : 'Comparing process maps across companies…',
+        });
 
-        // 4. Build AI prompt
-        const processName = deal.process_name || companyData[0]?.processName || 'the process';
-        const companySections = companyData.map((c) => {
-          const stepList = c.steps.map((s, i) =>
-            `  ${i + 1}. ${s.name}${s.department ? ` [${s.department}]` : ''}${s.isDecision ? ' [DECISION POINT]' : ''}${s.isExternal ? ' [EXTERNAL]' : ''}`
-          ).join('\n');
-          return `Company: ${c.companyName}\nRole: ${c.role}\nSteps (${c.steps.length}):\n${stepList}`;
-        }).join('\n\n---\n\n');
+        // 4. Build AI prompt (mode-specific)
+        const { systemPrompt, userPrompt } = buildAnalysisPrompt({
+          mode,
+          deal,
+          companyData,
+        });
 
-        const systemPrompt = `You are a process excellence consultant for a private equity firm. You compare process maps from portfolio companies to identify standardisation, consolidation, and efficiency opportunities. Your analysis must be data-driven, specific, and actionable. Output only valid JSON.`;
-
-        const userPrompt = `Deal: ${deal.name}
-Process being mapped: ${processName}
-Number of companies: ${companyData.length}
-
-Process maps:
-
-${companySections}
-
-Analyse these process maps across all ${companyData.length} companies. Identify:
-1. Steps that appear across multiple or all companies (standardisation candidates)
-2. Steps unique to individual companies (review for necessity)
-3. Specific recommendations for consolidating into a single standard process
-4. A proposed standard process the PE portfolio should adopt
-
-Return ONLY this JSON with no markdown fences, no commentary before or after:
-{
-  "summary": "2-3 sentence executive summary of the key findings and opportunity",
-  "commonSteps": [
-    {
-      "name": "descriptive step name",
-      "presentAt": ["Company A", "Company B"],
-      "presentAtAll": true,
-      "departments": ["Finance"],
-      "varianceNote": "how this step differs between companies, or empty string if identical"
-    }
-  ],
-  "uniqueSteps": [
-    {
-      "name": "step name",
-      "companyName": "Company A",
-      "recommendation": "keep",
-      "reason": "brief reason this step is unique and what to do with it"
-    }
-  ],
-  "mergeRecommendations": [
-    {
-      "finding": "clear description of the standardisation opportunity",
-      "affectedSteps": ["step name 1", "step name 2"],
-      "action": "specific, concrete action to take",
-      "estimatedSavingPct": 15
-    }
-  ],
-  "proposedProcess": [
-    {
-      "stepNumber": 1,
-      "name": "step name",
-      "source": "common",
-      "department": "Finance",
-      "notes": "standardisation or implementation note"
-    }
-  ]
-}
-
-recommendation values must be one of: keep, review, remove
-source values must be the company name or "common" or "merged"`;
-
-        send('progress', { message: 'Running AI analysis — comparing step patterns…' });
+        send('progress', {
+          message: mode === 'synergy' ? 'Running AI analysis - estimating overlap and consolidation savings…'
+            : mode === 'redesign' ? 'Running AI analysis - building the unified target process…'
+            : 'Running AI analysis - comparing step patterns…',
+        });
 
         // 5. Call Claude
         const model = getChatModel({ maxTokens: 8192, temperature: 0 });
@@ -218,33 +183,83 @@ source values must be the company name or "common" or "merged"`;
 
         send('progress', { message: 'Saving analysis…' });
 
-        // 7. Persist to deal.settings.analysis
-        const currentSettingsResp = await fetchWithTimeout(
-          `${supabaseUrl}/rest/v1/deals?id=eq.${encodeURIComponent(id)}&select=settings`,
-          { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
-        );
-        const [currentDeal] = currentSettingsResp.ok ? await currentSettingsResp.json() : [];
-        const mergedSettings = {
-          ...(currentDeal?.settings || {}),
-          analysis: {
-            runAt: new Date().toISOString(),
-            companiesAnalysed: companyData.map((c) => c.companyName),
+        const runAt = new Date().toISOString();
+
+        // 7a. Persist to deal_analyses table (authoritative history). The table
+        // is keyed per-deal with mode/status/result, so multiple runs are kept.
+        // If the migration hasn't been applied the insert will 4xx - we log and
+        // fall through so the analysis still renders from settings.analysis.
+        try {
+          // Resolve source deal_flows for the participants whose reports we just analysed
+          const flowsResp = await fetchWithTimeout(
+            `${supabaseUrl}/rest/v1/deal_flows?deal_id=eq.${encodeURIComponent(id)}&report_id=in.(${reportIds.map(encodeURIComponent).join(',')})&select=id,report_id`,
+            { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
+          );
+          const flowRows = flowsResp.ok ? await flowsResp.json() : [];
+          const sourceFlowIds = flowRows.map((f) => f.id);
+
+          const analysisRow = {
+            deal_id: id,
+            mode,
+            name: null,
+            source_flow_ids: sourceFlowIds,
+            source_report_ids: reportIds,
+            status: 'complete',
             result: analysis,
-          },
+            created_by_email: auth.email,
+            completed_at: runAt,
+          };
+          const analysisResp = await fetchWithTimeout(
+            `${supabaseUrl}/rest/v1/deal_analyses`,
+            {
+              method: 'POST',
+              headers: { ...getSupabaseWriteHeaders(supabaseKey), Prefer: 'return=minimal' },
+              body: JSON.stringify(analysisRow),
+            }
+          );
+          if (!analysisResp.ok && analysisResp.status !== 201 && analysisResp.status !== 204) {
+            const txt = await analysisResp.text().catch(() => '');
+            logger.warn('Failed to insert deal_analyses row', { requestId: reqId, status: analysisResp.status, body: txt.slice(0, 300) });
+          }
+        } catch (e) {
+          logger.warn('deal_analyses insert errored', { requestId: reqId, error: e.message });
+        }
+
+        // 7b. Keep the legacy settings.analysis copy for the current UI - the
+        // PE panel reads `deal.settings.analysis` to render the latest
+        // comparison result. For other modes the history endpoint is the
+        // source of truth; don't clobber the legacy comparison snapshot.
+        const latestPayload = {
+          runAt,
+          mode,
+          companiesAnalysed: companyData.map((c) => c.companyName),
+          result: analysis,
         };
 
-        await fetchWithTimeout(
-          `${supabaseUrl}/rest/v1/deals?id=eq.${encodeURIComponent(id)}`,
-          {
-            method: 'PATCH',
-            headers: getSupabaseWriteHeaders(supabaseKey),
-            body: JSON.stringify({ settings: mergedSettings }),
-          }
-        ).catch((e) => logger.warn('Failed to persist deal analysis', { requestId: reqId, error: e.message }));
+        if (mode === 'comparison') {
+          const currentSettingsResp = await fetchWithTimeout(
+            `${supabaseUrl}/rest/v1/deals?id=eq.${encodeURIComponent(id)}&select=settings`,
+            { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
+          );
+          const [currentDeal] = currentSettingsResp.ok ? await currentSettingsResp.json() : [];
+          const mergedSettings = {
+            ...(currentDeal?.settings || {}),
+            analysis: latestPayload,
+          };
+
+          await fetchWithTimeout(
+            `${supabaseUrl}/rest/v1/deals?id=eq.${encodeURIComponent(id)}`,
+            {
+              method: 'PATCH',
+              headers: getSupabaseWriteHeaders(supabaseKey),
+              body: JSON.stringify({ settings: mergedSettings }),
+            }
+          ).catch((e) => logger.warn('Failed to persist deal analysis', { requestId: reqId, error: e.message }));
+        }
 
         send('done', {
           success: true,
-          analysis: mergedSettings.analysis,
+          analysis: latestPayload,
         });
       } catch (err) {
         logger.error('Deal analysis stream error', { requestId: reqId, error: err.message, stack: err.stack });

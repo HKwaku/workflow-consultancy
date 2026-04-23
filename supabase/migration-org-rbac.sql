@@ -3,7 +3,7 @@
 -- Run in Supabase SQL Editor after reviewing.
 -- ============================================================
 
--- Lookup auth user id by email (service_role only) — used when inviting existing accounts
+-- Lookup auth user id by email (service_role only) - used when inviting existing accounts
 CREATE OR REPLACE FUNCTION public.get_user_id_by_email(p_email text)
 RETURNS uuid
 LANGUAGE sql

@@ -27,6 +27,19 @@ function sanitizeChatMessagesForPersist(msgs) {
     if (Array.isArray(m.suggestions) && m.suggestions.length) {
       item.suggestions = m.suggestions.filter((s) => typeof s === 'string').slice(0, 12);
     }
+    if (m.reportActions && m.reportActions.id) {
+      item.reportActions = { id: m.reportActions.id, processName: m.reportActions.processName || '' };
+    }
+    if (m.artefact && m.artefact.kind) {
+      item.artefact = {
+        kind: m.artefact.kind,
+        refId: m.artefact.refId || null,
+        label: m.artefact.label || null,
+        // Snapshots can be large - keep them for the 80-message window; they're
+        // already capped by MAX_CHAT_MESSAGES_PERSIST so overall payload stays bounded.
+        snapshot: m.artefact.snapshot ?? null,
+      };
+    }
     out.push(item);
   }
   return out.length ? out.slice(-MAX_CHAT_MESSAGES_PERSIST) : null;
@@ -410,7 +423,7 @@ export function DiagnosticProvider({ children }) {
     });
   }, []);
 
-  /** Snapshot of full diagnostic state — shape matches `progressData` from
+  /** Snapshot of full diagnostic state - shape matches `progressData` from
    *  saveProgressToCloud so `restoreProgress` can rehydrate it verbatim.
    *  Used by the chat-session autosave so resume-from-history achieves
    *  parity with the legacy Save & continue later flow (minus email). */

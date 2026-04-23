@@ -27,7 +27,7 @@ ALTER TABLE public.diagnostic_reports
   ADD COLUMN IF NOT EXISTS automation_percentage numeric;
 
 -- Separate JSONB column for cost analysis settings (labour rates, non-labour,
--- implementation cost etc.) — keeps diagnostic_data focused on process data.
+-- implementation cost etc.) - keeps diagnostic_data focused on process data.
 ALTER TABLE public.diagnostic_reports
   ADD COLUMN IF NOT EXISTS cost_analysis jsonb;
 
@@ -176,7 +176,7 @@ CREATE POLICY pol_redesigns_update
     )
   );
 
--- followup_events: service-role only (cron job) — deny anon access
+-- followup_events: service-role only (cron job) - deny anon access
 DROP POLICY IF EXISTS pol_followups_deny ON public.followup_events;
 CREATE POLICY pol_followups_deny
   ON public.followup_events FOR ALL

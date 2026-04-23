@@ -3,7 +3,7 @@
 import { useDiagnostic } from './DiagnosticContext';
 
 /**
- * Screen 0 — lightweight entry before template selection.
+ * Screen 0 - lightweight entry before template selection.
  * (Replaces a removed chat-native intro; keeps progress / resume compatibility.)
  */
 export default function IntroChatScreen() {

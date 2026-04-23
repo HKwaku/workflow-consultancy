@@ -210,33 +210,42 @@ export async function GET(request) {
   const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
   try {
-    // Fetch deals where owner, plus participant-linked deals
-    const [ownedResp, participantResp] = await Promise.all([
+    // Deals where the user is owner OR listed in collaborator_emails OR is a participant
+    const emailEnc = encodeURIComponent(auth.email);
+    const [ownedResp, collabResp, participantResp] = await Promise.all([
       fetchWithTimeout(
-        `${supabaseUrl}/rest/v1/deals?owner_email=eq.${encodeURIComponent(auth.email)}&select=id,deal_code,type,name,process_name,status,created_at,updated_at&order=created_at.desc&limit=100`,
+        `${supabaseUrl}/rest/v1/deals?owner_email=eq.${emailEnc}&select=id,deal_code,type,name,process_name,status,collaborator_emails,created_at,updated_at&order=created_at.desc&limit=100`,
+        { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
+      ),
+      // Postgres array contains: cs.{email}
+      fetchWithTimeout(
+        `${supabaseUrl}/rest/v1/deals?collaborator_emails=cs.%7B${emailEnc}%7D&select=id,deal_code,type,name,process_name,status,collaborator_emails,created_at,updated_at&order=created_at.desc&limit=100`,
         { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
       ),
       fetchWithTimeout(
-        `${supabaseUrl}/rest/v1/deal_participants?participant_email=eq.${encodeURIComponent(auth.email)}&select=deal_id,role,company_name,status,deals(id,deal_code,type,name,process_name,status,created_at,updated_at)&limit=100`,
+        `${supabaseUrl}/rest/v1/deal_participants?participant_email=eq.${emailEnc}&select=deal_id,role,company_name,status,deals(id,deal_code,type,name,process_name,status,created_at,updated_at)&limit=100`,
         { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
       ),
     ]);
 
     const owned = ownedResp.ok ? await ownedResp.json() : [];
+    const collaborated = collabResp.ok ? await collabResp.json() : [];
     const participantRows = participantResp.ok ? await participantResp.json() : [];
 
-    // Merge, deduplicate by id
     const seen = new Set();
     const deals = [];
 
     for (const d of owned) {
-      if (!seen.has(d.id)) { seen.add(d.id); deals.push({ ...d, ownerRole: 'owner' }); }
+      if (!seen.has(d.id)) { seen.add(d.id); deals.push({ ...d, ownerRole: 'owner', accessMode: 'owner' }); }
+    }
+    for (const d of collaborated) {
+      if (!seen.has(d.id)) { seen.add(d.id); deals.push({ ...d, ownerRole: 'collaborator', accessMode: 'collaborator' }); }
     }
     for (const row of participantRows) {
       const d = row.deals;
       if (d && !seen.has(d.id)) {
         seen.add(d.id);
-        deals.push({ ...d, ownerRole: row.role, participantCompany: row.company_name });
+        deals.push({ ...d, ownerRole: row.role, accessMode: 'participant', participantCompany: row.company_name });
       }
     }
 

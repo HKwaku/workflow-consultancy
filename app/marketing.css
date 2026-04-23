@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════
-   Vesno Marketing — Editorial Financial Redesign
+   Vesno Marketing - Editorial Financial Redesign
    ═══════════════════════════════════════════════════ */
 
    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
@@ -56,7 +56,7 @@
      -moz-osx-font-smoothing: grayscale;
    }
    
-   /* Light section overrides — applied per-section */
+   /* Light section overrides - applied per-section */
    .section--light {
      background: #ddd8ce !important;
      border-top-color: rgba(30,24,12,0.08) !important;
@@ -137,7 +137,7 @@
    .section--light .dash-row-val { color: rgba(26,22,16,0.45); }
    .section--light .comp-panel-label { opacity: 0.95; }
    .section--light .flow-benefits { border-color: rgba(30,24,12,0.1); }
-   /* Diagnostic CTA — light theme */
+   /* Diagnostic CTA - light theme */
    .section--light.diagnostic-cta::after { color: rgba(26,22,16,0.06); }
    .section--light.diagnostic-cta .diagnostic-badge { color: rgba(26,22,16,0.5); }
    .section--light.diagnostic-cta h2 { color: #1a1610; }
@@ -677,7 +677,7 @@
    .dash-tag { font-size: 0.58rem; background: rgba(107,158,120,0.12); color: var(--signal-green); padding: 0.15rem 0.45rem; border-radius: 2px; font-weight: 500; letter-spacing: 0.3px; }
    .dash-row-val { color: var(--text-muted); font-size: 0.65rem; }
    
-   /* APPROACH — now horizontal numbered steps */
+   /* APPROACH - now horizontal numbered steps */
    .approach-section {
      background: var(--bg-base); border-top: 1px solid var(--border-subtle);
    }
@@ -724,7 +724,7 @@
    /* Hides the old complex flow diagram connectors */
    .flow-grid, .flow-node-connector, .flow-return-line, .flow-return-label-mobile { display: none !important; }
 
-   /* Continuous visibility strip (after approach, before diagnostic CTA) — dark */
+   /* Continuous visibility strip (after approach, before diagnostic CTA) - dark */
    .continuous-strip {
      padding: 3.5rem 2rem 2.5rem;
      border-top: 1px solid rgba(255,255,255,0.06);
@@ -847,7 +847,7 @@
      font-weight: 300;
    }
 
-   /* Visibility strip — product visual (card stays light for contrast on dark section) */
+   /* Visibility strip - product visual (card stays light for contrast on dark section) */
    .csv-visual-wrap {
      position: relative;
      grid-column: 2;
@@ -1397,7 +1397,7 @@
    }
    
    /* ═══════════════════════════════════════════════════
-      HERO STAT BAR — OffDeal-style, full-width, bottom of hero
+      HERO STAT BAR - OffDeal-style, full-width, bottom of hero
       ═══════════════════════════════════════════════════ */
    
    .hero-stat-bar {
@@ -1437,13 +1437,13 @@
    .hero-stat-divider { display: none; }
    
    /* ═══════════════════════════════════════════════════
-      COMPARISON — two-panel checklist style
+      COMPARISON - two-panel checklist style
       ═══════════════════════════════════════════════════ */
    
    
    
    /* ═══════════════════════════════════════════════════
-      HERO — updated for full-width layout (remove split)
+      HERO - updated for full-width layout (remove split)
       ═══════════════════════════════════════════════════ */
    
    .hero-content { text-align: left; max-width: 560px; }
@@ -1483,7 +1483,7 @@
    }
    
    /* ═══════════════════════════════════════════════════
-      APPROACH — Process flow diagram
+      APPROACH - Process flow diagram
       ═══════════════════════════════════════════════════ */
    
    .approach-section {
@@ -1709,7 +1709,7 @@
      .flow-benefit:last-child { border-bottom: none; }
    }
    
-   /* ── Engine module — human + AI variant ── */
+   /* ── Engine module - human + AI variant ── */
    .flow-engine-module {
      display: flex; align-items: center; gap: 0.75rem;
      padding: 0.75rem 1rem;
@@ -1791,7 +1791,7 @@
    .section--light .mkt-footer li:not(:has(a)) { color: rgba(26,22,16,0.4); }
    .section--light .footer-bottom p { color: rgba(26,22,16,0.35); }
    
-   /* Signals section stays fully dark — explicit */
+   /* Signals section stays fully dark - explicit */
    .signals-section { background: var(--bg-base); }
    
    /* Seg card label colour on light */
@@ -1806,7 +1806,7 @@
    .section--light .seg-card-cta--purple { color: #6a50b0; }
    .section--light .seg-card-cta--gold   { color: #8a6e3a; }
    
-   /* Signal CTA on light — but signals is dark, so no override needed */
+   /* Signal CTA on light - but signals is dark, so no override needed */
    
    /* Comp panel label opacity on light */
    .section--light .comp-panel.legacy::before { opacity: 0.4; }
@@ -1816,7 +1816,7 @@
    .section--light .warn-icon { color: #8a3a3a; }
    
    /* ═══════════════════════════════════════════════════
-      SIGNALS — redesigned as numbered list grid
+      SIGNALS - redesigned as numbered list grid
       ═══════════════════════════════════════════════════ */
    
    .signals-grid {
@@ -1883,7 +1883,7 @@
    }
    
    /* ═══════════════════════════════════════════════════
-      SIGNALS — accordion board redesign
+      SIGNALS - accordion board redesign
       ═══════════════════════════════════════════════════ */
    
    .signals-section {
@@ -2050,7 +2050,7 @@
    }
    
    /* ═══════════════════════════════════════════════════
-      COMPARISON — RAG colour system + animations
+      COMPARISON - RAG colour system + animations
       ═══════════════════════════════════════════════════ */
    
    /* Panel colour tokens */
@@ -2073,7 +2073,7 @@
      --panel-color-glow: rgba(46,125,79,0.35);
    }
    
-   /* Top bar — full colour, thicker */
+   /* Top bar - full colour, thicker */
    .comp-panel::before {
      height: 3px !important;
      opacity: 1 !important;
@@ -2107,7 +2107,7 @@
    }
    
    /* ══════════════════════════════════════
-      LEGACY PANEL — chaos cards animate in with stagger + shake
+      LEGACY PANEL - chaos cards animate in with stagger + shake
       ══════════════════════════════════════ */
    
    @keyframes cardDrift1 {
@@ -2141,7 +2141,7 @@
    .comp-panel.legacy.anim-triggered .chaos-badge { animation: badgePulse 1.8s ease-in-out infinite; }
    
    /* ══════════════════════════════════════
-      AI PANEL — chat bubbles typewriter feel, warning flashes
+      AI PANEL - chat bubbles typewriter feel, warning flashes
       ══════════════════════════════════════ */
    
    @keyframes bubbleIn {
@@ -2160,7 +2160,7 @@
    .comp-panel.ai.anim-triggered .ai-warn-row                 { animation: warnFlash 1.6s ease-in-out infinite 0.6s; }
    
    /* ══════════════════════════════════════
-      SHARPIN PANEL — metrics count up feel, rows slide in
+      SHARPIN PANEL - metrics count up feel, rows slide in
       ══════════════════════════════════════ */
    
    @keyframes metricPop {
@@ -2193,7 +2193,7 @@
    .section--light .comp-panel.new    { background: #c8cec4; }
 
    /* ═══════════════════════════════════════════════════
-      COMPARISON SECTION — dark panel variant
+      COMPARISON SECTION - dark panel variant
       ═══════════════════════════════════════════════════ */
    .comparison-section {
      background: #f8fafc !important;
@@ -2247,7 +2247,7 @@
    .comparison-section .comp-panel.ai     .comp-panel-label { color: #fbbf24 !important; }
    .comparison-section .comp-panel.new    .comp-panel-label { color: #2dd4bf !important; }
 
-   /* Headings — override section--light hardcoded #1a1610 */
+   /* Headings - override section--light hardcoded #1a1610 */
    .comparison-section .comp-panel h3,
    .comparison-section .comp-panel.new h3 { color: #f1f5f9 !important; }
 
@@ -2287,10 +2287,10 @@
    }
    
    /* ═══════════════════════════════════════════════════
-      COMPARISON — staggered card animations
+      COMPARISON - staggered card animations
       ═══════════════════════════════════════════════════ */
 
-   /* Chaos cards — hidden until JS adds .card-visible one-by-one */
+   /* Chaos cards - hidden until JS adds .card-visible one-by-one */
    .chaos-stack { display: flex; flex-direction: column; gap: 0.5rem; position: relative; min-height: 200px; }
    .comp-panel.legacy .chaos-stack { height: auto; overflow: visible; }
 
@@ -2367,7 +2367,7 @@
    .process-card-status--done   { color: var(--panel-color); }
    .process-card-status--active { color: var(--signal-amber); }
    
-   /* Slide in from left — JS adds .card-visible one-by-one */
+   /* Slide in from left - JS adds .card-visible one-by-one */
    .process-card--anim {
      opacity: 0;
      transform: translateX(-32px);
@@ -2383,7 +2383,7 @@
    .section--light .ps-body--canvas { background: #111111 !important; }
    .section--light .ps-canvas-footer { background: rgba(26,26,26,0.95) !important; border-top-color: rgba(255,255,255,0.08) !important; }
 
-   /* Light section — portal carousel (Process-first strategy slides) */
+   /* Light section - portal carousel (Process-first strategy slides) */
    .section--light .portal-carousel {
      box-shadow: none;
      border: 1px solid rgba(30,24,12,0.12);
@@ -2430,7 +2430,7 @@
 
 
    /* ═══════════════════════════════════════════════════
-      PORTAL CAROUSEL — light theme product preview slides
+      PORTAL CAROUSEL - light theme product preview slides
       ═══════════════════════════════════════════════════ */
 
    .portal-carousel {
@@ -2441,7 +2441,7 @@
      background: var(--bg-raised);
    }
 
-   /* On mobile, the carousel stacks and collapses — give it enough height
+   /* On mobile, the carousel stacks and collapses - give it enough height
       for the flow canvas slide (slide 3 needs ~400px to show all rows) */
    @media (max-width: 768px) {
      .portal-carousel { min-height: 420px; }
@@ -2502,14 +2502,14 @@
      padding: 1px 5px; flex-shrink: 0;
    }
 
-   /* Slide body — match mockup-body padding */
+   /* Slide body - match mockup-body padding */
    .ps-body {
      flex: 1; display: flex; flex-direction: column;
      padding: 1rem; gap: 8px; overflow: hidden;
    }
 
    /* ────────────────────
-      SLIDE 1 — DIAGNOSTIC
+      SLIDE 1 - DIAGNOSTIC
       ──────────────────── */
 
    .ps-d-top { display: flex; align-items: center; gap: 10px; }
@@ -2552,7 +2552,7 @@
    .ps-d-opp   { font-size: 0.58rem; color: #0d9488; font-weight: 600; }
 
    /* ──────────────────────
-      SLIDE — Process health / drift monitoring
+      SLIDE - Process health / drift monitoring
       ────────────────────── */
    .ps-bar-chip--pulse {
      color: #0d9488 !important;
@@ -2664,7 +2664,7 @@
    }
 
    /* ──────────────────────
-      SLIDE 2 — FLOW CANVAS (dark tool-style)
+      SLIDE 2 - FLOW CANVAS (dark tool-style)
       ────────────────────── */
 
    .ps-bar--dark {
@@ -2805,7 +2805,7 @@
    .ps-canvas-footer .ps-cf-warn { color: #f59e0b; }
 
    /* ──────────────────────────
-      SLIDE 3 — COST ANALYSIS
+      SLIDE 3 - COST ANALYSIS
       ────────────────────────── */
 
    .ps-cost-head  { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; flex-shrink: 0; }
@@ -2857,10 +2857,10 @@
    }
 
    /* ══════════════════════════════════════════════════
-      SLIDE 1 — METRIC PROGRESSION chart
+      SLIDE 1 - METRIC PROGRESSION chart
       ══════════════════════════════════════════════════ */
 
-   /* Metric progression chart — embedded in slide 1 bottom half */
+   /* Metric progression chart - embedded in slide 1 bottom half */
    .ps-mprog-wrap {
      flex: 1; min-height: 0;
      display: flex; flex-direction: column;
@@ -2907,7 +2907,7 @@
    .ps-mprog-xlabels span:last-child  { text-align: right; }
 
    /* ══════════════════════════════════════════════════
-      SLIDE 3 — PROCESS FLOW MAP (animated build)
+      SLIDE 3 - PROCESS FLOW MAP (animated build)
       ══════════════════════════════════════════════════ */
 
    /* Snake flow canvas */
@@ -2937,7 +2937,7 @@
    .pm-terminal--end { background: #0d9488; border-color: #0d9488; }
    .pm-terminal--end span { color: #e8f8f7; }
 
-   /* Terminal rows — Start above row 1, End below row 3 */
+   /* Terminal rows - Start above row 1, End below row 3 */
    .pm-term-row { display: flex; align-items: center; height: 22px; }
    .pm-term-row--s { justify-content: flex-start; }
    .pm-term-row--e { justify-content: flex-end; }
@@ -2999,7 +2999,7 @@
    .pm-dec-num   { font-size: 0.32rem; font-weight: 700; color: #d97706; letter-spacing: 0.5px; line-height: 1; }
    .pm-dec-label { font-size: 0.44rem; font-weight: 700; color: #92400e; line-height: 1.2; }
 
-   /* No branch — downward arrow from decision node bottom vertex */
+   /* No branch - downward arrow from decision node bottom vertex */
    .pm-branch-no {
      position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
      display: flex; flex-direction: column; align-items: center;
@@ -3078,7 +3078,7 @@
    .pm-fs-badge--time { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
 
    /* ═══════════════════════════════════════════════════
-      MOBILE TYPOGRAPHY — increase small text for legibility
+      MOBILE TYPOGRAPHY - increase small text for legibility
       ═══════════════════════════════════════════════════ */
 
    @media (max-width: 768px) {

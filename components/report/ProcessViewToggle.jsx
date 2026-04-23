@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 /**
  * Per-process section toggle: Flowchart vs Written write-up. Parent supplies
- * the two panes as nodes — this component only owns the toggle state + UI.
+ * the two panes as nodes - this component only owns the toggle state + UI.
  */
 
 export default function ProcessViewToggle({

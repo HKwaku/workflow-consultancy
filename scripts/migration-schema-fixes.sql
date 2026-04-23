@@ -1,7 +1,7 @@
 -- =============================================================================
 -- Schema fixes migration
 -- Run in Supabase SQL Editor (Dashboard → SQL Editor → New query)
--- Safe to run incrementally — all statements use IF NOT EXISTS / IF EXISTS.
+-- Safe to run incrementally - all statements use IF NOT EXISTS / IF EXISTS.
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
@@ -69,7 +69,7 @@ ALTER TABLE public.team_diagnostics
 -- ---------------------------------------------------------------------------
 -- 4. CHECK CONSTRAINTS on status columns
 --    NOT VALID adds the constraint without a full table scan (no lock).
---    VALIDATE CONSTRAINT checks existing rows separately — run during low
+--    VALIDATE CONSTRAINT checks existing rows separately - run during low
 --    traffic if you have many rows.
 -- ---------------------------------------------------------------------------
 

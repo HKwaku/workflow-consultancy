@@ -37,7 +37,7 @@ export default function Screen5YourDetails() {
     const contactCompany = authUser?.company || '';
     const contactTitle = authUser?.title || '';
     setContact({ name: contactName, email: contactEmail, company: contactCompany, title: contactTitle, department: department.trim(), teamSize, industry, costAnalystEmail: costAnalystEmail.trim() || null });
-    addAuditEvent({ type: 'submit', detail: `Contact details confirmed — ${contactName}${contactCompany ? ` (${contactCompany})` : ''}${contactTitle ? `, ${contactTitle}` : ''}` });
+    addAuditEvent({ type: 'submit', detail: `Contact details confirmed - ${contactName}${contactCompany ? ` (${contactCompany})` : ''}${contactTitle ? `, ${contactTitle}` : ''}` });
     goToScreen(6);
   }, [authUser, department, teamSize, industry, costAnalystEmail, confirmStep, setContact, goToScreen, addAuditEvent]);
 

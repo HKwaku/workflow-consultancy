@@ -298,7 +298,7 @@ export default function OrgAdminClient({ user, accessToken, onSignOut }) {
                         {orgOptions.map((o) => (
                           <tr key={o.id}>
                             <td>{o.name}</td>
-                            <td className="org-admin-mono">{o.slug || '—'}</td>
+                            <td className="org-admin-mono">{o.slug || '-'}</td>
                             <td>
                               <button
                                 type="button"

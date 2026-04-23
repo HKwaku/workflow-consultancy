@@ -22,7 +22,7 @@ export default function TeamAuthGate({ onAuthenticated, onBack, subtitle }) {
           return;
         }
       } catch {
-        // Supabase not configured — fall through to auth form
+        // Supabase not configured - fall through to auth form
       }
       if (mounted) setChecking(false);
     })();
