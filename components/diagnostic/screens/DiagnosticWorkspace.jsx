@@ -492,7 +492,7 @@ function MapRailPortalFooter({ sessionUser, onSignOut }) {
   );
 }
 
-function ArtefactsPanel({ artefacts, onClose, onOpenReport, onOpenFlow, onPin }) {
+function ArtefactsPanel({ artefacts, onClose, onOpenReport, onOpenFlow, onOpenCost, onPin }) {
   const count = artefacts.length;
   const labelFor = (kind) => (
     kind === 'flow_snapshot' ? 'Flow snapshot'
@@ -504,6 +504,7 @@ function ArtefactsPanel({ artefacts, onClose, onOpenReport, onOpenFlow, onPin })
   const iconFor = (kind) => (kind === 'flow_snapshot' ? '◫' : kind === 'report' ? '▤' : '◉');
   const handle = (a) => {
     if (a.kind === 'report' && a.refId) onOpenReport?.(a.refId);
+    else if (a.kind === 'cost_analysis' && a.refId) onOpenCost?.(a.refId);
     else if (a.kind === 'flow_snapshot') onOpenFlow?.(a.snapshot);
   };
   return (
@@ -548,7 +549,7 @@ function ArtefactsPanel({ artefacts, onClose, onOpenReport, onOpenFlow, onPin })
   );
 }
 
-function ArtefactPill({ artefact, onOpenReport, onOpenFlow }) {
+function ArtefactPill({ artefact, onOpenReport, onOpenFlow, onOpenCost }) {
   if (!artefact || !artefact.kind) return null;
   const label = artefact.label || (
     artefact.kind === 'report' ? 'Diagnostic report'
@@ -560,6 +561,7 @@ function ArtefactPill({ artefact, onOpenReport, onOpenFlow }) {
   const icon = artefact.kind === 'flow_snapshot' ? '◫' : artefact.kind === 'report' ? '▤' : '◉';
   const handle = () => {
     if (artefact.kind === 'report' && artefact.refId) onOpenReport?.(artefact.refId);
+    else if (artefact.kind === 'cost_analysis' && artefact.refId) onOpenCost?.(artefact.refId);
     else if (artefact.kind === 'flow_snapshot') onOpenFlow?.(artefact.snapshot);
   };
   return (
@@ -1960,6 +1962,33 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
           queueMicrotask(() => addAuditEvent({ type: 'step_edit', detail: 'AI undid last chat action' }));
           break;
         }
+        case 'generate_report': {
+          // Agent-driven report generation. Only fires when the agent judges
+          // phases complete. Reuse handleContinue so validation + deps modal
+          // logic stays consistent with the manual rail button.
+          if (!editingReportId) {
+            queueMicrotask(() => handleContinue());
+          }
+          break;
+        }
+        case 'generate_cost': {
+          // Agent-driven cost view. Requires a report to exist. Pin a
+          // cost_analysis artefact so the session history has a bookmark.
+          if (!editingReportId) break;
+          setInlineReportId(null);
+          setInlineCostReportId(editingReportId);
+          const pn = processData?.processName ? `: ${processData.processName}` : '';
+          const artefact = {
+            kind: 'cost_analysis',
+            refId: editingReportId,
+            label: `Cost analysis${pn}`,
+          };
+          queueMicrotask(() => {
+            addChatMessage({ role: 'assistant', content: 'Opened cost analysis.', artefact });
+            try { persistMessageToCloud({ role: 'assistant', content: 'Opened cost analysis.', artefact }); } catch { /* best-effort */ }
+          });
+          break;
+        }
         case 'set_labour_rate':
         case 'set_non_labour_cost':
         case 'set_investment':
@@ -1973,7 +2002,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       }
     }
     return addedNames;
-  }, [addStep, removeStep, addCustomDepartment, updateProcessData, addAuditEvent, steps, handoffs, editingReportId]);
+  }, [addStep, removeStep, addCustomDepartment, updateProcessData, addAuditEvent, steps, handoffs, editingReportId, handleContinue, processData, addChatMessage, persistMessageToCloud]);
 
   const processFiles = useCallback((files) => {
     if (!files.length) return;
@@ -2838,7 +2867,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                   </div>
                 )}
                 {m.artefact && !(m.reportActions && m.artefact.kind === 'report') && (
-                  <ArtefactPill artefact={m.artefact} onOpenReport={(rid) => setInlineReportId(rid)} onOpenFlow={(snap) => setArtefactPreview(snap)} />
+                  <ArtefactPill artefact={m.artefact} onOpenReport={(rid) => setInlineReportId(rid)} onOpenFlow={(snap) => setArtefactPreview(snap)} onOpenCost={(rid) => { setInlineReportId(null); setInlineCostReportId(rid); }} />
                 )}
                 {Array.isArray(m.costProposals) && m.costProposals.length > 0 && editingReportId && (
                   <div className="s7-report-actions">
@@ -3017,6 +3046,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
         onClose={() => setShowArtefactsPanel(false)}
         onOpenReport={(rid) => { setShowArtefactsPanel(false); setInlineReportId(rid); }}
         onOpenFlow={(snap) => { setShowArtefactsPanel(false); setArtefactPreview(snap); }}
+        onOpenCost={(rid) => { setShowArtefactsPanel(false); setInlineReportId(null); setInlineCostReportId(rid); }}
         onPin={pinCurrentFlow}
       />
     );
