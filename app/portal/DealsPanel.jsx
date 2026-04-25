@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api-fetch';
 
@@ -521,8 +521,21 @@ export default function DealsPanel({ deals, loading, onRefresh, accessToken }) {
   const toggleExpanded = (dealId) => {
     if (expandedId === dealId) { setExpandedId(null); return; }
     setExpandedId(dealId);
-    if (!detailByDeal[dealId]) loadDetail(dealId);
+    loadDetail(dealId);
   };
+
+  useEffect(() => {
+    if (!expandedId) return;
+    const refresh = () => {
+      if (document.visibilityState === 'visible') loadDetail(expandedId);
+    };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [expandedId, loadDetail]);
 
   const handleCreateFlow = useCallback(async (dealId, { participantId, label, flowKind }) => {
     try {
