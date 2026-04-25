@@ -7,6 +7,7 @@ import { triggerWebhook } from '@/lib/triggerWebhook';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 import { normalizeCostAuthorizedEmails, getCostAnalystNotificationTargets } from '@/lib/costAnalystEnv';
+import { maybeCompleteDeal } from '@/lib/dealStatus';
 
 export async function POST(request) {
   const originErr = checkOrigin(request);
@@ -265,10 +266,14 @@ export async function POST(request) {
           scheduleFollowups(supabaseUrl, supabaseKey, reportId, contact, now, getRequestId(request));
           linkProgressRecord(supabaseUrl, supabaseKey, progressId, reportId, getRequestId(request));
           if (dealLink) {
-            completeDealParticipant(supabaseUrl, supabaseKey, dealLink.participantId, reportId, now, getRequestId(request));
-            if (dealLink.dealFlowId) {
-              completeDealFlow(supabaseUrl, supabaseKey, dealLink.dealFlowId, reportId, now, getRequestId(request));
-            }
+            const dealReqId = getRequestId(request);
+            (async () => {
+              await completeDealParticipant(supabaseUrl, supabaseKey, dealLink.participantId, reportId, now, dealReqId);
+              if (dealLink.dealFlowId) {
+                await completeDealFlow(supabaseUrl, supabaseKey, dealLink.dealFlowId, reportId, now, dealReqId);
+              }
+              await maybeCompleteDeal({ dealId: dealLink.dealId, supabaseUrl, supabaseKey, requestId: dealReqId });
+            })();
           }
         }
       } catch (sbErr) {

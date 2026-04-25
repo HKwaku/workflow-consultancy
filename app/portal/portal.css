@@ -4588,6 +4588,20 @@ body:has(.dashboard-header) {
 
 .deal-expanded-body { padding: 12px 14px; background: var(--bg-alt); display: flex; flex-direction: column; gap: 12px; }
 .deal-expanded-footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-top: 4px; }
+
+.deal-collaborators { padding: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; display: flex; flex-direction: column; gap: 8px; }
+.deal-collaborators-header { display: flex; flex-direction: column; gap: 2px; }
+.deal-collaborators-title { font-size: 0.85rem; font-weight: 600; color: var(--text-strong); margin: 0; }
+.deal-collaborators-hint { font-size: 0.72rem; color: var(--text-mid); }
+.deal-collaborators-empty { font-size: 0.78rem; color: var(--text-mid); margin: 0; }
+.deal-collaborators-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.deal-collaborators-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; background: var(--bg-alt); border-radius: 6px; }
+.deal-collaborators-email { font-size: 0.82rem; color: var(--text-strong); }
+.deal-collaborators-remove { background: transparent; border: none; color: var(--text-mid); font-size: 1.1rem; line-height: 1; cursor: pointer; padding: 0 4px; }
+.deal-collaborators-remove:hover:not(:disabled) { color: #ef4444; }
+.deal-collaborators-remove:disabled { opacity: 0.5; cursor: not-allowed; }
+.deal-collaborators-add-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.deal-collaborators-add-row .deal-participant-email { flex: 1 1 200px; min-width: 0; }
 .deal-delete-btn {
   background: transparent; border: 1px solid #ef4444; color: #ef4444;
   font-size: 0.78rem; padding: 6px 12px; border-radius: 6px; cursor: pointer;

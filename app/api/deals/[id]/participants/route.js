@@ -3,6 +3,7 @@ import { getSupabaseHeaders, getSupabaseWriteHeaders, fetchWithTimeout, requireS
 import { requireAuth } from '@/lib/auth';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { requireDealEditor } from '@/lib/dealAuth';
+import { maybeCompleteDeal } from '@/lib/dealStatus';
 import { logger } from '@/lib/logger';
 
 /**
@@ -68,6 +69,8 @@ export async function PATCH(request, { params }) {
         body: JSON.stringify({ deal_id: id, deal_role: participant.role }),
       }
     ).catch(() => {}); // non-fatal
+
+    await maybeCompleteDeal({ dealId: id, supabaseUrl, supabaseKey, requestId: getRequestId(request) });
 
     return NextResponse.json({ success: true });
   } catch (err) {

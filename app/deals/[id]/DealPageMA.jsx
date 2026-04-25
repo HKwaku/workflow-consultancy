@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api-fetch';
+import DealAnalysisSection from './DealAnalysisSection';
 
 const ROLE_LABEL = { acquirer: 'Acquirer', target: 'Target' };
 
@@ -285,6 +286,19 @@ export default function DealPageMA({ deal, participants, summary, accessToken, o
           Both acquirer and target must complete their process maps before step-level decisions can be made.
         </p>
       )}
+
+      <DealAnalysisSection
+        deal={deal}
+        participants={participants}
+        summary={{
+          completedCount: participants.filter((p) => p.status === 'complete').length,
+          totalCount: participants.length,
+        }}
+        accessToken={accessToken}
+        ctaTitle="Both companies have completed their process maps"
+        ctaText="Run an AI analysis to compare acquirer and target processes, quantify integration synergy, or design the unified target operating process."
+        notReadyMessage="Both acquirer and target must complete their process maps before the AI cross-company analysis can run."
+      />
     </div>
   );
 }

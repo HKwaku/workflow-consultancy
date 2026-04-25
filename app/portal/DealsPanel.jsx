@@ -314,9 +314,114 @@ function CompanyBlock({ participant, flows, canEdit, dealId, onCreateFlow, onOpe
   );
 }
 
+/* ── Collaborators section ────────────────────────────────────── */
+
+function CollaboratorsSection({ dealId, collaboratorEmails, accessToken, onChanged, flashToast }) {
+  const [adding, setAdding] = useState(false);
+  const [email, setEmail] = useState('');
+  const [busy, setBusy] = useState(false);
+  const list = Array.isArray(collaboratorEmails) ? collaboratorEmails : [];
+
+  async function handleAdd() {
+    const clean = email.trim().toLowerCase();
+    if (!clean) return;
+    setBusy(true);
+    try {
+      const resp = await apiFetch(`/api/deals/${encodeURIComponent(dealId)}/collaborators`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emails: [clean] }),
+      }, accessToken);
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Failed to add collaborator.');
+      setEmail('');
+      setAdding(false);
+      flashToast(`Added ${clean}`);
+      onChanged();
+    } catch (err) {
+      flashToast(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRemove(target) {
+    if (!confirm(`Remove ${target} from this deal?`)) return;
+    setBusy(true);
+    try {
+      const resp = await apiFetch(
+        `/api/deals/${encodeURIComponent(dealId)}/collaborators?email=${encodeURIComponent(target)}`,
+        { method: 'DELETE' },
+        accessToken
+      );
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Failed to remove collaborator.');
+      flashToast(`Removed ${target}`);
+      onChanged();
+    } catch (err) {
+      flashToast(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="deal-collaborators">
+      <div className="deal-collaborators-header">
+        <h4 className="deal-collaborators-title">Collaborators</h4>
+        <span className="deal-collaborators-hint">Owners only. Collaborators can edit flows and run analyses.</span>
+      </div>
+      {list.length === 0 ? (
+        <p className="deal-collaborators-empty">No collaborators yet.</p>
+      ) : (
+        <ul className="deal-collaborators-list">
+          {list.map((e) => (
+            <li key={e} className="deal-collaborators-item">
+              <span className="deal-collaborators-email">{e}</span>
+              <button
+                type="button"
+                className="deal-collaborators-remove"
+                onClick={() => handleRemove(e)}
+                disabled={busy}
+                title="Remove collaborator"
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {adding ? (
+        <div className="deal-collaborators-add-row">
+          <input
+            type="email"
+            className="deal-participant-email"
+            placeholder="collaborator@company.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoFocus
+            disabled={busy}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }}
+          />
+          <button type="button" className="portal-flow-btn compact" onClick={handleAdd} disabled={busy || !email.trim()}>
+            {busy ? 'Adding…' : 'Add'}
+          </button>
+          <button type="button" className="portal-flow-btn compact" onClick={() => { setAdding(false); setEmail(''); }} disabled={busy}>
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <button type="button" className="deal-add-participant" onClick={() => setAdding(true)}>
+          + Add collaborator
+        </button>
+      )}
+    </div>
+  );
+}
+
 /* ── Expanded deal detail ─────────────────────────────────────── */
 
-function ExpandedDeal({ deal, detail, detailLoading, detailError, canEdit, canDelete, onReloadDetail, onCreateFlow, onDeleteFlow, onOpenFlow, onCopyInvite, onGoToDealPage, onDeleteParticipant, onDeleteDeal }) {
+function ExpandedDeal({ deal, detail, detailLoading, detailError, canEdit, canDelete, canManage, accessToken, flashToast, onReloadDetail, onCreateFlow, onDeleteFlow, onOpenFlow, onCopyInvite, onGoToDealPage, onDeleteParticipant, onDeleteDeal }) {
   if (detailLoading) {
     return <div className="deal-expanded-body"><div className="portal-loading"><div className="spinner" /><p>Loading companies…</p></div></div>;
   }
@@ -357,6 +462,15 @@ function ExpandedDeal({ deal, detail, detailLoading, detailError, canEdit, canDe
             />
           ))}
         </div>
+      )}
+      {canManage && (
+        <CollaboratorsSection
+          dealId={deal.id}
+          collaboratorEmails={detail.deal?.collaboratorEmails || []}
+          accessToken={accessToken}
+          onChanged={onReloadDetail}
+          flashToast={flashToast}
+        />
       )}
       <div className="deal-expanded-footer">
         <button type="button" className="portal-flow-btn compact" onClick={onGoToDealPage}>Open deal page →</button>
@@ -559,6 +673,9 @@ export default function DealsPanel({ deals, loading, onRefresh, accessToken }) {
                     detailError={detailError[d.id] || null}
                     canEdit={canEdit}
                     canDelete={detail?.deal ? !!detail.deal.canDelete : (d.accessMode === 'owner')}
+                    canManage={detail?.deal ? !!detail.deal.isOwner : (d.accessMode === 'owner')}
+                    accessToken={accessToken}
+                    flashToast={flashToast}
                     onReloadDetail={() => loadDetail(d.id)}
                     onCreateFlow={(args) => handleCreateFlow(d.id, args)}
                     onDeleteFlow={(flow) => handleDeleteFlow(d.id, flow)}

@@ -71,7 +71,6 @@ export async function POST(request, { params }) {
         const isEditor = deal.owner_email === auth.email
           || (Array.isArray(deal.collaborator_emails) && deal.collaborator_emails.some((e) => typeof e === 'string' && e.toLowerCase() === auth.email.toLowerCase()));
         if (!isEditor) { send('error', { error: 'Only the deal owner or a collaborator can run analysis.' }); return; }
-        if (deal.type !== 'pe_rollup') { send('error', { error: 'Analysis is only available for PE roll-up deals.' }); return; }
 
         // 2. Fetch participants
         const partResp = await fetchWithTimeout(
