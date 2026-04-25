@@ -333,7 +333,7 @@ test.describe('PE Roll-up - deal setup gate', () => {
     // Confirm chip - create the deal
     await page.locator('.guided-chat-cta-chip:has-text("Create roll-up")').click();
 
-    // Should now be on the IntroChatScreen (screen 0) - PE badge is gone
+    // Should now be on the diagnostic shell - PE badge is gone
     await expect(page.locator('.pe-deal-badge')).not.toBeVisible({ timeout: 8000 });
     await expect(page.locator('.diagnostic-shell')).toBeVisible({ timeout: 8000 });
   });
