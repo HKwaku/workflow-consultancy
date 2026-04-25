@@ -5542,7 +5542,7 @@ body { line-height: 1.65; }
         }
         .s7-msg-user .s7-msg-bubble {
             background: linear-gradient(135deg, var(--accent) 0%, #14b8a6 100%);
-            color: #fff;
+            color: #0b132b;
             border-bottom-right-radius: 6px;
             box-shadow: 0 2px 12px rgba(13,148,136,0.2);
         }
@@ -12857,6 +12857,16 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   color: var(--accent, #0d9488);
   border-color: rgba(13, 148, 136, 0.28);
 }
+.s7-split-rail-btn.has-artefacts:not(.active) {
+  color: var(--accent, #0d9488);
+  border-color: rgba(13, 148, 136, 0.22);
+  background: rgba(13, 148, 136, 0.06);
+}
+[data-theme="dark"] .s7-split-rail-btn.has-artefacts:not(.active) {
+  color: #5eead4;
+  border-color: rgba(94, 234, 212, 0.32);
+  background: rgba(94, 234, 212, 0.08);
+}
 .s7-split-rail-count {
   position: absolute;
   top: -2px;
@@ -14305,13 +14315,18 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
 }
 .s7-report-action-btn:hover { background: var(--bg-alt, #f1f5f9); color: var(--text, #1e293b); }
 .s7-report-action-btn--primary {
-  background: var(--accent, #0d9488); color: #fff; border-color: var(--accent, #0d9488);
+  background: var(--accent, #0d9488); color: #0b132b; border-color: var(--accent, #0d9488);
 }
-.s7-report-action-btn--primary:hover { background: #0f766e; }
+.s7-report-action-btn--primary:hover { background: #0f766e; color: #0b132b; }
 
 /* Accent rail button (Generate report) */
 .s7-split-rail-btn--accent { color: var(--accent, #0d9488) !important; }
 .s7-split-rail-btn--accent:hover { background: rgba(13,148,136,0.1) !important; }
+.s7-split-rail-btn--ready { background: rgba(13,148,136,0.15) !important; animation: s7-rail-ready-pulse 2.4s ease-in-out infinite; }
+@keyframes s7-rail-ready-pulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(13,148,136,0.45), 0 0 8px rgba(13,148,136,0.4); }
+  50%      { box-shadow: 0 0 0 1px rgba(13,148,136,0.7),  0 0 18px rgba(13,148,136,0.75); }
+}
 
 /* Dark theme */
 [data-theme="dark"] .chat-history-hd { border-color: rgba(255,255,255,0.07); }
@@ -14539,16 +14554,17 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   padding: 7px 14px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--primary, #14b8a6);
-  background: rgba(20,184,166,0.10);
-  border: 1.5px solid var(--primary, #14b8a6);
+  color: #ffffff;
+  background: #14b8a6;
+  border: 1.5px solid #14b8a6;
   border-radius: 10px;
   cursor: pointer;
   transition: background 120ms ease, transform 120ms ease;
 }
 .s7-artefact-pill:hover {
-  background: var(--primary, #14b8a6);
-  color: #fff;
+  background: #0d9488;
+  border-color: #0d9488;
+  color: #ffffff;
   transform: translateY(-1px);
 }
 .s7-artefact-pill:hover .s7-artefact-pill-icon { opacity: 1; }
@@ -14670,13 +14686,13 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
 }
 .s7-artefacts-panel-actions { display: inline-flex; align-items: center; gap: 8px; }
 .s7-artefacts-panel-pin {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 10px; font-size: 12px; font-weight: 600;
-  background: rgba(20,184,166,0.08); color: var(--primary, #0f766e);
-  border: 1px solid rgba(20,184,166,0.35); border-radius: 6px;
-  cursor: pointer; transition: background 120ms ease, border-color 120ms ease;
+  display: inline-flex !important; align-items: center; gap: 6px;
+  padding: 5px 10px; font-size: 12px; font-weight: 700;
+  background: #14b8a6 !important; color: #ffffff !important;
+  border: 1px solid #14b8a6 !important; border-radius: 6px;
+  cursor: pointer; transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
 }
-.s7-artefacts-panel-pin:hover { background: var(--primary, #14b8a6); color: #fff; border-color: var(--primary, #14b8a6); }
+.s7-artefacts-panel-pin:hover { background: #0d9488 !important; color: #ffffff !important; border-color: #0d9488 !important; }
 .s7-artefacts-panel-close {
   background: transparent; border: 0; cursor: pointer;
   font-size: 20px; line-height: 1; color: var(--text-muted, #64748b);
@@ -14722,4 +14738,15 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
 }
 .s7-artefacts-panel-item:hover .s7-artefacts-panel-item-arrow { color: var(--primary, #14b8a6); }
 [data-theme="dark"] .s7-artefacts-panel-item-label { color: var(--text, #f1f5f9); }
+
+/* ── Teal-background contrast overrides ─────────────────────────────
+ * Wherever the brand teal is the bubble/button background we force dark
+ * text. Placed at end of file so it wins specificity ties without needing
+ * !important on every selector. */
+.s7-msg-user .s7-msg-bubble,
+.s7-msg-user .s7-msg-bubble * { color: #0b132b !important; }
+.s7-report-action-btn--primary,
+.s7-report-action-btn--primary:hover,
+.s7-split-rail-btn--accent,
+.s7-split-rail-btn--ready { color: #0b132b !important; }
 

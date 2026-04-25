@@ -4,6 +4,24 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getSessionSafe } from '@/lib/supabase';
 
+/** Map Supabase network / TLS failures to actionable copy (browser often shows "Failed to fetch"). */
+function formatAuthError(err) {
+  const name = err?.name || '';
+  const msg = String(err?.message || err || '');
+  if (
+    name === 'AuthRetryableFetchError' ||
+    /failed to fetch|networkerror|load failed|network request failed/i.test(msg)
+  ) {
+    return (
+      'Cannot reach Supabase from this browser. Check: (1) NEXT_PUBLIC_SUPABASE_URL and ' +
+      'NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local — then restart `next dev`; (2) the Supabase project is not paused; ' +
+      '(3) VPN or ad-blocker is not blocking *.supabase.co; (4) Supabase → Authentication → URL configuration includes ' +
+      `this origin (e.g. ${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}).`
+    );
+  }
+  return msg || 'Something went wrong.';
+}
+
 function PasswordField({ value, onChange, placeholder }) {
   const [visible, setVisible] = useState(false);
   return (
@@ -65,16 +83,18 @@ export default function PortalAuth({ supabase, onAuthenticated, mode: initialMod
   const handleSignIn = async (e) => {
     e?.preventDefault();
     if (!email || !password) { showError('Please enter email and password.'); return; }
+    if (!supabase) {
+      showError('Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, then restart the dev server.');
+      return;
+    }
     setLoading(true); setError('');
     try {
-      if (supabase) {
-        const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
-        if (err) throw err;
-        onAuthenticated(data.user);
-      } else {
-        onAuthenticated({ email });
-      }
-    } catch (err) { showError(err.message || 'Sign in failed.'); }
+      const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
+      if (err) throw err;
+      onAuthenticated(data.user);
+    } catch (err) {
+      showError(formatAuthError(err) || 'Sign in failed.');
+    }
     finally { setLoading(false); }
   };
 
@@ -82,28 +102,35 @@ export default function PortalAuth({ supabase, onAuthenticated, mode: initialMod
     e?.preventDefault();
     if (!email || !password) { showError('Please enter email and password.'); return; }
     if (password.length < 6) { showError('Password must be at least 6 characters.'); return; }
+    if (!supabase) {
+      showError('Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, then restart the dev server.');
+      return;
+    }
     setLoading(true); setError('');
     try {
-      if (supabase) {
-        const { data, error: err } = await supabase.auth.signUp({ email, password });
-        if (err) throw err;
-        if (data.user) onAuthenticated(data.user);
-        else setSuccess('Check your email for a confirmation link.');
-      } else { onAuthenticated({ email }); }
-    } catch (err) { showError(err.message || 'Sign up failed.'); }
+      const { data, error: err } = await supabase.auth.signUp({ email, password });
+      if (err) throw err;
+      if (data.user) onAuthenticated(data.user);
+      else setSuccess('Check your email for a confirmation link.');
+    } catch (err) {
+      showError(formatAuthError(err) || 'Sign up failed.');
+    }
     finally { setLoading(false); }
   };
 
   const handleForgotPassword = async (e) => {
     e?.preventDefault();
     if (!email) { showError('Please enter your email address.'); return; }
+    if (!supabase) { showError('Authentication service not available. Check NEXT_PUBLIC_SUPABASE_* in .env.local and restart the dev server.'); return; }
     setLoading(true); setError(''); setSuccess('');
     try {
       const redirectUrl = window.location.origin + '/portal';
       const { error: err } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: redirectUrl });
       if (err) throw err;
       setSuccess('Password reset link sent! Check your email (including spam folder).');
-    } catch (err) { showError(err.message || 'Failed to send reset email.'); }
+    } catch (err) {
+      showError(formatAuthError(err) || 'Failed to send reset email.');
+    }
     finally { setLoading(false); }
   };
 
@@ -122,7 +149,9 @@ export default function PortalAuth({ supabase, onAuthenticated, mode: initialMod
         const { session } = await getSessionSafe(supabase);
         if (session?.user) onAuthenticated(session.user);
       }, 1500);
-    } catch (err) { showError(err.message || 'Failed to update password. The link may have expired.'); }
+    } catch (err) {
+      showError(formatAuthError(err) || 'Failed to update password. The link may have expired.');
+    }
     finally { setLoading(false); }
   };
 
@@ -149,9 +178,14 @@ export default function PortalAuth({ supabase, onAuthenticated, mode: initialMod
         <p className="auth-subtitle">Enter your email and we&apos;ll send you a link to reset your password.</p>
         {error && <div className="auth-error show">{error}</div>}
         {success && <div className="auth-success show">{success}</div>}
+        {!supabase && (
+          <div className="auth-error show" role="alert">
+            Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, then restart <code style={{ fontSize: '0.85em' }}>next dev</code>.
+          </div>
+        )}
         <form onSubmit={handleForgotPassword}>
           <input type="email" className="auth-input" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <button type="submit" className="auth-btn" disabled={loading}>{loading ? 'Sending...' : 'Send Reset Link'}</button>
+          <button type="submit" className="auth-btn" disabled={loading || !supabase}>{loading ? 'Sending...' : 'Send Reset Link'}</button>
         </form>
         <div className="auth-toggle">
           <a onClick={() => setMode('login')} style={{ cursor: 'pointer' }}>Back to sign in</a>
@@ -170,6 +204,12 @@ export default function PortalAuth({ supabase, onAuthenticated, mode: initialMod
       </p>
       {error && <div className="auth-error show">{error}</div>}
       {success && <div className="auth-success show">{success}</div>}
+      {!supabase && (
+        <div className="auth-error show" role="alert">
+          Supabase is not configured in the browser. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to
+          .env.local, then restart <code style={{ fontSize: '0.85em' }}>next dev</code>.
+        </div>
+      )}
       <form onSubmit={mode === 'signup' ? handleSignUp : handleSignIn}>
         <input type="email" className="auth-input" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} />
         <PasswordField placeholder={mode === 'signup' ? 'Password (min 6 characters)' : 'Password'} value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -178,7 +218,7 @@ export default function PortalAuth({ supabase, onAuthenticated, mode: initialMod
             <a onClick={() => setMode('forgot')} style={{ fontSize: '0.82rem', color: 'var(--accent)', cursor: 'pointer' }}>Forgot password?</a>
           </div>
         )}
-        <button type="submit" className="auth-btn" disabled={loading}>
+        <button type="submit" className="auth-btn" disabled={loading || !supabase}>
           {loading ? 'Please wait...' : mode === 'signup' ? 'Create Account' : 'Sign In'}
         </button>
       </form>

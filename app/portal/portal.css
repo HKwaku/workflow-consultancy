@@ -912,7 +912,12 @@ body:has(.dashboard-header) {
   align-items: center;
   gap: 14px;
 }
-.header-right { gap: 12px; }
+.header-right {
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  row-gap: 6px;
+}
 
 .dashboard-header .header-logo {
   color: white;

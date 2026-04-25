@@ -111,7 +111,6 @@ const flowOutputs = [
 const flowBenefits = [
   { title: 'Evidence-based', desc: 'Findings anchored to real process data, not interviews' },
   { title: 'Financially quantified', desc: 'Quantify the cost of your bottlenecks' },
-  { title: 'Continuous monitoring', desc: 'Re-map and compare over time, and catch drift before it compounds' },
   { title: 'Fix-first', desc: 'Repair processes before any automation is applied' },
 ];
 
@@ -122,8 +121,8 @@ const visibilityStripCards = [
     icon: 'workspace',
   },
   {
-    title: 'Baseline, drift, and scenarios',
-    body: 'Compare new runs to your baseline to spot drift in cycle time and cost. Run scenarios on volumes, headcount, and assumptions so you see the range of outcomes before they hit the P&L.',
+    title: 'Scenario planning',
+    body: 'Run scenarios on volumes, headcount, and assumptions so you see the range of outcomes before they hit the P&L.',
     icon: 'scenarios',
   },
   {
@@ -255,16 +254,7 @@ export default function MarketingClient() {
   }, []);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('visible'); }),
-      { threshold: 0.06, rootMargin: '0px 0px -40px 0px' }
-    );
-    document.querySelectorAll('.scroll-reveal').forEach((el, i) => {
-      el.style.transitionDelay = `${(i % 4) * 0.1}s`;
-      observer.observe(el);
-    });
-
-    // Continuous stagger loop for comparison panels
+    // Comparison panels only (scroll-reveal is CSS-visible without IO — see marketing.css)
     const stopFns = [];
 
     const animObserver = new IntersectionObserver(
@@ -311,7 +301,7 @@ export default function MarketingClient() {
     );
     document.querySelectorAll('.comp-panel').forEach((el) => animObserver.observe(el));
 
-    return () => { observer.disconnect(); animObserver.disconnect(); stopFns.forEach(fn => fn()); };
+    return () => { animObserver.disconnect(); stopFns.forEach(fn => fn()); };
   }, []);
 
   const closeMenu = () => setMenuOpen(false);
@@ -730,52 +720,9 @@ export default function MarketingClient() {
                   </div>
                 </div>
 
-                {/* Slide 4, Process health / drift monitoring */}
-                <div className="portal-slide portal-slide--fast">
-                  <div className="ps-bar">
-                    <span className="ps-dot r"/><span className="ps-dot y"/><span className="ps-dot g"/>
-                    <span className="ps-bar-title">Process health · Invoice Approval</span>
-                    <span className="ps-bar-chip ps-bar-chip--pulse">Drift watch</span>
-                  </div>
-                  <div className="ps-body ps-body--monitor">
-                    <div className="ps-monitor-head">
-                      <span className="ps-monitor-base">Baseline · Jan 2026</span>
-                      <span className="ps-monitor-pill">Drift vs baseline</span>
-                    </div>
-                    <div className="ps-monitor-rows">
-                      <div className="ps-monitor-row">
-                        <span className="ps-monitor-metric">Cycle time</span>
-                        <span className="ps-monitor-val">4.2 d</span>
-                        <span className="ps-monitor-delta ps-monitor-delta--bad">+12%</span>
-                      </div>
-                      <div className="ps-monitor-row">
-                        <span className="ps-monitor-metric">Dwell at approval</span>
-                        <span className="ps-monitor-val">1.8 d</span>
-                        <span className="ps-monitor-delta ps-monitor-delta--ok">−4%</span>
-                      </div>
-                      <div className="ps-monitor-row">
-                        <span className="ps-monitor-metric">True annual cost</span>
-                        <span className="ps-monitor-val">£148k</span>
-                        <span className="ps-monitor-delta ps-monitor-delta--bad">+£5.6k</span>
-                      </div>
-                    </div>
-                    <div className="ps-monitor-spark" aria-hidden="true">
-                      <span className="ps-monitor-spark-label">12-week trend</span>
-                      <svg className="ps-monitor-spark-svg" viewBox="0 0 120 32" preserveAspectRatio="none">
-                        <path d="M0 24 L20 22 L40 18 L60 20 L80 12 L100 8 L120 6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </div>
-                    <div className="ps-monitor-foot">
-                      <span className="ps-monitor-sync">Compared 2 days ago · next auto-compare in 5d</span>
-                      <span className="ps-monitor-cta">Re-baseline</span>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Dots indicator */}
                 <div className="ps-dots">
                   <span className="ps-dot-ind ps-dot-ind--active"/>
-                  <span className="ps-dot-ind"/>
                   <span className="ps-dot-ind"/>
                   <span className="ps-dot-ind"/>
                 </div>

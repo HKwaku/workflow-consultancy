@@ -248,22 +248,48 @@ export async function POST(request) {
         };
         if (!isUpdate) reportPayload.created_at = timestamp || now;
 
-        let sbResp;
-        if (isUpdate) {
-          const updatePayload = { ...reportPayload }; delete updatePayload.id; delete updatePayload.created_at;
-          sbResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}`, { method: 'PATCH', headers: getSupabaseWriteHeaders(supabaseKey), body: JSON.stringify(updatePayload) });
-        } else {
-          sbResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports`, { method: 'POST', headers: getSupabaseWriteHeaders(supabaseKey), body: JSON.stringify(reportPayload) });
+        // Optional columns that may not exist in older deployed schemas. If
+        // PostgREST returns "Could not find the 'X' column" (PGRST204), drop
+        // that column from the payload and retry. This makes us resilient to
+        // un-applied migrations (segment, contributor_emails, deal_id, etc.).
+        const OPTIONAL_COLUMNS = ['segment', 'contributor_emails', 'deal_id', 'deal_role', 'parent_report_id', 'display_code', 'cost_analysis_token_expires_at'];
+
+        async function attemptWrite(payload) {
+          if (isUpdate) {
+            const updatePayload = { ...payload }; delete updatePayload.id; delete updatePayload.created_at;
+            return fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}`, { method: 'PATCH', headers: getSupabaseWriteHeaders(supabaseKey), body: JSON.stringify(updatePayload) });
+          }
+          return fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports`, { method: 'POST', headers: getSupabaseWriteHeaders(supabaseKey), body: JSON.stringify(payload) });
         }
-        if (sbResp.ok || sbResp.status === 201 || sbResp.status === 204) storedInSupabase = true;
-        else {
-          let sbBody = '';
-          try { sbBody = await sbResp.text(); } catch { /* ignore */ }
-          logger.warn('Supabase write failed', { requestId: getRequestId(request), status: sbResp.status, body: sbBody.slice(0, 500) });
+
+        let sbResp;
+        let workingPayload = reportPayload;
+        let lastBody = '';
+        for (let attempt = 0; attempt < 8; attempt++) {
+          sbResp = await attemptWrite(workingPayload);
+          if (sbResp.ok || sbResp.status === 201 || sbResp.status === 204) { storedInSupabase = true; break; }
+          lastBody = '';
+          try { lastBody = await sbResp.text(); } catch { /* ignore */ }
+          // PGRST204: missing column. Strip it and retry if it's in OPTIONAL_COLUMNS.
+          const missingCol = (() => {
+            try { const j = JSON.parse(lastBody); if (j?.code === 'PGRST204') { const m = (j.message || '').match(/'([^']+)' column/); return m ? m[1] : null; } } catch { /* not json */ }
+            return null;
+          })();
+          if (missingCol && OPTIONAL_COLUMNS.includes(missingCol) && (missingCol in workingPayload)) {
+            const next = { ...workingPayload }; delete next[missingCol];
+            workingPayload = next;
+            logger.warn('Supabase write: dropping missing column and retrying', { requestId: getRequestId(request), missingCol });
+            continue;
+          }
+          break;
+        }
+        if (!storedInSupabase) {
+          logger.warn('Supabase write failed', { requestId: getRequestId(request), status: sbResp.status, body: lastBody.slice(0, 500) });
+          supabaseError = `Supabase write failed (${sbResp.status}): ${lastBody.slice(0, 200)}`;
         }
 
         if (storedInSupabase && !isUpdate) {
-          scheduleFollowups(supabaseUrl, supabaseKey, reportId, contact, now, getRequestId(request));
+          // Email follow-ups disabled — keep linkProgressRecord and deal updates only.
           linkProgressRecord(supabaseUrl, supabaseKey, progressId, reportId, getRequestId(request));
           if (dealLink) {
             const dealReqId = getRequestId(request);
@@ -309,35 +335,13 @@ export async function POST(request) {
       contributorEmails: contributorEmailsToSave,
     };
 
-    const { sent: webhookConfigured, body: webhookResponse } = await triggerWebhook(n8nPayload, { envSuffix: 'DIAGNOSTIC_COMPLETE', requestId: getRequestId(request) });
+    // All report-related email webhooks disabled.
+    const webhookConfigured = false;
+    const webhookResponse = null;
+    void n8nPayload;
 
     const costAnalysisPending = (summary?.totalAnnualCost || 0) === 0 && diagnosticMode === 'comprehensive';
     const costAnalysisUrl = costAnalysisPending ? `${baseUrl}/cost-analysis?id=${reportId}&token=${costAnalysisToken}` : null;
-
-    // Server-side COST_ANALYSIS_SHARE - fires for each notification target when the
-    // analysis is pending. Replaces the per-client call from Screen6Complete so the
-    // email always goes out, even if the browser navigates away after save.
-    if (costAnalysisPending && costAnalysisUrl && storedInSupabase) {
-      const targets = getCostAnalystNotificationTargets(costAnalystEmail);
-      for (const target of targets) {
-        try {
-          await triggerWebhook(
-            {
-              requestType: 'cost-analysis-share',
-              reportId,
-              managerEmail: target,
-              costUrl: costAnalysisUrl,
-              contactName: contact.name || '',
-              company: contact.company || '',
-              timestamp: new Date().toISOString(),
-            },
-            { envSuffix: 'COST_ANALYSIS_SHARE', requestId: getRequestId(request) }
-          );
-        } catch (err) {
-          logger.warn('cost-analysis-share (server) failed', { requestId: getRequestId(request), reportId, target, error: err.message });
-        }
-      }
-    }
 
     return NextResponse.json({
       success: true, reportId,

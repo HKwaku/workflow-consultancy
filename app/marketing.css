@@ -187,11 +187,16 @@
      line-height: 1.9; font-weight: 300;
    }
    
+   /* Visible by default — do not rely on JS adding .visible (avoids “blank” page if IO/effect fails). */
    .scroll-reveal {
-     opacity: 0; transform: translateY(20px);
-     transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1);
+     opacity: 1;
+     transform: none;
+     transition: opacity 0.55s ease, transform 0.55s ease;
    }
-   .scroll-reveal.visible { opacity: 1; transform: translateY(0); }
+   .scroll-reveal.visible {
+     opacity: 1;
+     transform: none;
+   }
    
    /* NAV */
    .mkt-nav {

@@ -49,7 +49,10 @@ export default function OrgAdminClient({ user, accessToken, onSignOut }) {
   const canUse = adminMemberships.length > 0 || platformAdmin;
 
   const loadOrgs = useCallback(async () => {
-    if (!accessToken) return;
+    if (!accessToken) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {

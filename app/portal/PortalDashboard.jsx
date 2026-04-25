@@ -1193,11 +1193,13 @@ export default function PortalDashboard({ user, accessToken, onSignOut, initialS
           <span className="header-title">Dashboard</span>
         </div>
         <div className="header-right">
-          {showOrgAdminLink && (
-            <Link href="/portal/org-admin" className="header-org-admin-link">
-              Organisation admin
-            </Link>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            {showOrgAdminLink && (
+              <Link href="/portal/org-admin" className="header-org-admin-link">
+                Organisation admin
+              </Link>
+            )}
+          </div>
           <ThemeToggle className="header-theme-btn" />
 
           <span className="header-email">{email}</span>

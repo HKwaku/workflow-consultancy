@@ -31,14 +31,6 @@ const MAP_SPLIT_HANDLE_PX = 8;
 
 const MIN_STEPS = 3;
 const MAX_STEPS = 50;
-const DEP_TYPE_LABELS = {
-  feeds_into: '→ Feeds into',
-  receives_from: '← Receives from',
-  triggers: '⚡ Triggers',
-  triggered_by: '⚡ Triggered by',
-  shares_data: '⇄ Shares data with',
-  waits_for: '⏳ Waits for',
-};
 const PREDEFINED_DEPTS = new Set([...DEPT_INTERNAL, ...DEPT_EXTERNAL]);
 
 function SectionHint({ text }) {
@@ -319,7 +311,7 @@ function DealSetupCard({ platformCompany, onSubmit }) {
 }
 
 /** Save + optional view report - top of icon rail */
-function MapRailPrimaryTools({ editingReportId, onViewReport, onViewCost, onHandover, onContinue, onSaveToReport, savingToReport, sessionUser, hasCostAccess }) {
+function MapRailPrimaryTools({ editingReportId, onViewReport, onViewCost, onHandover, onContinue, onSaveToReport, savingToReport, sessionUser, hasCostAccess, readyToGenerate }) {
   return (
     <>
       <a
@@ -371,7 +363,13 @@ function MapRailPrimaryTools({ editingReportId, onViewReport, onViewCost, onHand
         </button>
       )}
       {onContinue && (
-        <button type="button" className="s7-split-rail-btn s7-split-rail-btn--accent" onClick={onContinue} title="Generate report">
+        <button
+          type="button"
+          className={`s7-split-rail-btn s7-split-rail-btn--accent${readyToGenerate ? ' s7-split-rail-btn--ready' : ''}`}
+          onClick={onContinue}
+          title={readyToGenerate ? 'Generate report (ready)' : 'Generate report'}
+          aria-label={readyToGenerate ? 'Generate report (ready)' : 'Generate report'}
+        >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
             <path d="M9 18l6-6-6-6"/>
           </svg>
@@ -575,7 +573,7 @@ function ArtefactPill({ artefact, onOpenReport, onOpenFlow, onOpenCost }) {
 export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp, onAuditTrailToggle, auditTrailOpen, reportToLoad, onReportLoaded, redesignReportId, onRedesignConsumed }) {
   const {
     processData, updateProcessData, goToScreen,
-    customDepartments, addCustomDepartment,
+    customDepartments, addCustomDepartment, removeCustomDepartment,
     diagnosticMode, teamMode, chatMessages, addChatMessage,
     saveProgressToCloud, buildFullSnapshot, editingReportId, editingRedesign, aiRedesignMode, contact, authUser, setContact,
     addAuditEvent,
@@ -754,6 +752,10 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
   const [checklistInputs, setChecklistInputs] = useState({});
   const [showFloatingFlow, setShowFloatingFlow] = useState(false);
   const [inlineReportId, setInlineReportId] = useState(null);
+  /** Auto-open the latest report once when the chat hydrates with a report
+   *  artefact (cloud reload of an existing chat). One-shot — user can close
+   *  the report and we won't reopen it. */
+  const autoOpenedReportRef = useRef(false);
   const [inlineCostReportId, setInlineCostReportId] = useState(null);
   const [inlineGenerateStatus, setInlineGenerateStatus] = useState('idle'); // 'idle' | 'generating' | 'error'
   const [inlineGenerateProgress, setInlineGenerateProgress] = useState('');
@@ -762,11 +764,6 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
   const [hasCostAccess, setHasCostAccess] = useState(false);
   const [snippets, setSnippets] = useState(() => { try { return loadSnippets(null); } catch { return []; } });
   const [showSnippetPicker, setShowSnippetPicker] = useState(false);
-  const [showDepsModal, setShowDepsModal] = useState(false);
-  const [depsLinks, setDepsLinks] = useState(() => processData.processDependencies || []);
-  const [depsNewProcess, setDepsNewProcess] = useState('');
-  const [depsNewType, setDepsNewType] = useState('feeds_into');
-  const [pendingNavAfterDeps, setPendingNavAfterDeps] = useState(false);
   const [previewViewMode, setPreviewViewMode] = useState('grid');
   const [flowNodePositions, setFlowNodePositions] = useState(() => processData.flowNodePositions || {});
   const [flowCustomEdges, setFlowCustomEdges] = useState(() => processData.flowCustomEdges || []);
@@ -1402,30 +1399,35 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
           onProgress: (msg) => setInlineGenerateProgress(msg),
         },
       );
-      if (out.reportId) {
-        setInlineReportId(out.reportId);
-        addAuditEvent({ type: 'submit', detail: `Generated report inline (${out.reportId})` });
-        const readyMsg = 'Your diagnostic report is ready.';
-        const reportArtefact = {
-          kind: 'report',
-          refId: out.reportId,
-          label: pd?.processName ? `Report: ${pd.processName}` : 'Diagnostic report',
-        };
-        addChatMessage({
+      if (!out.reportId) {
+        throw new Error('Report generation failed. Please try again.');
+      }
+      if (!out.storedInSupabase) {
+        const detail = out.supabaseError ? ` (${out.supabaseError})` : '';
+        throw new Error(`Your report could not be saved to storage${detail}. Please try again.`);
+      }
+      setInlineReportId(out.reportId);
+      addAuditEvent({ type: 'submit', detail: `Generated report inline (${out.reportId})` });
+      const readyMsg = 'Your diagnostic report is ready.';
+      const reportArtefact = {
+        kind: 'report',
+        refId: out.reportId,
+        label: pd?.processName ? `Report: ${pd.processName}` : 'Diagnostic report',
+      };
+      addChatMessage({
+        role: 'assistant',
+        content: readyMsg,
+        reportActions: { id: out.reportId, processName: pd?.processName || '' },
+        artefact: reportArtefact,
+      });
+      try {
+        persistMessageToCloud({
           role: 'assistant',
           content: readyMsg,
-          reportActions: { id: out.reportId, processName: pd?.processName || '' },
+          snapshot: buildFullSnapshot(pd),
           artefact: reportArtefact,
         });
-        try {
-          persistMessageToCloud({
-            role: 'assistant',
-            content: readyMsg,
-            snapshot: buildFullSnapshot(pd),
-            artefact: reportArtefact,
-          });
-        } catch { /* best-effort */ }
-      }
+      } catch { /* best-effort */ }
       setInlineGenerateStatus('idle');
     } catch (err) {
       setInlineGenerateError(err.message || 'Something went wrong. Please try again.');
@@ -1468,10 +1470,8 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       showValidationToast(`Add at least ${missing} more step${missing > 1 ? 's' : ''} before continuing. You need ${MIN_STEPS} named steps minimum.`);
       return;
     }
-    // Show dependency mapping modal before navigating away
-    setShowDepsModal(true);
-    setPendingNavAfterDeps(true);
-  }, [steps, showValidationToast]);
+    commitAndNavigate(processData.processDependencies || []);
+  }, [steps, showValidationToast, commitAndNavigate, processData.processDependencies]);
 
   const goStep = (dir) => {
     const n = activeIdx + dir;
@@ -1584,6 +1584,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       label: processData?.processName ? `Optimised flowchart: ${processData.processName}` : 'Optimised flowchart',
     } : undefined;
     addChatMessage({ role: 'assistant', content: msg, suggestions: suggestions.slice(0, 5), artefact });
+    if (artefact) lastArtefactAtRef.current = Date.now();
     if (postSnapshot) {
       try {
         persistMessageToCloud({ role: 'assistant', content: msg, snapshot: postSnapshot, artefact });
@@ -1606,8 +1607,11 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
 
   // Snapshot the flow when the intake phase advances (structure → owners →
   // timings → ... ). Each transition is a natural "milestone" the user may
-  // want to roll back to.
+  // want to roll back to. Skip when a turn-level artefact (upload reshape
+  // or replace_all_steps) was just emitted for the same canvas - that pill
+  // already covers this milestone.
   const lastPhaseIdRef = useRef(null);
+  const lastArtefactAtRef = useRef(0);
   useEffect(() => {
     const state = computePhaseState({ steps, handoffs });
     const currId = state.current?.id || (state.overallComplete ? '__complete__' : null);
@@ -1617,6 +1621,9 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     // Only snapshot when we have enough structure to be worth keeping.
     const namedCount = steps.filter((s) => (s.name || '').trim()).length;
     if (namedCount < 2) return;
+    // Dedupe: if a chat turn just produced a flow_snapshot (upload reshape,
+    // AI replace_all_steps, pin), don't also emit a near-identical phase pill.
+    if (Date.now() - lastArtefactAtRef.current < 2500) return;
     const completedPhase = INTAKE_PHASES_BY_ID[prev];
     if (!completedPhase) return;
     const snap = snapshotCurrentFlow();
@@ -1628,9 +1635,63 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       label: `After ${completedPhase.label.toLowerCase()}${pn}`,
     };
     addChatMessage({ role: 'assistant', content: `Phase complete: ${completedPhase.label}.`, artefact });
+    lastArtefactAtRef.current = Date.now();
     try { persistMessageToCloud({ role: 'assistant', content: `Phase complete: ${completedPhase.label}.`, snapshot: snap, artefact }); } catch { /* best-effort */ }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [steps, handoffs]);
+
+  // Auto-open the latest report on first hydration. If the user reopens a
+  // chat that already produced a report, the canvas should default to
+  // showing it instead of the empty flow grid. We pre-validate the report
+  // exists before opening — stale artefacts that point at deleted reports
+  // would otherwise auto-render a "Report not found" iframe on every reload.
+  useEffect(() => {
+    if (autoOpenedReportRef.current) return;
+    if (inlineReportId || editingReportId) return;
+    if (!Array.isArray(chatMessages) || !chatMessages.length) return;
+    let latestReportId = null;
+    for (let i = chatMessages.length - 1; i >= 0; i--) {
+      const m = chatMessages[i];
+      if (m?.reportActions?.id) { latestReportId = m.reportActions.id; break; }
+      if (m?.artefact?.kind === 'report' && m?.artefact?.refId) { latestReportId = m.artefact.refId; break; }
+    }
+    if (!latestReportId) return;
+    autoOpenedReportRef.current = true;
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await apiFetch(`/api/get-diagnostic?id=${encodeURIComponent(latestReportId)}`, {}, accessToken);
+        if (cancelled) return;
+        if (resp.ok) {
+          const data = await resp.json().catch(() => null);
+          if (data?.success) setInlineReportId(latestReportId);
+        }
+      } catch { /* report missing or auth issue — leave canvas on flow */ }
+    })();
+    return () => { cancelled = true; };
+  }, [chatMessages, inlineReportId, editingReportId, accessToken]);
+
+  // One-shot "ready to generate" banner in chat once all intake phases are
+  // satisfied. The deps modal used to be the prompt to continue; now the chat
+  // surfaces the cue and the canvas does the rest.
+  const announcedReadyRef = useRef(false);
+  useEffect(() => {
+    if (editingReportId) return;
+    if (inlineReportId) return;
+    const state = computePhaseState({ steps, handoffs });
+    if (!state.overallComplete) {
+      announcedReadyRef.current = false;
+      return;
+    }
+    if (announcedReadyRef.current) return;
+    const namedCount = steps.filter((s) => (s.name || '').trim()).length;
+    if (namedCount < MIN_STEPS) return;
+    announcedReadyRef.current = true;
+    const msg = "I've got enough to draft your diagnostic report. Hit Generate report when you're ready and it'll appear in the canvas.";
+    addChatMessage({ role: 'assistant', content: msg, generateAction: true });
+    try { persistMessageToCloud({ role: 'assistant', content: msg, generateAction: true }); } catch { /* best-effort */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [steps, handoffs, editingReportId, inlineReportId]);
 
   const pinCurrentFlow = useCallback(() => {
     const snap = snapshotCurrentFlow();
@@ -1640,6 +1701,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     const label = `Pinned snapshot${pn} (${namedCount} step${namedCount === 1 ? '' : 's'})`;
     const artefact = { kind: 'flow_snapshot', snapshot: snap, label };
     addChatMessage({ role: 'user', content: `Pinned current flow as artefact.`, artefact });
+    lastArtefactAtRef.current = Date.now();
     try { persistMessageToCloud({ role: 'user', content: `Pinned current flow as artefact.`, snapshot: snap, artefact }); } catch { /* best-effort */ }
   }, [snapshotCurrentFlow, processData, steps, addChatMessage, persistMessageToCloud]);
 
@@ -1791,7 +1853,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     // groups (e.g. replace_all_steps + multiple add_step tool calls in one
     // agent turn). A single undo reverts the whole turn rather than rolling
     // back tool-call-by-tool-call.
-    const MUTATING = new Set(['replace_all_steps', 'add_step', 'update_step', 'remove_step', 'set_handoff', 'add_custom_department']);
+    const MUTATING = new Set(['replace_all_steps', 'add_step', 'update_step', 'remove_step', 'set_handoff', 'add_custom_department', 'add_connector', 'remove_connector', 'redirect_connector', 'insert_step_between', 'set_branch_target', 'set_branch_probability', 'set_branch_label', 'remove_branch', 'add_branch', 'reorder_step', 'set_process_name', 'set_process_definition', 'set_step_details', 'set_cost_input', 'set_bottleneck', 'set_frequency_details', 'set_pe_context', 'add_step_system', 'remove_step_system', 'add_checklist_item', 'toggle_checklist_item', 'remove_checklist_item', 'remove_custom_department']);
     const turnMutates = actions.some((a) => MUTATING.has(a.name));
     if (turnMutates) {
       chatHistoryStackRef.current.push({
@@ -1928,6 +1990,446 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
           if (name && isCustomDepartment(name)) addCustomDepartment(name);
           break;
         }
+        case 'add_connector': {
+          const fromIdx = (action.input?.fromStep || 0) - 1;
+          const toIdx = (action.input?.toStep || 0) - 1;
+          if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) break;
+          const source = `step-${fromIdx}`;
+          const target = `step-${toIdx}`;
+          const toCustomId = (c) => `e-custom-${c.source}-${c.target}-${c.sourceHandle || 'r'}-${c.targetHandle || 'l'}`;
+          const newEdge = { source, target, sourceHandle: 'right', targetHandle: 'left' };
+          const newId = toCustomId(newEdge);
+          const existing = flowCustomEdgesRef.current || [];
+          if (existing.some((c) => toCustomId(c) === newId)) break;
+          const next = [...existing, newEdge];
+          flowCustomEdgesRef.current = next;
+          setFlowCustomEdges(next);
+          queueMicrotask(() => updateProcessData({ flowCustomEdges: next }));
+          queueMicrotask(() => addAuditEvent({ type: 'step_edit', detail: `AI connected step ${action.input.fromStep} → ${action.input.toStep}` }));
+          break;
+        }
+        case 'remove_connector': {
+          const fromIdx = (action.input?.fromStep || 0) - 1;
+          const toIdx = (action.input?.toStep || 0) - 1;
+          if (fromIdx < 0 || toIdx < 0) break;
+          const source = `step-${fromIdx}`;
+          const target = `step-${toIdx}`;
+          const customs = flowCustomEdgesRef.current || [];
+          const match = customs.find((c) => c.source === source && c.target === target);
+          if (match) {
+            const toCustomId = (c) => `e-custom-${c.source}-${c.target}-${c.sourceHandle || 'r'}-${c.targetHandle || 'l'}`;
+            const matchId = toCustomId(match);
+            const next = customs.filter((c) => toCustomId(c) !== matchId);
+            flowCustomEdgesRef.current = next;
+            setFlowCustomEdges(next);
+            queueMicrotask(() => updateProcessData({ flowCustomEdges: next }));
+          } else if (toIdx === fromIdx + 1) {
+            const seqId = `e-seq-${fromIdx}-${toIdx}`;
+            const deleted = flowDeletedEdgesRef.current || [];
+            if (!deleted.includes(seqId)) {
+              const next = [...deleted, seqId];
+              flowDeletedEdgesRef.current = next;
+              setFlowDeletedEdges(next);
+              queueMicrotask(() => updateProcessData({ flowDeletedEdges: next }));
+            }
+          } else {
+            // Attempt decision-branch removal: drop branches from fromStep that point to toStep
+            setSteps((prev) => {
+              if (fromIdx >= prev.length) return prev;
+              const src = prev[fromIdx];
+              if (!src?.isDecision || !Array.isArray(src.branches)) return prev;
+              const nextBranches = src.branches.filter((b) => {
+                const tgt = (b.target || b.targetStep || '').toString().match(/step\s*(\d+)/i);
+                const tIdx = tgt ? parseInt(tgt[1], 10) - 1 : -1;
+                return tIdx !== toIdx;
+              });
+              if (nextBranches.length === src.branches.length) return prev;
+              return prev.map((s, i) => i === fromIdx ? { ...s, branches: nextBranches } : s);
+            });
+          }
+          queueMicrotask(() => addAuditEvent({ type: 'step_edit', detail: `AI removed connector ${action.input.fromStep} → ${action.input.toStep}` }));
+          break;
+        }
+        case 'redirect_connector': {
+          const fromIdx = (action.input?.fromStep || 0) - 1;
+          const toIdx = (action.input?.toStep || 0) - 1;
+          const newFromIdx = action.input?.newFromStep != null ? action.input.newFromStep - 1 : fromIdx;
+          const newToIdx = action.input?.newToStep != null ? action.input.newToStep - 1 : toIdx;
+          if (fromIdx < 0 || toIdx < 0 || newFromIdx < 0 || newToIdx < 0) break;
+          if (newFromIdx === fromIdx && newToIdx === toIdx) break;
+          const source = `step-${fromIdx}`;
+          const target = `step-${toIdx}`;
+          const newSource = `step-${newFromIdx}`;
+          const newTarget = `step-${newToIdx}`;
+          const customs = flowCustomEdgesRef.current || [];
+          const toCustomId = (c) => `e-custom-${c.source}-${c.target}-${c.sourceHandle || 'r'}-${c.targetHandle || 'l'}`;
+          const match = customs.find((c) => c.source === source && c.target === target);
+          const newCustom = { source: newSource, target: newTarget, sourceHandle: 'right', targetHandle: 'left' };
+          let nextCustoms;
+          if (match) {
+            const matchId = toCustomId(match);
+            nextCustoms = [...customs.filter((c) => toCustomId(c) !== matchId), newCustom];
+          } else if (toIdx === fromIdx + 1) {
+            // Rewire a default sequence edge: delete it + add custom replacement
+            const seqId = `e-seq-${fromIdx}-${toIdx}`;
+            const deleted = flowDeletedEdgesRef.current || [];
+            if (!deleted.includes(seqId)) {
+              const nextDeleted = [...deleted, seqId];
+              flowDeletedEdgesRef.current = nextDeleted;
+              setFlowDeletedEdges(nextDeleted);
+            }
+            nextCustoms = [...customs, newCustom];
+          } else {
+            nextCustoms = [...customs, newCustom];
+          }
+          flowCustomEdgesRef.current = nextCustoms;
+          setFlowCustomEdges(nextCustoms);
+          queueMicrotask(() => updateProcessData({
+            flowCustomEdges: nextCustoms,
+            flowDeletedEdges: flowDeletedEdgesRef.current,
+          }));
+          queueMicrotask(() => addAuditEvent({ type: 'step_edit', detail: `AI rewired connector ${action.input.fromStep}→${action.input.toStep} to ${newFromIdx + 1}→${newToIdx + 1}` }));
+          break;
+        }
+        case 'insert_step_between': {
+          const { fromStep, toStep, name, department, isExternal, isDecision, isMerge, parallel, inclusive, workMinutes, waitMinutes, systems, branches, owner, checklist } = action.input || {};
+          const fromIdx = (fromStep || 0) - 1;
+          const toIdx = (toStep || 0) - 1;
+          if (fromIdx < 0 || toIdx < 0) break;
+          if (isCustomDepartment(department)) addCustomDepartment(department.trim());
+          // Drop any custom edge that spans the two endpoints - the new step replaces that connection.
+          const customs = flowCustomEdgesRef.current || [];
+          const source = `step-${fromIdx}`;
+          const target = `step-${toIdx}`;
+          const toCustomId = (c) => `e-custom-${c.source}-${c.target}-${c.sourceHandle || 'r'}-${c.targetHandle || 'l'}`;
+          const match = customs.find((c) => c.source === source && c.target === target);
+          let nextCustoms = customs;
+          if (match) {
+            const matchId = toCustomId(match);
+            nextCustoms = customs.filter((c) => toCustomId(c) !== matchId);
+            flowCustomEdgesRef.current = nextCustoms;
+            setFlowCustomEdges(nextCustoms);
+          }
+          const init = {
+            name: name || 'New step',
+            department: department || '',
+            isExternal: !!isExternal,
+            isDecision: !!isDecision,
+            isMerge: !!isMerge,
+            parallel: !!parallel,
+            inclusive: !!inclusive,
+            workMinutes: workMinutes ?? undefined,
+            waitMinutes: waitMinutes ?? undefined,
+            durationUnit: 'hours',
+            systems: systems || [],
+            branches: branches || [],
+            contributor: owner || '',
+            checklist: (checklist || []).map((t) => ({ text: t, checked: false })),
+          };
+          const insertAfterIdx = Math.min(fromIdx, toIdx);
+          addStep(insertAfterIdx, init);
+          queueMicrotask(() => updateProcessData({ flowCustomEdges: nextCustoms }));
+          if (name) addedNames.push(name);
+          break;
+        }
+        case 'add_branch': {
+          const stepIdx = (action.input?.stepNumber || 0) - 1;
+          if (stepIdx < 0) break;
+          const label = action.input?.label || '';
+          const target = action.input?.target || '';
+          const probRaw = action.input?.probability;
+          const prob = (probRaw == null || Number.isNaN(probRaw)) ? undefined : Math.max(0, Math.min(100, Number(probRaw)));
+          setSteps((prev) => {
+            if (stepIdx >= prev.length) return prev;
+            const s = prev[stepIdx];
+            const branches = Array.isArray(s.branches) ? s.branches : [];
+            const newBranch = { label, target };
+            if (prob != null) newBranch.probability = prob;
+            const next = { ...s, branches: [...branches, newBranch], isDecision: true };
+            return prev.map((p, i) => i === stepIdx ? next : p);
+          });
+          setActiveIdx(stepIdx);
+          queueMicrotask(() => addAuditEvent({ type: 'step_edit', detail: `AI added branch on step ${action.input.stepNumber}${label ? ` "${label}"` : ''}` }));
+          break;
+        }
+        case 'reorder_step': {
+          const fromIdx = (action.input?.stepNumber || 0) - 1;
+          const rawPos = action.input?.position;
+          if (fromIdx < 0 || rawPos == null) break;
+          const toIdx = Math.max(0, Math.min(steps.length - 1, rawPos - 1));
+          if (fromIdx === toIdx) break;
+          moveStep(fromIdx, toIdx);
+          break;
+        }
+        case 'set_process_name': {
+          const name = (action.input?.name || '').trim();
+          if (!name) break;
+          updateProcessData({ processName: name });
+          queueMicrotask(() => addAuditEvent({ type: 'step_edit', detail: `AI renamed process to "${name}"` }));
+          break;
+        }
+        case 'set_process_definition': {
+          const { startsWhen, completesWhen, complexity } = action.input || {};
+          const prevDef = processData?.definition || {};
+          const nextDef = { ...prevDef };
+          if (startsWhen !== undefined) nextDef.startsWhen = startsWhen;
+          if (completesWhen !== undefined) nextDef.completesWhen = completesWhen;
+          if (complexity !== undefined) nextDef.complexity = complexity;
+          updateProcessData({ definition: nextDef });
+          queueMicrotask(() => addAuditEvent({ type: 'step_edit', detail: 'AI updated process definition' }));
+          break;
+        }
+        case 'set_step_details': {
+          const stepIdx = (action.input?.stepNumber || 0) - 1;
+          if (stepIdx < 0) break;
+          const { waitType, waitNote, capacity, description } = action.input || {};
+          setSteps((prev) => {
+            if (stepIdx >= prev.length) return prev;
+            const s = { ...prev[stepIdx] };
+            if (waitType !== undefined) s.waitType = waitType || undefined;
+            if (waitNote !== undefined) s.waitNote = waitNote;
+            if (capacity !== undefined) s.capacity = capacity;
+            if (description !== undefined) s.description = description;
+            return prev.map((p, i) => i === stepIdx ? s : p);
+          });
+          setActiveIdx(stepIdx);
+          queueMicrotask(() => addAuditEvent({ type: 'step_edit', detail: `AI updated details on step ${action.input.stepNumber}` }));
+          break;
+        }
+        case 'set_cost_input': {
+          const { frequency, teamSize, hoursPerInstance } = action.input || {};
+          const FREQ_ANNUAL = { daily: 365, 'few-per-week': 150, weekly: 52, 'twice-monthly': 24, monthly: 12, quarterly: 4, 'twice-yearly': 2, yearly: 1 };
+          const updates = {};
+          if (frequency !== undefined) {
+            const annual = FREQ_ANNUAL[frequency] ?? processData?.frequency?.annual ?? 0;
+            updates.frequency = { ...(processData?.frequency || {}), type: frequency, annual };
+          }
+          if (teamSize !== undefined || hoursPerInstance !== undefined) {
+            updates.costs = { ...(processData?.costs || {}) };
+            if (teamSize !== undefined) updates.costs.teamSize = teamSize;
+            if (hoursPerInstance !== undefined) updates.costs.hoursPerInstance = hoursPerInstance;
+          }
+          if (Object.keys(updates).length) updateProcessData(updates);
+          queueMicrotask(() => addAuditEvent({ type: 'step_edit', detail: 'AI updated cost inputs' }));
+          break;
+        }
+        case 'set_bottleneck': {
+          const { reason, why } = action.input || {};
+          const prev = processData?.bottleneck || {};
+          const next = { ...prev };
+          if (reason !== undefined) next.reason = reason;
+          if (why !== undefined) next.why = why;
+          updateProcessData({ bottleneck: next });
+          queueMicrotask(() => addAuditEvent({ type: 'step_edit', detail: `AI set bottleneck${reason ? ` reason="${reason}"` : ''}` }));
+          break;
+        }
+        case 'set_frequency_details': {
+          const { inFlight } = action.input || {};
+          const prev = processData?.frequency || {};
+          const next = { ...prev };
+          if (inFlight !== undefined) next.inFlight = inFlight;
+          updateProcessData({ frequency: next });
+          queueMicrotask(() => addAuditEvent({ type: 'step_edit', detail: `AI set frequency details (inFlight=${inFlight})` }));
+          break;
+        }
+        case 'set_pe_context': {
+          const { peSopStatus, peKeyPerson, peReportingImpact } = action.input || {};
+          const updates = {};
+          if (peSopStatus !== undefined) updates.peSopStatus = peSopStatus;
+          if (peKeyPerson !== undefined) updates.peKeyPerson = peKeyPerson;
+          if (peReportingImpact !== undefined) updates.peReportingImpact = peReportingImpact;
+          if (Object.keys(updates).length) updateProcessData(updates);
+          queueMicrotask(() => addAuditEvent({ type: 'step_edit', detail: 'AI set PE portfolio context' }));
+          break;
+        }
+        case 'add_step_system': {
+          const stepIdx = (action.input?.stepNumber || 0) - 1;
+          const sys = (action.input?.system || '').trim();
+          if (stepIdx < 0 || !sys) break;
+          setSteps((prev) => {
+            if (stepIdx >= prev.length) return prev;
+            const s = prev[stepIdx];
+            const existing = s.systems || [];
+            if (existing.some((x) => x.toLowerCase() === sys.toLowerCase())) return prev;
+            return prev.map((p, i) => i === stepIdx ? { ...p, systems: [...existing, sys] } : p);
+          });
+          setActiveIdx(stepIdx);
+          queueMicrotask(() => addAuditEvent({ type: 'step_edit', detail: `AI added system "${sys}" to step ${action.input.stepNumber}` }));
+          break;
+        }
+        case 'remove_step_system': {
+          const stepIdx = (action.input?.stepNumber || 0) - 1;
+          const sys = (action.input?.system || '').trim();
+          if (stepIdx < 0 || !sys) break;
+          setSteps((prev) => {
+            if (stepIdx >= prev.length) return prev;
+            const s = prev[stepIdx];
+            const next = (s.systems || []).filter((x) => x.toLowerCase() !== sys.toLowerCase());
+            return prev.map((p, i) => i === stepIdx ? { ...p, systems: next } : p);
+          });
+          setActiveIdx(stepIdx);
+          queueMicrotask(() => addAuditEvent({ type: 'step_edit', detail: `AI removed system "${sys}" from step ${action.input.stepNumber}` }));
+          break;
+        }
+        case 'add_checklist_item': {
+          const stepIdx = (action.input?.stepNumber || 0) - 1;
+          const text = (action.input?.text || '').trim();
+          if (stepIdx < 0 || !text) break;
+          setSteps((prev) => {
+            if (stepIdx >= prev.length) return prev;
+            const s = prev[stepIdx];
+            const item = { id: Math.random().toString(36).slice(2, 8), text, checked: false };
+            const next = { ...s, checklist: [...(s.checklist || []), item] };
+            return prev.map((p, i) => i === stepIdx ? next : p);
+          });
+          setActiveIdx(stepIdx);
+          queueMicrotask(() => addAuditEvent({ type: 'checklist', detail: `AI added "${text}" to step ${action.input.stepNumber}` }));
+          break;
+        }
+        case 'toggle_checklist_item': {
+          const stepIdx = (action.input?.stepNumber || 0) - 1;
+          if (stepIdx < 0) break;
+          const locate = (list) => {
+            if (!Array.isArray(list) || !list.length) return -1;
+            if (action.input?.itemIndex != null) {
+              const i = action.input.itemIndex - 1;
+              return i >= 0 && i < list.length ? i : -1;
+            }
+            if (action.input?.text) {
+              const needle = String(action.input.text).trim().toLowerCase();
+              return list.findIndex((it) => (it?.text || '').trim().toLowerCase() === needle);
+            }
+            return -1;
+          };
+          let toggledText = '';
+          let nextChecked = null;
+          setSteps((prev) => {
+            if (stepIdx >= prev.length) return prev;
+            const s = prev[stepIdx];
+            const list = s.checklist || [];
+            const ci = locate(list);
+            if (ci < 0) return prev;
+            const target = action.input?.checked == null ? !list[ci].checked : !!action.input.checked;
+            nextChecked = target;
+            toggledText = list[ci].text || '';
+            const nextList = list.map((it, i) => i === ci ? { ...it, checked: target } : it);
+            return prev.map((p, i) => i === stepIdx ? { ...p, checklist: nextList } : p);
+          });
+          setActiveIdx(stepIdx);
+          if (toggledText) queueMicrotask(() => addAuditEvent({ type: 'checklist', detail: `AI ${nextChecked ? 'completed' : 'unchecked'} "${toggledText}" on step ${action.input.stepNumber}` }));
+          break;
+        }
+        case 'remove_checklist_item': {
+          const stepIdx = (action.input?.stepNumber || 0) - 1;
+          if (stepIdx < 0) break;
+          const locate = (list) => {
+            if (!Array.isArray(list) || !list.length) return -1;
+            if (action.input?.itemIndex != null) {
+              const i = action.input.itemIndex - 1;
+              return i >= 0 && i < list.length ? i : -1;
+            }
+            if (action.input?.text) {
+              const needle = String(action.input.text).trim().toLowerCase();
+              return list.findIndex((it) => (it?.text || '').trim().toLowerCase() === needle);
+            }
+            return -1;
+          };
+          let removedText = '';
+          setSteps((prev) => {
+            if (stepIdx >= prev.length) return prev;
+            const s = prev[stepIdx];
+            const list = s.checklist || [];
+            const ci = locate(list);
+            if (ci < 0) return prev;
+            removedText = list[ci].text || '';
+            const nextList = list.filter((_, i) => i !== ci);
+            return prev.map((p, i) => i === stepIdx ? { ...p, checklist: nextList } : p);
+          });
+          setActiveIdx(stepIdx);
+          if (removedText) queueMicrotask(() => addAuditEvent({ type: 'checklist', detail: `AI removed "${removedText}" from step ${action.input.stepNumber}` }));
+          break;
+        }
+        case 'remove_custom_department': {
+          const name = (action.input?.name || '').trim();
+          if (!name) break;
+          removeCustomDepartment(name);
+          queueMicrotask(() => addAuditEvent({ type: 'step_edit', detail: `AI removed custom department "${name}"` }));
+          break;
+        }
+        case 'trigger_redesign': {
+          if (editingReportId && accessToken) {
+            queueMicrotask(() => triggerAiRedesign());
+          }
+          break;
+        }
+        case 'pin_flow_snapshot': {
+          const customLabel = (action.input?.label || '').trim();
+          if (customLabel) {
+            const snap = snapshotCurrentFlow();
+            if (snap) {
+              const artefact = { kind: 'flow_snapshot', snapshot: snap, label: customLabel };
+              addChatMessage({ role: 'user', content: 'Pinned current flow as artefact.', artefact });
+              lastArtefactAtRef.current = Date.now();
+              try { persistMessageToCloud({ role: 'user', content: 'Pinned current flow as artefact.', snapshot: snap, artefact }); } catch { /* best-effort */ }
+            }
+          } else {
+            pinCurrentFlow();
+          }
+          break;
+        }
+        case 'set_branch_target':
+        case 'set_branch_probability':
+        case 'set_branch_label':
+        case 'remove_branch': {
+          const stepNumber = action.input?.stepNumber;
+          const stepIdx = (stepNumber || 0) - 1;
+          if (stepIdx < 0) break;
+          const locateBranchIdx = (branches) => {
+            if (!Array.isArray(branches) || !branches.length) return -1;
+            if (action.input?.branchIndex != null) {
+              const i = action.input.branchIndex - 1;
+              return i >= 0 && i < branches.length ? i : -1;
+            }
+            if (action.input?.branchLabel) {
+              const needle = String(action.input.branchLabel).trim().toLowerCase();
+              return branches.findIndex((b) => (b?.label || '').trim().toLowerCase() === needle);
+            }
+            return -1;
+          };
+          setSteps((prev) => {
+            if (stepIdx >= prev.length) return prev;
+            const s = prev[stepIdx];
+            if (!s?.isDecision || !Array.isArray(s.branches)) return prev;
+            const bi = locateBranchIdx(s.branches);
+            if (bi < 0) return prev;
+            let nextBranches;
+            if (action.name === 'remove_branch') {
+              nextBranches = s.branches.filter((_, i) => i !== bi);
+            } else if (action.name === 'set_branch_target') {
+              const n = action.input?.newTargetStep;
+              if (!n) return prev;
+              nextBranches = s.branches.map((b, i) => i === bi ? { ...b, target: `Step ${n}` } : b);
+            } else if (action.name === 'set_branch_label') {
+              const v = action.input?.newLabel;
+              if (v == null) return prev;
+              nextBranches = s.branches.map((b, i) => i === bi ? { ...b, label: String(v) } : b);
+            } else {
+              const p = action.input?.probability;
+              const clamped = (p == null || Number.isNaN(p)) ? undefined : Math.max(0, Math.min(100, Number(p)));
+              nextBranches = s.branches.map((b, i) => {
+                if (i !== bi) return b;
+                const next = { ...b };
+                if (clamped == null) delete next.probability;
+                else next.probability = clamped;
+                return next;
+              });
+            }
+            return prev.map((p, i) => i === stepIdx ? { ...p, branches: nextBranches } : p);
+          });
+          setActiveIdx(stepIdx);
+          queueMicrotask(() => addAuditEvent({ type: 'step_edit', detail: `AI ${action.name.replace(/_/g, ' ')} on step ${stepNumber}` }));
+          break;
+        }
         case 'highlight_step': {
           const idx = (action.input?.stepNumber || 0) - 1;
           if (idx >= 0) {
@@ -1938,15 +2440,25 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
         }
         case 'open_panel': {
           const panel = action.input?.panel;
+          // Fall back to the latest report artefact if no editingReportId yet
+          // (e.g. user reopened a chat that already produced a report).
+          let resolvedReportId = editingReportId;
+          if (!resolvedReportId) {
+            for (let i = chatMessages.length - 1; i >= 0; i--) {
+              const m = chatMessages[i];
+              const rid = m?.reportActions?.id || (m?.artefact?.kind === 'report' ? m?.artefact?.refId : null);
+              if (rid) { resolvedReportId = rid; break; }
+            }
+          }
           if (panel === 'flow') {
             setInlineReportId(null);
             setInlineCostReportId(null);
-          } else if (panel === 'report' && editingReportId) {
+          } else if (panel === 'report' && resolvedReportId) {
             setInlineCostReportId(null);
-            setInlineReportId(editingReportId);
-          } else if (panel === 'cost' && editingReportId) {
+            setInlineReportId(resolvedReportId);
+          } else if (panel === 'cost' && resolvedReportId) {
             setInlineReportId(null);
-            setInlineCostReportId(editingReportId);
+            setInlineCostReportId(resolvedReportId);
           }
           break;
         }
@@ -2002,7 +2514,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       }
     }
     return addedNames;
-  }, [addStep, removeStep, addCustomDepartment, updateProcessData, addAuditEvent, steps, handoffs, editingReportId, handleContinue, processData, addChatMessage, persistMessageToCloud]);
+  }, [addStep, removeStep, moveStep, addCustomDepartment, removeCustomDepartment, updateProcessData, addAuditEvent, steps, handoffs, editingReportId, accessToken, handleContinue, processData, addChatMessage, persistMessageToCloud, snapshotCurrentFlow, pinCurrentFlow, triggerAiRedesign, chatMessages]);
 
   const processFiles = useCallback((files) => {
     if (!files.length) return;
@@ -2234,6 +2746,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
         ...(costProposals.length ? { costProposals } : {}),
         ...(artefactForTurn ? { artefact: artefactForTurn } : {}),
       });
+      if (artefactForTurn) lastArtefactAtRef.current = Date.now();
       persistMessageToCloud({ role: 'assistant', content: data.reply, actions: data.actions, snapshot: buildLiveSnapshot(), artefact: artefactForTurn });
       if (data.actions?.length > 0) {
         const addedNames = processActions(data.actions);
@@ -2852,18 +3365,43 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                     ))}
                   </div>
                 )}
-                {m.reportActions && (
+                {(m.reportActions?.id || (m.artefact?.kind === 'report' && m.artefact?.refId)) && (() => {
+                  const rid = m.reportActions?.id || m.artefact?.refId;
+                  const handleViewReport = () => {
+                    setInlineCostReportId(null);
+                    setInlineReportId(rid);
+                    // Fallback: if the canvas column isn't being rendered
+                    // (pre-flow layout), open the report in a new tab so the
+                    // click always produces a visible result.
+                    if (!hasFlowArtifact) {
+                      try { window.open(`/report?id=${rid}&portal=1`, '_blank', 'noopener'); } catch {}
+                    }
+                  };
+                  return (
+                    <div className="s7-report-actions">
+                      <button
+                        type="button"
+                        className="s7-report-action-btn s7-report-action-btn--primary"
+                        onClick={handleViewReport}
+                      >
+                        View report
+                      </button>
+                      <a href={`/report?id=${rid}&portal=1`} target="_blank" rel="noopener noreferrer" className="s7-report-action-btn">
+                        Open in new tab ↗
+                      </a>
+                    </div>
+                  );
+                })()}
+                {m.generateAction && !inlineReportId && !editingReportId && (
                   <div className="s7-report-actions">
                     <button
                       type="button"
                       className="s7-report-action-btn s7-report-action-btn--primary"
-                      onClick={() => setInlineReportId(m.reportActions.id)}
+                      disabled={inlineGenerateStatus === 'generating'}
+                      onClick={handleContinue}
                     >
-                      View report
+                      {inlineGenerateStatus === 'generating' ? 'Generating…' : 'Generate report'}
                     </button>
-                    <a href={`/report?id=${m.reportActions.id}&portal=1`} target="_blank" rel="noopener noreferrer" className="s7-report-action-btn">
-                      Open in new tab ↗
-                    </a>
                   </div>
                 )}
                 {m.artefact && !(m.reportActions && m.artefact.kind === 'report') && (
@@ -3440,6 +3978,16 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     doSaveRedesign(mode);
   }, [doSaveRedesign]);
 
+  const readyToGenerate = useMemo(() => {
+    if (editingReportId) return false;
+    if (inlineReportId) return false;
+    const valid = steps.filter((s) => (s.name || '').trim());
+    if (valid.length < MIN_STEPS) return false;
+    try {
+      return computePhaseState({ steps, handoffs }).overallComplete;
+    } catch { return false; }
+  }, [steps, handoffs, editingReportId, inlineReportId]);
+
   const diagnosticNav = useDiagnosticNav();
   const registerNav = diagnosticNav?.registerNav;
   useEffect(() => {
@@ -3531,6 +4079,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
               savingToReport={savingToReport}
               sessionUser={sessionUser}
               hasCostAccess={hasCostAccess}
+              readyToGenerate={readyToGenerate}
             />
             <div className="s7-split-rail-sep" role="separator" aria-hidden />
             <MapRailPortalNav />
@@ -3538,7 +4087,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
             <button type="button" className={`s7-split-rail-btn${showChatHistory ? ' active' : ''}`} onClick={() => { setShowChatHistory((v) => !v); setShowArtefactsPanel(false); }} title="Chat history">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="13" y2="14"/></svg>
             </button>
-            <button type="button" className={`s7-split-rail-btn${showArtefactsPanel ? ' active' : ''}`} onClick={() => { setShowArtefactsPanel((v) => !v); setShowChatHistory(false); }} title={`Artefacts${sessionArtefacts.length ? ` (${sessionArtefacts.length})` : ''}`}>
+            <button type="button" className={`s7-split-rail-btn${showArtefactsPanel ? ' active' : ''}${sessionArtefacts.length > 0 ? ' has-artefacts' : ''}`} onClick={() => { setShowArtefactsPanel((v) => !v); setShowChatHistory(false); }} title={`Artefacts${sessionArtefacts.length ? ` (${sessionArtefacts.length})` : ''}`}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
               {sessionArtefacts.length > 0 && <span className="s7-split-rail-count">{sessionArtefacts.length}</span>}
             </button>
@@ -3722,12 +4271,17 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                 savingToReport={savingToReport}
                 sessionUser={sessionUser}
                 hasCostAccess={hasCostAccess}
+                readyToGenerate={readyToGenerate}
               />
               <div className="s7-split-rail-sep" role="separator" aria-hidden />
               <MapRailPortalNav />
               <div className="s7-split-rail-sep" role="separator" aria-hidden />
-              <button type="button" className={`s7-split-rail-btn${showChatHistory ? ' active' : ''}`} onClick={() => setShowChatHistory((v) => !v)} title="Chat history">
+              <button type="button" className={`s7-split-rail-btn${showChatHistory ? ' active' : ''}`} onClick={() => { setShowChatHistory((v) => !v); setShowArtefactsPanel(false); }} title="Chat history">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="13" y2="14"/></svg>
+              </button>
+              <button type="button" className={`s7-split-rail-btn${showArtefactsPanel ? ' active' : ''}${sessionArtefacts.length > 0 ? ' has-artefacts' : ''}`} onClick={() => { setShowArtefactsPanel((v) => !v); setShowChatHistory(false); }} title={`Artefacts${sessionArtefacts.length ? ` (${sessionArtefacts.length})` : ''}`}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                {sessionArtefacts.length > 0 && <span className="s7-split-rail-count">{sessionArtefacts.length}</span>}
               </button>
               <button type="button" className="s7-split-rail-btn" onClick={() => setShowFloatingFlow(true)} title="Expand flow in window">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/><path d="M10 5H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-5"/></svg>
@@ -3880,70 +4434,6 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                   </button>
                 </div>
               ))}
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* Cross-process dependency mapping modal */}
-      {showDepsModal && createPortal(
-        <div className="s7-snippet-overlay" onClick={() => { if (!pendingNavAfterDeps) setShowDepsModal(false); }}>
-          <div className="s7-deps-modal" data-theme={theme} onClick={(e) => e.stopPropagation()}>
-            <div className="s7-snippet-modal-header">
-              <span>Does this process connect to others?</span>
-              <button type="button" className="s7-floating-panel-close" onClick={() => { setShowDepsModal(false); if (pendingNavAfterDeps) { setPendingNavAfterDeps(false); commitAndNavigate(depsLinks); } }}>&times;</button>
-            </div>
-            <div className="s7-deps-modal-body">
-              <p className="s7-deps-modal-hint">Add any processes that feed into, or receive output from, <strong>{processData.processName || 'this process'}</strong>. This helps map your end-to-end workflow.</p>
-
-              {depsLinks.length > 0 && (
-                <div className="s7-deps-list">
-                  {depsLinks.map((d, i) => (
-                    <div key={i} className="s7-deps-item">
-                      <span className="s7-deps-badge">{DEP_TYPE_LABELS[d.type] || d.type}</span>
-                      <span className="s7-deps-process">{d.toProcess}</span>
-                      <button type="button" className="s7-detail-del-btn" onClick={() => setDepsLinks((prev) => prev.filter((_, j) => j !== i))} title="Remove">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="s7-deps-add-row">
-                <select className="s7-deps-type-select" value={depsNewType} onChange={(e) => setDepsNewType(e.target.value)}>
-                  {Object.entries(DEP_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                </select>
-                <input
-                  className="s7-deps-input"
-                  type="text"
-                  placeholder="Process name, e.g. Purchase Order"
-                  value={depsNewProcess}
-                  onChange={(e) => setDepsNewProcess(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && depsNewProcess.trim()) {
-                      setDepsLinks((prev) => [...prev, { fromProcess: processData.processName || '', toProcess: depsNewProcess.trim(), type: depsNewType }]);
-                      setDepsNewProcess('');
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  className="s7-deps-add-btn"
-                  disabled={!depsNewProcess.trim()}
-                  onClick={() => {
-                    if (!depsNewProcess.trim()) return;
-                    setDepsLinks((prev) => [...prev, { fromProcess: processData.processName || '', toProcess: depsNewProcess.trim(), type: depsNewType }]);
-                    setDepsNewProcess('');
-                  }}
-                >Add</button>
-              </div>
-            </div>
-            <div className="s7-deps-modal-footer">
-              <button type="button" className="s7-deps-skip-btn" onClick={() => { setShowDepsModal(false); setPendingNavAfterDeps(false); commitAndNavigate(depsLinks); }}>
-                {depsLinks.length === 0 ? 'No dependencies, Continue' : 'Done, Continue →'}
-              </button>
             </div>
           </div>
         </div>,

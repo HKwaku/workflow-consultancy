@@ -484,8 +484,47 @@ function DiagnosticContent() {
           canonicalEnd: data.canonicalEnd || null,
         });
         setGateCompleted(true);
-        setChatMessages([]);
         goToScreen(2);
+
+        // Hydrate cloud session (messages + artefacts) for this deal flow so a
+        // refresh restores chat history and artefact pills. Falls through to
+        // an empty thread if no session exists for the flow yet.
+        let hydrated = false;
+        try {
+          const sessionId = typeof window !== 'undefined'
+            ? localStorage.getItem('vesno_chat_session_active')
+            : null;
+          if (sessionId) {
+            const sResp = await apiFetch(`/api/chat-sessions/${encodeURIComponent(sessionId)}`, {}, accessToken);
+            const sd = sResp.ok ? await sResp.json() : null;
+            if (sd?.success && Array.isArray(sd.messages) && sd.messages.length) {
+              const artefactsByMsg = {};
+              for (const a of (sd.artefacts || [])) {
+                if (a.message_id) artefactsByMsg[a.message_id] = a;
+              }
+              setChatMessages(sd.messages.map((m) => {
+                const artefact = artefactsByMsg[m.id] || (m.artefact_id ? artefactsByMsg[m.artefact_id] : null);
+                const isReport = artefact && artefact.kind === 'report';
+                return {
+                  role: m.role,
+                  content: m.content,
+                  actions: m.actions || undefined,
+                  attachments: m.attachments || undefined,
+                  artefact: artefact ? {
+                    id: artefact.id,
+                    kind: artefact.kind,
+                    refId: artefact.ref_id,
+                    label: artefact.label,
+                    snapshot: artefact.snapshot,
+                  } : undefined,
+                  reportActions: isReport ? { id: artefact.ref_id, processName: artefact.label || '' } : undefined,
+                };
+              }));
+              hydrated = true;
+            }
+          }
+        } catch { /* best-effort */ }
+        if (!hydrated) setChatMessages([]);
       } catch (e) {
         setEditError('Failed to open flow.');
       }
@@ -658,13 +697,18 @@ function DiagnosticContent() {
           const key = reportId ? `vesno_chat_session_${reportId}` : 'vesno_chat_session_active';
           localStorage.setItem(key, urlChatSession);
         } catch { /* ignore */ }
+        // Match artefacts to messages by the artefact's message_id. The
+        // chat_messages.artefact_id back-link can be null if the link update
+        // ever failed (e.g. pre-migration), but the artefact row itself
+        // always carries message_id - that's the authoritative join.
         const artefactsByMsg = {};
         for (const a of (data.artefacts || [])) {
           if (a.message_id) artefactsByMsg[a.message_id] = a;
         }
         setChatMessages(
           data.messages.map((m) => {
-            const artefact = m.artefact_id ? artefactsByMsg[m.artefact_id] : null;
+            const artefact = artefactsByMsg[m.id] || (m.artefact_id ? artefactsByMsg[m.artefact_id] : null);
+            const isReport = artefact && artefact.kind === 'report';
             return {
               role: m.role,
               content: m.content,
@@ -677,6 +721,7 @@ function DiagnosticContent() {
                 label: artefact.label,
                 snapshot: artefact.snapshot,
               } : undefined,
+              reportActions: isReport ? { id: artefact.ref_id, processName: artefact.label || '' } : undefined,
             };
           })
         );
@@ -819,6 +864,43 @@ function DiagnosticContent() {
         });
         queueMicrotask(() => addAuditEvent({ type: 'edit', detail: `Opened report ${urlEdit} for editing` }));
 
+        // Hydrate chat + artefacts from the associated chat session so a
+        // refresh preserves history (the greeting above is a fallback when
+        // no session exists). Best-effort: fall through silently on error.
+        try {
+          const sessionId = typeof window !== 'undefined'
+            ? localStorage.getItem(`vesno_chat_session_${urlEdit}`)
+            : null;
+          if (sessionId && accessToken) {
+            apiFetch(`/api/chat-sessions/${encodeURIComponent(sessionId)}`, {}, accessToken)
+              .then((resp) => (resp.ok ? resp.json() : null))
+              .then((sd) => {
+                if (!sd?.success || !Array.isArray(sd.messages) || !sd.messages.length) return;
+                const artefactsByMsg = {};
+                for (const a of (sd.artefacts || [])) {
+                  if (a.message_id) artefactsByMsg[a.message_id] = a;
+                }
+                setChatMessages(sd.messages.map((m) => {
+                  const artefact = artefactsByMsg[m.id] || (m.artefact_id ? artefactsByMsg[m.artefact_id] : null);
+                  return {
+                    role: m.role,
+                    content: m.content,
+                    actions: m.actions || undefined,
+                    attachments: m.attachments || undefined,
+                    artefact: artefact ? {
+                      id: artefact.id,
+                      kind: artefact.kind,
+                      refId: artefact.ref_id,
+                      label: artefact.label,
+                      snapshot: artefact.snapshot,
+                    } : undefined,
+                  };
+                }));
+              })
+              .catch(() => { /* keep greeting */ });
+          }
+        } catch { /* best-effort */ }
+
         setEditLoading(false);
       })
       .catch(() => {
@@ -870,6 +952,137 @@ function DiagnosticContent() {
       }
     }
   }, [searchParams, resumeChecked, loadProgress]);
+
+  /*
+   * Pre-report refresh hydration: plain /diagnostic (no ?chatSession, no ?edit,
+   * no ?resume) relies on localStorage for chat history, which misses
+   * chat_artefacts rows saved in the cloud. Pull the active session from
+   * /api/chat-sessions so pills (flow snapshots, phase transitions, pins)
+   * survive a refresh before any report exists.
+   */
+  const preReportHydrateRef = useRef(false);
+  // Explicit "New chat" intent (?new=1): clear the active-session pointer
+  // and any saved progress once, so we don't auto-resume into the last chat.
+  // Then strip the param so a subsequent refresh doesn't keep wiping state.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (searchParams.get('new') !== '1') return;
+    try {
+      localStorage.removeItem('vesno_chat_session_active');
+      localStorage.removeItem('processDiagnosticProgress');
+    } catch { /* ignore */ }
+    preReportHydrateRef.current = true;
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('new');
+      window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
+    } catch { /* ignore */ }
+  }, [searchParams]);
+
+  // Silent localStorage fallback: restores just chatMessages (with artefact refs
+  // intact via sanitizeChatMessagesForPersist) so pills survive refresh even when
+  // cloud hydration can't run (unauthenticated, no session pointer, or fetch empty).
+  // Does NOT trigger Resume dialog semantics - only repopulates the chat thread.
+  const restoreChatFromLocal = useCallback(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const raw = localStorage.getItem('processDiagnosticProgress');
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      const age = (new Date() - new Date(data.timestamp || 0)) / (1000 * 60 * 60);
+      if (age >= 24) return false;
+      if (!Array.isArray(data.chatMessages) || !data.chatMessages.length) return false;
+      setChatMessages(data.chatMessages);
+      if (process.env.NODE_ENV !== 'production') console.info('[hydrate-preReport] localStorage fallback restored', { count: data.chatMessages.length });
+      return true;
+    } catch {
+      return false;
+    }
+  }, [setChatMessages]);
+
+  useEffect(() => {
+    if (preReportHydrateRef.current) return;
+    if (urlChatSession || urlEdit) return;
+    if (searchParams.get('resume')) return;
+    if (searchParams.get('new') === '1') return;
+    if (typeof window === 'undefined') return;
+
+    // Auth not yet resolved or unavailable - use localStorage fallback so pills
+    // don't vanish. Mark hydrate done so auth arriving later doesn't overwrite.
+    if (authLoading || !accessToken) {
+      if (!authLoading) {
+        if (restoreChatFromLocal()) preReportHydrateRef.current = true;
+      }
+      return;
+    }
+
+    const sessionId = (() => {
+      try { return localStorage.getItem('vesno_chat_session_active'); } catch { return null; }
+    })();
+    if (!sessionId) {
+      if (process.env.NODE_ENV !== 'production') console.info('[hydrate-preReport] no cloud session - trying localStorage');
+      if (restoreChatFromLocal()) preReportHydrateRef.current = true;
+      return;
+    }
+
+    preReportHydrateRef.current = true;
+    if (process.env.NODE_ENV !== 'production') console.info('[hydrate-preReport] fetching session', sessionId);
+    apiFetch(`/api/chat-sessions/${encodeURIComponent(sessionId)}`, {}, accessToken)
+      .then((resp) => (resp.ok ? resp.json() : null))
+      .then((sd) => {
+        if (!sd?.success || !Array.isArray(sd.messages) || !sd.messages.length) {
+          if (process.env.NODE_ENV !== 'production') console.warn('[hydrate-preReport] empty cloud - falling back to localStorage', { sessionId, success: sd?.success, messageCount: sd?.messages?.length });
+          restoreChatFromLocal();
+          return;
+        }
+        const artefactCount = (sd.artefacts || []).length;
+        if (process.env.NODE_ENV !== 'production') console.info('[hydrate-preReport] loaded', { messages: sd.messages.length, artefacts: artefactCount });
+
+        const snapshot = sd.session?.process_snapshot;
+        if (snapshot && typeof snapshot === 'object' && snapshot.processData && typeof snapshot.processData === 'object') {
+          restoreProgress(snapshot);
+        }
+
+        const artefactsByMsg = {};
+        for (const a of (sd.artefacts || [])) {
+          if (a.message_id) artefactsByMsg[a.message_id] = a;
+        }
+        let matchedCount = 0;
+        const mapped = sd.messages.map((m) => {
+          const artefact = artefactsByMsg[m.id] || (m.artefact_id ? artefactsByMsg[m.artefact_id] : null);
+          if (artefact) matchedCount += 1;
+          const isReport = artefact && artefact.kind === 'report';
+          return {
+            role: m.role,
+            content: m.content,
+            actions: m.actions || undefined,
+            attachments: m.attachments || undefined,
+            artefact: artefact ? {
+              id: artefact.id,
+              kind: artefact.kind,
+              refId: artefact.ref_id,
+              label: artefact.label,
+              snapshot: artefact.snapshot,
+            } : undefined,
+            reportActions: isReport ? { id: artefact.ref_id, processName: artefact.label || '' } : undefined,
+          };
+        });
+        if (process.env.NODE_ENV !== 'production') console.info('[hydrate-preReport] artefact→message match', { matched: matchedCount, totalArtefacts: artefactCount, orphans: artefactCount - matchedCount });
+        setChatMessages(mapped);
+
+        // Cloud is authoritative - suppress the localStorage Resume dialog.
+        setShowResume(false);
+        setSavedData(null);
+
+        if (snapshot && typeof snapshot === 'object' && snapshot.processData) {
+          goToScreen(2);
+        }
+      })
+      .catch((err) => {
+        if (process.env.NODE_ENV !== 'production') console.error('[hydrate-preReport] fetch failed - falling back to localStorage', err?.message || err);
+        restoreChatFromLocal();
+      });
+  }, [urlChatSession, urlEdit, authLoading, accessToken, searchParams, setChatMessages, restoreProgress, goToScreen, restoreChatFromLocal]);
 
   const handleResumeYes = () => {
     if (savedData) {
