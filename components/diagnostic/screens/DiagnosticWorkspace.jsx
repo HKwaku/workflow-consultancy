@@ -1534,6 +1534,11 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
   const { accessToken, user: sessionUser, signOut } = useAuth();
   const { theme } = useTheme();
   const isMobile = useIsMobile();
+  // 'chat' | 'canvas' — only meaningful on mobile, where we hide
+  // whichever surface isn't selected. Phase-1 stacked them vertically
+  // which still felt cramped on phones; the toggle gives the user
+  // 100% of the viewport for whichever they're focused on.
+  const [mobileView, setMobileView] = useState('chat');
 
   /* ── Cloud chat persistence ── */
   const chatSessionIdRef = useRef(null);
@@ -5457,7 +5462,34 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
             from the panel render their iframe (with the "Open in new tab"
             link in the canvas topbar) instead of becoming silent no-ops. */}
         {(hasFlowArtifact || inlineReportId || inlineCostReportId || inlineAnalysisId) ? (
-        <div ref={splitAreaRef} className="s7-canvas-area s7-canvas-area--split">
+        <div
+          ref={splitAreaRef}
+          className="s7-canvas-area s7-canvas-area--split"
+          data-mobile-view={isMobile ? mobileView : undefined}
+        >
+          {/* Mobile-only toggle so the user can flip between chat and
+              canvas instead of seeing them stacked. CSS uses the
+              data-mobile-view attribute on the parent to hide the
+              inactive surface. Hidden on desktop where both render
+              side-by-side anyway. */}
+          {isMobile && (
+            <div className="s7-mobile-view-toggle" role="tablist" aria-label="Workspace view">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mobileView === 'chat'}
+                className={`s7-mobile-view-tab${mobileView === 'chat' ? ' active' : ''}`}
+                onClick={() => setMobileView('chat')}
+              >Chat</button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mobileView === 'canvas'}
+                className={`s7-mobile-view-tab${mobileView === 'canvas' ? ' active' : ''}`}
+                onClick={() => setMobileView('canvas')}
+              >Canvas</button>
+            </div>
+          )}
           <nav className="s7-split-rail" data-theme={theme} aria-label="Mapping tools">
             <div className="s7-split-rail-body">
               {/* Order: Home · Dashboard · Reports · Deals · Chat · Artefacts ·
@@ -5908,6 +5940,10 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
             );
             const handle = (a) => () => {
               setShowArtefactsPanel(false);
+              // On mobile the artefact renders in the canvas column,
+              // which is hidden when the user is on the Chat tab. Flip
+              // to Canvas so the click produces a visible result.
+              if (isMobile) setMobileView('canvas');
               if (a.kind === 'report' && a.refId) {
                 setInlineCostReportId(null);
                 setInlineReportId(a.refId);
