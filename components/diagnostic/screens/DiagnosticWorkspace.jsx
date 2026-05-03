@@ -1703,6 +1703,11 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
   const [chatLoading, setChatLoading] = useState(false);
   const [chatProgress, setChatProgress] = useState('');
   const [chatStreamedText, setChatStreamedText] = useState('');
+  // Elapsed-seconds counter shown next to the spinner once a request
+  // crosses 4 s. Helps the user see whether the response is still
+  // making progress or has actually hung — without it, a 30 s wait
+  // and a 30 ms wait look identical.
+  const [chatElapsedSeconds, setChatElapsedSeconds] = useState(0);
   // Bump on every completed chat turn so the CreditsWidget re-fetches
   // /api/me/budget and the count drops live.
   const [creditsRefreshKey, setCreditsRefreshKey] = useState(0);
@@ -3668,7 +3673,23 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     setChatError(null);
     setChatLoading(true);
     setChatStreamedText('');
-    if (attachmentsToSend.length > 0) setChatProgress('Sending files to the assistant…');
+    // Immediate visible feedback: don't wait for the server's first
+    // SSE 'progress' to land — that takes one round-trip + Anthropic
+    // setup time (often 1-3 s), during which the typing dots alone
+    // don't make it clear *anything* is happening. Seed locally and
+    // upgrade the copy as elapsed time grows so the user always knows
+    // we're still on it.
+    setChatProgress(
+      attachmentsToSend.length > 0
+        ? 'Sending files to the assistant…'
+        : 'Reina is thinking…',
+    );
+    const progressTimers = [
+      setTimeout(() => { setChatProgress((cur) => cur && /thinking/i.test(cur) ? 'Still working on it…' : cur); }, 6000),
+      setTimeout(() => { setChatProgress((cur) => cur && /working/i.test(cur) ? 'Pulling together a response…' : cur); }, 14000),
+      setTimeout(() => { setChatProgress((cur) => cur && /pulling|response/i.test(cur) ? 'This is taking longer than usual — still going…' : cur); }, 30000),
+    ];
+    const clearProgressTimers = () => progressTimers.forEach((t) => clearTimeout(t));
 
     // Abort any in-flight request before starting a new one.
     if (chatAbortRef.current) {
@@ -3860,6 +3881,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     }
 
     if (chatAbortRef.current === controller) chatAbortRef.current = null;
+    clearProgressTimers();
     setChatLoading(false);
     setChatProgress('');
     setChatStreamedText('');
@@ -3902,6 +3924,23 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     if (!chatStreamedText) return;
     chatEndRef.current?.scrollIntoView({ behavior: 'auto' });
   }, [chatStreamedText]);
+  // Keep the typing/progress indicator in view from the moment the
+  // request fires — without this, the pending bubble can land just
+  // below the viewport on long threads and the user thinks nothing's
+  // happening.
+  useEffect(() => {
+    if (chatLoading) chatEndRef.current?.scrollIntoView({ behavior: 'auto' });
+  }, [chatLoading, chatProgress]);
+  // Tick the elapsed-seconds counter while a chat request is in flight.
+  // Reset on each new request via the chatLoading transition.
+  useEffect(() => {
+    if (!chatLoading) { setChatElapsedSeconds(0); return undefined; }
+    const startedAt = Date.now();
+    const id = setInterval(() => {
+      setChatElapsedSeconds(Math.round((Date.now() - startedAt) / 1000));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [chatLoading]);
 
   /* ═══════ Computed ═══════ */
   const namedSteps = steps.filter((s) => s.name.trim());
@@ -4540,10 +4579,33 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
               <div className={`s7-msg-bubble${chatStreamedText ? ' s7-msg-bubble--md' : ' s7-typing'}`}>
                 {chatStreamedText ? (
                   <ChatMessageContent content={chatStreamedText} streaming />
-                ) : chatProgress ? (
-                  <span className="s7-typing-text">{chatProgress}</span>
                 ) : (
-                  <><span /><span /><span /></>
+                  <span
+                    className="s7-typing-text"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
+                  >
+                    <span
+                      aria-hidden
+                      style={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: '50%',
+                        border: '2px solid currentColor',
+                        borderTopColor: 'transparent',
+                        animation: 'spin 0.9s linear infinite',
+                        flex: '0 0 auto',
+                      }}
+                    />
+                    {/* Always show *something*. Even if neither chatProgress
+                        nor chatStreamedText has landed yet, this guarantees
+                        the user sees a clear "we're working on it" cue. */}
+                    <span>{chatProgress || 'Reina is thinking…'}</span>
+                    {chatElapsedSeconds >= 4 && (
+                      <span style={{ opacity: 0.6, fontSize: '0.85em' }}>
+                        ({chatElapsedSeconds}s)
+                      </span>
+                    )}
+                  </span>
                 )}
               </div>
               <div className="s7-msg-actions">
