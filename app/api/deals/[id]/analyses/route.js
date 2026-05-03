@@ -34,8 +34,13 @@ export async function GET(request, { params }) {
   if (!sb) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
 
   try {
+    // Project `result->>summary` server-side as a separate column
+    // (`summary`) so we don't pull the entire result JSONB across the
+    // wire just to truncate one field. For deals with many completed
+    // analyses (~50 KB results × 50 rows) this is the difference
+    // between a multi-MB response and a few KB.
     const resp = await fetchWithTimeout(
-      `${sb.url}/rest/v1/deal_analyses?deal_id=eq.${encodeURIComponent(dealId)}&select=id,mode,name,status,source_flow_ids,source_report_ids,result,error,created_by_email,created_at,completed_at&order=created_at.desc&limit=50`,
+      `${sb.url}/rest/v1/deal_analyses?deal_id=eq.${encodeURIComponent(dealId)}&select=id,mode,name,status,source_flow_ids,source_report_ids,error,created_by_email,created_at,completed_at,summary:result->>summary&order=created_at.desc&limit=50`,
       { method: 'GET', headers: getSupabaseHeaders(sb.key) }
     );
     // Table may not exist pre-migration - return an empty list rather than 500.
@@ -52,14 +57,16 @@ export async function GET(request, { params }) {
       status: r.status,
       sourceFlowCount: Array.isArray(r.source_flow_ids) ? r.source_flow_ids.length : 0,
       sourceReportCount: Array.isArray(r.source_report_ids) ? r.source_report_ids.length : 0,
-      summary: r.result?.summary ? String(r.result.summary).slice(0, 280) : null,
+      summary: r.summary ? String(r.summary).slice(0, 280) : null,
       error: r.error || null,
       createdByEmail: access.canManage ? r.created_by_email : undefined,
       createdAt: r.created_at,
       completedAt: r.completed_at,
     }));
 
-    return NextResponse.json({ analyses });
+    return NextResponse.json({ analyses }, {
+      headers: { 'Cache-Control': 'private, max-age=5, stale-while-revalidate=30' },
+    });
   } catch (err) {
     logger.error('List deal analyses error', { requestId: getRequestId(request), error: err.message });
     return NextResponse.json({ error: 'Failed to list analyses.' }, { status: 500 });

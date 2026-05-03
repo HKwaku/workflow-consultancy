@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
+import dynamic from 'next/dynamic';
 import { useDiagnostic } from '../DiagnosticContext';
 import { useDiagnosticNav } from '../DiagnosticNavContext';
 import { useAuth } from '@/lib/useAuth';
@@ -28,16 +29,21 @@ import DocsRailButton from '@/components/diagnostic/chat/DocsRailButton';
 import AnalyticsRailButton from '@/components/diagnostic/chat/AnalyticsRailButton';
 import DealContextChip from '@/components/diagnostic/chat/DealContextChip';
 import RailSlidePanel from '@/components/diagnostic/chat/RailSlidePanel';
-import DealAnalysisInline from '@/components/diagnostic/chat/DealAnalysisInline';
 import CreditsWidget from '@/components/diagnostic/chat/CreditsWidget';
-import AuditTrailPanel from '@/components/diagnostic/AuditTrailPanel';
 import { CanvasActionProvider, useCanvasAction } from '@/components/diagnostic/chat/CanvasActionContext';
 
 const INTAKE_PHASES_BY_ID = Object.fromEntries(INTAKE_PHASES.map((p) => [p.id, p]));
 import { generateReportInline } from '@/lib/diagnostic';
-import FloatingFlowViewer from '../FloatingFlowViewer';
-import ChatHistoryPanel from '../ChatHistoryPanel';
 import ChatMessageContent, { CopyButton } from '../ChatMessageContent';
+
+// Bundle-split heavy panels that only render on demand. Keeps the
+// /process-audit initial bundle slim — these are loaded only when the
+// user actually opens the floating flow viewer / audit log / inline
+// analysis / chat history.
+const FloatingFlowViewer = dynamic(() => import('../FloatingFlowViewer'), { ssr: false });
+const AuditTrailPanel = dynamic(() => import('@/components/diagnostic/AuditTrailPanel'), { ssr: false });
+const DealAnalysisInline = dynamic(() => import('@/components/diagnostic/chat/DealAnalysisInline'), { ssr: false });
+const ChatHistoryPanel = dynamic(() => import('../ChatHistoryPanel'), { ssr: false });
 
 const MAP_SPLIT_RAIL_PX = 48;
 const MAP_SPLIT_HANDLE_PX = 8;

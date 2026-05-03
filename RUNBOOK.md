@@ -1,5 +1,16 @@
 # Runbook: Common Failures & Recovery
 
+## "Everything feels slow"
+
+**First, eliminate the obvious:** are you on `next dev`? Dev mode compiles each route on first hit, runs without minification, includes React's strict-mode double-invocation, and serves modules un-bundled. **Real perf bar is `npm run build && npm start`** — typically 2-5× faster on the same hardware. If perf only matters for a specific route, hit that route once with `next dev` to warm the compile, then test.
+
+**If still slow on production builds:**
+- Check the Network tab. Slow API responses = backend issue. Slow JS parse = bundle size issue.
+- Confirm `SUPABASE_JWT_SECRET` is set (saves ~200ms of `auth.getUser` round-trip per first-of-key authenticated request — see `lib/auth.js:verifyJwtLocal`).
+- Confirm `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are reachable. The 800 ms allow-cache in `lib/rate-limit.js` masks Upstash latency for the second-and-onwards request from a key, but the first call still pays the full Upstash round-trip if Upstash is in a different region.
+- Apply `supabase/migration-perf-indexes.sql` if not already applied.
+- Run a real production build (`npm run build`) and watch the bundle-size warnings — anything > 250 kB gzip on a route is a problem.
+
 ## Supabase Unavailable
 
 **Symptoms:** 502, "Failed to fetch report", "Storage not configured"

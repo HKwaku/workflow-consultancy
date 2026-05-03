@@ -42,53 +42,99 @@ export async function GET(request, { params }) {
     const isOwner = access.mode === 'owner';
     const canSeePII = access.canManage; // owner or collaborator
 
-    // Fetch participants
-    const partResp = await fetchWithTimeout(
-      `${supabaseUrl}/rest/v1/deal_participants?deal_id=eq.${id}&select=*&order=created_at.asc`,
-      { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
-    );
+    // Parallelise the three independent reads (participants, flows,
+    // auxiliary stats) so the wall-clock cost is one Supabase round-
+    // trip instead of three. Auxiliary stats internally already
+    // parallelises its two sub-fetches. Trim select= to the columns
+    // actually consumed below to cut payload size.
+    const headers = getSupabaseHeaders(supabaseKey);
+    const PARTICIPANT_COLS = 'id,role,company_name,participant_email,participant_name,invite_token,report_id,status,invited_at,completed_at';
+    const FLOW_COLS = 'id,participant_id,label,flow_kind,report_id,status,created_at,updated_at';
+    const [partResp, flowsResp, auxiliary] = await Promise.all([
+      fetchWithTimeout(
+        `${supabaseUrl}/rest/v1/deal_participants?deal_id=eq.${id}&select=${PARTICIPANT_COLS}&order=created_at.asc`,
+        { method: 'GET', headers },
+      ),
+      fetchWithTimeout(
+        `${supabaseUrl}/rest/v1/deal_flows?deal_id=eq.${encodeURIComponent(id)}&select=${FLOW_COLS}&order=created_at.asc`,
+        { method: 'GET', headers },
+      ),
+      buildDealAuxiliaryStats({ dealId: deal.id, supabaseUrl, supabaseKey }),
+    ]);
     const participants = partResp.ok ? await partResp.json() : [];
+    const flowRows = flowsResp.ok ? await flowsResp.json() : [];
 
-    // Fetch report summaries for completed participants
-    const reportIds = participants.filter((p) => p.report_id).map((p) => p.report_id);
-    let reportSummaries = {};
-    if (reportIds.length > 0) {
-      const reportsResp = await fetchWithTimeout(
-        `${supabaseUrl}/rest/v1/diagnostic_reports?id=in.(${reportIds.map(encodeURIComponent).join(',')})&select=id,total_annual_cost,potential_savings,automation_percentage,automation_grade,diagnostic_mode,created_at,updated_at,diagnostic_data`,
-        { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
-      );
-      if (reportsResp.ok) {
-        const reports = await reportsResp.json();
-        for (const r of reports) {
-          const dd = r.diagnostic_data || {};
-          const rawSteps = (dd.rawProcesses?.[0]?.steps || []).slice(0, 150).map((s) => ({
-            name: s.name || '',
-            department: s.department || '',
-            isDecision: !!s.isDecision,
-            isExternal: !!s.isExternal,
-            durationMinutes: s.durationMinutes || s.workMinutes || 0,
-          }));
-          reportSummaries[r.id] = {
-            id: r.id,
-            totalAnnualCost: r.total_annual_cost,
-            potentialSavings: r.potential_savings,
-            automationPercentage: r.automation_percentage,
-            automationGrade: r.automation_grade,
-            diagnosticMode: r.diagnostic_mode,
-            processCount: dd.summary?.totalProcesses || dd.processes?.length || 0,
-            processes: (dd.processes || []).map((p) => ({
-              name: p.name,
-              annualCost: p.annualCost,
-              stepsCount: p.stepsCount,
-              quality: p.quality,
-              automationPct: p.automationPct,
-            })),
-            rawSteps,
-            reportUrl: `/report?id=${r.id}`,
-            createdAt: r.created_at,
-            updatedAt: r.updated_at,
-          };
-        }
+    // Combined report fetch: union of report_ids referenced from
+    // participants AND flows, in a single query, instead of two
+    // sequential queries (the second of which dedupes against the
+    // first). Detail columns are only needed for the participant
+    // path, so we only run the heavy SELECT on participant ids and
+    // the lighter SELECT on flow-only extras.
+    const participantReportIds = participants.filter((p) => p.report_id).map((p) => p.report_id);
+    const flowOnlyReportIds = flowRows
+      .map((f) => f.report_id)
+      .filter(Boolean)
+      .filter((rid) => !participantReportIds.includes(rid));
+    const reportSummaries = {};
+    const [participantReportsResp, flowOnlyReportsResp] = await Promise.all([
+      participantReportIds.length
+        ? fetchWithTimeout(
+          `${supabaseUrl}/rest/v1/diagnostic_reports?id=in.(${participantReportIds.map(encodeURIComponent).join(',')})&select=id,total_annual_cost,potential_savings,automation_percentage,automation_grade,diagnostic_mode,created_at,updated_at,diagnostic_data`,
+          { method: 'GET', headers },
+        )
+        : Promise.resolve(null),
+      flowOnlyReportIds.length
+        ? fetchWithTimeout(
+          `${supabaseUrl}/rest/v1/diagnostic_reports?id=in.(${flowOnlyReportIds.map(encodeURIComponent).join(',')})&select=id,total_annual_cost,potential_savings,automation_percentage,automation_grade,created_at,updated_at`,
+          { method: 'GET', headers },
+        )
+        : Promise.resolve(null),
+    ]);
+    if (participantReportsResp?.ok) {
+      const reports = await participantReportsResp.json();
+      for (const r of reports) {
+        const dd = r.diagnostic_data || {};
+        const rawSteps = (dd.rawProcesses?.[0]?.steps || []).slice(0, 150).map((s) => ({
+          name: s.name || '',
+          department: s.department || '',
+          isDecision: !!s.isDecision,
+          isExternal: !!s.isExternal,
+          durationMinutes: s.durationMinutes || s.workMinutes || 0,
+        }));
+        reportSummaries[r.id] = {
+          id: r.id,
+          totalAnnualCost: r.total_annual_cost,
+          potentialSavings: r.potential_savings,
+          automationPercentage: r.automation_percentage,
+          automationGrade: r.automation_grade,
+          diagnosticMode: r.diagnostic_mode,
+          processCount: dd.summary?.totalProcesses || dd.processes?.length || 0,
+          processes: (dd.processes || []).map((p) => ({
+            name: p.name,
+            annualCost: p.annualCost,
+            stepsCount: p.stepsCount,
+            quality: p.quality,
+            automationPct: p.automationPct,
+          })),
+          rawSteps,
+          reportUrl: `/report?id=${r.id}`,
+          createdAt: r.created_at,
+          updatedAt: r.updated_at,
+        };
+      }
+    }
+    if (flowOnlyReportsResp?.ok) {
+      for (const r of await flowOnlyReportsResp.json()) {
+        reportSummaries[r.id] = {
+          id: r.id,
+          totalAnnualCost: r.total_annual_cost,
+          potentialSavings: r.potential_savings,
+          automationPercentage: r.automation_percentage,
+          automationGrade: r.automation_grade,
+          reportUrl: `/report?id=${r.id}`,
+          createdAt: r.created_at,
+          updatedAt: r.updated_at,
+        };
       }
     }
 
@@ -105,34 +151,6 @@ export async function GET(request, { params }) {
       invitedAt: p.invited_at,
       completedAt: p.completed_at,
     }));
-
-    // Fetch flows for this deal and join with report summaries
-    const flowsResp = await fetchWithTimeout(
-      `${supabaseUrl}/rest/v1/deal_flows?deal_id=eq.${encodeURIComponent(id)}&select=*&order=created_at.asc`,
-      { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
-    );
-    const flowRows = flowsResp.ok ? await flowsResp.json() : [];
-    const flowReportIds = flowRows.map((f) => f.report_id).filter(Boolean).filter((rid) => !reportSummaries[rid]);
-    if (flowReportIds.length) {
-      const extraResp = await fetchWithTimeout(
-        `${supabaseUrl}/rest/v1/diagnostic_reports?id=in.(${flowReportIds.map(encodeURIComponent).join(',')})&select=id,total_annual_cost,potential_savings,automation_percentage,automation_grade,created_at,updated_at,diagnostic_data`,
-        { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
-      );
-      if (extraResp.ok) {
-        for (const r of await extraResp.json()) {
-          reportSummaries[r.id] = {
-            id: r.id,
-            totalAnnualCost: r.total_annual_cost,
-            potentialSavings: r.potential_savings,
-            automationPercentage: r.automation_percentage,
-            automationGrade: r.automation_grade,
-            reportUrl: `/report?id=${r.id}`,
-            createdAt: r.created_at,
-            updatedAt: r.updated_at,
-          };
-        }
-      }
-    }
     const flows = flowRows.map((f) => ({
       id: f.id,
       participantId: f.participant_id,
@@ -171,8 +189,14 @@ export async function GET(request, { params }) {
       flows,
       summary: {
         ...buildDealSummary(deal.type, enrichedParticipants),
-        ...(await buildDealAuxiliaryStats({ dealId: deal.id, supabaseUrl, supabaseKey })),
+        ...auxiliary,
       },
+    }, {
+      // Short browser cache so back/forward and tab-revisits within
+      // 5 s skip the server entirely. private = per-user (response
+      // varies by Authorization). stale-while-revalidate gives a
+      // cheap snappy navigation while a fresh fetch runs in the bg.
+      headers: { 'Cache-Control': 'private, max-age=5, stale-while-revalidate=30' },
     });
   } catch (err) {
     logger.error('Get deal error', { requestId: getRequestId(request), error: err.message });

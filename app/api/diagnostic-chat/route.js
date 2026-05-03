@@ -187,8 +187,14 @@ export async function POST(request) {
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
+      // Disables proxy/CDN response buffering so each SSE event reaches
+      // the client as it's enqueued, not after the response closes.
+      // Recognised by nginx ('X-Accel-Buffering') and similar by most
+      // edge / CDN layers — without this the per-tool-call updates
+      // sent via send() can be coalesced at the network boundary.
+      'X-Accel-Buffering': 'no',
     },
   });
 }
