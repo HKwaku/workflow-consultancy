@@ -17871,12 +17871,88 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
 
   /* Hide the inactive surface based on the data attribute */
   [data-mobile-view='chat'] .s7-canvas-column,
-  [data-mobile-view='chat'] .s7-detail-panel {
+  [data-mobile-view='chat'] .s7-detail-panel,
+  [data-mobile-view='chat'] .s7-mobile-canvas-empty {
     display: none !important;
   }
   [data-mobile-view='canvas'] .s7-inline-chat,
-  [data-mobile-view='canvas'] .s7-inline-chat--sized {
+  [data-mobile-view='canvas'] .s7-inline-chat--sized,
+  [data-mobile-view='canvas'] .s7-map-landing {
     display: none !important;
+  }
+  /* Empty-state when "Canvas" tab is selected but no flow / inline
+     content exists yet (early deal-chat scope). Only renders on the
+     no-flow branch since the split-view branch always has something
+     in the canvas column. Centered card so the user has clear
+     feedback that the Canvas tab works — just empty. */
+  .s7-mobile-canvas-empty {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 24px;
+    text-align: center;
+    flex: 1 1 auto;
+    min-height: 240px;
+    color: var(--text, #1e293b);
+  }
+  [data-mobile-view='canvas'] .s7-mobile-canvas-empty {
+    display: flex !important;
+  }
+
+  /* ---- DealContextChip pass 2: tighter still ----
+     The phone screenshot showed the chip taking ~4 lines (deal name
+     wraps, then 2 toggle buttons on a second row). Hide the
+     "Hide context" toggle on mobile (the pane it controls is already
+     hidden), and shrink the chip more aggressively so the deal label
+     wraps once instead of twice. */
+  .chat-deal-chip-toggle[aria-expanded] {
+    display: none !important;
+  }
+  .chat-deal-context {
+    margin: 4px 10px 0 !important;
+  }
+  .chat-deal-chip {
+    padding: 5px 8px !important;
+    font-size: 11.5px !important;
+    gap: 4px 6px !important;
+  }
+  .chat-deal-chip > svg {
+    width: 11px !important;
+    height: 11px !important;
+  }
+
+  /* ---- Chat-input keyboard-shortcut hint ----
+     "Enter to send · Alt+Enter new line" is a desktop affordance; on
+     touch keyboards Enter inserts a newline anyway and the user has
+     a Send button. The hint just adds chrome on small screens. */
+  .s7-chat-input-hint {
+    display: none !important;
+  }
+
+  /* ---- Trial gate warning banner ----
+     "46% automation readiness — 24% from optimised threshold / Review →"
+     is informational; on mobile it ate ~80px of vertical space the
+     user circled. Compress aggressively: drop the pill prefix, smaller
+     padding/font, single line that ellipsises if needed. */
+  .trial-gate-banner--warn {
+    flex-wrap: wrap;
+    padding: 6px 10px !important;
+    font-size: 11.5px !important;
+    line-height: 1.35;
+    gap: 4px 8px !important;
+  }
+  .trial-gate-banner-pill {
+    font-size: 11px;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .trial-gate-banner-link {
+    flex-shrink: 0;
+    font-size: 11.5px;
   }
 }
 

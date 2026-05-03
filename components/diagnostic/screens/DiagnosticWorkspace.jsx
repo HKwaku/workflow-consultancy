@@ -5461,35 +5461,37 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
             is open, even with no flow yet — that's how clicked artefacts
             from the panel render their iframe (with the "Open in new tab"
             link in the canvas topbar) instead of becoming silent no-ops. */}
+        {/* Mobile chat ⇄ canvas toggle. Lifted OUT of the split-view
+            branch so it shows even when no flow / artefact is open
+            yet — without this the user has no toggle visible during
+            an early deal chat (which is what was reported). The
+            "Canvas" tab does the right thing depending on what's
+            available: existing canvas column when a flow / inline
+            artefact exists, otherwise a friendly empty-state below. */}
+        {isMobile && (
+          <div className="s7-mobile-view-toggle" role="tablist" aria-label="Workspace view">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mobileView === 'chat'}
+              className={`s7-mobile-view-tab${mobileView === 'chat' ? ' active' : ''}`}
+              onClick={() => setMobileView('chat')}
+            >Chat</button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mobileView === 'canvas'}
+              className={`s7-mobile-view-tab${mobileView === 'canvas' ? ' active' : ''}`}
+              onClick={() => setMobileView('canvas')}
+            >Canvas</button>
+          </div>
+        )}
         {(hasFlowArtifact || inlineReportId || inlineCostReportId || inlineAnalysisId) ? (
         <div
           ref={splitAreaRef}
           className="s7-canvas-area s7-canvas-area--split"
           data-mobile-view={isMobile ? mobileView : undefined}
         >
-          {/* Mobile-only toggle so the user can flip between chat and
-              canvas instead of seeing them stacked. CSS uses the
-              data-mobile-view attribute on the parent to hide the
-              inactive surface. Hidden on desktop where both render
-              side-by-side anyway. */}
-          {isMobile && (
-            <div className="s7-mobile-view-toggle" role="tablist" aria-label="Workspace view">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mobileView === 'chat'}
-                className={`s7-mobile-view-tab${mobileView === 'chat' ? ' active' : ''}`}
-                onClick={() => setMobileView('chat')}
-              >Chat</button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mobileView === 'canvas'}
-                className={`s7-mobile-view-tab${mobileView === 'canvas' ? ' active' : ''}`}
-                onClick={() => setMobileView('canvas')}
-              >Canvas</button>
-            </div>
-          )}
           <nav className="s7-split-rail" data-theme={theme} aria-label="Mapping tools">
             <div className="s7-split-rail-body">
               {/* Order: Home · Dashboard · Reports · Deals · Chat · Artefacts ·
@@ -5779,7 +5781,10 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
           </div>
         </div>
         ) : (
-        <div className="s7-canvas-area s7-canvas-area--with-rail">
+        <div
+          className="s7-canvas-area s7-canvas-area--with-rail"
+          data-mobile-view={isMobile ? mobileView : undefined}
+        >
           <nav className="s7-split-rail" data-theme={theme} aria-label="Mapping tools">
             <div className="s7-split-rail-body">
               {/* Same canonical order as the with-flow rail above. */}
@@ -5878,6 +5883,24 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
             <CanvasActionOverlay />
             {activeChatContent}
           </div>
+          {/* Mobile-only empty state for the Canvas tab when there's
+              nothing yet to render — without this the user picks
+              Canvas and sees a blank screen. CSS shows it only when
+              data-mobile-view='canvas' on the parent. */}
+          {isMobile && (
+            <div className="s7-mobile-canvas-empty">
+              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>No canvas yet</div>
+              <p style={{ fontSize: 13, color: 'var(--text-mid, #64748b)', maxWidth: 320, lineHeight: 1.5 }}>
+                Map a process or open an analysis from the Artefacts panel — once a flow exists it'll show here.
+              </p>
+              <button
+                type="button"
+                onClick={() => setMobileView('chat')}
+                className="redesign-bulk-btn"
+                style={{ marginTop: 12 }}
+              >Back to chat</button>
+            </div>
+          )}
         </div>
         )}
 
