@@ -139,3 +139,58 @@ export async function POST(request) {
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
+
+/**
+ * DELETE /api/save-redesign
+ * Body: { reportId, redesignId }
+ *
+ * Removes a single report_redesigns row. The owning diagnostic_report stays
+ * intact (only the chosen redesign version is dropped). Owner-only — same
+ * email gate the rename endpoint uses.
+ */
+export async function DELETE(request) {
+  try {
+    const originErr = checkOrigin(request);
+    if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
+    const auth = await requireAuth(request);
+    if (auth.error) return NextResponse.json(auth.error.body, { status: auth.error.status });
+
+    const rl = await checkRateLimit(getRateLimitKey(request));
+    if (!rl.allowed) return NextResponse.json({ error: 'Too many requests.' }, { status: 429 });
+
+    let body;
+    try { body = await request.json(); } catch { return NextResponse.json({ error: 'Invalid JSON.' }, { status: 400 }); }
+    const reportId = body?.reportId != null ? String(body.reportId).trim() : '';
+    const redesignId = body?.redesignId != null ? String(body.redesignId).trim() : '';
+    if (!reportId || reportId.length > 64) return NextResponse.json({ error: 'Valid report ID required.' }, { status: 400 });
+    if (!redesignId || redesignId.length > 64) return NextResponse.json({ error: 'Valid redesign ID required.' }, { status: 400 });
+
+    const sb = requireSupabase();
+    if (!sb) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+    const headers = getSupabaseWriteHeaders(sb.key);
+
+    // Ownership check via the parent report's contact_email.
+    const ownerResp = await fetchWithTimeout(
+      `${sb.url}/rest/v1/diagnostic_reports?id=eq.${encodeURIComponent(reportId)}&select=id,contact_email&limit=1`,
+      { headers },
+    );
+    const [report] = ownerResp.ok ? await ownerResp.json() : [];
+    if (!report) return NextResponse.json({ error: 'Report not found.' }, { status: 404 });
+    if ((report.contact_email || '').toLowerCase() !== auth.email.toLowerCase()) {
+      return NextResponse.json({ error: 'You can only delete your own redesigns.' }, { status: 403 });
+    }
+
+    const delResp = await fetchWithTimeout(
+      `${sb.url}/rest/v1/report_redesigns?id=eq.${encodeURIComponent(redesignId)}&report_id=eq.${encodeURIComponent(reportId)}`,
+      { method: 'DELETE', headers },
+    );
+    if (!delResp.ok && delResp.status !== 204) {
+      logger.warn('Delete redesign: Supabase error', { requestId: getRequestId(request), status: delResp.status });
+      return NextResponse.json({ error: 'Failed to delete redesign.' }, { status: 502 });
+    }
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    logger.error('Delete redesign error', { requestId: getRequestId(request), error: err.message });
+    return NextResponse.json({ error: 'Failed to delete redesign.' }, { status: 500 });
+  }
+}

@@ -71,6 +71,12 @@ export default function PortalAuth({ supabase, onAuthenticated, mode: initialMod
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  // Banner is client-only. SSR always renders it as hidden so the server
+  // HTML and client first-render match — otherwise the SSR pass (with
+  // supabase=null) bakes the banner into HTML, hydration mismatches, and
+  // React keeps the stale SSR DOM forever.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => { setHydrated(true); }, []);
 
   // Pre-fill email from ?email= URL param (passed from diagnostic gate)
   useEffect(() => {
@@ -178,7 +184,7 @@ export default function PortalAuth({ supabase, onAuthenticated, mode: initialMod
         <p className="auth-subtitle">Enter your email and we&apos;ll send you a link to reset your password.</p>
         {error && <div className="auth-error show">{error}</div>}
         {success && <div className="auth-success show">{success}</div>}
-        {!supabase && (
+        {hydrated && !supabase && (
           <div className="auth-error show" role="alert">
             Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, then restart <code style={{ fontSize: '0.85em' }}>next dev</code>.
           </div>
@@ -204,7 +210,7 @@ export default function PortalAuth({ supabase, onAuthenticated, mode: initialMod
       </p>
       {error && <div className="auth-error show">{error}</div>}
       {success && <div className="auth-success show">{success}</div>}
-      {!supabase && (
+      {hydrated && !supabase && (
         <div className="auth-error show" role="alert">
           Supabase is not configured in the browser. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to
           .env.local, then restart <code style={{ fontSize: '0.85em' }}>next dev</code>.

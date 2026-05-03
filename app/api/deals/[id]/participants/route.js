@@ -1,10 +1,105 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseHeaders, getSupabaseWriteHeaders, fetchWithTimeout, requireSupabase, checkOrigin, getRequestId } from '@/lib/api-helpers';
+import { getSupabaseHeaders, getSupabaseWriteHeaders, fetchWithTimeout, requireSupabase, checkOrigin, getRequestId, isValidEmail } from '@/lib/api-helpers';
 import { requireAuth } from '@/lib/auth';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { requireDealEditor } from '@/lib/dealAuth';
 import { maybeCompleteDeal } from '@/lib/dealStatus';
+import { triggerWebhook } from '@/lib/triggerWebhook';
 import { logger } from '@/lib/logger';
+
+const VALID_ROLES = ['platform_company', 'portfolio_company', 'acquirer', 'target', 'self'];
+
+/**
+ * POST /api/deals/[id]/participants
+ * Editor-only. Adds a participant to an existing deal.
+ * Body: { role, companyName, participantEmail?, participantName?, invite?: boolean }
+ *
+ * If `invite` is truthy and participantEmail is set, fires a deal-invites
+ * webhook so the existing email pipeline notifies the new participant.
+ * Returns the new row plus a fully-built inviteUrl the caller can copy.
+ */
+export async function POST(request, { params }) {
+  const originErr = checkOrigin(request);
+  if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
+
+  const rl = await checkRateLimit(getRateLimitKey(request));
+  if (!rl.allowed) return NextResponse.json({ error: 'Too many requests.' }, { status: 429 });
+
+  const auth = await requireAuth(request);
+  if (auth.error) return NextResponse.json(auth.error.body, { status: auth.error.status });
+
+  const { id } = await params;
+  if (!id) return NextResponse.json({ error: 'Deal ID required.' }, { status: 400 });
+
+  let body;
+  try { body = await request.json(); } catch { return NextResponse.json({ error: 'Invalid JSON.' }, { status: 400 }); }
+
+  const role = String(body?.role || '').trim();
+  const companyName = String(body?.companyName || '').trim();
+  const participantEmail = body?.participantEmail ? String(body.participantEmail).trim().toLowerCase() : null;
+  const participantName = body?.participantName ? String(body.participantName).trim() : null;
+  const sendInvite = Boolean(body?.invite);
+
+  if (!VALID_ROLES.includes(role)) {
+    return NextResponse.json({ error: `role must be one of: ${VALID_ROLES.join(', ')}` }, { status: 400 });
+  }
+  if (!companyName || companyName.length > 200) {
+    return NextResponse.json({ error: 'companyName required (max 200 chars).' }, { status: 400 });
+  }
+  if (participantEmail && !isValidEmail(participantEmail)) {
+    return NextResponse.json({ error: 'Invalid participantEmail.' }, { status: 400 });
+  }
+
+  const sbConfig = requireSupabase();
+  if (!sbConfig) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
+  const { url: supabaseUrl, key: supabaseKey } = sbConfig;
+
+  const guard = await requireDealEditor({ dealId: id, email: auth.email, userId: auth.userId });
+  if (guard.error) return NextResponse.json(guard.error, { status: guard.status });
+
+  const insertResp = await fetchWithTimeout(
+    `${supabaseUrl}/rest/v1/deal_participants`,
+    {
+      method: 'POST',
+      headers: { ...getSupabaseWriteHeaders(supabaseKey), Prefer: 'return=representation' },
+      body: JSON.stringify({
+        deal_id: id,
+        role,
+        company_name: companyName,
+        participant_email: participantEmail,
+        participant_name: participantName,
+        invited_at: participantEmail ? new Date().toISOString() : null,
+      }),
+    },
+  );
+  if (!insertResp.ok) {
+    const errText = await insertResp.text().catch(() => '');
+    logger.warn('Add participant: Supabase error', { requestId: getRequestId(request), status: insertResp.status, body: errText.slice(0, 200) });
+    return NextResponse.json({ error: 'Failed to add participant.' }, { status: 502 });
+  }
+  const [participant] = await insertResp.json();
+
+  const proto = request.headers.get('x-forwarded-proto') || 'https';
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'localhost:3000';
+  const inviteUrl = `${proto}://${host}/process-audit?participant=${participant.invite_token}`;
+
+  if (sendInvite && participantEmail) {
+    triggerWebhook({
+      requestType: 'deal-invites',
+      dealId: id,
+      participants: [{
+        participantId: participant.id,
+        role: participant.role,
+        companyName: participant.company_name,
+        participantEmail: participant.participant_email,
+        participantName: participant.participant_name,
+        inviteUrl,
+      }],
+    }).catch(() => {});
+  }
+
+  return NextResponse.json({ success: true, participant: { ...participant, inviteUrl } });
+}
 
 /**
  * PATCH /api/deals/[id]/participants

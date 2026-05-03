@@ -323,10 +323,13 @@ export default function Screen6Complete({ onComplete }) {
         ).filter(Boolean);
         setFindings(topFindings);
 
-        // For PE Roll-up deals, redirect to the deal dashboard so all participants are visible
+        // For PE Roll-up deals, route into the chat surface scoped to the
+        // deal so the user lands on the unified deal workspace (the legacy
+        // /deals/[id] page was removed in Phase 18; that route now redirects
+        // here anyway, but going direct avoids the bounce).
         const effectiveDealId = dealId || processData?.dealId;
         if (effectiveModuleId === 'pe' && effectiveDealId) {
-          setPendingUrl(`/deals/${effectiveDealId}`);
+          setPendingUrl(`/process-audit?deal=${encodeURIComponent(effectiveDealId)}`);
         } else if (reportData.reportId) {
           // Chat-first: notify parent to load report in the workspace
           if (typeof onComplete === 'function') {
@@ -435,11 +438,11 @@ export default function Screen6Complete({ onComplete }) {
                     className="button button-primary"
                     onClick={handleViewReport}
                   >
-                    Go to deal dashboard →
+                    Go to deal workspace →
                   </button>
                 )}
 
-                <p className="sc6-redirect-hint">Redirecting to the deal dashboard…</p>
+                <p className="sc6-redirect-hint">Opening the deal workspace…</p>
               </>
             );
           }

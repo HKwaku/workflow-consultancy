@@ -210,7 +210,11 @@ export async function GET(request) {
   const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
   try {
-    // Deals where the user is owner OR listed in collaborator_emails OR is a participant
+    // Deals where the user is owner OR listed in collaborator_emails OR is a
+    // participant. The risk-score query is intentionally a SECOND round-trip
+    // scoped by deal_id IN (…) — we previously prefetched all findings in
+    // parallel, but that query had no deal_id filter and the service-role
+    // key bypasses RLS. Correctness wins over the saved round-trip.
     const emailEnc = encodeURIComponent(auth.email);
     const [ownedResp, collabResp, participantResp] = await Promise.all([
       fetchWithTimeout(
@@ -250,6 +254,71 @@ export async function GET(request) {
     }
 
     deals.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+
+    // Severity-weighted risk score per deal. We issue a SECOND round-trip
+    // for findings, scoped to the deal_ids the user can actually access.
+    // This is a deliberate trade vs. the previous "prefetch in parallel"
+    // approach — that one had no deal_id filter and the service-role key
+    // bypasses RLS, so the wire payload could leak findings from other
+    // tenants. Correctness > saved round-trip.
+    const dealIds = deals.map((d) => d.id).filter(Boolean);
+    if (dealIds.length > 0) {
+      const idCsv = dealIds.map(encodeURIComponent).join(',');
+      const findingsResp = await fetchWithTimeout(
+        // created_at pulled into the SELECT so we can tiebreak ties on
+        // analysis row-counts deterministically (latest wins).
+        `${supabaseUrl}/rest/v1/deal_findings?deal_id=in.(${idCsv})&select=deal_id,analysis_id,severity,confidence,section,created_at&limit=5000`,
+        { method: 'GET', headers: getSupabaseHeaders(supabaseKey) },
+      );
+      const allFindings = findingsResp.ok ? await findingsResp.json() : [];
+
+      const byDeal = new Map();
+      for (const f of allFindings) {
+        if (!byDeal.has(f.deal_id)) byDeal.set(f.deal_id, []);
+        byDeal.get(f.deal_id).push(f);
+      }
+      const SEV_WEIGHT = { critical: 5, high: 3, medium: 1, low: 0.3 };
+      for (const d of deals) {
+        const arr = byDeal.get(d.id);
+        if (!arr || arr.length === 0) {
+          d.riskScore = 0;
+          d.openFindings = 0;
+          d.criticalFindings = 0;
+          continue;
+        }
+        // Latest analysis: rank by max(created_at) across each analysis_id.
+        // Falls back to the row-count proxy when timestamps are missing
+        // (legacy rows). Either way the picker is deterministic.
+        const byAnalysis = new Map();
+        for (const f of arr) {
+          const cur = byAnalysis.get(f.analysis_id) || { count: 0, latest: 0 };
+          cur.count += 1;
+          const ts = f.created_at ? new Date(f.created_at).getTime() : 0;
+          if (ts > cur.latest) cur.latest = ts;
+          byAnalysis.set(f.analysis_id, cur);
+        }
+        let bestId = null; let bestLatest = -1; let bestCount = -1;
+        for (const [id, info] of byAnalysis) {
+          if (info.latest > bestLatest
+            || (info.latest === bestLatest && info.count > bestCount)) {
+            bestId = id; bestLatest = info.latest; bestCount = info.count;
+          }
+        }
+        const latest = arr.filter((f) => f.analysis_id === bestId
+          && f.section !== 'executiveSummary' && f.section !== 'keyFindings');
+        let score = 0;
+        let critical = 0;
+        for (const f of latest) {
+          const w = SEV_WEIGHT[f.severity] ?? 1;
+          const c = typeof f.confidence === 'number' ? Math.max(0, Math.min(1, f.confidence)) : 0.5;
+          score += w * c;
+          if (f.severity === 'critical') critical += 1;
+        }
+        d.riskScore = Math.round(score * 10) / 10;
+        d.openFindings = latest.length;
+        d.criticalFindings = critical;
+      }
+    }
 
     return NextResponse.json({ deals });
   } catch (err) {

@@ -169,7 +169,10 @@ export async function GET(request, { params }) {
       },
       participants: enrichedParticipants,
       flows,
-      summary: buildDealSummary(deal.type, enrichedParticipants),
+      summary: {
+        ...buildDealSummary(deal.type, enrichedParticipants),
+        ...(await buildDealAuxiliaryStats({ dealId: deal.id, supabaseUrl, supabaseKey })),
+      },
     });
   } catch (err) {
     logger.error('Get deal error', { requestId: getRequestId(request), error: err.message });
@@ -289,6 +292,32 @@ export async function DELETE(request, { params }) {
  * Compute deal-level aggregate metrics from enriched participants.
  * Returned alongside the deal to avoid a second round-trip in the portal.
  */
+/**
+ * Counts that aren't derivable from the participant list — documents in
+ * the data room and the latest analysis status. Best-effort: any failure
+ * returns null fields so the deal page still renders.
+ */
+async function buildDealAuxiliaryStats({ dealId, supabaseUrl, supabaseKey }) {
+  try {
+    const headers = getSupabaseHeaders(supabaseKey);
+    const [docsResp, anaResp] = await Promise.all([
+      fetchWithTimeout(`${supabaseUrl}/rest/v1/deal_documents?deal_id=eq.${dealId}&select=id,status`, { method: 'GET', headers }),
+      fetchWithTimeout(`${supabaseUrl}/rest/v1/deal_analyses?deal_id=eq.${dealId}&select=id,mode,status,created_at&order=created_at.desc&limit=1`, { method: 'GET', headers }),
+    ]);
+    const docs = docsResp.ok ? await docsResp.json() : [];
+    const ana  = anaResp.ok  ? await anaResp.json()  : [];
+    const latest = ana[0] || null;
+    return {
+      documentsTotal: docs.length,
+      documentsReady: docs.filter((d) => d.status === 'ready').length,
+      latestAnalysisMode: latest?.mode || null,
+      latestAnalysisStatus: latest?.status || null,
+    };
+  } catch {
+    return { documentsTotal: null, documentsReady: null, latestAnalysisMode: null, latestAnalysisStatus: null };
+  }
+}
+
 function buildDealSummary(type, participants) {
   const completed = participants.filter((p) => p.status === 'complete' && p.report);
 

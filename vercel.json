@@ -7,5 +7,23 @@
     "app/api/**/*.js": {
       "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/reap-stuck-documents",
+      "schedule": "15 5 * * *"
+    },
+    {
+      "path": "/api/cron/reset-budgets",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/key-rotation-reminders",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/expunge-deleted-accounts",
+      "schedule": "0 3 * * *"
+    }
+  ]
 }

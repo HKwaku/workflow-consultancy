@@ -107,6 +107,9 @@ export async function POST(request, { params }) {
       isOrgAdmin: Boolean(isOrgAdmin),
       entitlements: entitlements || {},
       redirectBaseUrl,
+      actorEmail: auth.email,
+      actorUserId: auth.userId,
+      requestId: getRequestId(request),
     });
     const member = {
       ...result.member,

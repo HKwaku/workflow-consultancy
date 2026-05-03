@@ -5,6 +5,11 @@ import Link from 'next/link';
 import ThemeToggle from '@/components/ThemeToggle';
 import { apiFetch } from '@/lib/api-fetch';
 import { ENTITLEMENT_KEYS } from '@/lib/entitlements';
+import CustomerKeyPanel from './CustomerKeyPanel';
+import UsageAnalyticsPanel from './UsageAnalyticsPanel';
+import ModelAllowlistPanel from './ModelAllowlistPanel';
+import IntegrationsPanel from './IntegrationsPanel';
+import FirstRunOnboarding from './FirstRunOnboarding';
 
 async function parseJsonResponse(resp) {
   const text = await resp.text();
@@ -24,6 +29,16 @@ async function parseJsonResponse(resp) {
 }
 
 export default function OrgAdminClient({ user, accessToken, onSignOut }) {
+  // Streamlined onboarding intercept — when ?firstRun=1 is in the URL we
+  // bypass the full admin shell and render the 3-step create-org + paste-key
+  // flow. Used by the trial-exhausted gate banner CTA.
+  const [firstRun, setFirstRun] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get('firstRun') === '1') setFirstRun(true);
+  }, []);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [memberships, setMemberships] = useState([]);
@@ -167,7 +182,22 @@ export default function OrgAdminClient({ user, accessToken, onSignOut }) {
     setInviteEnt((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const [mfaReport, setMfaReport] = useState(null);
+  const [mfaLoading, setMfaLoading] = useState(false);
   const [rowBusyId, setRowBusyId] = useState(null);
+
+  useEffect(() => {
+    if (!accessToken || !selectedOrgId || activePanel !== 'members') return;
+    let cancelled = false;
+    setMfaLoading(true);
+    apiFetch(`/api/organizations/${selectedOrgId}/mfa-status`, {}, accessToken)
+      .then((r) => r.json())
+      .then((data) => { if (!cancelled && data && !data.error) setMfaReport(data); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setMfaLoading(false); });
+    return () => { cancelled = true; };
+  }, [accessToken, selectedOrgId, activePanel, members.length]);
+
   const patchMember = useCallback(async (member, patch) => {
     if (!accessToken || !selectedOrgId) return;
     setRowBusyId(member.user_id);
@@ -206,6 +236,28 @@ export default function OrgAdminClient({ user, accessToken, onSignOut }) {
         name: m.organization?.name || m.organization_id,
         slug: m.organization?.slug,
       }));
+
+  if (firstRun) {
+    return (
+      <div className="portal-viewport">
+        <header className="dashboard-header">
+          <div className="header-left">
+            <Link href="/" className="header-logo">
+              Vesno<span className="header-logo-dot">.</span>
+            </Link>
+            <div className="header-divider" />
+            <span className="header-title">Get set up</span>
+          </div>
+          <div className="header-right">
+            <ThemeToggle className="header-theme-btn" />
+          </div>
+        </header>
+        <main className="portal-wrap" style={{ maxWidth: 720, margin: '40px auto', padding: '0 24px' }}>
+          <FirstRunOnboarding accessToken={accessToken} onComplete={() => setFirstRun(false)} />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="portal-viewport">
@@ -278,7 +330,53 @@ export default function OrgAdminClient({ user, accessToken, onSignOut }) {
               >
                 Members
               </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activePanel === 'api-keys'}
+                className={`portal-section-tab ${activePanel === 'api-keys' ? 'active' : ''}`}
+                onClick={() => setActivePanel('api-keys')}
+                disabled={!selectedOrgId}
+                title={selectedOrgId ? '' : 'Select an organisation first'}
+              >
+                API keys
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activePanel === 'integrations'}
+                className={`portal-section-tab ${activePanel === 'integrations' ? 'active' : ''}`}
+                onClick={() => setActivePanel('integrations')}
+                disabled={!selectedOrgId}
+                title={selectedOrgId ? '' : 'Select an organisation first'}
+              >
+                Integrations
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activePanel === 'usage'}
+                className={`portal-section-tab ${activePanel === 'usage' ? 'active' : ''}`}
+                onClick={() => setActivePanel('usage')}
+                disabled={!selectedOrgId}
+                title={selectedOrgId ? '' : 'Select an organisation first'}
+              >
+                Usage
+              </button>
             </nav>
+
+            {activePanel === 'api-keys' && selectedOrgId && (
+              <>
+                <CustomerKeyPanel orgId={selectedOrgId} accessToken={accessToken} />
+                <ModelAllowlistPanel orgId={selectedOrgId} accessToken={accessToken} />
+              </>
+            )}
+            {activePanel === 'integrations' && selectedOrgId && (
+              <IntegrationsPanel orgId={selectedOrgId} accessToken={accessToken} />
+            )}
+            {activePanel === 'usage' && selectedOrgId && (
+              <UsageAnalyticsPanel orgId={selectedOrgId} accessToken={accessToken} />
+            )}
 
             {activePanel === 'organisations' && (
               <div className="dash-card portal-content-card org-admin-card">
@@ -364,6 +462,24 @@ export default function OrgAdminClient({ user, accessToken, onSignOut }) {
                   <p className="org-admin-body">Select an organisation to invite users and view members.</p>
                 ) : (
                   <>
+                    {mfaReport && mfaReport.totalMembers > 0 && (
+                      <div
+                        className={`org-admin-mfa-banner ${mfaReport.fullyEnforced ? 'ok' : 'warn'}`}
+                        role="status"
+                        aria-live="polite"
+                      >
+                        <strong>MFA: {mfaReport.mfaEnabled}/{mfaReport.totalMembers} members enrolled</strong>
+                        <span>
+                          {mfaReport.fullyEnforced
+                            ? 'All members have a verified second factor — SOC 2 CC6.2 satisfied.'
+                            : `${mfaReport.mfaDisabled} member${mfaReport.mfaDisabled === 1 ? '' : 's'} without MFA. Chase them: SOC 2 CC6.2 expects 100% enforcement.`}
+                        </span>
+                      </div>
+                    )}
+                    {mfaLoading && !mfaReport && (
+                      <p className="org-admin-muted">Checking MFA status…</p>
+                    )}
+
                     <form className="org-admin-form" onSubmit={handleInvite}>
                       <div className="org-admin-invite-row">
                         <label className="org-admin-label">

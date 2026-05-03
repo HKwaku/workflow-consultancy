@@ -1,153 +1,25 @@
-'use client';
+/**
+ * Legacy deal page — replaced by the chat-first workspace as of Phase 18.
+ *
+ * This is now a redirect to /process-audit?deal=<id>, preserving:
+ *   - the deal scope on the chat surface (DealsRailButton hydrates from ?deal=)
+ *   - any ?focusFinding=<key> deep-link (DealWorkspaceModal auto-opens to it)
+ *
+ * Old bookmarks (`/deals/<id>?focusFinding=...`) keep working — they just
+ * land in the chat with the workspace modal open on the right finding.
+ *
+ * If you ever need the legacy long-form layout back, recover from git
+ * history: `git log --diff-filter=D -- app/deals/[id]/page.jsx`.
+ */
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useAuth } from '@/lib/useAuth';
-import { apiFetch } from '@/lib/api-fetch';
-import DealPagePE from './DealPagePE';
-import DealPageMA from './DealPageMA';
-import DealPageScaling from './DealPageScaling';
-import '../deals.css';
+import { redirect } from 'next/navigation';
 
-const TYPE_LABEL = { pe_rollup: 'PE Roll-up', ma: 'M&A', scaling: 'Scaling' };
-const TYPE_COLOR = { pe_rollup: '#8b5cf6', ma: '#6366f1', scaling: '#0d9488' };
-
-export default function DealPage() {
-  const { id } = useParams();
-  const router = useRouter();
-  const { user, accessToken, loading: authLoading } = useAuth();
-
-  const [deal, setDeal] = useState(null);
-  const [participants, setParticipants] = useState([]);
-  const [summary, setSummary] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace(`/portal?next=${encodeURIComponent(`/deals/${id}`)}`);
-    }
-  }, [user, authLoading, id, router]);
-
-  const loadDeal = async () => {
-    if (!id || !accessToken) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const resp = await apiFetch(`/api/deals/${id}`, {}, accessToken);
-      const data = await resp.json();
-      if (!resp.ok) { setError(data.error || 'Failed to load deal.'); return; }
-      setDeal(data.deal);
-      setParticipants(data.participants || []);
-      setSummary(data.summary || {});
-    } catch {
-      setError('Network error loading deal.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (accessToken) loadDeal();
-  }, [id, accessToken]);
-
-  if (authLoading || (!user && !authLoading)) {
-    return (
-      <div className="deal-page-loading">
-        <div className="deal-page-spinner" />
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="deal-page-wrap">
-        <DealNav deal={null} />
-        <div className="deal-page-loading">
-          <div className="deal-page-spinner" />
-          <p>Loading deal…</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="deal-page-wrap">
-        <DealNav deal={null} />
-        <div className="deal-page-error">
-          <p>{error}</p>
-          <button type="button" className="deal-btn" onClick={loadDeal}>Retry</button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="deal-page-wrap">
-      <DealNav deal={deal} />
-
-      <div className="deal-page-header">
-        <div className="deal-page-header-left">
-          <span
-            className="deal-page-type-badge"
-            style={{ background: (TYPE_COLOR[deal.type] || '#64748b') + '22', color: TYPE_COLOR[deal.type] || '#64748b' }}
-          >
-            {TYPE_LABEL[deal.type] || deal.type}
-          </span>
-          <h1 className="deal-page-title">{deal.name}</h1>
-          {deal.processName && (
-            <p className="deal-page-process">Process: <strong>{deal.processName}</strong></p>
-          )}
-        </div>
-        <span className={`deal-page-status deal-page-status--${deal.status}`}>
-          {deal.status === 'collecting' ? 'Collecting' : deal.status === 'complete' ? 'Complete' : 'Draft'}
-        </span>
-      </div>
-
-      {deal.type === 'pe_rollup' && (
-        <DealPagePE
-          deal={deal}
-          participants={participants}
-          summary={summary}
-          accessToken={accessToken}
-          currentUserEmail={user?.email || ''}
-          onRefresh={loadDeal}
-        />
-      )}
-      {deal.type === 'ma' && (
-        <DealPageMA
-          deal={deal}
-          participants={participants}
-          summary={summary}
-          accessToken={accessToken}
-          onRefresh={loadDeal}
-        />
-      )}
-      {deal.type === 'scaling' && (
-        <DealPageScaling
-          deal={deal}
-          participants={participants}
-          summary={summary}
-        />
-      )}
-    </div>
-  );
-}
-
-function DealNav({ deal }) {
-  return (
-    <nav className="deal-page-breadcrumb">
-      <Link href="/portal?dashboard=1" className="deal-breadcrumb-link">Dashboard</Link>
-      <span className="deal-breadcrumb-sep">›</span>
-      <Link href="/portal/deals" className="deal-breadcrumb-link">Deals</Link>
-      {deal && (
-        <>
-          <span className="deal-breadcrumb-sep">›</span>
-          <span className="deal-breadcrumb-current">{deal.name}</span>
-        </>
-      )}
-    </nav>
-  );
+export default async function LegacyDealPageRedirect({ params, searchParams }) {
+  const { id } = await params;
+  const sp = await searchParams;
+  const qs = new URLSearchParams();
+  if (id) qs.set('deal', id);
+  if (sp?.focusFinding) qs.set('focusFinding', String(sp.focusFinding));
+  if (sp?.focus) qs.set('focus', String(sp.focus));
+  redirect(`/process-audit?${qs.toString()}`);
 }

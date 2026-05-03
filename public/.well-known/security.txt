@@ -1,0 +1,10 @@
+# Security disclosure policy for Vesno
+# https://securitytxt.org/ (RFC 9116)
+
+Contact: mailto:security@vesno.io
+Expires: 2027-04-26T00:00:00.000Z
+Preferred-Languages: en
+Policy: https://vesno.io/SECURITY.md
+Acknowledgments: https://vesno.io/SECURITY.md#hall-of-fame
+
+# Replace `vesno.io` with your actual domain. Re-issue annually.

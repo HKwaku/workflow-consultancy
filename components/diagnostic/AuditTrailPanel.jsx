@@ -58,7 +58,7 @@ function groupByDate(events) {
   return groups;
 }
 
-export default function AuditTrailPanel({ auditTrail = [], onClose }) {
+export default function AuditTrailPanel({ auditTrail = [], onClose, embedded = false }) {
   const [filter, setFilter] = useState('all');
 
   const filtered = useMemo(() => {
@@ -71,13 +71,8 @@ export default function AuditTrailPanel({ auditTrail = [], onClose }) {
 
   const dateGroups = useMemo(() => groupByDate(filtered), [filtered]);
 
-  return (
-    <div className="audit-trail-panel">
-      <div className="audit-trail-header">
-        <h4>Activity Log <span className="audit-trail-count">{auditTrail.length}</span></h4>
-        <button type="button" onClick={onClose}>×</button>
-      </div>
-
+  const inner = (
+    <>
       <div className="audit-trail-filters">
         {FILTER_GROUPS.map(g => (
           <button
@@ -118,6 +113,21 @@ export default function AuditTrailPanel({ auditTrail = [], onClose }) {
           </div>
         ))}
       </div>
+    </>
+  );
+
+  // Embedded mode drops the floating outer chrome so this panel can render
+  // inside a rail slide-in (s7-rail-pane). The slide-in supplies its own
+  // header + close affordance, so we only need the filters + body here.
+  if (embedded) return inner;
+
+  return (
+    <div className="audit-trail-panel">
+      <div className="audit-trail-header">
+        <h4>Activity Log <span className="audit-trail-count">{auditTrail.length}</span></h4>
+        <button type="button" onClick={onClose}>×</button>
+      </div>
+      {inner}
     </div>
   );
 }

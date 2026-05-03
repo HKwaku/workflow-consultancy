@@ -7,6 +7,7 @@ import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 import { requireOrgAdminOrPlatformAdmin } from '@/lib/orgAdmin';
 import { mergeWithDefaults, sanitizeEntitlements } from '@/lib/entitlements';
+import { auditLog } from '@/lib/auditLog';
 
 const PatchSchema = z.object({
   isOrgAdmin: z.boolean().optional(),
@@ -104,6 +105,31 @@ export async function PATCH(request, { params }) {
   if (upErr) {
     logger.error('org member patch', { requestId: getRequestId(request), message: upErr.message });
     return NextResponse.json({ error: 'Failed to update member.' }, { status: 502 });
+  }
+
+  if (parsed.data.isOrgAdmin !== undefined && parsed.data.isOrgAdmin !== target.is_org_admin) {
+    auditLog({
+      action: 'member.role_changed',
+      actorEmail: auth.email, actorUserId: auth.userId,
+      organizationId: orgId,
+      targetType: 'organization_member', targetId: target.id,
+      requestId: getRequestId(request),
+      details: {
+        targetEmail: target.email,
+        from: { isOrgAdmin: target.is_org_admin },
+        to:   { isOrgAdmin: parsed.data.isOrgAdmin },
+      },
+    });
+  }
+  if (parsed.data.entitlements !== undefined) {
+    auditLog({
+      action: 'member.entitlements_changed',
+      actorEmail: auth.email, actorUserId: auth.userId,
+      organizationId: orgId,
+      targetType: 'organization_member', targetId: target.id,
+      requestId: getRequestId(request),
+      details: { targetEmail: target.email, patch: parsed.data.entitlements },
+    });
   }
 
   return NextResponse.json({

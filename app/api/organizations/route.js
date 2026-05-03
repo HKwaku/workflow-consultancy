@@ -83,8 +83,17 @@ export async function POST(request) {
   const auth = await requireAuth(request);
   if (auth.error) return NextResponse.json(auth.error.body, { status: auth.error.status });
 
+  // Platform admins can always create. Other users can self-create their
+  // FIRST org as part of the trial-to-paid conversion path. Once they
+  // belong to an org, further creation is gated to platform admins.
   if (!isPlatformAdminEmail(auth.email)) {
-    return NextResponse.json({ error: 'Only platform administrators can create organizations.' }, { status: 403 });
+    const { getOrgIdForUser } = await import('@/lib/costGuard');
+    const existingOrgId = await getOrgIdForUser({ email: auth.email, userId: auth.userId });
+    if (existingOrgId) {
+      return NextResponse.json({
+        error: 'You are already a member of an organisation. Contact a platform administrator to add another.',
+      }, { status: 403 });
+    }
   }
 
   const rl = await checkRateLimit(getRateLimitKey(request));

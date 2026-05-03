@@ -28,3 +28,6 @@ next-app/
 
 .vercel
 .env*.local
+
+# SOC 2 evidence snapshots — contain customer identifiers; never commit
+compliance/evidence/

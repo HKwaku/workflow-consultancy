@@ -98,6 +98,15 @@ function diagnosticReducer(state, action) {
       return { ...state, editingReportId: action.payload };
     case 'SET_EDITING_REDESIGN':
       return { ...state, editingRedesign: action.payload };
+    case 'SET_EDITING_ANALYSIS':
+      // payload = { analysisId, dealId } | null. Used by the deal-analysis
+      // edit path so the workspace knows to PATCH deal_analyses instead of
+      // diagnostic_reports on save.
+      return {
+        ...state,
+        editingAnalysisId: action.payload?.analysisId || null,
+        editingAnalysisDealId: action.payload?.dealId || null,
+      };
     case 'SET_PENDING_PATH':
       return { ...state, pendingPath: action.payload };
     case 'SET_TEAM_MODE':
@@ -152,6 +161,10 @@ const initialState = {
   editingReportId: null,
   editingRedesign: false,
   aiRedesignMode: false,
+  // Set when the workspace was opened to edit a deal_analyses row's
+  // redesignedProcess (via /process-audit?editAnalysis=…&deal=…).
+  editingAnalysisId: null,
+  editingAnalysisDealId: null,
   editingProcessIndex: null,
   moduleId: null,
   diagnosticMode: 'comprehensive',
@@ -323,6 +336,10 @@ export function DiagnosticProvider({ children }) {
     dispatch({ type: 'SET_EDITING_REDESIGN', payload: !!v });
   }, []);
 
+  const setEditingAnalysis = useCallback((p) => {
+    dispatch({ type: 'SET_EDITING_ANALYSIS', payload: p });
+  }, []);
+
   const setEditingProcessIndex = useCallback((idx) => {
     dispatch({ type: 'SET_EDITING_PROCESS_INDEX', payload: idx });
   }, []);
@@ -404,6 +421,8 @@ export function DiagnosticProvider({ children }) {
         stepCount: data.stepCount ?? 0,
         editingReportId: data.editingReportId || null,
         editingRedesign: !!data.editingRedesign,
+        editingAnalysisId: data.editingAnalysisId || null,
+        editingAnalysisDealId: data.editingAnalysisDealId || null,
         moduleId: data.moduleId || null,
         diagnosticMode: data.diagnosticMode || 'comprehensive',
         teamMode: data.teamMode || false,
@@ -548,6 +567,7 @@ export function DiagnosticProvider({ children }) {
     setStepCount,
     setEditingReportId,
     setEditingRedesign,
+    setEditingAnalysis,
     setEditingProcessIndex,
     setPendingPath,
     setTeamMode,

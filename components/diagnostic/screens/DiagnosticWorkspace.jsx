@@ -19,6 +19,19 @@ import { getWaitProfile } from '@/lib/flows/flowModel';
 import { repairFlow } from '@/lib/flows/normalizer';
 import { reconcileDecisionBranches } from '@/lib/flows/reconcileEdges';
 import { computePhaseState, INTAKE_PHASES } from '@/lib/diagnostic/intakePhases';
+import ModelPicker from '@/components/diagnostic/chat/ModelPicker';
+import DealsRailButton from '@/components/diagnostic/chat/DealsRailButton';
+import HomeRailButton from '@/components/diagnostic/chat/HomeRailButton';
+import ReportsRailButton from '@/components/diagnostic/chat/ReportsRailButton';
+import SettingsRailButton from '@/components/diagnostic/chat/SettingsRailButton';
+import DocsRailButton from '@/components/diagnostic/chat/DocsRailButton';
+import AnalyticsRailButton from '@/components/diagnostic/chat/AnalyticsRailButton';
+import DealContextChip from '@/components/diagnostic/chat/DealContextChip';
+import RailSlidePanel from '@/components/diagnostic/chat/RailSlidePanel';
+import DealAnalysisInline from '@/components/diagnostic/chat/DealAnalysisInline';
+import CreditsWidget from '@/components/diagnostic/chat/CreditsWidget';
+import AuditTrailPanel from '@/components/diagnostic/AuditTrailPanel';
+import { CanvasActionProvider, useCanvasAction } from '@/components/diagnostic/chat/CanvasActionContext';
 
 const INTAKE_PHASES_BY_ID = Object.fromEntries(INTAKE_PHASES.map((p) => [p.id, p]));
 import { generateReportInline } from '@/lib/diagnostic';
@@ -83,37 +96,99 @@ function ensureHandoffs(steps, handoffs) {
   return out.slice(0, needed);
 }
 
-/* ── First-visit guide tour ─────────────────────────────────────── */
+/* ── First-visit guide tour — walks the rail top-to-bottom ──────── */
 
+// Walkthrough order MUST match the rail top-to-bottom so the spotlight
+// always moves downward. Canonical rail (DiagnosticWorkspace):
+//   Home · Admin dashboard · Reports · Deals · Chat history · Artefacts
+//   · View report · Save to report · Cost analysis · Steps list
+//   · Analytics · Docs & guides · Replay walkthrough · Activity log
+//   · Settings (footer)
+// Conditional icons (View / Save / Cost) are auto-skipped when their
+// selector doesn't resolve (see MapGuide effect).
 const GUIDE_TOUR = [
   {
     title: "Hi, I'm Reina",
-    desc: "I'm your process mapping assistant. Describe any business process in plain language, or upload a doc, spreadsheet, or diagram, and I'll build the flow for you in real time.",
+    desc: "I'm your process mapping assistant. Describe any business process in plain language, or upload a doc, spreadsheet, or diagram, and I'll build the flow for you in real time. Let me walk you through the rail on the left — top to bottom.",
     selector: null,
     cta: "Show me around →",
   },
   {
+    title: "Home",
+    desc: "Returns you to a fresh chat with the standard intro. Clears the deal scope, the canvas, and any in-flight conversation. Your reports, deals, and analytics are still in the rail below — nothing is deleted.",
+    selector: '[title="Home — fresh chat"]',
+    cta: "Next →",
+  },
+  {
+    title: "Admin dashboard",
+    desc: "Manage your organisation — members and roles, BYO API keys, model allowlist, monthly token budget, usage analytics. Opens the org admin page in a new tab.",
+    selector: '[title="Admin dashboard"]',
+    cta: "Next →",
+  },
+  {
+    title: "Your reports",
+    desc: "Open one of your saved diagnostic reports. The slide-in panel groups reports by company → recency bucket. Each row collapses to title + status dots; expand to see the current process and any redesigns. Edit or delete at the child level; redesign is always available so you can spawn another version. Use the search box to filter by company, process, or code.",
+    selector: '[title^="Switch report"],[title^="Open one of your reports"]',
+    cta: "Next →",
+  },
+  {
+    title: "Deals",
+    desc: "Bring an M&A deal, PE roll-up, or scaling project into the chat. Deals are sorted by risk score (Σ severity × confidence) so the ones needing attention float to the top — coloured pill on each name. Pick a deal to scope the conversation, then click Open workspace for the full surface: data room (any file format, OCR for scanned PDFs, AI categorisation, expected-docs checklist), Q&A queue, evidence-cited findings with inline tags / comments / staleness flags, and a one-page scorecard.",
+    selector: '[title^="Switch deal context"],[title^="Bring a deal into this chat"]',
+    cta: "Next →",
+  },
+  {
     title: "Chat history",
-    desc: "Every conversation is autosaved. Open this panel to jump back into any prior audit - your flow, chat, and progress all come back exactly as you left them.",
+    desc: "Every conversation is autosaved. Open this panel to jump back into any prior audit — your flow, chat, and progress all come back exactly as you left them.",
     selector: '[title="Chat history"]',
     cta: "Next →",
   },
   {
-    title: "Step editor",
-    desc: "Toggle the step list panel to add or edit steps manually. Useful for fine-tuning names, reordering, or adding details Reina hasn't filled in yet.",
+    title: "Artefacts",
+    desc: "Snapshots of your flow, generated reports, cost analyses — every artefact created in this chat session, one click away.",
+    selector: '[title^="Artefacts"]',
+    cta: "Next →",
+  },
+  {
+    title: "View report",
+    desc: "Open the diagnostic report this audit produced — bottlenecks, automation opportunities, and recommendations. Appears once a report exists.",
+    selector: '[title="View report"]',
+    cta: "Next →",
+  },
+  {
+    title: "Save to report",
+    desc: "Persist your changes back to the originating report so the dashboard reflects the latest version.",
+    selector: '[title^="Save to report"],[title^="Saving"]',
+    cta: "Next →",
+  },
+  {
+    title: "Cost analysis",
+    desc: "See the financial impact of this process — annual cost, estimated savings, payback, and ROI. Available once a report has been generated.",
+    selector: '[title="Cost analysis"]',
+    cta: "Next →",
+  },
+  {
+    title: "Steps list",
+    desc: "Open the steps panel to add or edit steps manually. Useful for fine-tuning names, reordering, or adding details Reina hasn't filled in yet.",
     selector: '[title="Steps list"],[title="Add steps manually"]',
     cta: "Next →",
   },
   {
-    title: "Snippets",
-    desc: "Save reusable step templates - approvals, reviews, onboarding chunks - and drop them into any flow. Great for processes you map over and over.",
-    selector: '[title="Snippets"]',
+    title: "Analytics",
+    desc: "A compact analytics panel: total processes mapped, savings, automation grades, recent activity. The same data the old dashboard used to show.",
+    selector: '[title="Analytics"]',
     cta: "Next →",
   },
   {
-    title: "Expand the flow",
-    desc: "Open the process diagram in a floating window for a full-screen view. Useful once your steps are mapped.",
-    selector: '[title="Expand flow in window"]',
+    title: "Docs & guides",
+    desc: "Searchable documentation grouped by Getting started · Tutorials (your first audit, running a deal, the data room, the deal workspace, BYO API keys, citations) · Reference (audit log, entitlements, exports, finding shape, model picker). Each topic opens in a new tab.",
+    selector: '[title="Docs & guides"]',
+    cta: "Next →",
+  },
+  {
+    title: "Replay walkthrough",
+    desc: "You can re-open this tour anytime via this icon — handy after we ship new rail features.",
+    selector: '[title="Replay walkthrough"]',
     cta: "Next →",
   },
   {
@@ -123,27 +198,9 @@ const GUIDE_TOUR = [
     cta: "Next →",
   },
   {
-    title: "Cost analysis",
-    desc: "See the financial impact of this process - annual cost, estimated savings, payback, and ROI. Available once a report has been generated.",
-    selector: '[title="Cost analysis"]',
-    cta: "Next →",
-  },
-  {
-    title: "Handover to a colleague",
-    desc: "Pass this process audit to a colleague. They'll get a unique link and can pick up exactly where you left off - your flow, chat history, and notes travel with it.",
-    selector: '[title="Handover to a colleague"]',
-    cta: "Next →",
-  },
-  {
-    title: "Generate report",
-    desc: "When the flow is complete, click here to generate your diagnostic report - bottlenecks, automation opportunities, and cost impact.",
-    selector: '[title="Generate report"]',
-    cta: "Next →",
-  },
-  {
-    title: "Dashboard / sign in",
-    desc: "Access your dashboard to view saved reports, manage process audits, and track completed work.",
-    selector: '[title="Dashboard"],[title="Sign in"],[title="Account"]',
+    title: "Settings",
+    desc: "The gear icon at the bottom of the rail is your account menu. Signed in: shows your email, lets you sign out, export your data (GDPR right to portability), or schedule account deletion (30-day cancel window). Signed out: it's a sign-in shortcut. The popover anchors from the rail bottom so it never clips against the viewport.",
+    selector: '[title="Settings"],[title="Account"],[title="Sign in"]',
     cta: "Next →",
   },
   {
@@ -314,18 +371,9 @@ function DealSetupCard({ platformCompany, onSubmit }) {
 function MapRailPrimaryTools({ editingReportId, onViewReport, onViewCost, onHandover, onContinue, onSaveToReport, savingToReport, sessionUser, hasCostAccess, readyToGenerate }) {
   return (
     <>
-      <a
-        href={sessionUser ? '/portal?dashboard=1' : '/portal'}
-        className="s7-split-rail-btn s7-split-rail-link"
-        title={sessionUser ? 'Dashboard' : 'Sign in'}
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <rect x="3" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="3" width="7" height="7" rx="1" />
-          <rect x="3" y="14" width="7" height="7" rx="1" />
-          <rect x="14" y="14" width="7" height="7" rx="1" />
-        </svg>
-      </a>
+      {/* Dashboard icon removed — the Admin dashboard rail icon (above) is the
+          single canonical link to /portal/org-admin. Keeping a second grid
+          icon here was confusing and pointed at the legacy /portal redirect. */}
       {hasCostAccess && editingReportId && (
         <button
           type="button"
@@ -365,7 +413,7 @@ function MapRailPrimaryTools({ editingReportId, onViewReport, onViewCost, onHand
       {onContinue && (
         <button
           type="button"
-          className={`s7-split-rail-btn s7-split-rail-btn--accent${readyToGenerate ? ' s7-split-rail-btn--ready' : ''}`}
+          className="s7-split-rail-btn"
           onClick={onContinue}
           title={readyToGenerate ? 'Generate report (ready)' : 'Generate report'}
           aria-label={readyToGenerate ? 'Generate report (ready)' : 'Generate report'}
@@ -570,14 +618,886 @@ function ArtefactPill({ artefact, onOpenReport, onOpenFlow, onOpenCost }) {
   );
 }
 
+/**
+ * Fetch a signed URL for a deal document. Returns the full {url, filename,
+ * mime_type, byte_size} payload or null on failure.
+ */
+async function fetchDealDocSignedUrl({ dealId, documentId, accessToken }) {
+  if (!dealId || !documentId) return null;
+  try {
+    const r = await apiFetch(
+      `/api/deals/${dealId}/documents/${documentId}/signed-url`,
+      {},
+      accessToken,
+    );
+    if (!r.ok) return null;
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Lightbox-style modal that renders a deal document inline. PDFs go in an
+ * iframe; non-PDFs (docx, xlsx, images) get an "Open in new tab" fallback
+ * because most browsers won't render them directly. Closing dismisses.
+ */
+function DealDocViewer({ open, onClose, doc }) {
+  if (!open || !doc?.url) return null;
+  const isPdf = (doc.mime_type || '').toLowerCase().includes('pdf');
+  const isImage = (doc.mime_type || '').toLowerCase().startsWith('image/');
+  return (
+    <div className="deal-doc-viewer-overlay" role="dialog" aria-modal aria-label={`Viewing ${doc.filename}`} onClick={onClose}>
+      <div className="deal-doc-viewer-frame" onClick={(e) => e.stopPropagation()}>
+        <div className="deal-doc-viewer-bar">
+          <span className="deal-doc-viewer-name" title={doc.filename}>{doc.filename}</span>
+          <div className="deal-doc-viewer-actions">
+            <a className="deal-doc-viewer-btn" href={doc.url} target="_blank" rel="noopener noreferrer">Open in new tab</a>
+            <button type="button" className="deal-doc-viewer-btn" onClick={onClose} aria-label="Close">Close</button>
+          </div>
+        </div>
+        {isPdf && <iframe src={doc.url} className="deal-doc-viewer-iframe" title={doc.filename} />}
+        {!isPdf && isImage && <img src={doc.url} alt={doc.filename} className="deal-doc-viewer-image" />}
+        {!isPdf && !isImage && (
+          <div className="deal-doc-viewer-fallback">
+            <p>This file type ({doc.mime_type || 'unknown'}) can't render inline. Open it in a new tab.</p>
+            <a className="deal-doc-viewer-btn deal-doc-viewer-btn--primary" href={doc.url} target="_blank" rel="noopener noreferrer">Open in new tab</a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Open a document in a new tab via the deal-viewer signed-URL endpoint.
+ * Returns false on failure so callers can show a small inline error.
+ */
+async function openDealDocument({ dealId, documentId, accessToken }) {
+  const data = await fetchDealDocSignedUrl({ dealId, documentId, accessToken });
+  if (!data?.url) return false;
+  window.open(data.url, '_blank', 'noopener,noreferrer');
+  return true;
+}
+
+/**
+ * Render the data-room chunks the search_deal_documents tool returned during
+ * an assistant turn as cards under the bubble. Filenames are clickable —
+ * fetches a signed Storage URL and opens the original document in a new tab.
+ */
+function DealDocsSources({ groups, dealId, accessToken }) {
+  const [busyChunkId, setBusyChunkId] = useState(null);
+  const [errorChunkId, setErrorChunkId] = useState(null);
+  const [viewing, setViewing] = useState(null); // { url, filename, mime_type }
+  if (!groups?.length) return null;
+  const all = groups.flatMap((g) => g.chunks || []);
+  if (!all.length) return null;
+  const formatLoc = (c) => [
+    c.page ? `p.${c.page}` : null,
+    c.slide ? `slide ${c.slide}` : null,
+    c.sheet ? `sheet ${c.sheet}` : null,
+    c.cellRange ? `range ${c.cellRange}` : null,
+    c.section,
+  ].filter(Boolean).join(' · ');
+
+  const open = async (c) => {
+    if (!dealId || !c.documentId) return;
+    setBusyChunkId(c.chunkId);
+    setErrorChunkId(null);
+    const data = await fetchDealDocSignedUrl({ dealId, documentId: c.documentId, accessToken });
+    setBusyChunkId(null);
+    if (!data?.url) { setErrorChunkId(c.chunkId); return; }
+    setViewing({ url: data.url, filename: c.filename || data.filename, mime_type: data.mime_type });
+  };
+
+  return (
+    <div className="s7-msg-deal-sources" role="region" aria-label="Sources from the data room">
+      <div className="s7-msg-deal-sources-head">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+        <span>{all.length} source{all.length === 1 ? '' : 's'} from the data room</span>
+      </div>
+      <ul className="s7-msg-deal-sources-list">
+        {all.map((c, i) => (
+          <li key={c.chunkId || i} className="s7-msg-deal-sources-item">
+            <div className="s7-msg-deal-sources-meta">
+              {c.documentId && dealId ? (
+                <button
+                  type="button"
+                  className="s7-msg-deal-sources-name s7-msg-deal-sources-name--link"
+                  onClick={() => open(c)}
+                  disabled={busyChunkId === c.chunkId}
+                  title="View the source document inline"
+                >
+                  {c.filename || 'Untitled document'}
+                </button>
+              ) : (
+                <span className="s7-msg-deal-sources-name">{c.filename || 'Untitled document'}</span>
+              )}
+              {formatLoc(c) && <span className="s7-msg-deal-sources-loc"> · {formatLoc(c)}</span>}
+              {busyChunkId === c.chunkId && <span className="s7-msg-deal-sources-loading"> · opening…</span>}
+              {errorChunkId === c.chunkId && <span className="s7-msg-deal-sources-err"> · failed to open</span>}
+            </div>
+            {c.snippet && <div className="s7-msg-deal-sources-snippet">{c.snippet}</div>}
+          </li>
+        ))}
+      </ul>
+      <DealDocViewer open={Boolean(viewing)} onClose={() => setViewing(null)} doc={viewing} />
+    </div>
+  );
+}
+
+/**
+ * Loading state that renders inside the right canvas area while a long-
+ * running action (analysis / export / etc) is in flight. Reads from
+ * CanvasActionContext. Renders nothing when no action is in flight, so
+ * existing canvas content shows through normally.
+ *
+ * Two modes via the `inline` prop:
+ *   inline=false (default): centered card filling the canvas — used when
+ *     there's no flow chart to show (deal mode / pre-map)
+ *   inline=true: smaller floating chip top-right of the canvas — used when
+ *     a flow chart is rendered behind it so the user keeps editing
+ */
+function CanvasActionOverlay({ inline = false }) {
+  const { action, endAction } = useCanvasAction();
+  if (!action) return null;
+  const elapsed = Math.max(0, Math.floor((Date.now() - (action.startedAt || Date.now())) / 1000));
+  const cls = inline ? 'canvas-action-overlay canvas-action-overlay--inline' : 'canvas-action-overlay canvas-action-overlay--card';
+  return (
+    <div className={cls} role="status" aria-live="polite">
+      <div className="canvas-action-overlay-spinner" />
+      <div className="canvas-action-overlay-body">
+        <div className="canvas-action-overlay-label">
+          {action.label || 'Working…'}
+          {action.detail && <span className="canvas-action-overlay-detail"> · {action.detail}</span>}
+        </div>
+        <div className="canvas-action-overlay-status">
+          {action.status || 'in progress'} · {elapsed}s
+        </div>
+      </div>
+      <button type="button" className="canvas-action-overlay-dismiss" onClick={() => endAction({ id: action.id })} aria-label="Dismiss">
+        ×
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Render structured deal metadata (documents list / findings list) emitted by
+ * the deal-metadata tools as compact cards under the assistant bubble.
+ * Document filenames are clickable (signed URL → new tab). Findings deep-link
+ * to the deal page focused on the finding's review row.
+ */
+function DealMetaCards({ groups, dealId, accessToken }) {
+  const [busyId, setBusyId] = useState(null);
+  const [viewing, setViewing] = useState(null);
+  if (!groups?.length) return null;
+  const openDoc = async (d) => {
+    if (!dealId || !d.id) return;
+    setBusyId(d.id);
+    const data = await fetchDealDocSignedUrl({ dealId, documentId: d.id, accessToken });
+    setBusyId(null);
+    if (data?.url) setViewing({ url: data.url, filename: d.filename || data.filename, mime_type: data.mime_type });
+  };
+  return (
+    <div className="s7-msg-deal-meta">
+      {groups.map((g, gi) => {
+        if (g.kind === 'documents') {
+          return (
+            <div key={gi} className="s7-msg-deal-meta-block">
+              <div className="s7-msg-deal-meta-head">{g.items.length} document{g.items.length === 1 ? '' : 's'} in the data room</div>
+              <ul className="s7-msg-deal-meta-list">
+                {g.items.map((d) => (
+                  <li key={d.id} className="s7-msg-deal-meta-row">
+                    <span className={`s7-msg-deal-meta-status s7-msg-deal-meta-status--${d.status}`}>{d.status}</span>
+                    {dealId && d.status === 'ready' ? (
+                      <button
+                        type="button"
+                        className="s7-msg-deal-meta-name s7-msg-deal-meta-name--link"
+                        onClick={() => openDoc(d)}
+                        disabled={busyId === d.id}
+                        title="Open the document in a new tab"
+                      >
+                        {d.filename}
+                      </button>
+                    ) : (
+                      <span className="s7-msg-deal-meta-name">{d.filename}</span>
+                    )}
+                    <span className="s7-msg-deal-meta-sub">
+                      {[d.sourceParty, d.pageCount ? `${d.pageCount}p` : null, d.byteSize ? `${(d.byteSize / 1024).toFixed(0)} KB` : null].filter(Boolean).join(' · ')}
+                      {busyId === d.id && ' · opening…'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        }
+        if (g.kind === 'findings') {
+          return (
+            <div key={gi} className="s7-msg-deal-meta-block">
+              <div className="s7-msg-deal-meta-head">{g.items.length} finding{g.items.length === 1 ? '' : 's'}</div>
+              <ul className="s7-msg-deal-meta-list">
+                {g.items.map((f) => (
+                  <li key={f.key} className="s7-msg-deal-meta-row">
+                    {f.severity && <span className={`s7-msg-deal-meta-sev s7-msg-deal-meta-sev--${f.severity}`}>{f.severity}</span>}
+                    {dealId ? (
+                      <a
+                        className="s7-msg-deal-meta-name s7-msg-deal-meta-name--link"
+                        href={`/process-audit?deal=${encodeURIComponent(dealId)}&focusFinding=${encodeURIComponent(f.key)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Open this finding in the deal page"
+                      >
+                        {f.title}
+                      </a>
+                    ) : (
+                      <span className="s7-msg-deal-meta-name">{f.title}</span>
+                    )}
+                    <span className="s7-msg-deal-meta-sub">
+                      {[f.section || f.category, f.evidenceCount != null ? `${f.evidenceCount} evidence` : null, `review: ${f.reviewStatus}`].filter(Boolean).join(' · ')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        }
+        return null;
+      })}
+      <DealDocViewer open={Boolean(viewing)} onClose={() => setViewing(null)} doc={viewing} />
+    </div>
+  );
+}
+
+/**
+ * Render staged deal mutation proposals (currently `finding_review`) as
+ * confirm-to-apply cards under the assistant bubble. The chat agent only
+ * stages — the actual mutation is the user's click. Mirrors the cost-proposal
+ * pattern (set_labour_rate etc.) but for deal-side actions.
+ */
+/**
+ * Picker UI for the four report scopes. Defaults to selecting every
+ * participant + process the proposal carried; user can untick. For the
+ * "across companies" scopes the user must keep ≥ 1 of each (we disable Apply
+ * until valid). Pushes the current selection up via onPicksChange so the
+ * parent's apply handler can read p._userPicks.
+ */
+function ReportScopePicker({ proposal, onPicksChange, defaultMode }) {
+  const allItems = proposal.items || [];
+  const isSingleCompany = proposal.scope === 'process_per_company' || proposal.scope === 'company_rollup';
+  const isSingleProcess = proposal.scope === 'process_per_company' || proposal.scope === 'process_across_companies';
+
+  // Pre-select all participants + the union of process names (or the
+  // requested process names when present).
+  const initialParticipantIds = useMemo(() => allItems.map((i) => i.participantId), [allItems]);
+  const initialProcessNames = useMemo(() => {
+    if (proposal.requestedProcessNames?.length) return proposal.requestedProcessNames;
+    const names = new Set();
+    for (const it of allItems) for (const proc of it.processes || []) names.add(proc.name);
+    return [...names];
+  }, [allItems, proposal.requestedProcessNames]);
+
+  const [picked, setPicked] = useState(() => new Set(initialParticipantIds));
+  const [pickedProcs, setPickedProcs] = useState(() => new Set(initialProcessNames));
+  const [mode, setMode] = useState(defaultMode || 'comparison');
+
+  useEffect(() => {
+    onPicksChange?.({
+      participantIds: [...picked],
+      processNames: [...pickedProcs],
+      mode,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [picked, pickedProcs, mode]);
+
+  const togglePart = (id) => setPicked((s) => {
+    const next = new Set(s);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    if (isSingleCompany) return new Set([id]); // single-pick mode
+    return next;
+  });
+  const toggleProc = (name) => setPickedProcs((s) => {
+    const next = new Set(s);
+    if (next.has(name)) next.delete(name); else next.add(name);
+    if (isSingleProcess && proposal.scope === 'process_across_companies') return new Set([name]);
+    return next;
+  });
+
+  const allProcNames = useMemo(() => {
+    const names = new Set();
+    for (const it of allItems) for (const proc of it.processes || []) names.add(proc.name);
+    return [...names];
+  }, [allItems]);
+
+  return (
+    <div className="report-picker">
+      {proposal.incompleteSummary && (
+        <div className="report-picker-warn">⚠ {proposal.incompleteSummary} You can still proceed — pending items will be marked in the output.</div>
+      )}
+
+      <div className="report-picker-section">
+        <div className="report-picker-section-label">
+          {isSingleCompany ? 'Pick one company' : 'Companies (uncheck to exclude)'}
+        </div>
+        <ul className="report-picker-list">
+          {allItems.map((it) => {
+            const checked = picked.has(it.participantId);
+            return (
+              <li key={it.participantId} className="report-picker-row">
+                <label className="report-picker-check">
+                  <input
+                    type={isSingleCompany ? 'radio' : 'checkbox'}
+                    name="report-picker-company"
+                    checked={checked}
+                    onChange={() => togglePart(it.participantId)}
+                  />
+                  <span className="report-picker-row-name">{it.companyName}</span>
+                  <span className="report-picker-row-meta">
+                    {it.role} · {it.status}
+                    {it.processes?.length > 0
+                      ? ` · ${it.processes.length} process${it.processes.length === 1 ? '' : 'es'}`
+                      : ' · no processes mapped yet'}
+                    {!it.isComplete && <span className="report-picker-pending"> · partial</span>}
+                  </span>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      {!isSingleCompany && allProcNames.length > 1 && (
+        <div className="report-picker-section">
+          <div className="report-picker-section-label">
+            {isSingleProcess ? 'Pick one process' : 'Processes to include'}
+          </div>
+          <ul className="report-picker-list">
+            {allProcNames.map((name) => (
+              <li key={name} className="report-picker-row">
+                <label className="report-picker-check">
+                  <input
+                    type={isSingleProcess ? 'radio' : 'checkbox'}
+                    name="report-picker-proc"
+                    checked={pickedProcs.has(name)}
+                    onChange={() => toggleProc(name)}
+                  />
+                  <span className="report-picker-row-name">{name}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {(proposal.scope === 'process_across_companies' || proposal.scope === 'multi_company_multi_process') && (
+        <div className="report-picker-section">
+          <div className="report-picker-section-label">Analysis mode</div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {['comparison', 'synergy', 'redesign'].map((m) => (
+              <button
+                key={m}
+                type="button"
+                className={`deal-workspace-tab${mode === m ? ' active' : ''}`}
+                onClick={() => setMode(m)}
+              >{m}</button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DealProposalCards({ proposals, accessToken }) {
+  const [stateById, setStateById] = useState({});
+  const { beginAction, updateAction, endAction } = useCanvasAction();
+  if (!proposals?.length) return null;
+
+  const apply = async (idx, p) => {
+    setStateById((s) => ({ ...s, [idx]: { busy: true } }));
+    try {
+      if (p.kind === 'finding_review') {
+        const r = await apiFetch(
+          `/api/deals/${p.dealId}/analyses/${p.analysisId}/reviews`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              finding_key: p.findingKey,
+              status: p.status,
+              ...(p.note ? { reviewer_note: p.note } : {}),
+            }),
+          },
+          accessToken,
+        );
+        if (!r.ok) {
+          const data = await r.json().catch(() => ({}));
+          throw new Error(data?.error || `Apply failed (${r.status})`);
+        }
+        setStateById((s) => ({ ...s, [idx]: { applied: true } }));
+        return;
+      }
+
+      if (p.kind === 'run_analysis') {
+        const r = await apiFetch(
+          `/api/deals/${p.dealId}/analyse`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode: p.mode }),
+          },
+          accessToken,
+        );
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data?.error || `Apply failed (${r.status})`);
+        const analysisId = data.analysis_id;
+        setStateById((s) => ({
+          ...s,
+          [idx]: { applied: true, info: `${p.mode} analysis running on the canvas…` },
+        }));
+
+        // Surface the loading state on the right canvas via CanvasActionContext.
+        beginAction({
+          id: `analysis:${analysisId}`,
+          kind: 'analysis',
+          label: `Running ${p.mode} analysis`,
+          detail: p.dealName || null,
+          status: 'queued',
+        });
+
+        // Poll status every 2s until terminal. ~5 min ceiling.
+        (async () => {
+          const start = Date.now();
+          const ceiling = 5 * 60_000;
+          while (Date.now() - start < ceiling) {
+            await new Promise((res) => setTimeout(res, 2000));
+            try {
+              const sr = await apiFetch(
+                `/api/deals/${p.dealId}/analyses/${analysisId}/status`,
+                { dedupe: false }, // status poll — never reuse cached response
+                accessToken,
+              );
+              if (!sr.ok) continue;
+              const sd = await sr.json();
+              updateAction({
+                id: `analysis:${analysisId}`,
+                status: sd.progress_message || sd.status || 'running',
+              });
+              if (sd.complete) {
+                updateAction({ id: `analysis:${analysisId}`, status: '✓ complete — open the workspace to see findings' });
+                setTimeout(() => endAction({ id: `analysis:${analysisId}` }), 4000);
+                return;
+              }
+              if (sd.failed) {
+                updateAction({ id: `analysis:${analysisId}`, status: `failed: ${sd.error || 'unknown'}` });
+                setTimeout(() => endAction({ id: `analysis:${analysisId}` }), 6000);
+                return;
+              }
+            } catch { /* swallow — try next tick */ }
+          }
+          updateAction({ id: `analysis:${analysisId}`, status: 'still running — check back later' });
+          setTimeout(() => endAction({ id: `analysis:${analysisId}` }), 4000);
+        })();
+
+        return;
+      }
+
+      if (p.kind === 'export_pptx') {
+        const url = `/api/deals/${p.dealId}/export-diligence-pptx?analysis_id=${p.analysisId}`;
+        const r = await fetch(url, { headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {} });
+        if (!r.ok) throw new Error(`Export failed (${r.status})`);
+        const blob = await r.blob();
+        const dl = document.createElement('a');
+        dl.href = URL.createObjectURL(blob);
+        dl.download = 'diligence-memo.pptx';
+        document.body.appendChild(dl);
+        dl.click();
+        dl.remove();
+        URL.revokeObjectURL(dl.href);
+        setStateById((s) => ({ ...s, [idx]: { applied: true, info: 'Download started.' } }));
+        return;
+      }
+
+      if (p.kind === 'upload_document') {
+        // No real mutation — just navigate to the deal's data-room area.
+        // The deal page reads ?focus=documents (Phase 6 pattern) to scroll
+        // and highlight that section.
+        window.open(`/deals/${p.dealId}?focus=documents`, '_blank', 'noopener,noreferrer');
+        setStateById((s) => ({
+          ...s,
+          [idx]: { applied: true, info: 'Opened the data-room upload page' },
+        }));
+        return;
+      }
+
+      if (p.kind === 'undo_finding_review') {
+        const r = await apiFetch(
+          `/api/deals/${p.dealId}/analyses/${p.analysisId}/reviews`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ finding_key: p.findingKey, status: 'pending' }),
+          },
+          accessToken,
+        );
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data?.error || `Apply failed (${r.status})`);
+        setStateById((s) => ({
+          ...s,
+          [idx]: { applied: true, info: `Reverted "${p.findingKey}" to pending (was ${p.previousStatus})` },
+        }));
+        return;
+      }
+
+      if (p.kind === 'undo_link_participant_report') {
+        // No PATCH path clears report_id — call PATCH with reportId='' will fail
+        // validation. Instead use the participant DELETE-style helper if one
+        // exists, OR clear via a direct deal_participants update. Fastest v1:
+        // surface that this requires the deal-page UI for now.
+        const r = await apiFetch(
+          `/api/deals/${p.dealId}/participants/${p.participantId}`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ report_id: null }),
+          },
+          accessToken,
+        );
+        if (!r.ok) {
+          throw new Error('Server can\'t unlink reports yet — visit the deal page to clear it manually.');
+        }
+        setStateById((s) => ({
+          ...s,
+          [idx]: { applied: true, info: `Unlinked report from ${p.participantCompany}` },
+        }));
+        return;
+      }
+
+      if (p.kind === 'link_participant_report') {
+        const r = await apiFetch(
+          `/api/deals/${p.dealId}/participants`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ participantId: p.participantId, reportId: p.reportId }),
+          },
+          accessToken,
+        );
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data?.error || `Apply failed (${r.status})`);
+        setStateById((s) => ({
+          ...s,
+          [idx]: { applied: true, info: `Linked to ${p.participantCompany} (${p.participantRole})` },
+        }));
+        return;
+      }
+
+      if (p.kind === 'reprocess_document') {
+        const url = `/api/deals/${p.dealId}/documents/${p.documentId}/reprocess${p.wipe ? '?wipe=1' : ''}`;
+        const r = await apiFetch(
+          url,
+          { method: 'POST', headers: { 'Content-Type': 'application/json' } },
+          accessToken,
+        );
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data?.error || `Apply failed (${r.status})`);
+        setStateById((s) => ({
+          ...s,
+          [idx]: { applied: true, info: `Reprocess queued — ${p.filename} is now pending` },
+        }));
+        return;
+      }
+
+      if (p.kind === 'generate_report') {
+        // Routing per scope:
+        //   process_per_company / company_rollup → navigate to existing
+        //     diagnostic report(s); no new analysis runs
+        //   process_across_companies / multi_company_multi_process → POST
+        //     /analyse with the participantIds + processNames filters; the
+        //     route + worker honour them
+        const picks = p._userPicks || { participantIds: [], processNames: [], mode: p.mode || 'comparison' };
+        try {
+          if (p.scope === 'process_per_company' || p.scope === 'company_rollup') {
+            const target = (p.items || []).find((it) => picks.participantIds.includes(it.participantId));
+            if (target?.reportId) {
+              window.open(`/process-audit?edit=${encodeURIComponent(target.reportId)}`, '_blank', 'noopener,noreferrer');
+              setStateById((s) => ({ ...s, [idx]: { applied: true, info: `Opened ${target.companyName}'s report in a new tab` } }));
+            } else {
+              throw new Error('No report exists yet for the picked company.');
+            }
+            return;
+          }
+
+          // process_across_companies + multi_company_multi_process
+          const r = await apiFetch(
+            `/api/deals/${p.dealId}/analyse`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                mode: picks.mode,
+                participantIds: picks.participantIds,
+                processNames: picks.processNames,
+              }),
+            },
+            accessToken,
+          );
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(data?.error || `Apply failed (${r.status})`);
+          setStateById((s) => ({
+            ...s,
+            [idx]: { applied: true, info: `${picks.mode} report running on the canvas…` },
+          }));
+          beginAction({
+            id: `analysis:${data.analysis_id}`,
+            kind: 'analysis',
+            label: `Generating ${picks.mode} report`,
+            detail: `${picks.participantIds.length} compan${picks.participantIds.length === 1 ? 'y' : 'ies'}${picks.processNames.length ? ' · ' + picks.processNames.join(', ') : ''}`,
+            status: 'queued',
+          });
+          (async () => {
+            const start = Date.now();
+            const ceiling = 5 * 60_000;
+            while (Date.now() - start < ceiling) {
+              await new Promise((res) => setTimeout(res, 2000));
+              try {
+                const sr = await apiFetch(`/api/deals/${p.dealId}/analyses/${data.analysis_id}/status`, { dedupe: false }, accessToken);
+                if (!sr.ok) continue;
+                const sd = await sr.json();
+                updateAction({ id: `analysis:${data.analysis_id}`, status: sd.progress_message || sd.status || 'running' });
+                if (sd.complete) { updateAction({ id: `analysis:${data.analysis_id}`, status: '✓ complete — open the workspace to see findings' }); setTimeout(() => endAction({ id: `analysis:${data.analysis_id}` }), 4000); return; }
+                if (sd.failed)   { updateAction({ id: `analysis:${data.analysis_id}`, status: `failed: ${sd.error || 'unknown'}` }); setTimeout(() => endAction({ id: `analysis:${data.analysis_id}` }), 6000); return; }
+              } catch { /* swallow */ }
+            }
+          })();
+        } catch (err) {
+          throw err;
+        }
+        return;
+      }
+
+      if (p.kind === 'invite_participant') {
+        const r = await apiFetch(
+          `/api/deals/${p.dealId}/participants`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              role: p.role,
+              companyName: p.companyName,
+              ...(p.email ? { participantEmail: p.email } : {}),
+              ...(p.name  ? { participantName:  p.name  } : {}),
+              invite: Boolean(p.sendInviteEmail && p.email),
+            }),
+          },
+          accessToken,
+        );
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data?.error || `Apply failed (${r.status})`);
+        const info = p.sendInviteEmail && p.email
+          ? `Participant added · invite emailed to ${p.email}`
+          : `Participant added · invite link copied below`;
+        setStateById((s) => ({ ...s, [idx]: { applied: true, info, inviteUrl: data?.participant?.inviteUrl || null } }));
+        return;
+      }
+    } catch (e) {
+      setStateById((s) => ({ ...s, [idx]: { error: e?.message || 'Network error' } }));
+    }
+  };
+
+  const dismiss = (idx) => setStateById((s) => ({ ...s, [idx]: { dismissed: true } }));
+
+  return (
+    <div className="s7-msg-deal-proposals">
+      {proposals.map((p, idx) => {
+        const st = stateById[idx] || {};
+        if (st.dismissed) return null;
+
+        let head, body, applyLabel, modifier;
+        if (p.kind === 'finding_review') {
+          const verb = p.status === 'approved' ? 'Approve' : p.status === 'rejected' ? 'Reject' : 'Mark for revision';
+          modifier = p.status;
+          applyLabel = `Apply ${verb.toLowerCase()}`;
+          head = (
+            <>
+              <span className="s7-msg-deal-proposal-action">Proposed: {verb}</span>
+              {p.findingSeverity && (
+                <span className={`s7-msg-deal-meta-sev s7-msg-deal-meta-sev--${p.findingSeverity}`}>{p.findingSeverity}</span>
+              )}
+            </>
+          );
+          body = (
+            <>
+              <div className="s7-msg-deal-proposal-title">{p.findingTitle}</div>
+              {p.findingSection && <div className="s7-msg-deal-proposal-section">{p.findingSection}</div>}
+              {p.note && <div className="s7-msg-deal-proposal-note">"{p.note}"</div>}
+            </>
+          );
+        } else if (p.kind === 'run_analysis') {
+          modifier = 'run-analysis';
+          applyLabel = `Run ${p.mode} analysis`;
+          head = <span className="s7-msg-deal-proposal-action">Proposed: Run analysis</span>;
+          body = (
+            <>
+              <div className="s7-msg-deal-proposal-title">{p.mode.charAt(0).toUpperCase() + p.mode.slice(1)} analysis</div>
+              {p.reason && <div className="s7-msg-deal-proposal-note">{p.reason}</div>}
+            </>
+          );
+        } else if (p.kind === 'export_pptx') {
+          modifier = 'export';
+          applyLabel = 'Download PowerPoint';
+          head = <span className="s7-msg-deal-proposal-action">Proposed: Export to PowerPoint</span>;
+          body = (
+            <>
+              <div className="s7-msg-deal-proposal-title">Diligence memo (.pptx)</div>
+              <div className="s7-msg-deal-proposal-section">
+                {p.approvedCount} approved finding{p.approvedCount === 1 ? '' : 's'}
+              </div>
+            </>
+          );
+        } else if (p.kind === 'link_participant_report') {
+          modifier = 'link';
+          applyLabel = 'Link report to slot';
+          head = <span className="s7-msg-deal-proposal-action">Proposed: Link report</span>;
+          body = (
+            <>
+              <div className="s7-msg-deal-proposal-title">{p.participantCompany} <span style={{ fontWeight: 400, color: 'var(--text-mid, #64748b)' }}>· {p.participantRole}</span></div>
+              <div className="s7-msg-deal-proposal-section">Report id: <code>{String(p.reportId).slice(0, 12)}…</code></div>
+            </>
+          );
+        } else if (p.kind === 'upload_document') {
+          modifier = 'upload';
+          applyLabel = 'Open data room';
+          head = <span className="s7-msg-deal-proposal-action">Proposed: Upload documents</span>;
+          body = (
+            <>
+              <ul className="s7-msg-deal-proposal-list">
+                {p.docTypes.map((d, di) => (<li key={di}>{d}</li>))}
+              </ul>
+              {p.reason && <div className="s7-msg-deal-proposal-note">{p.reason}</div>}
+            </>
+          );
+        } else if (p.kind === 'undo_finding_review') {
+          modifier = 'undo';
+          applyLabel = 'Undo review';
+          head = <span className="s7-msg-deal-proposal-action">Proposed: Undo finding review</span>;
+          body = (
+            <>
+              <div className="s7-msg-deal-proposal-title">Revert review for <code>{String(p.findingKey).slice(0, 32)}</code></div>
+              <div className="s7-msg-deal-proposal-section">{p.previousStatus} → pending</div>
+            </>
+          );
+        } else if (p.kind === 'undo_link_participant_report') {
+          modifier = 'undo';
+          applyLabel = 'Unlink report';
+          head = <span className="s7-msg-deal-proposal-action">Proposed: Unlink participant report</span>;
+          body = (
+            <>
+              <div className="s7-msg-deal-proposal-title">Unlink from {p.participantCompany}</div>
+              <div className="s7-msg-deal-proposal-section">Previous report id: <code>{String(p.previousReportId).slice(0, 12)}…</code></div>
+            </>
+          );
+        } else if (p.kind === 'reprocess_document') {
+          modifier = 'reprocess';
+          applyLabel = p.wipe ? 'Wipe chunks & reprocess' : 'Reprocess document';
+          head = <span className="s7-msg-deal-proposal-action">Proposed: Reprocess document</span>;
+          body = (
+            <>
+              <div className="s7-msg-deal-proposal-title">{p.filename}</div>
+              <div className="s7-msg-deal-proposal-section">
+                Current status: {p.currentStatus}{p.wipe ? ' · existing chunks will be deleted' : ''}
+              </div>
+              {p.reason && <div className="s7-msg-deal-proposal-note">{p.reason}</div>}
+            </>
+          );
+        } else if (p.kind === 'generate_report') {
+          modifier = 'report';
+          const labelByScope = {
+            process_per_company: 'Open report',
+            company_rollup: 'Open report',
+            process_across_companies: 'Run report',
+            multi_company_multi_process: 'Run report',
+          };
+          applyLabel = labelByScope[p.scope] || 'Generate';
+          head = <span className="s7-msg-deal-proposal-action">Proposed: Generate report ({p.scope.replace(/_/g, ' ')})</span>;
+          body = (
+            <ReportScopePicker
+              proposal={p}
+              onPicksChange={(picks) => { p._userPicks = picks; }}
+              defaultMode={p.mode || 'comparison'}
+            />
+          );
+        } else if (p.kind === 'invite_participant') {
+          modifier = 'invite';
+          applyLabel = p.sendInviteEmail && p.email ? 'Add & email invite' : 'Add participant';
+          head = <span className="s7-msg-deal-proposal-action">Proposed: Invite participant</span>;
+          body = (
+            <>
+              <div className="s7-msg-deal-proposal-title">{p.companyName} <span style={{ fontWeight: 400, color: 'var(--text-mid, #64748b)' }}>· {p.role}</span></div>
+              {(p.email || p.name) && (
+                <div className="s7-msg-deal-proposal-section">
+                  {[p.name, p.email].filter(Boolean).join(' · ')}
+                </div>
+              )}
+            </>
+          );
+        } else {
+          return null;
+        }
+
+        return (
+          <div key={idx} className={`s7-msg-deal-proposal s7-msg-deal-proposal--${modifier}`}>
+            <div className="s7-msg-deal-proposal-head">{head}</div>
+            <div className="s7-msg-deal-proposal-body">{body}</div>
+            {st.applied ? (
+              <>
+                <div className="s7-msg-deal-proposal-applied">✓ {st.info || 'Applied'}</div>
+                {st.inviteUrl && (
+                  <div className="s7-msg-deal-proposal-section" style={{ marginTop: 6, wordBreak: 'break-all' }}>
+                    <a href={st.inviteUrl} target="_blank" rel="noopener noreferrer">{st.inviteUrl}</a>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="s7-msg-deal-proposal-actions">
+                <button
+                  type="button"
+                  className="s7-msg-deal-proposal-btn s7-msg-deal-proposal-btn--primary"
+                  onClick={() => apply(idx, p)}
+                  disabled={st.busy}
+                >
+                  {st.busy ? 'Applying…' : applyLabel}
+                </button>
+                <button
+                  type="button"
+                  className="s7-msg-deal-proposal-btn"
+                  onClick={() => dismiss(idx)}
+                  disabled={st.busy}
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+            {st.error && <div className="s7-msg-deal-proposal-err">{st.error}</div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp, onAuditTrailToggle, auditTrailOpen, reportToLoad, onReportLoaded, redesignReportId, onRedesignConsumed }) {
   const {
     processData, updateProcessData, goToScreen,
     customDepartments, addCustomDepartment, removeCustomDepartment,
-    diagnosticMode, teamMode, chatMessages, addChatMessage,
-    saveProgressToCloud, buildFullSnapshot, editingReportId, editingRedesign, aiRedesignMode, contact, authUser, setContact,
+    diagnosticMode, teamMode, chatMessages, addChatMessage, setChatMessages,
+    saveProgressToCloud, buildFullSnapshot, editingReportId, editingRedesign, editingAnalysisId, editingAnalysisDealId, aiRedesignMode, contact, authUser, setContact,
     addAuditEvent,
-    moduleId, setModuleId, dealCanonicalProcessName, dealName, dealRole, dealId, setDeal,
+    moduleId, setModuleId, dealCanonicalProcessName, dealName, dealRole, dealId, setDeal, dealParticipants,
     completedProcesses, auditTrail, sendDiagnosticReport,
   } = useDiagnostic();
   const { accessToken, user: sessionUser, signOut } = useAuth();
@@ -591,6 +1511,42 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     const key = editingReportId ? `vesno_chat_session_${editingReportId}` : 'vesno_chat_session_active';
     try { chatSessionIdRef.current = localStorage.getItem(key) || null; } catch { /* ignore */ }
   }, [editingReportId]);
+
+  /* ── Deal participants + analyses for the artefacts panel ── */
+  // The artefacts panel shows process maps and analysis outputs that exist
+  // in scope, not just chat-pinned objects. For a deal-scoped chat, each
+  // participant.report is a "mapped process" and each completed
+  // deal_analysis is a generated artefact — both should surface here
+  // regardless of whether they were mentioned in a chat message.
+  // runDealAnalysis writes to deal_analyses but never creates a
+  // chat_artefacts row, so without this fetch, redesigns/diligence runs
+  // are invisible to the artefacts panel even when complete.
+  const [dealParticipantsForArtefacts, setDealParticipantsForArtefacts] = useState([]);
+  const [dealAnalysesForArtefacts, setDealAnalysesForArtefacts] = useState([]);
+  // Process name pulled from the deal record (deals.process_name) — used
+  // as the second-level group in the artefacts tree. dealCanonicalProcessName
+  // from DiagnosticContext is only populated on deal-flow / participant-
+  // token entry paths, so it's null for deal owners landing via ?deal=<id>.
+  const [dealProcessName, setDealProcessName] = useState(null);
+  useEffect(() => {
+    if (!dealId || !accessToken) {
+      setDealParticipantsForArtefacts([]);
+      setDealAnalysesForArtefacts([]);
+      setDealProcessName(null);
+      return;
+    }
+    let cancelled = false;
+    Promise.all([
+      apiFetch(`/api/deals/${dealId}`, {}, accessToken).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      apiFetch(`/api/deals/${dealId}/analyses`, {}, accessToken).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    ]).then(([dealData, analysesData]) => {
+      if (cancelled) return;
+      setDealParticipantsForArtefacts(Array.isArray(dealData?.participants) ? dealData.participants : []);
+      setDealAnalysesForArtefacts(Array.isArray(analysesData?.analyses) ? analysesData.analyses : []);
+      setDealProcessName(dealData?.deal?.processName || null);
+    });
+    return () => { cancelled = true; };
+  }, [dealId, accessToken]);
 
   /* ── Cost-analysis entitlement: platform admin OR any membership with cost_analyst ── */
   useEffect(() => {
@@ -741,7 +1697,12 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
   const [chatLoading, setChatLoading] = useState(false);
   const [chatProgress, setChatProgress] = useState('');
   const [chatStreamedText, setChatStreamedText] = useState('');
+  // Bump on every completed chat turn so the CreditsWidget re-fetches
+  // /api/me/budget and the count drops live.
+  const [creditsRefreshKey, setCreditsRefreshKey] = useState(0);
   const [chatAttachments, setChatAttachments] = useState([]);
+  // Sticks for the session — picker hydrates from /api/me/models on mount.
+  const [selectedModel, setSelectedModel] = useState(null);
   const [chatError, setChatError] = useState(null);
   const [chatDragOver, setChatDragOver] = useState(false);
   /** Shown while FileReader is loading selected files into the composer */
@@ -757,6 +1718,19 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
    *  the report and we won't reopen it. */
   const autoOpenedReportRef = useRef(false);
   const [inlineCostReportId, setInlineCostReportId] = useState(null);
+  const [inlineAnalysisId, setInlineAnalysisId] = useState(null);
+  // Track which artefact-tree groups are collapsed. Keys are namespaced
+  // ("deal:<dealKey>" / "process:<dealKey>/<processKey>" /
+  // "variant:<dealKey>/<processKey>/<variantKey>") so sibling group
+  // names don't collide. Default = empty Set (everything expanded).
+  const [collapsedArtefactKeys, setCollapsedArtefactKeys] = useState(() => new Set());
+  const toggleArtefactKey = useCallback((key) => {
+    setCollapsedArtefactKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, []);
   const [inlineGenerateStatus, setInlineGenerateStatus] = useState('idle'); // 'idle' | 'generating' | 'error'
   const [inlineGenerateProgress, setInlineGenerateProgress] = useState('');
   const [inlineGenerateError, setInlineGenerateError] = useState('');
@@ -773,13 +1747,46 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
   const [showChatHistory, setShowChatHistory] = useState(false);
   const [showArtefactsPanel, setShowArtefactsPanel] = useState(false);
 
+  /* ═══════ Rail slide-in anchors ═══════
+     Steps / Artefacts / Activity log open as slide-in panels (same UX as
+     Reports). The refs anchor the panel to the rail's right edge — only
+     one rail (with-flow OR no-flow) renders at a time, so a single ref
+     per panel is sufficient. */
+  const stepsBtnRef = useRef(null);
+  const artefactsBtnRef = useRef(null);
+  const activityBtnRef = useRef(null);
+
   /* Ref for first-paint context inside the one-shot chat seeding effect */
   const chatSeedCtxRef = useRef(null);
-  chatSeedCtxRef.current = { processData, moduleId, dealCanonicalProcessName, dealName, dealRole, chatMessages };
+  // Resolve which company the current user is mapping for: match their email
+  // against deal_participants — if they're a participant, use that company.
+  const myEmail = (sessionUser?.email || '').toLowerCase();
+  const myDealCompany = (dealParticipants || []).find(
+    (p) => (p.participant_email || p.participantEmail || '').toLowerCase() === myEmail,
+  )?.company_name || (dealParticipants || []).find(
+    (p) => (p.participant_email || p.participantEmail || '').toLowerCase() === myEmail,
+  )?.companyName || null;
 
-  /* ═══════ First-visit guide (shows every page load) ═══════ */
+  chatSeedCtxRef.current = { processData, moduleId, dealCanonicalProcessName, dealName, dealRole, chatMessages, myDealCompany };
+
+  /* ═══════ Walkthrough — first-visit only, re-openable via rail ═══════ */
+  const GUIDE_SEEN_KEY = 'workflow-walkthrough-seen-v1';
   const [showGuide, setShowGuide] = useState(false);
-  const dismissGuide = useCallback(() => setShowGuide(false), []);
+  const dismissGuide = useCallback(() => {
+    setShowGuide(false);
+    try { window.localStorage.setItem(GUIDE_SEEN_KEY, '1'); } catch { /* ignore */ }
+  }, []);
+  // Replay handler exposed to the rail's help icon.
+  const replayGuide = useCallback(() => setShowGuide(true), []);
+  // Have they seen it before? Only auto-open on first visit.
+  const guideSeenRef = useRef(false);
+  useEffect(() => {
+    try { guideSeenRef.current = window.localStorage.getItem(GUIDE_SEEN_KEY) === '1'; } catch { /* ignore */ }
+  }, []);
+  // Convenience: only call setShowGuide(true) automatically if not yet seen.
+  const maybeAutoShowGuide = useCallback(() => {
+    if (!guideSeenRef.current) setShowGuide(true);
+  }, []);
 
   /* ═══════ Layout state (floating panels) ═══════ */
   const [floatingPanel, setFloatingPanel] = useState(null); // null | 'steps' | 'chat'
@@ -825,7 +1832,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
   useEffect(() => {
     if (hasSeededChatRef.current || editingRedesign) return;
 
-    const { processData: pd, moduleId: mid, dealCanonicalProcessName: canonical, dealName: dName, dealRole: dRole, chatMessages: ctxMsgs } = chatSeedCtxRef.current;
+    const { processData: pd, moduleId: mid, dealCanonicalProcessName: canonical, dealName: dName, dealRole: dRole, chatMessages: ctxMsgs, myDealCompany: myCo } = chatSeedCtxRef.current;
     const processName = pd?.processName?.trim() || canonical?.trim() || '';
 
     // ── Restored session or already-seeded (any existing messages means
@@ -833,24 +1840,53 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     //    user picked a pillar - don't seed another intro in either case) ──
     if (initialSteps.length > 0) return;
     if (ctxMsgs.length > 0) {
-      hasSeededChatRef.current = true;
-      if (!editingReportId) setShowGuide(true);
-      return;
+      // Heuristic: if every persisted message is from the assistant (no user
+      // turns yet), this is a stale opener leaking from localStorage. Drop
+      // it so the pillar / deal-aware intro can re-seed for the current
+      // scope. Real conversations always have at least one user turn.
+      const hasUserTurn = ctxMsgs.some((m) => m.role === 'user');
+      if (!hasUserTurn) {
+        setChatMessages([]);
+        // fall through — let the seed below run
+      } else {
+        hasSeededChatRef.current = true;
+        if (!editingReportId) maybeAutoShowGuide();
+        return;
+      }
     }
 
     hasSeededChatRef.current = true;
 
-    if (!mid && !dName) {
+    if (dealId && !mid && !processName) {
+      // Deal-scoped chat with no module / no map yet — seed a deal-aware
+      // opener with one-click action chips. Don't show pillars: the user
+      // has already chosen a scope by picking the deal.
+      addChatMessage({
+        role: 'assistant',
+        content:
+          (myCo
+            ? `I'm scoped to **${dName || 'this deal'}** — and you're mapping for **${myCo}**. Pick something to get started — or just ask me anything about the deal:`
+            : `I'm scoped to **${dName || 'this deal'}**. Pick something to get started — or just ask me anything about the deal:`),
+        chips: [
+          { name: 'Summarise the data room',     tagline: 'Top-line read of every document' },
+          { name: 'Run a diligence analysis',    tagline: 'Findings, red flags, Day-1 / TSA / Separation' },
+          { name: 'Show me the latest findings', tagline: 'Approve, reject, edit, or add notes' },
+          { name: 'List the data room',          tagline: 'See what is uploaded — open & cite docs' },
+          { name: 'Who is on this deal?',        tagline: 'Participants, roles, completion status' },
+          { name: 'What is missing?',            tagline: 'Suggest documents we should still upload' },
+        ],
+      });
+    } else if (!mid && !dName) {
       // No segment selected yet - introduce Reina and ask which situation fits
       addChatMessage({
         role: 'assistant',
         content: `Hi, I'm Reina - your process mapping assistant.\n\nTell me about any business process in plain language and I'll build the flow for you in real time - steps, handoffs, decision branches, timings, and systems. You can also drop in docs, spreadsheets, screenshots, or diagrams and I'll extract the process from them.\n\nOnce it's mapped, I'll spot bottlenecks, estimate the cost of the current flow, and generate a redesign with automation suggestions and projected savings.\n\nTo tailor the audit, which best describes your situation?`,
         chips: SEGMENT_CHIPS,
       });
-      if (!editingReportId) setShowGuide(true);
+      if (!editingReportId) maybeAutoShowGuide();
     } else {
       addChatMessage({ role: 'assistant', content: buildOpeningMessage({ mid, dName, dRole, canonical, processName }) });
-      if (!editingReportId) setShowGuide(true);
+      if (!editingReportId) maybeAutoShowGuide();
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -2636,6 +3672,16 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     chatAbortRef.current = controller;
     let streamedSoFar = '';
     let aborted = false;
+    // Accumulate per-turn deal-document chunks emitted by the search_deal_documents
+    // tool so we can attach them to the assistant message and render source cards.
+    const dealDocsForTurn = [];
+    // Accumulate structured metadata payloads (documents/findings list events)
+    // emitted by the deal-metadata tools.
+    const dealMetaForTurn = [];
+    // Accumulate staged mutation proposals (e.g. finding_review). Each is one
+    // Apply card under the bubble; the user clicks to commit via the existing
+    // mutation endpoint.
+    const dealProposalsForTurn = [];
 
     const incompleteSummary = steps
       .map((s, i) => {
@@ -2661,6 +3707,8 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       editingReportId: editingReportId || undefined,
       editingRedesign: editingRedesign || undefined,
       redesignContext: redesignContextRef.current || undefined,
+      dealId: dealId || undefined,
+      model: selectedModel || undefined,
     });
 
     const maxAttempts = 3;
@@ -2707,6 +3755,19 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                 streamedSoFar += (parsed.text || '');
                 setChatStreamedText((prev) => prev + (parsed.text || ''));
               }
+              else if (event === 'deal_documents') {
+                if (Array.isArray(parsed.chunks) && parsed.chunks.length) {
+                  dealDocsForTurn.push({ query: parsed.query || '', chunks: parsed.chunks });
+                }
+              }
+              else if (event === 'deal_metadata') {
+                if (Array.isArray(parsed.items) && parsed.items.length) {
+                  dealMetaForTurn.push({ kind: parsed.kind, items: parsed.items });
+                }
+              }
+              else if (event === 'deal_proposal') {
+                if (parsed && parsed.kind) dealProposalsForTurn.push(parsed);
+              }
               else if (event === 'done') data = parsed;
               else if (event === 'error') throw new Error(parsed.error || 'Chat failed');
             } catch (e) { if (e.message !== 'Chat failed' && !e.message.startsWith('Chat failed')) continue; throw e; }
@@ -2745,6 +3806,9 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
         content: data.reply,
         ...(costProposals.length ? { costProposals } : {}),
         ...(artefactForTurn ? { artefact: artefactForTurn } : {}),
+        ...(dealDocsForTurn.length ? { dealDocs: dealDocsForTurn } : {}),
+        ...(dealMetaForTurn.length ? { dealMeta: dealMetaForTurn } : {}),
+        ...(dealProposalsForTurn.length ? { dealProposals: dealProposalsForTurn } : {}),
       });
       if (artefactForTurn) lastArtefactAtRef.current = Date.now();
       persistMessageToCloud({ role: 'assistant', content: data.reply, actions: data.actions, snapshot: buildLiveSnapshot(), artefact: artefactForTurn });
@@ -2793,6 +3857,9 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     setChatLoading(false);
     setChatProgress('');
     setChatStreamedText('');
+    // Re-fetch the credits widget — token spend is recorded server-side
+    // by the time the stream finishes, so the count drops near-real-time.
+    setCreditsRefreshKey((k) => k + 1);
   };
 
   const stopChat = useCallback(() => {
@@ -3312,6 +4379,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
           <span>Drop files here</span>
         </div>
       )}
+      <DealContextChip />
       <div className="s7-chat-messages">
         {chatMessages.map((m, i) => {
           const isLast = i === chatMessages.length - 1;
@@ -3326,6 +4394,15 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                 <div className={`s7-msg-bubble${isAssistant ? ' s7-msg-bubble--md' : ''}`}>
                   {isAssistant ? <ChatMessageContent content={m.content} /> : m.content}
                 </div>
+                {isAssistant && Array.isArray(m.dealDocs) && m.dealDocs.length > 0 && (
+                  <DealDocsSources groups={m.dealDocs} dealId={dealId} accessToken={accessToken} />
+                )}
+                {isAssistant && Array.isArray(m.dealMeta) && m.dealMeta.length > 0 && (
+                  <DealMetaCards groups={m.dealMeta} dealId={dealId} accessToken={accessToken} />
+                )}
+                {isAssistant && Array.isArray(m.dealProposals) && m.dealProposals.length > 0 && (
+                  <DealProposalCards proposals={m.dealProposals} accessToken={accessToken} />
+                )}
                 {showActions && (
                   <div className="s7-msg-actions">
                     <CopyButton text={m.content} className="s7-msg-action-btn" label="Copy" copiedLabel="Copied" />
@@ -3392,7 +4469,13 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                     </div>
                   );
                 })()}
-                {m.generateAction && !inlineReportId && !editingReportId && (
+                {/* Inline "Generate report" button — gated to NON-deal chats.
+                    Deal-scoped chats use the chat-side propose_generate_report
+                    picker (four scopes, partial-warning, etc) instead. Without
+                    this gate, clicking here shoots the user into Screen6's
+                    participant-completion flow even when they're just in a
+                    copilot conversation. */}
+                {m.generateAction && !inlineReportId && !editingReportId && !dealId && (
                   <div className="s7-report-actions">
                     <button
                       type="button"
@@ -3541,6 +4624,14 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
             <button type="button" className="s7-chat-attach" onClick={() => chatFileRef.current?.click()} title="Attach files (images, Excel, PDF, etc.)" disabled={chatLoading}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" aria-hidden><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
             </button>
+            <ModelPicker
+              accessToken={accessToken}
+              selected={selectedModel}
+              onChange={setSelectedModel}
+              phase={computePhaseState({ steps, handoffs })?.phase || 'map'}
+              editingRedesign={!!editingRedesign}
+              hasAttachments={chatAttachments.length > 0}
+            />
             <div className="s7-chat-input-actions-end">
               <span className="s7-chat-input-hint">Enter to send · Alt+Enter new line</span>
               <button type="button" className="s7-chat-send" onClick={() => sendChat()} disabled={(!chatInput.trim() && chatAttachments.length === 0) || chatLoading}>
@@ -3553,41 +4644,193 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     </div>
   );
 
-  // Gather artefacts attached to this session's chat messages.
+  // Gather artefacts in scope: chat-message-attached + implicit (mapped
+  // processes that exist regardless of chat history). The user-facing
+  // contract is "if a process is mapped, it should appear here" — that
+  // includes deal participant reports the user has access to and the
+  // user's own live map when not in deal scope.
   const sessionArtefacts = useMemo(() => {
     const list = [];
+    const seenReportIds = new Set();
+
+    // Lookup so we can attach a "deal · process" label to each entry —
+    // see the row's secondary line in the artefacts panel below. Keys
+    // are the diagnostic_report id; values capture the process and
+    // company context.
+    const reportIdToParticipant = new Map();
+    if (Array.isArray(dealParticipantsForArtefacts)) {
+      for (const p of dealParticipantsForArtefacts) {
+        const rid = p?.reportId || p?.report_id || p?.report?.id;
+        if (rid) reportIdToParticipant.set(rid, p);
+      }
+    }
+    const dealLabel = dealId ? (dealName || 'This deal') : null;
+
+    // Each artefact carries four levels of context for the panel tree:
+    //   dealLabel    — outer group (deal name)
+    //   processLabel — second level (process name, e.g. "Customer onboarding")
+    //   variantLabel — third level ("Current" / "Redesign" / "Diligence" / …)
+    //   companyLabel — leaf row (company + role, e.g. "Acme HQ (Platform)")
+    // Levels can be null for non-deal contexts; the renderer collapses
+    // missing levels gracefully.
+    const ROLE_LABEL = {
+      platform_company: 'Platform',
+      portfolio_company: 'Portfolio',
+      target: 'Target',
+      acquirer: 'Acquirer',
+    };
+    const formatCompany = (p) => {
+      if (!p) return null;
+      const company = p.companyName || p.company_name || p.company || null;
+      const role = ROLE_LABEL[p.role] || (p.role ? p.role.replace(/_/g, ' ') : null);
+      if (company && role) return `${company} (${role})`;
+      return company || role || null;
+    };
+    // Prefer the deal-level process name (deals.process_name fetched in
+    // the participants effect) over the canonical-process-name from
+    // DiagnosticContext, which is only populated when the user enters
+    // via a deal-flow or participant-token path. Falls back to either
+    // if one is missing.
+    const resolvedProcessName = dealProcessName || dealCanonicalProcessName || null;
+
+    // 1. Chat-message-attached artefacts (existing behaviour)
     chatMessages.forEach((m, idx) => {
       if (m.artefact && m.artefact.kind) {
-        list.push({ ...m.artefact, messageIdx: idx, preview: (m.content || '').slice(0, 80) });
+        const p = m.artefact.refId ? reportIdToParticipant.get(m.artefact.refId) : null;
+        const processLabel = resolvedProcessName || (p ? (p.companyName || p.company_name || p.company) : (processData?.processName || null));
+        list.push({
+          ...m.artefact,
+          messageIdx: idx,
+          preview: (m.content || '').slice(0, 80),
+          dealLabel,
+          processLabel,
+          variantLabel: m.artefact.kind === 'report' ? 'Current'
+            : m.artefact.kind === 'flow_snapshot' ? 'Current'
+            : m.artefact.kind === 'deal_analysis' ? 'Redesign'
+            : m.artefact.kind === 'cost_analysis' ? 'Cost analysis'
+            : 'Other',
+          companyLabel: formatCompany(p),
+        });
+        if (m.artefact.kind === 'report' && m.artefact.refId) seenReportIds.add(m.artefact.refId);
       }
       if (m.reportActions && m.reportActions.id && !m.artefact) {
+        const p = reportIdToParticipant.get(m.reportActions.id);
+        const processLabel = m.reportActions.processName
+          || resolvedProcessName
+          || (p ? (p.companyName || p.company_name || p.company) : null)
+          || null;
         list.push({
           kind: 'report',
           refId: m.reportActions.id,
           label: m.reportActions.processName ? `Report: ${m.reportActions.processName}` : 'Diagnostic report',
           messageIdx: idx,
           preview: (m.content || '').slice(0, 80),
+          dealLabel,
+          processLabel,
+          variantLabel: 'Current',
+          companyLabel: formatCompany(p),
         });
+        seenReportIds.add(m.reportActions.id);
       }
     });
-    return list;
-  }, [chatMessages]);
 
-  // Show chat history panel, artefacts panel, or regular chat depending on state
+    // 2. Deal participants' mapped processes — implicit artefacts.
+    //    Each participant's report is the **current** state of the
+    //    process for their company. The panel groups these under
+    //    Customer onboarding → Current → Acme HQ (Platform).
+    if (dealId && Array.isArray(dealParticipantsForArtefacts)) {
+      dealParticipantsForArtefacts.forEach((p) => {
+        const reportId = p?.reportId || p?.report_id || p?.report?.id;
+        if (!reportId || seenReportIds.has(reportId)) return;
+        const company = p?.companyName || p?.company_name || p?.company || 'Participant';
+        list.push({
+          kind: 'report',
+          refId: reportId,
+          label: company,
+          source: 'deal_participant',
+          dealLabel,
+          processLabel: resolvedProcessName || company,
+          variantLabel: 'Current',
+          companyLabel: formatCompany(p),
+        });
+        seenReportIds.add(reportId);
+      });
+    }
+
+    // 3. Deal analyses — every completed run (redesign, diligence, etc.)
+    //    appears under its mode-named variant. The redesign result is
+    //    unified across companies, so it has no companyLabel — sits as
+    //    a single row at variant level (renderer collapses gracefully).
+    const seenAnalysisIds = new Set();
+    chatMessages.forEach((m) => {
+      if (m?.artefact?.kind === 'deal_analysis' && m.artefact.refId) seenAnalysisIds.add(m.artefact.refId);
+    });
+    if (dealId && Array.isArray(dealAnalysesForArtefacts)) {
+      const MODE_LABEL = {
+        redesign: 'Redesign',
+        diligence: 'Diligence',
+        synergy: 'Synergy',
+        comparison: 'Comparison',
+      };
+      // Index unnamed analyses per mode (chronological asc) so the
+      // default label reads "Redesign 1 / Redesign 2 / …" within the
+      // same mode. The API returns analyses in created_at desc order,
+      // so reverse before counting.
+      const ordinalByAnalysisId = {};
+      const counters = {};
+      const ascending = [...dealAnalysesForArtefacts].reverse();
+      for (const a of ascending) {
+        if (!a?.id) continue;
+        const m = a.mode || 'analysis';
+        counters[m] = (counters[m] || 0) + 1;
+        ordinalByAnalysisId[a.id] = counters[m];
+      }
+      dealAnalysesForArtefacts.forEach((a) => {
+        if (!a?.id || seenAnalysisIds.has(a.id) || a.status !== 'complete') return;
+        const modeLabel = MODE_LABEL[a.mode] || a.mode || 'Analysis';
+        const ordinal = ordinalByAnalysisId[a.id] || 1;
+        const defaultName = `${modeLabel} ${ordinal}`;
+        const displayName = (a.name && a.name.trim()) || defaultName;
+        list.push({
+          kind: 'deal_analysis',
+          refId: a.id,
+          label: displayName,
+          source: 'deal_analysis',
+          mode: a.mode,
+          dealLabel,
+          processLabel: resolvedProcessName || null,
+          variantLabel: modeLabel,
+          companyLabel: null, // analyses are unified across companies
+        });
+        seenAnalysisIds.add(a.id);
+      });
+    }
+
+    // 4. Live current map outside deal scope — for non-deal sessions, the
+    //    user's working map is the only "mapped process" and should be
+    //    visible as an artefact even before they pin or report it.
+    if (!dealId && Array.isArray(processData?.steps) && processData.steps.length > 0) {
+      list.push({
+        kind: 'flow_snapshot',
+        label: 'Current',
+        snapshot: processData,
+        dealLabel: null,
+        processLabel: processData.processName || null,
+        variantLabel: 'Current',
+        companyLabel: null,
+        source: 'live',
+      });
+    }
+
+    return list;
+  }, [chatMessages, dealId, dealName, dealCanonicalProcessName, dealProcessName, dealParticipantsForArtefacts, dealAnalysesForArtefacts, processData]);
+
+  // Show chat history panel or regular chat. Artefacts opens as a slide-in
+  // alongside the rail (see the RailSlidePanel below) so it doesn't displace
+  // the conversation surface — same UX as Reports / Deals / Docs.
   let activeChatContent;
   if (showChatHistory) {
     activeChatContent = <ChatHistoryPanel onClose={() => setShowChatHistory(false)} onLoadReport={handleLoadReport} onRedesignReport={handleRedesignInChat} />;
-  } else if (showArtefactsPanel) {
-    activeChatContent = (
-      <ArtefactsPanel
-        artefacts={sessionArtefacts}
-        onClose={() => setShowArtefactsPanel(false)}
-        onOpenReport={(rid) => { setShowArtefactsPanel(false); setInlineReportId(rid); }}
-        onOpenFlow={(snap) => { setShowArtefactsPanel(false); setArtefactPreview(snap); }}
-        onOpenCost={(rid) => { setShowArtefactsPanel(false); setInlineReportId(null); setInlineCostReportId(rid); }}
-        onPin={pinCurrentFlow}
-      />
-    );
   } else {
     activeChatContent = chatContent;
   }
@@ -3954,6 +5197,48 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
         company: contact?.company,
         contact,
       };
+      // Branch: when editing a deal_analysis (?editAnalysis=… loaded the
+      // workspace), serialise the canvas state back to the analysis row's
+      // result.redesignedProcess instead of PUTing /api/update-diagnostic
+      // (which targets diagnostic_reports). Same surface either way; only
+      // the persistence destination differs.
+      if (editingAnalysisId && editingAnalysisDealId) {
+        // Re-fetch the analysis so we can merge our updated steps into
+        // the existing result blob (preserving phasing, risks, etc.).
+        try {
+          const cur = await apiFetch(`/api/deals/${encodeURIComponent(editingAnalysisDealId)}/analyses/${encodeURIComponent(editingAnalysisId)}`, {}, accessToken);
+          const curData = cur.ok ? await cur.json() : null;
+          const baseResult = (curData?.analysis || curData)?.result || {};
+          const updatedRedesignedProcess = (freshPd.steps || []).map((s, i) => {
+            const orig = (baseResult.redesignedProcess || []).find((rp) => (rp.stepNumber ?? -1) === (s.number ?? i + 1));
+            return {
+              ...(orig || {}),
+              stepNumber: i + 1,
+              name: s.name || orig?.name || `Step ${i + 1}`,
+              department: s.department || orig?.department || '',
+              isDecision: !!s.isDecision,
+              changeType: orig?.changeType || 'kept',
+            };
+          });
+          const nextResult = { ...baseResult, redesignedProcess: updatedRedesignedProcess, processName: freshPd.processName || baseResult.processName };
+          const resp = await apiFetch(`/api/deals/${encodeURIComponent(editingAnalysisDealId)}/analyses/${encodeURIComponent(editingAnalysisId)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ result: nextResult }),
+          }, accessToken);
+          if (resp.ok) {
+            window.location.href = `/process-audit?deal=${encodeURIComponent(editingAnalysisDealId)}`;
+          } else {
+            const data = await resp.json().catch(() => ({}));
+            alert(data.error || 'Failed to save analysis edits.');
+          }
+        } catch {
+          alert('Network error. Please try again.');
+        } finally {
+          setSavingToReport(false);
+        }
+        return;
+      }
       const resp = await apiFetch('/api/update-diagnostic', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -3962,7 +5247,15 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       let data;
       try { data = await resp.json(); } catch (e) { alert('Invalid response from server. Please try again.'); return; }
       if (resp.ok && data.success) {
-        window.location.href = `/portal`;
+        // Stay in deal scope when the edit was launched from a deal
+        // (artefacts pencil → /process-audit?edit=…&editFromDeal=…).
+        // Without this the user is dumped to /portal and loses the
+        // chat thread, deal chip, and rail tools they were using.
+        if (dealId) {
+          window.location.href = `/process-audit?deal=${encodeURIComponent(dealId)}`;
+        } else {
+          window.location.href = `/portal`;
+        }
       } else {
         alert(data.error || 'Failed to save changes.');
       }
@@ -3971,7 +5264,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     } finally {
       setSavingToReport(false);
     }
-  }, [editingReportId, editingRedesign, contact, buildFreshProcessData, accessToken, buildRedesignPayload, doSaveRedesign]);
+  }, [editingReportId, editingRedesign, editingAnalysisId, editingAnalysisDealId, dealId, contact, buildFreshProcessData, accessToken, buildRedesignPayload, doSaveRedesign]);
 
   const handleSaveRedesignChoice = useCallback((mode) => {
     setSavingToReport(true);
@@ -4064,53 +5357,105 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
           </div>
         )}
 
-        {/* ── Before flowchart: full-width describe + floating chat. After: rail + chat + resize + canvas ── */}
-        {hasFlowArtifact ? (
+        {/* ── Before flowchart: full-width describe + floating chat. After: rail + chat + resize + canvas ──
+            Also use the split layout when an inline report or cost analysis
+            is open, even with no flow yet — that's how clicked artefacts
+            from the panel render their iframe (with the "Open in new tab"
+            link in the canvas topbar) instead of becoming silent no-ops. */}
+        {(hasFlowArtifact || inlineReportId || inlineCostReportId || inlineAnalysisId) ? (
         <div ref={splitAreaRef} className="s7-canvas-area s7-canvas-area--split">
           <nav className="s7-split-rail" data-theme={theme} aria-label="Mapping tools">
             <div className="s7-split-rail-body">
-            <MapRailPrimaryTools
-              editingReportId={editingReportId}
-              onViewReport={(id) => { setInlineCostReportId(null); setInlineReportId(id); }}
-              onViewCost={(id) => { setInlineReportId(null); setInlineCostReportId(id); }}
-              onHandover={editingReportId ? undefined : openHandoverModal}
-              onContinue={editingReportId ? undefined : handleContinue}
-              onSaveToReport={editingReportId ? handleSaveToReport : undefined}
-              savingToReport={savingToReport}
-              sessionUser={sessionUser}
-              hasCostAccess={hasCostAccess}
-              readyToGenerate={readyToGenerate}
-            />
-            <div className="s7-split-rail-sep" role="separator" aria-hidden />
-            <MapRailPortalNav />
-            <div className="s7-split-rail-sep" role="separator" aria-hidden />
-            <button type="button" className={`s7-split-rail-btn${showChatHistory ? ' active' : ''}`} onClick={() => { setShowChatHistory((v) => !v); setShowArtefactsPanel(false); }} title="Chat history">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="13" y2="14"/></svg>
-            </button>
-            <button type="button" className={`s7-split-rail-btn${showArtefactsPanel ? ' active' : ''}${sessionArtefacts.length > 0 ? ' has-artefacts' : ''}`} onClick={() => { setShowArtefactsPanel((v) => !v); setShowChatHistory(false); }} title={`Artefacts${sessionArtefacts.length ? ` (${sessionArtefacts.length})` : ''}`}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-              {sessionArtefacts.length > 0 && <span className="s7-split-rail-count">{sessionArtefacts.length}</span>}
-            </button>
-            <button type="button" className="s7-split-rail-btn" onClick={() => setShowFloatingFlow(true)} title="Expand flow in window">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/><path d="M10 5H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-5"/></svg>
-            </button>
-            <button type="button" className={`s7-split-rail-btn${floatingPanel === 'steps' ? ' active' : ''}`} onClick={() => setFloatingPanel((p) => (p === 'steps' ? null : 'steps'))} title="Steps list">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg>
-              {steps.length > 0 && <span className="s7-split-rail-count">{steps.length}</span>}
-            </button>
-            {snippets.length > 0 && (
-              <button type="button" className="s7-split-rail-btn" onClick={() => setShowSnippetPicker(true)} title="Snippets">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+              {/* Order: Home · Dashboard · Reports · Deals · Chat · Artefacts ·
+                  View report · Save to report · Cost analysis · Steps list ·
+                  Docs · Replay walkthrough · Activity log. Settings is in the
+                  footer below. */}
+              <HomeRailButton />
+              {sessionUser && (
+                <a
+                  href="/portal/org-admin"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="s7-split-rail-btn s7-split-rail-link"
+                  title="Admin dashboard"
+                  aria-label="Admin dashboard"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" />
+                  </svg>
+                </a>
+              )}
+              {sessionUser && <ReportsRailButton accessToken={accessToken} sessionUserEmail={sessionUser.email} />}
+              {sessionUser && <DealsRailButton accessToken={accessToken} />}
+              <button type="button" className={`s7-split-rail-btn${showChatHistory ? ' active' : ''}`} onClick={() => setShowChatHistory((v) => !v)} title="Chat history">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="13" y2="14"/></svg>
               </button>
-            )}
-            {sessionUser && typeof onAuditTrailToggle === 'function' && (
-              <button type="button" className={`s7-split-rail-btn${auditTrailOpen ? ' active' : ''}`} onClick={onAuditTrailToggle} title="Activity log">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <button ref={artefactsBtnRef} type="button" className={`s7-split-rail-btn${showArtefactsPanel ? ' active' : ''}${sessionArtefacts.length > 0 ? ' has-artefacts' : ''}`} onClick={() => setShowArtefactsPanel((v) => !v)} title={`Artefacts${sessionArtefacts.length ? ` (${sessionArtefacts.length})` : ''}`}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                {sessionArtefacts.length > 0 && <span className="s7-split-rail-count">{sessionArtefacts.length}</span>}
               </button>
-            )}
+              {editingReportId && (
+                <button type="button" className="s7-split-rail-btn" onClick={() => { setInlineCostReportId(null); setInlineReportId(editingReportId); }} title="View report">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                    <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
+                  </svg>
+                </button>
+              )}
+              {editingReportId && (
+                <button type="button" className="s7-split-rail-btn" onClick={handleSaveToReport} disabled={savingToReport} title={savingToReport ? 'Saving…' : 'Save to report'}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                    <path d="M20 14v6a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h6"/><polyline points="14 2 20 2 20 8"/><line x1="12" y1="12" x2="20" y2="2"/>
+                  </svg>
+                </button>
+              )}
+              {hasCostAccess && editingReportId && (
+                <button type="button" className="s7-split-rail-btn" onClick={() => { setInlineReportId(null); setInlineCostReportId(editingReportId); }} title="Cost analysis">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <line x1="12" y1="1" x2="12" y2="23" />
+                    <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+                  </svg>
+                </button>
+              )}
+              <button ref={stepsBtnRef} type="button" className={`s7-split-rail-btn${floatingPanel === 'steps' ? ' active' : ''}`} onClick={() => setFloatingPanel((p) => (p === 'steps' ? null : 'steps'))} title="Steps list">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg>
+                {steps.length > 0 && <span className="s7-split-rail-count">{steps.length}</span>}
+              </button>
+              {sessionUser && <AnalyticsRailButton accessToken={accessToken} sessionUserEmail={sessionUser.email} />}
+              {/* Bottom group — Docs · Replay walkthrough · Activity log.
+                  margin-top: auto pushes them to the end of the rail body
+                  so they sit just above the footer (Settings). */}
+              <div className="s7-split-rail-bottom-group" style={{ marginTop: 'auto' }}>
+                <DocsRailButton />
+                <button
+                  type="button"
+                  className="s7-split-rail-btn"
+                  onClick={replayGuide}
+                  title="Replay walkthrough"
+                  aria-label="Replay walkthrough"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                </button>
+                {sessionUser && typeof onAuditTrailToggle === 'function' && (
+                  <button ref={activityBtnRef} type="button" className={`s7-split-rail-btn${auditTrailOpen ? ' active' : ''}`} onClick={onAuditTrailToggle} title="Activity log">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  </button>
+                )}
+              </div>
             </div>
             <div className="s7-split-rail-footer">
-              <MapRailPortalFooter sessionUser={sessionUser} onSignOut={signOut} />
+              {sessionUser ? (
+                <SettingsRailButton accessToken={accessToken} sessionUser={sessionUser} onSignOut={signOut} />
+              ) : (
+                <MapRailPortalFooter sessionUser={sessionUser} onSignOut={signOut} />
+              )}
             </div>
           </nav>
           <div
@@ -4120,7 +5465,12 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
           >
             <div className="s7-inline-chat-header">
               <div className="sharp-avatar sharp-avatar-sm" title="Reina">R</div>
-              <span className="s7-inline-chat-title">{showChatHistory ? 'History' : showArtefactsPanel ? 'Artefacts' : 'AI Assistant'}</span>
+              <span className="s7-inline-chat-title">{showChatHistory ? 'History' : 'AI Assistant'}</span>
+              {/* Credits widget pinned to the top-right of the chat panel.
+                  Re-fetches after each chat turn so the count drops live. */}
+              <span style={{ marginLeft: 'auto' }}>
+                <CreditsWidget accessToken={accessToken} refreshKey={creditsRefreshKey} />
+              </span>
             </div>
             {activeChatContent}
           </div>
@@ -4132,7 +5482,38 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
             onPointerDown={handleSplitResizeStart}
           />
           <div className="s7-canvas-column">
-          {inlineCostReportId ? (
+          {inlineAnalysisId ? (
+            <>
+              <div className="s7-canvas-topbar s7-canvas-topbar--report">
+                <button type="button" className="s7-report-back-btn" onClick={() => setInlineAnalysisId(null)}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                  </svg>
+                  Back
+                </button>
+                <a
+                  href={`/deal-analysis/${encodeURIComponent(dealId || '')}/${encodeURIComponent(inlineAnalysisId)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="s7-report-newtab-link"
+                >
+                  Open in new tab
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+                    <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                  </svg>
+                </a>
+              </div>
+              <div className="s7-canvas s7-canvas--report">
+                <DealAnalysisInline
+                  dealId={dealId}
+                  analysisId={inlineAnalysisId}
+                  accessToken={accessToken}
+                  darkTheme={theme === 'dark'}
+                />
+              </div>
+            </>
+          ) : inlineCostReportId ? (
             <>
               <div className="s7-canvas-topbar s7-canvas-topbar--report">
                 <button type="button" className="s7-report-back-btn" onClick={() => setInlineCostReportId(null)}>
@@ -4174,7 +5555,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                   Flow
                 </button>
                 <a
-                  href={`/report?id=${inlineReportId}&portal=1`}
+                  href={`/report?id=${inlineReportId}&portal=1${dealId ? `&dealId=${encodeURIComponent(dealId)}` : ''}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="s7-report-newtab-link"
@@ -4188,7 +5569,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
               </div>
               <div className="s7-canvas s7-canvas--report">
                 <iframe
-                  src={`/report?id=${encodeURIComponent(inlineReportId)}&embed=1`}
+                  src={`/report?id=${encodeURIComponent(inlineReportId)}&embed=1${dealId ? `&dealId=${encodeURIComponent(dealId)}` : ''}`}
                   title="Report"
                   className="s7-report-iframe"
                   sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
@@ -4207,6 +5588,16 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                 </div>
               </div>
               <div ref={previewCanvasRef} className="s7-canvas">
+                <CanvasActionOverlay inline />
+                {/* Guard the React Flow mount on namedSteps having content.
+                    The split-view layout can now activate without a flow
+                    (when an inline report/cost iframe is open from the
+                    artefacts panel). During state transitions React can
+                    briefly land in this else-branch with empty steps,
+                    which made react-flow log "parent container needs a
+                    width and a height" warnings even though the warning
+                    was transient. Match the guard pattern at L4802. */}
+                {namedSteps.length > 0 && (
                 <InteractiveFlowCanvas
                   process={{ ...processData, steps, handoffs: ensureHandoffs(steps, handoffs) }}
                   layout={previewViewMode}
@@ -4252,6 +5643,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                     queueMicrotask(() => updateProcessData({ flowCustomEdges: remappedCustom, flowDeletedEdges: newDeleted }));
                   }}
                 />
+                )}
               </div>
             </>
           )}
@@ -4261,50 +5653,100 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
         <div className="s7-canvas-area s7-canvas-area--with-rail">
           <nav className="s7-split-rail" data-theme={theme} aria-label="Mapping tools">
             <div className="s7-split-rail-body">
-              <MapRailPrimaryTools
-                editingReportId={editingReportId}
-                onViewReport={(id) => { setInlineCostReportId(null); setInlineReportId(id); }}
-                onViewCost={(id) => { setInlineReportId(null); setInlineCostReportId(id); }}
-                onHandover={editingReportId ? undefined : openHandoverModal}
-                onContinue={editingReportId ? undefined : handleContinue}
-                onSaveToReport={editingReportId ? handleSaveToReport : undefined}
-                savingToReport={savingToReport}
-                sessionUser={sessionUser}
-                hasCostAccess={hasCostAccess}
-                readyToGenerate={readyToGenerate}
-              />
-              <div className="s7-split-rail-sep" role="separator" aria-hidden />
-              <MapRailPortalNav />
-              <div className="s7-split-rail-sep" role="separator" aria-hidden />
-              <button type="button" className={`s7-split-rail-btn${showChatHistory ? ' active' : ''}`} onClick={() => { setShowChatHistory((v) => !v); setShowArtefactsPanel(false); }} title="Chat history">
+              {/* Same canonical order as the with-flow rail above. */}
+              <HomeRailButton />
+              {sessionUser && (
+                <a
+                  href="/portal/org-admin"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="s7-split-rail-btn s7-split-rail-link"
+                  title="Admin dashboard"
+                  aria-label="Admin dashboard"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" />
+                  </svg>
+                </a>
+              )}
+              {sessionUser && <ReportsRailButton accessToken={accessToken} sessionUserEmail={sessionUser.email} />}
+              {sessionUser && <DealsRailButton accessToken={accessToken} />}
+              <button type="button" className={`s7-split-rail-btn${showChatHistory ? ' active' : ''}`} onClick={() => setShowChatHistory((v) => !v)} title="Chat history">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="13" y2="14"/></svg>
               </button>
-              <button type="button" className={`s7-split-rail-btn${showArtefactsPanel ? ' active' : ''}${sessionArtefacts.length > 0 ? ' has-artefacts' : ''}`} onClick={() => { setShowArtefactsPanel((v) => !v); setShowChatHistory(false); }} title={`Artefacts${sessionArtefacts.length ? ` (${sessionArtefacts.length})` : ''}`}>
+              <button ref={artefactsBtnRef} type="button" className={`s7-split-rail-btn${showArtefactsPanel ? ' active' : ''}${sessionArtefacts.length > 0 ? ' has-artefacts' : ''}`} onClick={() => setShowArtefactsPanel((v) => !v)} title={`Artefacts${sessionArtefacts.length ? ` (${sessionArtefacts.length})` : ''}`}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
                 {sessionArtefacts.length > 0 && <span className="s7-split-rail-count">{sessionArtefacts.length}</span>}
               </button>
-              <button type="button" className="s7-split-rail-btn" onClick={() => setShowFloatingFlow(true)} title="Expand flow in window">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/><path d="M10 5H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-5"/></svg>
-              </button>
-              <button type="button" className={`s7-split-rail-btn${floatingPanel === 'steps' ? ' active' : ''}`} onClick={() => setFloatingPanel((p) => (p === 'steps' ? null : 'steps'))} title="Add steps manually">
+              {editingReportId && (
+                <button type="button" className="s7-split-rail-btn" onClick={() => { setInlineCostReportId(null); setInlineReportId(editingReportId); }} title="View report">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                    <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
+                  </svg>
+                </button>
+              )}
+              {editingReportId && (
+                <button type="button" className="s7-split-rail-btn" onClick={handleSaveToReport} disabled={savingToReport} title={savingToReport ? 'Saving…' : 'Save to report'}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                    <path d="M20 14v6a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h6"/><polyline points="14 2 20 2 20 8"/><line x1="12" y1="12" x2="20" y2="2"/>
+                  </svg>
+                </button>
+              )}
+              {hasCostAccess && editingReportId && (
+                <button type="button" className="s7-split-rail-btn" onClick={() => { setInlineReportId(null); setInlineCostReportId(editingReportId); }} title="Cost analysis">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <line x1="12" y1="1" x2="12" y2="23" />
+                    <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+                  </svg>
+                </button>
+              )}
+              <button ref={stepsBtnRef} type="button" className={`s7-split-rail-btn${floatingPanel === 'steps' ? ' active' : ''}`} onClick={() => setFloatingPanel((p) => (p === 'steps' ? null : 'steps'))} title="Steps list">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg>
               </button>
-              {snippets.length > 0 && (
-                <button type="button" className="s7-split-rail-btn" onClick={() => setShowSnippetPicker(true)} title="Snippets">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+              {sessionUser && <AnalyticsRailButton accessToken={accessToken} sessionUserEmail={sessionUser.email} />}
+              <div className="s7-split-rail-bottom-group" style={{ marginTop: 'auto' }}>
+                <DocsRailButton />
+                <button
+                  type="button"
+                  className="s7-split-rail-btn"
+                  onClick={replayGuide}
+                  title="Replay walkthrough"
+                  aria-label="Replay walkthrough"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
                 </button>
-              )}
-              {typeof onAuditTrailToggle === 'function' && (
-                <button type="button" className={`s7-split-rail-btn${auditTrailOpen ? ' active' : ''}`} onClick={onAuditTrailToggle} title="Activity log">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                </button>
-              )}
+                {typeof onAuditTrailToggle === 'function' && (
+                  <button ref={activityBtnRef} type="button" className={`s7-split-rail-btn${auditTrailOpen ? ' active' : ''}`} onClick={onAuditTrailToggle} title="Activity log">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  </button>
+                )}
+              </div>
             </div>
             <div className="s7-split-rail-footer">
-              <MapRailPortalFooter sessionUser={sessionUser} onSignOut={signOut} />
+              {sessionUser ? (
+                <SettingsRailButton accessToken={accessToken} sessionUser={sessionUser} onSignOut={signOut} />
+              ) : (
+                <MapRailPortalFooter sessionUser={sessionUser} onSignOut={signOut} />
+              )}
             </div>
           </nav>
-          <div className="s7-map-landing" data-theme={theme}>
+          <div className="s7-map-landing" data-theme={theme} style={{ position: 'relative' }}>
+            {/* Credits pill — also mounted here (no-flow chat surface) so the
+                user sees their trial balance before any steps are mapped.
+                The split-view branch above mounts its own copy in the chat
+                header. */}
+            <span className="chat-main-panel-topright">
+              <CreditsWidget accessToken={accessToken} refreshKey={creditsRefreshKey} />
+            </span>
+            <CanvasActionOverlay />
             {activeChatContent}
           </div>
         </div>
@@ -4320,21 +5762,215 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
         </div>{/* /s7-workspace-main */}
       </div>
 
-      {/* Floating panels (Steps list only - chat is always inline) */}
+      {/* Rail slide-in panels — Steps · Artefacts · Activity log all open
+          as slide-ins anchored to the rail's right edge so every rail icon
+          opens with the same UX as Reports / Deals / Docs. */}
 
-      {floatingPanel === 'steps' && createPortal(
-        <div className="s7-floating-panel" data-theme={theme}>
-          <div className="s7-floating-panel-header">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg>
-            <span>Steps {steps.length > 0 ? `(${steps.length})` : ''}</span>
-            <button type="button" className="s7-floating-panel-close" onClick={() => setFloatingPanel(null)} title="Close">&times;</button>
-          </div>
-          <div className="s7-floating-panel-body">
-            {stepListContent}
-          </div>
-        </div>,
-        document.body
-      )}
+      <RailSlidePanel
+        open={floatingPanel === 'steps'}
+        onClose={() => setFloatingPanel(null)}
+        triggerRef={stepsBtnRef}
+        title={`Steps${steps.length > 0 ? ` (${steps.length})` : ''}`}
+      >
+        <div className="s7-rail-pane-body s7-rail-pane-body--padded">
+          {stepListContent}
+        </div>
+      </RailSlidePanel>
+
+      <RailSlidePanel
+        open={showArtefactsPanel}
+        onClose={() => setShowArtefactsPanel(false)}
+        triggerRef={artefactsBtnRef}
+        title={`Artefacts${sessionArtefacts.length > 0 ? ` (${sessionArtefacts.length})` : ''}`}
+        headerRight={(
+          <button
+            type="button"
+            className="s7-rail-pane-clear"
+            onClick={pinCurrentFlow}
+            title="Snapshot the current flow"
+          >Pin current</button>
+        )}
+      >
+        <div className="s7-rail-pane-body">
+          {sessionArtefacts.length === 0 ? (
+            <div className="s7-rail-pane-empty">
+              No artefacts in this chat yet. Redesigns, generated reports, and upload reshapes will appear here.
+            </div>
+          ) : (() => {
+            // Build a 4-level tree from sessionArtefacts:
+            //   Deal → Process → Variant (Current/Redesign/...) → leaves
+            // Map preserves insertion order so the panel reads in the
+            // same order the build pass produced (participants first,
+            // then analyses, then live).
+            const labelFor = (kind) => (
+              kind === 'flow_snapshot' ? 'Flow snapshot'
+                : kind === 'report' ? 'Report'
+                  : kind === 'cost_analysis' ? 'Cost analysis'
+                    : kind === 'deal_analysis' ? 'Deal analysis'
+                      : 'Artefact'
+            );
+            const handle = (a) => () => {
+              setShowArtefactsPanel(false);
+              if (a.kind === 'report' && a.refId) {
+                setInlineCostReportId(null);
+                setInlineReportId(a.refId);
+              } else if (a.kind === 'cost_analysis' && a.refId) {
+                setInlineReportId(null);
+                setInlineCostReportId(a.refId);
+              } else if (a.kind === 'flow_snapshot') {
+                setArtefactPreview(a.snapshot);
+              } else if (a.kind === 'deal_analysis' && a.refId) {
+                setInlineReportId(null);
+                setInlineCostReportId(null);
+                setInlineAnalysisId(a.refId);
+              }
+            };
+            const FALLBACK_DEAL = 'Not in a deal';
+            const FALLBACK_PROCESS = 'Other process';
+            const FALLBACK_VARIANT = 'Other';
+            const tree = new Map(); // dealKey → Map<processKey, Map<variantKey, [artefact]>>
+            for (const a of sessionArtefacts) {
+              const dKey = a.dealLabel || FALLBACK_DEAL;
+              const pKey = a.processLabel || FALLBACK_PROCESS;
+              const vKey = a.variantLabel || FALLBACK_VARIANT;
+              if (!tree.has(dKey)) tree.set(dKey, new Map());
+              const procs = tree.get(dKey);
+              if (!procs.has(pKey)) procs.set(pKey, new Map());
+              const variants = procs.get(pKey);
+              if (!variants.has(vKey)) variants.set(vKey, []);
+              variants.get(vKey).push(a);
+            }
+            const renderLeaf = (a, key) => {
+              // Pencil routes to the canonical canvas edit mode:
+              //   - report (current participant maps) → ?edit=<reportId>
+              //   - deal_analysis (redesign output)   → ?editAnalysis=<id>&deal=<dealId>
+              // Both URLs land in the existing /process-audit edit
+              // surface where the user gets the full canvas editor
+              // (drag reorder, add/delete steps, step-detail panel).
+              // Body click still uses the inline viewer so the user can
+              // browse without leaving the deal chat.
+              let editHref = null;
+              if (a.kind === 'report' && a.refId) {
+                editHref = `/process-audit?edit=${encodeURIComponent(a.refId)}${dealId ? `&editFromDeal=${encodeURIComponent(dealId)}` : ''}`;
+              } else if (a.kind === 'deal_analysis' && a.refId && dealId) {
+                editHref = `/process-audit?editAnalysis=${encodeURIComponent(a.refId)}&deal=${encodeURIComponent(dealId)}`;
+              }
+              return (
+                <li key={key}>
+                  <div className="s7-rail-pane-item s7-rail-pane-item--row" style={{ display: 'flex', alignItems: 'stretch', gap: 4 }}>
+                    <button type="button" className="s7-rail-pane-item-body" onClick={handle(a)} style={{ flex: '1 1 auto', minWidth: 0 }}>
+                      <span className="s7-rail-pane-item-name">
+                        {a.companyLabel || a.label || labelFor(a.kind)}
+                      </span>
+                      {!a.companyLabel && a.label && a.label !== a.variantLabel && (
+                        <span className="s7-rail-pane-item-meta">{a.label}</span>
+                      )}
+                    </button>
+                    {editHref && (
+                      <a
+                        href={editHref}
+                        title="Open in edit mode"
+                        aria-label="Edit"
+                        style={{ flex: '0 0 auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: 'var(--text-mid, #64748b)', padding: '0 8px', fontSize: 13 }}
+                      >✎</a>
+                    )}
+                  </div>
+                </li>
+              );
+            };
+            const isCollapsed = (k) => collapsedArtefactKeys.has(k);
+            const ToggleHeader = ({ title, level, onClick, collapsed }) => {
+              // Three depth presets so the visual hierarchy reads at a
+              // glance: deal (level 0) is bold + uppercase eyebrow,
+              // process (level 1) is bold primary text, variant (level
+              // 2) is small mid-tone uppercase.
+              const levelStyles = [
+                { fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.04, color: 'var(--text-mid, #64748b)' },
+                { fontSize: 13, fontWeight: 700, color: 'var(--text, #1e293b)' },
+                { fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.04, color: 'var(--text-mid, #64748b)' },
+              ];
+              return (
+                <button
+                  type="button"
+                  className="s7-rail-pane-group-title"
+                  onClick={onClick}
+                  aria-expanded={!collapsed}
+                  style={{ ...levelStyles[level], cursor: 'pointer' }}
+                >
+                  {/* Subtle chevron instead of the bordered +/- box. The
+                      global .s7-rail-pane-group-toggle class adds a
+                      border + sized square; override inline so the
+                      indicator inherits the header's text colour and
+                      reads as a quiet glyph rather than a button. */}
+                  <span
+                    aria-hidden
+                    style={{
+                      display: 'inline-block',
+                      width: 10,
+                      fontSize: 9,
+                      lineHeight: 1,
+                      color: 'inherit',
+                      opacity: 0.55,
+                      transform: collapsed ? 'rotate(-90deg)' : 'none',
+                      transition: 'transform 120ms ease',
+                    }}
+                  >▾</span>
+                  <span>{title}</span>
+                </button>
+              );
+            };
+            return (
+              <div className="s7-rail-pane-groups">
+                {[...tree.entries()].map(([dealKey, processes]) => {
+                  const dealKeyId = `deal:${dealKey}`;
+                  const dealCollapsed = isCollapsed(dealKeyId);
+                  return (
+                    <div className={`s7-rail-pane-group${dealCollapsed ? ' is-collapsed' : ''}`} key={dealKey}>
+                      <ToggleHeader title={dealKey} level={0} onClick={() => toggleArtefactKey(dealKeyId)} collapsed={dealCollapsed} />
+                      {!dealCollapsed && [...processes.entries()].map(([processKey, variants]) => {
+                        const processKeyId = `process:${dealKey}/${processKey}`;
+                        const processCollapsed = isCollapsed(processKeyId);
+                        return (
+                          <div key={processKey} style={{ marginLeft: 6 }} className={processCollapsed ? 'is-collapsed' : ''}>
+                            <ToggleHeader title={processKey} level={1} onClick={() => toggleArtefactKey(processKeyId)} collapsed={processCollapsed} />
+                            {!processCollapsed && [...variants.entries()].map(([variantKey, leaves]) => {
+                              const variantKeyId = `variant:${dealKey}/${processKey}/${variantKey}`;
+                              const variantCollapsed = isCollapsed(variantKeyId);
+                              return (
+                                <div key={variantKey} style={{ marginLeft: 10, marginTop: 2 }} className={variantCollapsed ? 'is-collapsed' : ''}>
+                                  <ToggleHeader title={variantKey} level={2} onClick={() => toggleArtefactKey(variantKeyId)} collapsed={variantCollapsed} />
+                                  {!variantCollapsed && (
+                                    <ul className="s7-rail-pane-list">
+                                      {leaves.map((a, i) => renderLeaf(a, `${dealKey}/${processKey}/${variantKey}/${i}`))}
+                                    </ul>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+      </RailSlidePanel>
+
+      <RailSlidePanel
+        open={!!auditTrailOpen}
+        onClose={() => { if (typeof onAuditTrailToggle === 'function') onAuditTrailToggle(); }}
+        triggerRef={activityBtnRef}
+        title={`Activity log${auditTrail?.length ? ` (${auditTrail.length})` : ''}`}
+      >
+        <AuditTrailPanel
+          auditTrail={auditTrail || []}
+          onClose={() => { if (typeof onAuditTrailToggle === 'function') onAuditTrailToggle(); }}
+          embedded
+        />
+      </RailSlidePanel>
 
       {/* Floating flow viewer */}
       {showFloatingFlow && (
@@ -4463,6 +6099,10 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
 
       {/* First-visit guide tour */}
       {showGuide && <MapGuide onDismiss={dismissGuide} />}
+      {/* CanvasActionOverlay is now rendered inline inside the canvas areas
+          (see InteractiveFlowCanvas wrapper + s7-map-landing below) so the
+          loading state visibly anchors to the right canvas / landing area
+          rather than floating in the bottom-right corner of the screen. */}
 
       {/* Handover modal */}
       {handoverModalOpen && (

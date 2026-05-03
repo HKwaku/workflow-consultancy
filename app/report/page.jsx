@@ -209,6 +209,85 @@ const EXIT_READINESS_META = {
   'blocker':         { label: 'Exit Blocker',     color: '#dc2626', bg: '#dc262618' },
 };
 
+const DEAL_STAGE_META = {
+  day1:        { label: 'Day 1',        color: '#dc2626', bg: '#dc262618' },
+  tsa:         { label: 'TSA',          color: '#7c3aed', bg: '#7c3aed18' },
+  separation:  { label: 'Separation',   color: '#0891b2', bg: '#0891b218' },
+  'post-close':{ label: 'Post-close',   color: '#16a34a', bg: '#16a34a18' },
+};
+
+/**
+ * Renders dealStage pill, source citation pills, and (when canReview) approve/reject buttons.
+ * Optimistically updates local recommendation state via setRec on success.
+ */
+function RecCardExtras({ rec, reportId, accessToken, canReview }) {
+  const [status, setStatus] = useState(rec.reviewStatus || 'pending');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+
+  const submit = useCallback(async (next) => {
+    if (!reportId || !rec.id) return;
+    setBusy(true); setErr(null);
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+      const resp = await fetch(`/api/diagnostic-recommendations/${encodeURIComponent(reportId)}`, {
+        method: 'PATCH', headers,
+        body: JSON.stringify({ recommendationId: rec.id, reviewStatus: next }),
+      });
+      if (!resp.ok) {
+        const j = await resp.json().catch(() => ({}));
+        throw new Error(j.error || `Update failed (${resp.status})`);
+      }
+      setStatus(next);
+    } catch (e) {
+      setErr(e.message || 'Update failed.');
+    } finally {
+      setBusy(false);
+    }
+  }, [reportId, rec.id, accessToken]);
+
+  const stage = rec.dealStage && DEAL_STAGE_META[rec.dealStage];
+  const sources = Array.isArray(rec.sources) ? rec.sources.filter(Boolean) : [];
+  const showStage = !!stage;
+  const showSources = sources.length > 0;
+  const showStatus = status && status !== 'pending';
+
+  if (!showStage && !showSources && !showStatus && !canReview) return null;
+
+  return (
+    <div className="report-rec-extras">
+      {showStage && (
+        <span className="report-rec-stage-pill" style={{ color: stage.color, background: stage.bg, borderColor: stage.color }}>{stage.label}</span>
+      )}
+      {showStatus && (
+        <span className={`report-rec-review-badge report-rec-review-badge--${status}`}>
+          {status === 'approved' ? '✓ Approved' : status === 'rejected' ? '✗ Rejected' : 'Pending review'}
+        </span>
+      )}
+      {showSources && (
+        <div className="report-rec-sources">
+          {sources.slice(0, 5).map((s, i) => {
+            const label = [s.docName, s.locator].filter(Boolean).join(' · ') || 'Source';
+            const title = s.quote ? `“${s.quote}”` : (s.docName || '');
+            return <span key={i} className="report-rec-source-pill" title={title}>📎 {label}</span>;
+          })}
+        </div>
+      )}
+      {canReview && (
+        <div className="report-rec-review-actions">
+          <button type="button" disabled={busy || status === 'approved'} className="report-rec-review-btn report-rec-review-btn--approve" onClick={() => submit('approved')}>Approve</button>
+          <button type="button" disabled={busy || status === 'rejected'} className="report-rec-review-btn report-rec-review-btn--reject" onClick={() => submit('rejected')}>Reject</button>
+          {status !== 'pending' && (
+            <button type="button" disabled={busy} className="report-rec-review-btn report-rec-review-btn--reset" onClick={() => submit('pending')}>Undo</button>
+          )}
+          {err && <span className="report-rec-review-err">{err}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ObservationsContent({ recs, isMapOnly, rawProcesses, segment }) {
   const items = isMapOnly && rawProcesses?.length
     ? buildMapObservations(rawProcesses)
@@ -2022,9 +2101,15 @@ function ReportContent() {
                 </summary>
                 <div className="report-rec-list">
                   {recsByEffort[effortKey].map((r, ri) => (
-                    <div key={ri} className="report-rec-card">
+                    <div key={r.id || ri} className="report-rec-card">
                       {r.severity && <span className={`report-severity-pill sev-${r.severity}`}>{r.severity}</span>}
                       <span className="report-rec-text">{r.action || r.text}</span>
+                      <RecCardExtras
+                        rec={r}
+                        reportId={id}
+                        accessToken={accessToken}
+                        canReview={!!sessionUser?.email && contactEmail && sessionUser.email.toLowerCase() === contactEmail.toLowerCase() && !isClientView}
+                      />
                     </div>
                   ))}
                 </div>
@@ -2415,6 +2500,7 @@ function ReportContent() {
             </div>
             <div className="top-bar-nav">
               <ThemeToggle className="top-bar-theme-btn" />
+              {id && <a href={`/api/export-pptx?id=${encodeURIComponent(id)}`} className="top-bar-link" download title="Download presentation-ready PowerPoint">.pptx</a>}
               {!isClientView && id && <Link href={processAuditOpenInChatHref} className="top-bar-link" target="_blank" rel="noopener noreferrer">Edit</Link>}
               {!isClientView && (sessionUser?.email ? (
                 <>

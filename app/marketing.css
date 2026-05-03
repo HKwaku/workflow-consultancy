@@ -1417,7 +1417,7 @@
    .hero-stat-bar-inner {
      padding-left: 0;
      display: grid;
-     grid-template-columns: repeat(4, 1fr);
+     grid-template-columns: repeat(3, 1fr);
      align-items: stretch;
    }
    
@@ -1426,6 +1426,7 @@
      display: flex; flex-direction: column; gap: 0.3rem;
      border-right: 1px solid var(--border-subtle);
    }
+   .hero-stat-bar-inner > .hero-stat-item:last-child { border-right: none; }
    
    .hero-stat-item .hero-stat-num {
      font-family: var(--font-display);

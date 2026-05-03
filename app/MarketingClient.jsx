@@ -329,7 +329,6 @@ export default function MarketingClient() {
           <ul className={menuOpen ? 'open' : ''}>
             <li><a href="#services" onClick={scrollTo('services')}>Our Value Add</a></li>
             <li><a href="#approach" onClick={scrollTo('approach')}>Approach</a></li>
-            <li><Link href="/portal" onClick={closeMenu}>Client Login</Link></li>
             <li><a href="#diagnostic" className="cta-nav" onClick={scrollTo('diagnostic')}>Get Started</a></li>
             {sessionUser?.email && (
               <li><button type="button" className="nav-signout-btn" onClick={() => { closeMenu(); sessionSignOut(); }}>Sign Out</button></li>
@@ -355,7 +354,7 @@ export default function MarketingClient() {
               </p>
               <div className="hero-cta-row">
                 <Link href="/process-audit" className="btn-primary" target="_blank" rel="noopener noreferrer">
-                  Start Free Process Audit <ArrowIcon />
+                  Start Free Process Discovery <ArrowIcon />
                 </Link>
                 <a href="#comparison" className="btn-secondary" onClick={scrollTo('comparison')}>
                   See how we&apos;re different
@@ -381,11 +380,6 @@ export default function MarketingClient() {
             <div className="hero-stat-item">
               <span className="hero-stat-num">Continuous visibility</span>
               <span className="hero-stat-label">Monitor processes over time, and see when reality diverges from the map</span>
-            </div>
-            <div className="hero-stat-divider" />
-            <div className="hero-stat-item">
-              <span className="hero-stat-num">Free audit</span>
-              <span className="hero-stat-label">Start with a full process audit at no cost</span>
             </div>
           </div>
         </div>

@@ -8,6 +8,16 @@ import { DiagnosticNavProvider } from './DiagnosticNavContext';
 import { useAuth } from '@/lib/useAuth';
 import { apiFetch } from '@/lib/api-fetch';
 import { DEPT_INTERNAL, DEPT_EXTERNAL } from '@/lib/diagnostic/stepConstants';
+import DealsRailButton from './chat/DealsRailButton';
+import HomeRailButton from './chat/HomeRailButton';
+import ReportsRailButton from './chat/ReportsRailButton';
+import SettingsRailButton from './chat/SettingsRailButton';
+import DocsRailButton from './chat/DocsRailButton';
+import AnalyticsRailButton from './chat/AnalyticsRailButton';
+import DealContextChip from './chat/DealContextChip';
+import CreditsWidget from './chat/CreditsWidget';
+import SignInRequired from './chat/SignInRequired';
+import { CanvasActionProvider } from './chat/CanvasActionContext';
 
 const STANDARD_DEPTS = new Set([...DEPT_INTERNAL, ...DEPT_EXTERNAL]);
 
@@ -343,26 +353,67 @@ function AuditGate({ onComplete, dealContext, onDealCodeResolved, sessionUser })
 
 /** Shared workspace shell for all pre-map-steps chat screens.
  *  Matches Screen2's s7-workspace / s7-workspace-main / s7-split-rail structure exactly. */
-function ChatWorkspaceShell({ children, sessionUser }) {
+function ChatWorkspaceShell({ children, sessionUser, accessToken, onSignOut }) {
   return (
     <div className="s7-workspace chat-workspace">
       <div className="s7-workspace-main">
         <nav className="s7-split-rail" aria-label="Chat tools">
-          <div className="s7-split-rail-body" />
+          <div className="s7-split-rail-body">
+            {/* Pre-map shell — narrower set (no map-tools yet). Order matches
+                the canonical rail: Home · Dashboard · Reports · Deals · Docs.
+                Settings sits in the footer below. */}
+            <HomeRailButton />
+            {sessionUser && (
+              <a
+                href="/portal/org-admin"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="s7-split-rail-btn s7-split-rail-link"
+                title="Admin dashboard"
+                aria-label="Admin dashboard"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <rect x="3" y="3" width="7" height="7" rx="1" />
+                  <rect x="14" y="3" width="7" height="7" rx="1" />
+                  <rect x="3" y="14" width="7" height="7" rx="1" />
+                  <rect x="14" y="14" width="7" height="7" rx="1" />
+                </svg>
+              </a>
+            )}
+            {sessionUser && <ReportsRailButton accessToken={accessToken} sessionUserEmail={sessionUser.email} />}
+            {sessionUser && <DealsRailButton accessToken={accessToken} />}
+            {sessionUser && <AnalyticsRailButton accessToken={accessToken} sessionUserEmail={sessionUser.email} />}
+            {/* Bottom group — Docs sits just above the Settings footer to
+                match the canonical rail order in DiagnosticWorkspace. */}
+            <div className="s7-split-rail-bottom-group" style={{ marginTop: 'auto' }}>
+              <DocsRailButton />
+            </div>
+          </div>
           <div className="s7-split-rail-footer">
-            <a
-              href="/portal"
-              className="s7-split-rail-btn s7-split-rail-link"
-              title={sessionUser ? 'Dashboard' : 'Sign in'}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-            </a>
+            {sessionUser ? (
+              <SettingsRailButton accessToken={accessToken} sessionUser={sessionUser} onSignOut={onSignOut} />
+            ) : (
+              <a
+                href="/portal"
+                className="s7-split-rail-btn s7-split-rail-link"
+                title="Sign in"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </a>
+            )}
           </div>
         </nav>
         <div className="chat-main-panel">
+          {/* Credits widget pinned to the top-right corner of the chat
+              surface. The actual badge is positioned via .credits-widget
+              CSS (position: absolute; right; top). */}
+          <div className="chat-main-panel-topright">
+            <CreditsWidget accessToken={accessToken} />
+          </div>
+          <DealContextChip />
           {children}
         </div>
       </div>
@@ -370,15 +421,16 @@ function ChatWorkspaceShell({ children, sessionUser }) {
   );
 }
 
+
 function DiagnosticContent() {
   const searchParams = useSearchParams();
   const {
     currentScreen, loadProgress, restoreProgress, goToScreen,
     setAuthUser, authUser,
     updateProcessData, setModuleId, moduleId,
-    setEditingReportId, editingReportId, setEditingRedesign, setDiagnosticMode,
+    setEditingReportId, editingReportId, setEditingRedesign, setEditingAnalysis, setDiagnosticMode,
     setChatMessages, addAuditEvent, auditTrail,
-    dealId, setDeal,
+    dealId, setDeal, resetProcess, setCompletedProcesses,
   } = useDiagnostic();
   const [showResume, setShowResume] = useState(false);
   const [savedData, setSavedData] = useState(null);
@@ -594,7 +646,39 @@ function DiagnosticContent() {
   const urlEditRedesign = searchParams.get('editRedesign') === '1';
   const urlAiRedesign = searchParams.get('aiRedesign') === '1';
   const urlViewCost = searchParams.get('view') === 'cost';
+  // When the user enters edit mode from a deal artefact, this flag
+  // tells the loader to also fetch the deal and rehydrate the
+  // workspace's deal context (chip, rail, deal-scoped chat tools).
+  // Without it, editing a participant map drops the user out of the
+  // deal scope into a normal single-process edit.
+  const urlEditFromDeal = searchParams.get('editFromDeal');
   const editLoadedRef = useRef(false);
+
+  // Helper: fetch the deal record + the user's participation role and
+  // return the slice of fields restoreProgress understands. Used by
+  // the report-edit and analysis-edit paths so opening either from a
+  // deal preserves dealId / dealName / processName / role on the
+  // workspace, keeping the deal chip + rail tools live.
+  const fetchDealContextSlice = useCallback(async (dealIdToLoad) => {
+    if (!dealIdToLoad || !accessToken) return null;
+    try {
+      const r = await apiFetch(`/api/deals/${encodeURIComponent(dealIdToLoad)}`, {}, accessToken);
+      if (!r.ok) return null;
+      const d = await r.json();
+      const deal = d?.deal;
+      if (!deal) return null;
+      const myEmail = (sessionUser?.email || '').toLowerCase();
+      const me = (d.participants || []).find((p) => (p.participantEmail || '').toLowerCase() === myEmail);
+      return {
+        dealId: deal.id,
+        dealCode: deal.dealCode,
+        dealName: deal.name,
+        dealRole: me?.role || null,
+        dealParticipants: d.participants || [],
+        dealCanonicalProcessName: deal.processName || null,
+      };
+    } catch { return null; }
+  }, [accessToken, sessionUser]);
 
   // Handle re-audit: seed process names from original report, store parentReportId
   const reauditLoadedRef = useRef(false);
@@ -631,15 +715,16 @@ function DiagnosticContent() {
   // message thread and repopulate the chat UI so the user can pick up
   // where they left off.
   const urlChatSession = searchParams.get('chatSession');
-  const chatSessionLoadedRef = useRef(false);
+  const chatSessionLoadedRef = useRef(null); // tracks the LAST loaded session id
   useEffect(() => {
-    if (!urlChatSession || chatSessionLoadedRef.current) return;
+    if (!urlChatSession) return;
+    if (chatSessionLoadedRef.current === urlChatSession) return; // already loaded this one
     if (authLoading) return;
     if (!accessToken) {
       setEditError('Please sign in to resume this chat.');
       return;
     }
-    chatSessionLoadedRef.current = true;
+    chatSessionLoadedRef.current = urlChatSession;
     setGateCompleted(true);
     (async () => {
       try {
@@ -657,6 +742,18 @@ function DiagnosticContent() {
           restoreProgress(snapshot);
         } else if (snapshot && typeof snapshot === 'object') {
           updateProcessData(snapshot);
+        } else if (data.session?.kind === 'copilot') {
+          // Deal copilot sessions don't carry a process map — wipe every
+          // canvas-driving piece of state from any prior chat so the workspace
+          // genuinely looks fresh. resetProcess() alone only clears
+          // processData; editingReportId / reportToLoad / completedProcesses
+          // would otherwise re-hydrate the canvas from the previous report.
+          resetProcess();
+          setEditingReportId(null);
+          setEditingRedesign(false);
+          setReportToLoad(null);
+          setRedesignReportId(null);
+          setCompletedProcesses([]);
         } else if (reportId) {
           // No snapshot (older session) - hydrate from the report's rawProcesses.
           try {
@@ -705,38 +802,52 @@ function DiagnosticContent() {
         for (const a of (data.artefacts || [])) {
           if (a.message_id) artefactsByMsg[a.message_id] = a;
         }
-        setChatMessages(
-          data.messages.map((m) => {
-            const artefact = artefactsByMsg[m.id] || (m.artefact_id ? artefactsByMsg[m.artefact_id] : null);
-            const isReport = artefact && artefact.kind === 'report';
-            return {
-              role: m.role,
-              content: m.content,
-              actions: m.actions || undefined,
-              attachments: m.attachments || undefined,
-              artefact: artefact ? {
-                id: artefact.id,
-                kind: artefact.kind,
-                refId: artefact.ref_id,
-                label: artefact.label,
-                snapshot: artefact.snapshot,
-              } : undefined,
-              reportActions: isReport ? { id: artefact.ref_id, processName: artefact.label || '' } : undefined,
-            };
-          })
-        );
+        const restoredMessages = data.messages.map((m) => {
+          const artefact = artefactsByMsg[m.id] || (m.artefact_id ? artefactsByMsg[m.artefact_id] : null);
+          const isReport = artefact && artefact.kind === 'report';
+          return {
+            role: m.role,
+            content: m.content,
+            actions: m.actions || undefined,
+            attachments: m.attachments || undefined,
+            artefact: artefact ? {
+              id: artefact.id,
+              kind: artefact.kind,
+              refId: artefact.ref_id,
+              label: artefact.label,
+              snapshot: artefact.snapshot,
+            } : undefined,
+            reportActions: isReport ? { id: artefact.ref_id, processName: artefact.label || '' } : undefined,
+          };
+        });
+
+        // NOTE: do NOT seed a copilot welcome message here. Doing so persists
+        // into localStorage via DiagnosticContext's save effect and prevents
+        // DiagnosticWorkspace's pillar intro from ever firing on later fresh
+        // visits (its seed effect bails if any messages are present). The
+        // copilot intro is now seeded by DiagnosticWorkspace itself when it
+        // sees a deal scope + no messages, alongside the pillars-fallback
+        // for unscoped fresh chats.
+
+        setChatMessages(restoredMessages);
         goToScreen(2);
       } catch {
         setEditError('Could not load this chat.');
       }
     })();
-  }, [urlChatSession, accessToken, authLoading, setChatMessages, goToScreen, updateProcessData, restoreProgress, setEditingReportId, setEditingRedesign]);
+  }, [urlChatSession, accessToken, authLoading, setChatMessages, goToScreen, updateProcessData, restoreProgress, setEditingReportId, setEditingRedesign, resetProcess, setCompletedProcesses]);
 
   useEffect(() => {
     if (!urlEdit || editLoadedRef.current) return;
-    // When editing (editable=true), wait for auth to load so we have a token
-    if (urlEditEmail && authLoading) return;
-    if (urlEditEmail && !accessToken) {
+    // Wait for auth when we need it: (a) editable=true mode requires
+    // a token; (b) editFromDeal=<dealId> needs a token to fetch the
+    // deal record so the workspace can rehydrate dealId / dealName /
+    // dealRole. Without (b) the effect ran before accessToken was
+    // ready, fetchDealContextSlice bailed null, and the deal chip /
+    // rail tools disappeared during the edit session.
+    const authRequired = !!(urlEditEmail || urlEditFromDeal);
+    if (authRequired && authLoading) return;
+    if (authRequired && !accessToken) {
       setEditError('Please sign in to edit this report.');
       setEditLoading(false);
       return; // Don't set editLoadedRef so we can retry when user signs in
@@ -751,7 +862,7 @@ function DiagnosticContent() {
 
     apiFetch(url, {}, urlEdit ? accessToken : null)
       .then(async r => { try { return await r.json(); } catch { throw new Error('Invalid response'); } })
-      .then(data => {
+      .then(async data => {
         if (!data.success || !data.report) {
           setEditError('Could not load this report for editing. It may have been deleted.');
           setEditLoading(false);
@@ -830,6 +941,11 @@ function DiagnosticContent() {
           industry: contact.industry || '',
           phone: contact.phone || '',
         };
+        // If the user came in via a deal artefact (?editFromDeal=…),
+        // pull the deal record + their participation role and stitch
+        // it into the restoreProgress payload so the workspace keeps
+        // the deal context (DealContextChip / rail tools).
+        const dealCtx = urlEditFromDeal ? await fetchDealContextSlice(urlEditFromDeal) : null;
         restoreProgress({
           currentScreen: 2,
           processData,
@@ -861,6 +977,7 @@ function DiagnosticContent() {
           editingRedesign: isEditRedesign,
           aiRedesignMode: urlAiRedesign,
           diagnosticMode: mode,
+          ...(dealCtx || {}),
         });
         queueMicrotask(() => addAuditEvent({ type: 'edit', detail: `Opened report ${urlEdit} for editing` }));
 
@@ -907,7 +1024,92 @@ function DiagnosticContent() {
         setEditError('Failed to load report. Please check your connection and try again.');
         setEditLoading(false);
       });
-  }, [urlEdit, urlEditEmail, urlEditRedesign, authLoading, accessToken, restoreProgress, setEditingReportId, setEditingRedesign, setChatMessages, setDiagnosticMode, addAuditEvent]);
+  }, [urlEdit, urlEditEmail, urlEditRedesign, urlEditFromDeal, fetchDealContextSlice, authLoading, accessToken, restoreProgress, setEditingReportId, setEditingRedesign, setChatMessages, setDiagnosticMode, addAuditEvent]);
+
+  // Handle ?editAnalysis=<id>&deal=<dealId> — open a deal-analysis
+  // (typically a redesign output) in the canvas edit mode. Converts
+  // result.redesignedProcess to the steps[] / handoffs[] shape the
+  // workspace expects, sets editingAnalysisId so save knows where to
+  // PATCH back. Same surface as the diagnostic_reports edit path.
+  const urlEditAnalysisId = searchParams.get('editAnalysis');
+  const urlEditAnalysisDealId = searchParams.get('deal');
+  const editAnalysisLoadedRef = useRef(false);
+  useEffect(() => {
+    if (!urlEditAnalysisId || !urlEditAnalysisDealId || editAnalysisLoadedRef.current) return;
+    if (authLoading) return;
+    if (!accessToken) {
+      setEditError('Please sign in to edit this redesign.');
+      setEditLoading(false);
+      return;
+    }
+    editAnalysisLoadedRef.current = true;
+    setEditLoading(true);
+    setEditError(null);
+
+    Promise.all([
+      apiFetch(`/api/deals/${encodeURIComponent(urlEditAnalysisDealId)}/analyses/${encodeURIComponent(urlEditAnalysisId)}`, {}, accessToken)
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))),
+      // Pull deal context in parallel so DealContextChip / rail tools
+      // light up alongside the canvas — without this the user lands in
+      // "edit mode" but the surrounding UI thinks they're not in a deal.
+      fetchDealContextSlice(urlEditAnalysisDealId),
+    ])
+      .then(([d, dealCtx]) => {
+        const analysis = d?.analysis || d;
+        const result = analysis?.result || {};
+        const rp = Array.isArray(result.redesignedProcess) ? result.redesignedProcess : [];
+        if (rp.length === 0) {
+          setEditError('This analysis has no redesigned process to edit.');
+          setEditLoading(false);
+          return;
+        }
+        const steps = rp.map((s, i) => ({
+          number: s.stepNumber || i + 1,
+          name: s.name || '',
+          department: s.department || '',
+          isDecision: !!s.isDecision,
+          isExternal: false,
+          branches: [],
+          systems: s.systems || [],
+        }));
+        const handoffs = steps.slice(0, -1).map(() => ({ from: {}, to: {}, method: 'system', clarity: '' }));
+        const processData = {
+          processType: 'pe',
+          processName: result.processName || analysis?.name || 'Redesigned process',
+          definition: { startsWhen: '', completesWhen: '', complexity: '', departments: [] },
+          lastExample: { name: '', startDate: '', endDate: '', elapsedDays: 0 },
+          userTime: { meetings: 0, emails: 0, execution: 0, waiting: 0, rework: 0, total: 0 },
+          steps,
+          handoffs,
+          systems: [],
+          frequency: { type: '', annual: 0 },
+          costs: { hourlyRate: 50, teamSize: 1 },
+          flowCustomEdges: [],
+          flowDeletedEdges: [],
+          flowNodePositions: {},
+        };
+        setEditingReportId(null);
+        setEditingRedesign(true);
+        setEditingAnalysis({ analysisId: urlEditAnalysisId, dealId: urlEditAnalysisDealId });
+        setChatMessages([{ role: 'assistant', content: "You're editing the redesigned flow for this deal. Save once you're happy with the changes." }]);
+        restoreProgress({
+          currentScreen: 2,
+          processData,
+          stepCount: steps.length,
+          editingReportId: null,
+          editingRedesign: true,
+          editingAnalysisId: urlEditAnalysisId,
+          editingAnalysisDealId: urlEditAnalysisDealId,
+          ...(dealCtx || { dealId: urlEditAnalysisDealId }),
+        });
+        queueMicrotask(() => addAuditEvent({ type: 'edit', detail: `Opened analysis ${urlEditAnalysisId} for editing` }));
+        setEditLoading(false);
+      })
+      .catch(() => {
+        setEditError('Failed to load analysis. Please check your connection and try again.');
+        setEditLoading(false);
+      });
+  }, [urlEditAnalysisId, urlEditAnalysisDealId, fetchDealContextSlice, authLoading, accessToken, restoreProgress, setEditingReportId, setEditingRedesign, setEditingAnalysis, setChatMessages, addAuditEvent]);
 
   // Handle ?resume=xxx - load from API; ?step=N deep-links to a specific step
   useEffect(() => {
@@ -1028,7 +1230,17 @@ function DiagnosticContent() {
     preReportHydrateRef.current = true;
     if (process.env.NODE_ENV !== 'production') console.info('[hydrate-preReport] fetching session', sessionId);
     apiFetch(`/api/chat-sessions/${encodeURIComponent(sessionId)}`, {}, accessToken)
-      .then((resp) => (resp.ok ? resp.json() : null))
+      .then((resp) => {
+        // 404 means the pointed-to session no longer exists OR doesn't
+        // belong to this user OR the deal access was revoked. All three
+        // are legitimate; the pointer is stale either way. Drop it so we
+        // don't ask again on every page load.
+        if (resp.status === 404) {
+          try { localStorage.removeItem('vesno_chat_session_active'); } catch { /* ignore */ }
+          return null;
+        }
+        return resp.ok ? resp.json() : null;
+      })
       .then((sd) => {
         if (!sd?.success || !Array.isArray(sd.messages) || !sd.messages.length) {
           if (process.env.NODE_ENV !== 'production') console.warn('[hydrate-preReport] empty cloud - falling back to localStorage', { sessionId, success: sd?.success, messageCount: sd?.messages?.length });
@@ -1156,6 +1368,13 @@ function DiagnosticContent() {
     goToScreen(2);
   }, [accessToken, goToScreen]);
 
+  // Force-remount the workspace when the bound context changes — switching
+  // deals, opening a different report, or unbinding any of them. Without
+  // this, DiagnosticWorkspace's *local* useState(steps) (seeded once via
+  // useMemo) survives the switch and re-paints the previous flow on the
+  // canvas, even though global processData has been reset.
+  const workspaceKey = `ws:${editingReportId || ''}:${dealId || ''}:${urlChatSession || ''}`;
+
   const renderScreen = () => {
     switch (currentScreen) {
       case 1.5:
@@ -1163,6 +1382,7 @@ function DiagnosticContent() {
       case 2:
         return (
           <DiagnosticWorkspace
+            key={workspaceKey}
             initialStepIdx={initialStepIdx}
             onAuditTrailToggle={() => setShowAuditTrail((v) => !v)}
             auditTrailOpen={showAuditTrail}
@@ -1177,6 +1397,7 @@ function DiagnosticContent() {
       default:
         return (
           <DiagnosticWorkspace
+            key={workspaceKey}
             initialStepIdx={initialStepIdx}
             onAuditTrailToggle={() => setShowAuditTrail((v) => !v)}
             auditTrailOpen={showAuditTrail}
@@ -1246,7 +1467,29 @@ function DiagnosticContent() {
     return <div className="loading-state" style={{ minHeight: '100dvh' }}><div className="loading-spinner" /></div>;
   }
 
+  // Sign-in is now required for the diagnostic surface. Two narrow
+  // exceptions:
+  //   1. Participant-token flow — the user followed a magic link from a
+  //      deal invite email; they're identified by token, not by Supabase
+  //      auth. Forcing them through sign-up would break the invite flow.
+  //   2. dealFlowId=… — already requires an auth'd session above (sets
+  //      flowLoadedRef), so by the time we get here they're signed in.
+  // Anonymous diagnostics are no longer allowed because trial credits
+  // can't be metered against an unidentified user.
+  const isParticipantInvite = !!dealContext?.participantToken;
+  if (!sessionUser && !isParticipantInvite) {
+    return <SignInRequired returnTo="/process-audit" />;
+  }
+
   if (!gateCompleted) {
+    // For signed-in, non-participant, non-deal-flow users the auto-complete
+    // effect at L622 fires immediately and flips gateCompleted to true on
+    // the next render. Don't flash the gate form in between — show the same
+    // spinner the auth-resolving branch uses so the transition is invisible.
+    const willAutoComplete = sessionUser?.email && !dealContext?.participantToken && !urlDealFlowId;
+    if (willAutoComplete) {
+      return <div className="loading-state" style={{ minHeight: '100dvh' }}><div className="loading-spinner" /></div>;
+    }
     return <AuditGate onComplete={handleGateComplete} dealContext={dealContext} onDealCodeResolved={handleDealCodeResolved} sessionUser={sessionUser} />;
   }
 
@@ -1272,10 +1515,11 @@ function DiagnosticContent() {
     <>
       <div className="diagnostic-shell container container-wide">
         <DiagnosticNavProvider>
+        <CanvasActionProvider>
           {currentScreen === 2 ? (
             renderScreen()
           ) : (
-            <ChatWorkspaceShell sessionUser={sessionUser}>
+            <ChatWorkspaceShell sessionUser={sessionUser} accessToken={accessToken} onSignOut={sessionSignOut}>
               <>
                 {showResume && savedData && (
                   savedData.handoverSender ? (
@@ -1314,6 +1558,7 @@ function DiagnosticContent() {
               </>
             </ChatWorkspaceShell>
           )}
+        </CanvasActionProvider>
         </DiagnosticNavProvider>
       </div>
 

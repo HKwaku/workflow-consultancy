@@ -1,12 +1,24 @@
 # Workflow Consultancy (Vesno)
 
-Technology-agnostic workflow optimization and process mapping. Next.js app with AI-powered diagnostics, Supabase backend, and n8n webhooks.
+AI-native M&A diligence + process mapping platform. Chat-first UI ("Reina" copilot) over a per-deal data room with semantic + keyword retrieval, agentic findings with reviewer workflow, and an open-format dataroom that accepts any file.
+
+> **Recent additions** (deal workspace + dataroom): see [`DIAGNOSTICS_CAPABILITIES.md`](./DIAGNOSTICS_CAPABILITIES.md). Highlights:
+> - **Open-format dataroom** — any file uploads; text-extractable formats are searchable, others land as `stored` (downloadable + previewable). OCR fallback via Mistral Document OCR for scanned PDFs / images. Org-admin BYO key path.
+> - **AI auto-categorisation** — Haiku classifies each ready document into Financial / Legal / HR / IP / Tech / Commercial / Operational / Other.
+> - **Expected-docs checklist** — per-deal-type template (M&A / PE roll-up / Scaling) with received-vs-missing rendered inside the workspace modal.
+> - **Per-finding evidence drawer** — lazy-loads chunk text + neighbours so reviewers verify without leaving the workspace.
+> - **Auto-rerun analysis** — `processDealDocument` queues a delta diligence run after a new doc lands (throttled, only after a prior completed analysis exists). Workspace badges new findings.
+> - **Severity-weighted risk score** — `Σ(severity × confidence)` per deal, surfaced as a coloured pill on the Deals rail and used to sort the panel.
+> - **Auto-filled scorecard** — one-page IC summary (thesis, top risks, mitigants, rule-based recommended action, doc coverage). Inline in the workspace modal.
+> - **Workspace collaboration** — structured Q&A queue, threaded comments per finding, finding tags (deal_breaker / re_trade / disclose / mitigate / monitor), staleness flag when cited docs are reprocessed.
+> - **Auth perf** — `requireAuth` cached + coalesced, eliminating the per-request Supabase Auth round-trip.
 
 ## Tech Stack
 
-- **Framework**: Next.js 15
-- **Auth & DB**: Supabase
-- **AI**: Anthropic Claude (LangChain)
+- **Framework**: Next.js 15 (App Router)
+- **Auth & DB**: Supabase (Postgres + RLS + Vault + Storage + pgvector)
+- **AI**: Anthropic Claude (chat agent, redesign, recommendations, categorisation), Voyage AI (embeddings), Mistral Document OCR (optional dataroom OCR)
+- **Async work**: Inngest (deal-document processing, deal-analysis runs, auto-trigger)
 - **Automation**: n8n webhooks
 - **Hosting**: Vercel
 
@@ -90,6 +102,10 @@ Optional:
 | `NEXT_PUBLIC_APP_URL` | App URL for CORS and Origin checks (e.g. https://your-app.vercel.app) |
 | `LOG_LEVEL` | Log level: debug, info, warn, error |
 | `PUBLIC_CONFIG_RESTRICTED` | Set to `true` to disable `/api/public-config` in production |
+| `VOYAGE_API_KEY` | Voyage AI key for deal-document embeddings (`voyage-3-large`). Without it, dataroom search degrades to keyword-only. |
+| `MISTRAL_API_KEY` | Platform fallback for Mistral Document OCR. Per-org keys can be set in **Org admin → API keys → Mistral (OCR)** instead — that path is preferred. Without any Mistral key, scanned PDFs / images land as `stored` (downloadable but not text-indexed). |
+| `MODEL_KEY_ENCRYPTION_SECRET` | Required to store any per-org BYO API keys (Anthropic / Voyage / OpenAI / Mistral) — pgcrypto encryption secret. |
+| `INNGEST_EVENT_KEY` | Required for the deal-document and deal-analysis workers to receive events. Without it, uploads land but parsing/chunking/embedding stays at `pending`. |
 
 ## Deployment
 
