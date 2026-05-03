@@ -47,6 +47,31 @@ const ChatHistoryPanel = dynamic(() => import('../ChatHistoryPanel'), { ssr: fal
 
 const MAP_SPLIT_RAIL_PX = 48;
 const MAP_SPLIT_HANDLE_PX = 8;
+const MOBILE_BREAKPOINT_PX = 768;
+
+/**
+ * Returns true when viewport width <= MOBILE_BREAKPOINT_PX. Hydration-safe:
+ * the SSR/initial-paint value is `false` (desktop) so server and client
+ * markup match, then re-evaluates after mount + on resize. Used to gate
+ * desktop-only affordances like the split-resize drag, the pixel width
+ * restored from localStorage, and the rail-reservation calculation.
+ */
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT_PX}px)`);
+    const handler = (e) => setIsMobile(e.matches);
+    setIsMobile(mql.matches);
+    if (mql.addEventListener) mql.addEventListener('change', handler);
+    else mql.addListener(handler);
+    return () => {
+      if (mql.removeEventListener) mql.removeEventListener('change', handler);
+      else mql.removeListener(handler);
+    };
+  }, []);
+  return isMobile;
+}
 
 const MIN_STEPS = 3;
 const MAX_STEPS = 50;
@@ -1508,6 +1533,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
   } = useDiagnostic();
   const { accessToken, user: sessionUser, signOut } = useAuth();
   const { theme } = useTheme();
+  const isMobile = useIsMobile();
 
   /* ── Cloud chat persistence ── */
   const chatSessionIdRef = useRef(null);
@@ -5529,7 +5555,10 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
           <div
             className="s7-inline-chat s7-inline-chat--sized"
             data-theme={theme}
-            style={{ width: splitChatWidthPx, flex: '0 0 auto' }}
+            // On mobile we let the CSS take over (full-width column).
+            // The persisted desktop pixel width would otherwise win and
+            // force horizontal overflow on phones.
+            style={isMobile ? undefined : { width: splitChatWidthPx, flex: '0 0 auto' }}
           >
             <div className="s7-inline-chat-header">
               <div className="sharp-avatar sharp-avatar-sm" title="Reina">R</div>

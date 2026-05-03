@@ -17526,3 +17526,307 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   PHASE 1 — Mobile layout reflow
+   -----------------------------------------------------------------------
+   Below 768px the desktop "rail | chat | canvas | detail" row collapses
+   to a vertical stack with the rail as a bottom nav. The resizable
+   split width and rail-reservation pixels stop applying since touch
+   users can't drag-resize anyway. Touch targets bumped to the WCAG 44×44
+   floor.
+
+   All overrides scoped under @media so desktop is untouched. Anything
+   gated with !important is fighting an inline style or a more-specific
+   selector elsewhere in this file — keep that contract; don't widen.
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* ---- Workspace shell: stack vertically ---- */
+  .s7-workspace-main {
+    flex-direction: column !important;
+  }
+
+  /* ---- Split rail → bottom nav bar ----
+     Desktop: 48px-wide vertical column on the left.
+     Mobile: full-width horizontal strip pinned beneath the chat.
+     order:99 puts it at the bottom of the column flex; the canvas /
+     chat stack above it. */
+  .s7-split-rail {
+    width: 100% !important;
+    flex: 0 0 auto !important;
+    flex-direction: row !important;
+    height: auto !important;
+    min-height: 56px !important;
+    border-right: none !important;
+    border-top: 1px solid var(--border, #e2e8f0);
+    padding: 6px 8px !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    order: 99;
+    -webkit-overflow-scrolling: touch;
+  }
+  .s7-split-rail-body {
+    flex-direction: row !important;
+    align-items: center;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 4px;
+  }
+  .s7-split-rail-bottom-group {
+    flex-direction: row !important;
+    width: auto;
+    margin-left: auto !important;
+  }
+  .s7-split-rail-footer {
+    flex-direction: row !important;
+    padding: 0 4px !important;
+    border-left: 1px solid var(--border, #e2e8f0);
+    margin-left: 6px;
+  }
+
+  /* ---- Touch targets: WCAG 2.1 AA recommends 44×44 minimum ---- */
+  .s7-split-rail-btn {
+    min-width: 44px;
+    min-height: 44px;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+  }
+  .s7-rail-pane-close,
+  .s7-artefacts-panel-close {
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  /* ---- Inline chat: full width, kill the desktop drag-resize value
+     that gets restored from localStorage. ---- */
+  .s7-inline-chat,
+  .s7-inline-chat--sized {
+    width: 100% !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+
+  /* ---- Resize handle: hide on touch — drag-resize is a desktop affordance ---- */
+  .s7-split-resize-handle {
+    display: none !important;
+  }
+
+  /* ---- Canvas column: full width below chat ---- */
+  .s7-canvas-column {
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+  .s7-canvas-area--split,
+  .s7-canvas-area--with-rail {
+    flex-direction: column !important;
+  }
+
+  /* ---- Detail panel: stack at the bottom rather than alongside ---- */
+  .s7-detail-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-left: none !important;
+    border-top: 1px solid var(--border, #e2e8f0);
+  }
+
+  /* ---- Sidebar (used elsewhere in the app) goes full width ---- */
+  .s7-sidebar {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border, #e2e8f0);
+  }
+
+  /* ---- Rail slide-in panels: full width since there's no rail-side anchor ---- */
+  .s7-rail-pane,
+  .s7-rail-pane--anchored {
+    width: 100% !important;
+    max-width: 100vw !important;
+    left: 0 !important;
+    right: 0 !important;
+  }
+
+  /* ═══ Phase 2 (≤768px) ═══ */
+
+  /* ---- DealAnalysisInline header / cards: tighter padding ---- */
+  .report-page.report-page--portal > .report-section-header {
+    padding: 14px 16px 10px !important;
+  }
+  .report-page.report-page--portal .report-card {
+    padding: 14px 16px !important;
+  }
+  .report-page.report-page--portal .report-metric-grid {
+    gap: 8px;
+  }
+  .report-page.report-page--portal .report-metric-card {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 0;
+    padding: 10px 12px !important;
+  }
+
+  /* ---- Flow toolbar (Linear/Swimlane + legend + Float button) wraps
+     on narrow viewports instead of overflowing horizontally. ---- */
+  .report-flow-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .report-flow-canvas-wrap {
+    /* Cap to 50vh on small screens — full-screen flow swallows the
+       decision cards below it on a phone. */
+    height: min(50vh, 360px) !important;
+    min-height: 240px !important;
+  }
+
+  /* ---- Decision bar: bulk-action buttons wrap and gain breathing room ---- */
+  .report-redesign-decision-bar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 10px 14px !important;
+  }
+  .report-redesign-decision-stats {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 12px;
+  }
+  .report-redesign-decision-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .redesign-bulk-btn,
+  .redesign-save-btn,
+  .redesign-finalise-btn {
+    flex: 1 1 calc(50% - 6px);
+    text-align: center;
+  }
+
+  /* ---- Per-decision cards: vertical layout so verdict buttons sit
+     below the body instead of squeezing it. ---- */
+  .report-redesign-change-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 12px 14px !important;
+    gap: 10px;
+  }
+  .report-redesign-change-icon {
+    margin-bottom: 0;
+  }
+  .report-redesign-change-verdict {
+    align-self: flex-end;
+  }
+  .verdict-btn {
+    /* Touch targets — these were ~28×28 from the desktop rules. */
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  /* ---- Artefacts tree: tighter indentation, smaller pencil button ---- */
+  .s7-rail-pane-groups {
+    gap: 6px;
+  }
+  .s7-rail-pane-group-title {
+    padding: 8px 6px 6px;
+    font-size: 13px;
+  }
+  .s7-rail-pane-item s7-rail-pane-item--row,
+  .s7-rail-pane-item--row {
+    gap: 2px !important;
+  }
+  .s7-rail-pane-item-body {
+    padding: 10px 8px !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PHASE 3 — Modals + grid pages on mobile
+   -----------------------------------------------------------------------
+   Every modal in the app is a centered card with viewport padding around
+   it. On a 360-px phone that wastes the entire viewport on chrome with
+   no room for content. Full-screen treatment on mobile gives the modal
+   the whole screen and drops the rounded-corner / border-radius / drop-
+   shadow chrome that was tuned for centered desktop overlays.
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* ---- Overlays: kill the centered-card padding, let the frame fill ---- */
+  .deal-workspace-overlay,
+  .deal-folder-picker-overlay,
+  .deal-doc-viewer-overlay,
+  .s7-redesign-overlay,
+  .s7-snippet-overlay {
+    padding: 0 !important;
+  }
+
+  /* ---- Frames / cards: full-viewport, no rounded corners ---- */
+  .deal-workspace-frame,
+  .analytics-modal-frame,
+  .s7-redesign-overlay-card,
+  .s7-snippet-modal,
+  .s7-deps-modal {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* ---- Tighter chrome inside the frames ---- */
+  .deal-workspace-bar {
+    flex-wrap: wrap;
+    padding: 10px 12px !important;
+  }
+  .deal-workspace-bar-actions { width: 100%; }
+  .deal-workspace-body { padding: 12px 14px !important; }
+  .deal-workspace-grid { gap: 12px !important; }
+  .deal-workspace-section-title { font-size: 14px; }
+  .s7-snippet-modal-body,
+  .s7-deps-modal-body { padding: 14px !important; }
+
+  /* ---- Doc viewer / folder picker tighten ---- */
+  .deal-folder-picker-overlay > *,
+  .deal-doc-viewer-overlay > * {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+  }
+
+  /* ---- Catch-all for any auto-fit grid using 240px+ minmax — collapse
+     to a single column on phones rather than letting the minmax keep
+     two awkward 240-px columns side-by-side that overflow. ---- */
+  .deal-workspace-section-list,
+  .portal-overview-cards,
+  .portal-analytics-overview-cards {
+    /* These already have explicit mobile rules in portal.css; the
+       safety net here is only for any future siblings that forget. */
+  }
+  .org-admin-ent-grid {
+    flex-direction: column;
+    gap: 10px !important;
+  }
+}
+
+/* Sub-mobile: <=480px. Stacks bulk buttons fully and shrinks more. */
+@media (max-width: 480px) {
+  .redesign-bulk-btn,
+  .redesign-save-btn,
+  .redesign-finalise-btn {
+    flex: 1 1 100%;
+  }
+  .report-page.report-page--portal .report-metric-card {
+    flex: 1 1 100%;
+  }
+  .report-page.report-page--portal .report-section-title {
+    font-size: 18px !important;
+  }
+  .report-flow-canvas-wrap {
+    height: min(42vh, 300px) !important;
+    min-height: 200px !important;
+  }
+  .report-redesign-change-card {
+    padding: 10px 12px !important;
+  }
+}
+
