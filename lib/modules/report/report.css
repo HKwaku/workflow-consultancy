@@ -2029,3 +2029,75 @@
   font-weight: 700;
   color: var(--report-text);
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Mobile reflow — full-width report
+   The report previously kept its 2.5rem card padding + rounded corners
+   + box-shadow on phones, which made the content look like a small
+   island floating in the middle of the screen. On a 375px viewport
+   that left ~280px of usable text width. This block flattens the
+   report on phones: cards go edge-to-edge, padding tightens, rounded
+   corners and shadows go (the dark navy background already separates
+   the surfaces visually). Section max-widths are removed so summary
+   sections can use the full screen width.
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .report-page .report-card,
+  .report-page .report-summary-section,
+  .report-page .report-collapsible {
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    border-radius: 0 !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    box-shadow: none !important;
+  }
+  .report-page .report-card {
+    padding: 14px 14px !important;
+  }
+  .report-page .report-summary-section {
+    padding: 16px 14px 20px !important;
+  }
+  .report-page .report-summary-inner-tab {
+    padding: 12px 14px !important;
+    border-radius: 8px;
+  }
+  /* Container loses its outer gutter so cards reach the screen edges.
+     Cards still keep their own internal padding. */
+  .report-page .report-container,
+  .report-page .report-full-report-inline {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  /* Hero block: tighten and stop centering padding from eating width. */
+  .report-page .report-hero {
+    padding: 16px 14px !important;
+    text-align: left;
+  }
+  /* Tab bar can be wider than the screen on long titles — let it
+     scroll horizontally instead of forcing a wrap that breaks the row. */
+  .report-page .report-section-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+  }
+  .report-page .report-section-tab {
+    flex-shrink: 0;
+  }
+  /* Fixed pixel widths inside the report force horizontal scrolling
+     on phones. Allow them to shrink. */
+  .report-page .report-finding-card,
+  .report-page .report-value-block,
+  .report-page .report-roadmap-col,
+  .report-page .report-appendix-card {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  /* Floating viewer launch button shouldn't be a giant FAB on mobile. */
+  .report-page .report-flow-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}

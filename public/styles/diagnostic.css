@@ -17692,11 +17692,27 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
     display: none !important;
   }
 
-  /* ---- Canvas column: full width below chat ---- */
+  /* ---- Canvas column: full width below chat. On mobile we also need
+     the column itself to scroll because the inline report (changeOverview
+     cards + tabs + flow + decision cards) is taller than the visible
+     pane — without overflow:auto here the user can't reach the flow
+     chart below the metric cards. ---- */
   .s7-canvas-column {
     width: 100% !important;
     min-width: 0 !important;
     flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  /* The inner .s7-canvas wrapper has overflow:hidden by default to clip
+     the canvas to the pane on desktop; on mobile we want the report
+     content (which can be 2000+ px tall) to scroll naturally. */
+  .s7-canvas,
+  .s7-canvas--report {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
   }
   .s7-canvas-area--split,
   .s7-canvas-area--with-rail {
