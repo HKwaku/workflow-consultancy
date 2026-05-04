@@ -17849,7 +17849,8 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
        address bar. env(safe-area-inset-top) gives us the iOS notch /
        URL-bar overlap; the extra 8px is breathing room. */
     top: 0;
-    padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+    padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
+    padding-bottom: 0;
     z-index: 5;
   }
   [data-theme="dark"] .s7-mobile-view-toggle {
