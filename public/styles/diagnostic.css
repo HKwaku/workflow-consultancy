@@ -17900,26 +17900,54 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
     display: flex !important;
   }
 
-  /* ---- DealContextChip pass 2: tighter still ----
-     The phone screenshot showed the chip taking ~4 lines (deal name
-     wraps, then 2 toggle buttons on a second row). Hide the
-     "Hide context" toggle on mobile (the pane it controls is already
-     hidden), and shrink the chip more aggressively so the deal label
-     wraps once instead of twice. */
+  /* ---- DealContextChip pass 3: single-line truncated ----
+     Pass 2 still let the chip wrap to two lines on a 390-px phone
+     because deal name + role + workspace button can't fit. Force a
+     single non-wrapping line and let the deal-label span ellipsise.
+     The icon + "Open workspace" pin to the ends; the label between
+     them shrinks with min-width:0 + overflow:hidden. */
   .chat-deal-chip-toggle[aria-expanded] {
     display: none !important;
   }
   .chat-deal-context {
-    margin: 4px 10px 0 !important;
+    margin: 0 !important;
   }
+  /* Drop the desktop pill shape on mobile — flush full-width strip
+     instead. The green tint and 1px bottom border act as a compact
+     section separator, no rounded edges, no horizontal inset. */
   .chat-deal-chip {
-    padding: 5px 8px !important;
-    font-size: 11.5px !important;
-    gap: 4px 6px !important;
+    display: flex !important;
+    width: 100% !important;
+    flex-wrap: nowrap !important;
+    padding: 6px 12px !important;
+    font-size: 11px !important;
+    gap: 6px !important;
+    line-height: 1.3;
+    border-radius: 0 !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    border-top: 0 !important;
+    border-bottom: 1px solid rgba(13, 148, 136, 0.22) !important;
   }
   .chat-deal-chip > svg {
     width: 11px !important;
     height: 11px !important;
+    flex-shrink: 0;
+  }
+  /* The deal-name span is the only flex child without a class. Target
+     it as the first span child so it ellipsises rather than pushing
+     the Open workspace button off-screen. */
+  .chat-deal-chip > span:first-of-type {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .chat-deal-chip-toggle:not([aria-expanded]) {
+    flex-shrink: 0;
+    padding: 3px 8px !important;
+    font-size: 10.5px !important;
   }
 
   /* ---- Chat-input keyboard-shortcut hint ----
