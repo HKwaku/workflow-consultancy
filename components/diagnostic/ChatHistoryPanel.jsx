@@ -196,10 +196,21 @@ export default function ChatHistoryPanel({ onClose, onLoadReport, onRedesignRepo
 
   /* Actions */
   const handleSelect = useCallback((session) => {
-    // Route every session - with or without a linked report - through the
-    // ?chatSession resume path so the workflow snapshot (steps, handoffs,
-    // flow canvas) AND the message thread are both restored. The resume
-    // handler falls back to the report row when the snapshot is empty.
+    // Default click = VIEW. The user explicitly asked that opening a
+    // report shouldn't drop them into edit mode — they want to view
+    // first and choose Edit if they want to change anything. The Edit
+    // pencil icon (handleEdit) still opens the workspace in edit mode.
+    //
+    // Routing rules:
+    //   - session has a report → /report?id=<reportId> (read-only)
+    //   - legacy report row    → /report?id=<reportId> (read-only)
+    //   - session with no report (chat-only) → resume the chat, since
+    //     there's no separate "view" surface for a chat-without-report.
+    const reportId = session.report_id || (session.legacy ? session.id : null);
+    if (reportId) {
+      window.location.href = `/report?id=${encodeURIComponent(reportId)}`;
+      return;
+    }
     window.location.href = `/process-audit?chatSession=${encodeURIComponent(session.id)}`;
   }, []);
 

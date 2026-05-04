@@ -6045,12 +6045,61 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                     : kind === 'deal_analysis' ? 'Deal analysis'
                       : 'Artefact'
             );
+            // Per-kind suggestion chips. The user wanted the chat to
+            // greet the user when an artefact opens with "you opened X,
+            // here's what we can do" — so we drop a single assistant
+            // message tagged with quick-action chips. Tapping a chip
+            // sends the chip text into the chat (sendChat already
+            // handles chips this way), which gives the agent direct
+            // context about the artefact and what to do with it.
+            const SUGGESTIONS = {
+              report: [
+                'Summarise this process',
+                'Where are the bottlenecks?',
+                'Suggest improvements',
+                'Run a redesign with AI',
+              ],
+              deal_analysis: [
+                'Explain this redesign',
+                'How does it compare to the current process?',
+                'Estimate the savings',
+                'Highlight the biggest risks',
+              ],
+              cost_analysis: [
+                'Summarise the cost picture',
+                'Find the biggest line items',
+                'Where can we save the most?',
+              ],
+              flow_snapshot: [
+                'Walk me through this flow',
+                'Identify pain points',
+                'Suggest improvements',
+              ],
+            };
+            const greet = (a) => {
+              const kindLabel = labelFor(a.kind);
+              const titleParts = [];
+              if (a.processLabel) titleParts.push(a.processLabel);
+              if (a.companyLabel) titleParts.push(a.companyLabel);
+              const title = titleParts.length ? titleParts.join(' · ') : (a.label || kindLabel);
+              const variantNote = a.variantLabel && a.variantLabel !== a.processLabel
+                ? ` (${a.variantLabel})`
+                : '';
+              const chips = (SUGGESTIONS[a.kind] || []).map((name) => ({ name }));
+              addChatMessage({
+                role: 'assistant',
+                content: `Opened **${title}**${variantNote} — ${kindLabel.toLowerCase()}.\n\nWhat would you like to do with it?`,
+                chips,
+              });
+            };
             const handle = (a) => () => {
               setShowArtefactsPanel(false);
-              // On mobile the artefact renders in the canvas column,
-              // which is hidden when the user is on the Chat tab. Flip
-              // to Canvas so the click produces a visible result.
-              if (isMobile) setMobileView('canvas');
+              // On mobile we now stay on the Chat tab so the greeting
+              // message ("Opened X — what would you like to do?") with
+              // its action chips is the first thing the user sees. The
+              // artefact loads in the Canvas column in the background
+              // and the user can flip to the Canvas tab when ready.
+              if (isMobile) setMobileView('chat');
               if (a.kind === 'report' && a.refId) {
                 setInlineCostReportId(null);
                 setInlineReportId(a.refId);
@@ -6064,6 +6113,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                 setInlineCostReportId(null);
                 setInlineAnalysisId(a.refId);
               }
+              greet(a);
             };
             const FALLBACK_DEAL = 'Not in a deal';
             const FALLBACK_PROCESS = 'Other process';

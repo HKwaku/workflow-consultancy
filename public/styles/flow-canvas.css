@@ -582,9 +582,21 @@
 @media (max-width: 768px) {
   .flow-legend-automation {
     align-items: flex-end;
+    overflow: visible;
   }
+  /* Heading: "Automation opportunities ?" / "Owner ?" — let it wrap so
+     the "?" badge isn't pushed off the right edge of the panel. */
   .flow-legend-automation-heading {
     font-size: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    row-gap: 2px;
+    overflow: visible;
+    max-width: none;
+  }
+  .flow-auto-hint {
+    flex-shrink: 0;
+    margin-left: 2px;
   }
   .flow-legend-right {
     /* Tightened: only the heading + symbols visible, labels truncated. */
@@ -602,10 +614,11 @@
     display: none !important;
   }
   .flow-automation-panel {
-    max-width: 120px;
+    max-width: 160px;
     margin-top: 8px !important;
-    padding: 4px !important;
+    padding: 4px 6px !important;
     gap: 2px !important;
+    overflow: visible;
   }
   /* Bottom legend (decision symbols) — single row, tighter, no labels. */
   .flow-legend-panel {
