@@ -17844,7 +17844,12 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
     border-bottom: 1px solid var(--border, #e2e8f0);
     flex-shrink: 0;
     position: sticky;
+    /* iOS Safari paints the URL bar over the top of position:sticky
+       elements that pin to top:0, so the tabs sit flush against the
+       address bar. env(safe-area-inset-top) gives us the iOS notch /
+       URL-bar overlap; the extra 8px is breathing room. */
     top: 0;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
     z-index: 5;
   }
   [data-theme="dark"] .s7-mobile-view-toggle {
