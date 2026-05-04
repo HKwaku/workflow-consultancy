@@ -5896,8 +5896,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
               <button
                 type="button"
                 onClick={() => setMobileView('chat')}
-                className="redesign-bulk-btn"
-                style={{ marginTop: 12 }}
+                className="s7-mobile-canvas-empty-cta"
               >Back to chat</button>
             </div>
           )}

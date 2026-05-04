@@ -17605,6 +17605,11 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
     width: 100% !important;
     flex: 1 1 auto !important;
     min-width: 0 !important;
+    /* Stop the chat scroll container from chaining its momentum to
+       the body — without this every flick at the top/bottom of the
+       chat scrolls the page itself, which reads as the layout
+       "jumping". */
+    overscroll-behavior: contain;
   }
 
   /* ---- Resize handle: hide on touch — drag-resize is a desktop affordance ---- */
@@ -17843,15 +17848,18 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
     background: var(--bg, #f8fafc);
     border-bottom: 1px solid var(--border, #e2e8f0);
     flex-shrink: 0;
-    position: sticky;
-    /* iOS Safari paints the URL bar over the top of position:sticky
-       elements that pin to top:0, so the tabs sit flush against the
-       address bar. env(safe-area-inset-top) gives us the iOS notch /
-       URL-bar overlap; the extra 8px is breathing room. */
-    top: 0;
+    /* Anchored to the workspace top (not sticky). Sticky was causing
+       visible jumps on iOS as the URL bar collapsed and the tabs
+       briefly redocked at the new viewport top. The workspace itself
+       is 100dvh and the toggle is its first flex child, so anchoring
+       statically is enough. */
+    position: relative;
     padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
     padding-bottom: 0;
     z-index: 5;
+    /* Prevents the tap on a tab from triggering momentum scroll on
+       iOS that visually scrolls the chat by a few pixels. */
+    touch-action: manipulation;
   }
   [data-theme="dark"] .s7-mobile-view-toggle {
     background: var(--bg-panel, #1e293b);
@@ -17873,6 +17881,15 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   .s7-mobile-view-tab.active {
     color: var(--accent, #0d9488);
     border-bottom-color: var(--accent, #0d9488);
+  }
+  /* Kill the iOS blue tap flash on tab presses + most large mobile
+     surfaces. Combined with touch-action this removes the stutter
+     that read as "jumpy" on quick taps. */
+  .s7-mobile-view-tab,
+  .s7-mobile-canvas-empty-cta,
+  .s7-rail-icon,
+  .chat-deal-chip-toggle {
+    -webkit-tap-highlight-color: transparent;
   }
 
   /* Hide the inactive surface based on the data attribute */
@@ -17904,6 +17921,32 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   }
   [data-mobile-view='canvas'] .s7-mobile-canvas-empty {
     display: flex !important;
+  }
+  /* Clean, calm CTA — replaces the loud .redesign-bulk-btn that was
+     visually heavy for an empty-state action. Matches accent tokens
+     so it picks up the right colour in light + dark themes. */
+  .s7-mobile-canvas-empty-cta {
+    margin-top: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 18px;
+    border: 1px solid var(--accent, #0d9488);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--accent, #0d9488);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+  .s7-mobile-canvas-empty-cta:hover,
+  .s7-mobile-canvas-empty-cta:active {
+    background: var(--accent, #0d9488);
+    color: #fff;
   }
 
   /* ---- DealContextChip pass 4: full-width strip, allow wrapping ----
