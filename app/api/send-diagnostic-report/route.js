@@ -29,7 +29,7 @@ export async function POST(request) {
       const msg = err.formErrors?.join?.(' ') || err.errors?.[0]?.message || 'Invalid request.';
       return NextResponse.json({ error: msg, details: err }, { status: 400 });
     }
-    let { editingReportId, contact, fallbackEmail, authToken, summary, recommendations, automationScore, roadmap, processes, rawProcesses, customDepartments, diagnosticMode, timestamp, userId, progressId, auditTrail, costAnalystEmail, parentReportId, dealParticipantToken, dealCode, dealFlowId } = parsed.data;
+    let { editingReportId, contact, fallbackEmail, authToken, summary, recommendations, automationScore, roadmap, processes, rawProcesses, customDepartments, diagnosticMode, timestamp, userId, progressId, auditTrail, costAnalystEmail, parentReportId, dealParticipantToken, dealCode, dealFlowId, dealId } = parsed.data;
     let resolvedEmail = (contact?.email || '').trim() || (fallbackEmail || '').trim() || '';
     if (!resolvedEmail || !isValidEmail(resolvedEmail)) {
       const token = authToken || request.headers.get('Authorization')?.replace(/^Bearer\s+/i, '')?.trim();
@@ -172,6 +172,74 @@ export async function POST(request) {
             }
           }
         } catch { /* non-fatal */ }
+      }
+    }
+
+    // Fourth path — direct dealId from a signed-in user mapping inside
+    // an existing deal scope (no invite token / no flow slot / no
+    // dealCode prompt). Match the user's email against
+    // deal_participants.participant_email on this deal. This is the
+    // common case for an owner / collaborator mapping their own side.
+    if (!dealLink && dealId && sbConfig && !editingReportId) {
+      try {
+        const { url: supabaseUrl, key: supabaseKey } = sbConfig;
+        const dealResp = await fetchWithTimeout(
+          `${supabaseUrl}/rest/v1/deals?id=eq.${encodeURIComponent(dealId)}&select=id,type,status,owner_email,collaborator_emails`,
+          { method: 'GET', headers: getSupabaseHeaders(supabaseKey) },
+        );
+        if (dealResp.ok) {
+          const [foundDeal] = await dealResp.json();
+          if (foundDeal && foundDeal.status !== 'complete') {
+            const ownerLower = (foundDeal.owner_email || '').toLowerCase();
+            const collabLower = Array.isArray(foundDeal.collaborator_emails)
+              ? foundDeal.collaborator_emails.map((e) => (typeof e === 'string' ? e.toLowerCase() : '')).filter(Boolean)
+              : [];
+            const isOwnerOrCollab = resolvedEmailLower === ownerLower || collabLower.includes(resolvedEmailLower);
+            // Look for an existing participant on this deal that the
+            // signed-in user owns (by email).
+            const partsResp = await fetchWithTimeout(
+              `${supabaseUrl}/rest/v1/deal_participants?deal_id=eq.${encodeURIComponent(dealId)}&select=id,role,participant_email,status,report_id`,
+              { method: 'GET', headers: getSupabaseHeaders(supabaseKey) },
+            );
+            if (partsResp.ok) {
+              const parts = await partsResp.json().catch(() => []);
+              let myPart = (parts || []).find(
+                (p) => (p.participant_email || '').toLowerCase() === resolvedEmailLower
+                  && p.status !== 'complete',
+              );
+              // Owner/collaborator with no participant_email match: if
+              // there's exactly ONE incomplete participant on the deal
+              // and the caller is owner/collab, take that slot. This is
+              // the pattern the user just described — owner mapping the
+              // acquirer flow themselves before any specific email is
+              // assigned to that participant.
+              if (!myPart && isOwnerOrCollab) {
+                const incomplete = (parts || []).filter((p) => p.status !== 'complete');
+                if (incomplete.length === 1) myPart = incomplete[0];
+              }
+              if (myPart) {
+                dealLink = { dealId, dealRole: myPart.role, participantId: myPart.id };
+                // If the participant_email column was null, claim it
+                // for the signed-in user so future presence + handover
+                // mechanics can find them by email.
+                if (!myPart.participant_email) {
+                  try {
+                    await fetchWithTimeout(
+                      `${supabaseUrl}/rest/v1/deal_participants?id=eq.${encodeURIComponent(myPart.id)}`,
+                      {
+                        method: 'PATCH',
+                        headers: { ...getSupabaseWriteHeaders(supabaseKey), 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+                        body: JSON.stringify({ participant_email: resolvedEmailLower }),
+                      },
+                    );
+                  } catch { /* non-fatal */ }
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        logger.warn('Deal-id participant resolve failed', { requestId: getRequestId(request), error: err.message, dealId });
       }
     }
 

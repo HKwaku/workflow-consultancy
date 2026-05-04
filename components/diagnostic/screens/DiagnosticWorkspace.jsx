@@ -2739,6 +2739,11 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
           sessionUser,
           accessToken,
           costAnalystEmail: contact?.costAnalystEmail || null,
+          // Pass deal scope so the report endpoint can auto-link to the
+          // signed-in user's participant on this deal and flip status
+          // to 'complete' (otherwise the deal context chip would keep
+          // showing "0/2 participants ready").
+          dealId: dealId || null,
         },
         {
           sendDiagnosticReport,
