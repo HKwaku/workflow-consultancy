@@ -46,6 +46,14 @@ function sanitizeChatMessagesForPersist(msgs) {
     if (m.reportActions && m.reportActions.id) {
       item.reportActions = { id: m.reportActions.id, processName: m.reportActions.processName || '' };
     }
+    if (m.dealSetup && typeof m.dealSetup === 'object') {
+      // The PE / M&A in-chat deal-setup form needs its props (the
+      // platform/acquirer name + which kind it is) to survive a refresh.
+      item.dealSetup = {
+        platformCompany: typeof m.dealSetup.platformCompany === 'string' ? m.dealSetup.platformCompany : '',
+        dealKind: m.dealSetup.dealKind === 'ma' ? 'ma' : 'pe',
+      };
+    }
     if (m.artefact && m.artefact.kind) {
       item.artefact = {
         kind: m.artefact.kind,

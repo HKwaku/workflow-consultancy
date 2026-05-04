@@ -16976,16 +16976,23 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
 .chat-history-signin-link:hover { text-decoration: underline; }
 
 /* In-chat PE deal setup card */
+/* ── In-chat deal-setup form ──
+   Sits attached to the assistant message bubble, not floating below
+   it as a generic boxy card. The accent left bar visually links it to
+   the assistant's preceding "Great — let's set up your roll-up..."
+   message; the rest of the form uses minimal inset styling so it
+   reads as part of the conversation, not a popup. */
 .s7-deal-setup-card {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 10px;
-  padding: 14px;
-  border: 1px solid var(--border, #e2e8f0);
-  border-radius: 10px;
-  background: var(--bg-alt, #f8fafc);
-  max-width: 420px;
+  margin: 6px 0 0;
+  padding: 4px 0 4px 14px;
+  border: 0;
+  border-left: 2px solid rgba(13, 148, 136, 0.42);
+  border-radius: 0;
+  background: transparent;
+  max-width: 480px;
 }
 .s7-deal-setup-field {
   display: flex;
@@ -16993,71 +17000,111 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   gap: 4px;
 }
 .s7-deal-setup-label {
-  font-size: 0.78rem;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--text-mid, #64748b);
 }
 .s7-deal-setup-input {
-  padding: 8px 10px;
+  padding: 9px 12px;
   border: 1px solid var(--border, #e2e8f0);
-  border-radius: 6px;
-  font-size: 0.85rem;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-family: inherit;
   background: var(--bg, #ffffff);
   color: var(--text, #0f172a);
   width: 100%;
   box-sizing: border-box;
+  transition: border-color 0.12s, box-shadow 0.12s;
 }
+.s7-deal-setup-input::placeholder { color: var(--text-light, #94a3b8); }
+.s7-deal-setup-input:hover { border-color: var(--border-strong, #cbd5e1); }
 .s7-deal-setup-input:focus {
   outline: none;
   border-color: var(--accent, #0d9488);
-  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.15);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
 }
 .s7-deal-setup-input:disabled { opacity: 0.6; cursor: not-allowed; }
-.s7-deal-setup-platform {
-  font-size: 0.78rem;
-  color: var(--text-mid, #64748b);
+/* Platform / Acquirer line + Create button on a single row so the
+   form occupies fewer vertical lines and the action sits flush. */
+.s7-deal-setup-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 2px;
 }
+.s7-deal-setup-platform {
+  font-size: 12px;
+  color: var(--text-mid, #64748b);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.s7-deal-setup-platform strong {
+  color: var(--text, #1e293b);
+  font-weight: 600;
+}
+[data-theme="dark"] .s7-deal-setup-platform strong { color: var(--text, #f1f5f9); }
 .s7-deal-setup-error {
-  font-size: 0.8rem;
+  font-size: 12px;
   color: #dc2626;
+  margin: -2px 0 0;
 }
 .s7-deal-setup-submit {
-  align-self: flex-start;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 18px;
+  min-height: 36px;
+  border: 0;
+  border-radius: 999px;
   background: var(--accent, #0d9488);
   color: #ffffff;
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, opacity 0.15s;
+  transition: filter 0.12s, transform 0.06s, opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
 }
-.s7-deal-setup-submit:hover:not(:disabled) { background: var(--accent-dark, #0f766e); }
+.s7-deal-setup-submit:hover:not(:disabled) { filter: brightness(1.08); }
+.s7-deal-setup-submit:active:not(:disabled) { transform: translateY(1px); }
 .s7-deal-setup-submit:disabled { opacity: 0.6; cursor: not-allowed; }
 .s7-deal-setup-card--done {
-  padding: 10px 14px;
-  font-size: 0.85rem;
-  color: #059669;
-  background: rgba(5, 150, 105, 0.08);
-  border-color: rgba(5, 150, 105, 0.25);
+  padding: 8px 14px 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0d9488;
+  background: rgba(13, 148, 136, 0.08);
+  border-left-color: var(--accent, #0d9488);
+  border-radius: 0;
 }
 [data-theme="dark"] .s7-deal-setup-card {
-  background: rgba(30, 41, 59, 0.6);
-  border-color: rgba(148, 163, 184, 0.2);
+  border-left-color: rgba(94, 234, 212, 0.42);
+  background: transparent;
 }
-[data-theme="dark"] .s7-deal-setup-label { color: #94a3b8; }
+[data-theme="dark"] .s7-deal-setup-label { color: var(--text-mid, #94a3b8); }
 [data-theme="dark"] .s7-deal-setup-input {
-  background: #0f172a;
-  border-color: rgba(148, 163, 184, 0.25);
-  color: #e2e8f0;
+  background: rgba(15, 23, 42, 0.55);
+  border-color: rgba(148, 163, 184, 0.18);
+  color: var(--text, #e2e8f0);
 }
-[data-theme="dark"] .s7-deal-setup-platform { color: #94a3b8; }
-[data-theme="dark"] .s7-deal-setup-error { color: #f87171; }
+[data-theme="dark"] .s7-deal-setup-input:hover { border-color: rgba(148, 163, 184, 0.36); }
+[data-theme="dark"] .s7-deal-setup-input:focus {
+  border-color: #5eead4;
+  box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.12);
+}
+[data-theme="dark"] .s7-deal-setup-platform { color: var(--text-mid, #94a3b8); }
+[data-theme="dark"] .s7-deal-setup-error { color: #fca5a5; }
 [data-theme="dark"] .s7-deal-setup-card--done {
-  color: #6ee7b7;
-  background: rgba(5, 150, 105, 0.15);
-  border-color: rgba(5, 150, 105, 0.35);
+  color: #5eead4;
+  background: rgba(94, 234, 212, 0.10);
+  border-left-color: #5eead4;
 }
 
 /* Report action buttons in chat */

@@ -336,12 +336,33 @@ function MapGuide({ onDismiss }) {
 }
 
 /** In-chat PE deal setup card - rendered as part of an assistant message. */
-function DealSetupCard({ platformCompany, onSubmit }) {
+function DealSetupCard({ platformCompany, onSubmit, dealKind = 'pe' }) {
   const [dealName, setDealName] = useState('');
   const [targetCompany, setTargetCompany] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+
+  // Per-kind copy. PE roll-up: platform + portfolio. M&A: acquirer +
+  // target. The submit shape stays the same — handleDealSetupSubmit
+  // routes the kind to the correct deal type and participant roles.
+  const COPY = {
+    pe: {
+      namePlaceholder: 'e.g. ABC Capital 2026 Roll-up',
+      targetLabel: 'First portfolio company',
+      targetPlaceholder: 'Portfolio company name',
+      ownerLabel: 'Platform',
+      missingTarget: 'Enter at least one portfolio company.',
+    },
+    ma: {
+      namePlaceholder: 'e.g. Acme acquires Beta — 2026',
+      targetLabel: 'Target company',
+      targetPlaceholder: 'Company being acquired',
+      ownerLabel: 'Acquirer',
+      missingTarget: 'Enter the target company.',
+    },
+  };
+  const copy = COPY[dealKind] || COPY.pe;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -349,9 +370,9 @@ function DealSetupCard({ platformCompany, onSubmit }) {
     const name = dealName.trim();
     const target = targetCompany.trim();
     if (!name) { setError('Enter a deal name.'); return; }
-    if (!target) { setError('Enter at least one portfolio company.'); return; }
+    if (!target) { setError(copy.missingTarget); return; }
     setSubmitting(true);
-    const res = await onSubmit({ dealName: name, targetCompany: target, platformCompany });
+    const res = await onSubmit({ dealName: name, targetCompany: target, platformCompany, dealKind });
     setSubmitting(false);
     if (res?.ok) setDone(true);
     else if (res?.error) setError(res.error);
@@ -374,28 +395,30 @@ function DealSetupCard({ platformCompany, onSubmit }) {
           className="s7-deal-setup-input"
           value={dealName}
           onChange={(e) => setDealName(e.target.value)}
-          placeholder="e.g. ABC Capital 2026 Roll-up"
+          placeholder={copy.namePlaceholder}
           autoComplete="off"
           disabled={submitting}
         />
       </label>
       <label className="s7-deal-setup-field">
-        <span className="s7-deal-setup-label">First portfolio company</span>
+        <span className="s7-deal-setup-label">{copy.targetLabel}</span>
         <input
           type="text"
           className="s7-deal-setup-input"
           value={targetCompany}
           onChange={(e) => setTargetCompany(e.target.value)}
-          placeholder="Portfolio company name"
+          placeholder={copy.targetPlaceholder}
           autoComplete="off"
           disabled={submitting}
         />
       </label>
-      <div className="s7-deal-setup-platform">Platform: <strong>{platformCompany}</strong></div>
       {error && <div className="s7-deal-setup-error">{error}</div>}
-      <button type="submit" className="s7-deal-setup-submit" disabled={submitting}>
-        {submitting ? 'Creating…' : 'Create deal & continue'}
-      </button>
+      <div className="s7-deal-setup-footer">
+        <div className="s7-deal-setup-platform">{copy.ownerLabel}: <strong>{platformCompany}</strong></div>
+        <button type="submit" className="s7-deal-setup-submit" disabled={submitting}>
+          {submitting ? 'Creating…' : 'Create deal & continue'}
+        </button>
+      </div>
     </form>
   );
 }
@@ -2076,14 +2099,22 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     setModuleId(segmentId);
     updateProcessData({ segment: segmentId });
     addChatMessage({ role: 'user', content: label });
-    if (segmentId === 'pe' && !dealId) {
-      // PE roll-up: collect deal setup in-chat before opening question.
-      const platformCompany = (authUser?.company || '').trim() || 'your platform company';
+    // Both PE roll-up and M&A run on the same deal-scoped chat surface.
+    // Collect minimal deal setup in-chat before the opening question so
+    // the deal context chip can mount and the user gets the workspace
+    // (data room, participants, findings) right away.
+    if ((segmentId === 'pe' || segmentId === 'ma') && !dealId) {
+      const ownerCompany = (authUser?.company || '').trim()
+        || (segmentId === 'ma' ? 'your company' : 'your platform company');
+      const intro = segmentId === 'ma'
+        ? `Great — let's set up the M&A. I'll create a deal with **${ownerCompany}** as the acquirer and one target company to start (you can add more participants later).`
+        : `Great — let's set up your roll-up. I'll create a deal for **${ownerCompany}** and one portfolio company to start (you can invite more later).`;
       addChatMessage({
         role: 'assistant',
-        content: `Great - let's set up your roll-up. I'll create a deal for **${platformCompany}** and one portfolio company to start (you can invite more later).`,
+        content: intro,
         dealSetup: {
-          platformCompany,
+          platformCompany: ownerCompany,
+          dealKind: segmentId,
         },
       });
     } else {
@@ -2093,22 +2124,32 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     if (!editingReportId) setShowGuide(true);
   }, [setModuleId, updateProcessData, addChatMessage, editingReportId, dealId, authUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* ── In-chat PE deal setup submission ── */
-  const handleDealSetupSubmit = useCallback(async ({ dealName: name, targetCompany, platformCompany }) => {
+  /* ── In-chat deal setup submission (PE roll-up + M&A) ── */
+  const handleDealSetupSubmit = useCallback(async ({ dealName: name, targetCompany, platformCompany, dealKind = 'pe' }) => {
     if (!accessToken) {
       addChatMessage({ role: 'assistant', content: 'You need to be signed in to create a deal. [Sign in](/portal?returnTo=%2Fprocess-audit)' });
       return { error: 'not signed in' };
     }
+    // Map the kind onto the deal API's `type` and the right pair of
+    // participant roles. The API treats both deal types the same way
+    // downstream (data room, findings, redesigns); this mapping just
+    // controls the labels and the role each participant occupies.
+    const isMA = dealKind === 'ma';
+    const dealType = isMA ? 'ma' : 'pe_rollup';
+    const ownerRole = isMA ? 'acquirer' : 'platform_company';
+    const counterpartRole = isMA ? 'target' : 'portfolio_company';
+    const counterpartLabel = isMA ? 'Target' : 'Portfolio';
+    const segmentForState = isMA ? 'ma' : 'pe';
     try {
       const resp = await apiFetch('/api/deals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: 'pe_rollup',
+          type: dealType,
           name,
           participants: [
-            { role: 'platform_company', companyName: platformCompany },
-            { role: 'portfolio_company', companyName: targetCompany },
+            { role: ownerRole, companyName: platformCompany },
+            { role: counterpartRole, companyName: targetCompany },
           ],
         }),
       }, accessToken);
@@ -2118,16 +2159,16 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       setDeal({
         dealId: d.id,
         dealCode: d.dealCode,
-        dealRole: 'platform_company',
+        dealRole: ownerRole,
         dealName: d.name,
         dealParticipants: data.participants || [],
         canonicalProcessName: d.processName || null,
       });
-      updateProcessData({ dealCode: d.dealCode, segment: 'pe' });
-      addChatMessage({ role: 'user', content: `Deal "${name}" · Portfolio: ${targetCompany}` });
+      updateProcessData({ dealCode: d.dealCode, segment: segmentForState });
+      addChatMessage({ role: 'user', content: `Deal "${name}" · ${counterpartLabel}: ${targetCompany}` });
       addChatMessage({
         role: 'assistant',
-        content: buildOpeningMessage({ mid: 'pe', dName: d.name, dRole: 'platform_company', canonical: null, processName: null }),
+        content: buildOpeningMessage({ mid: segmentForState, dName: d.name, dRole: ownerRole, canonical: null, processName: null }),
       });
       return { ok: true };
     } catch (err) {
@@ -4696,6 +4737,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                 {m.dealSetup && !dealId && (
                   <DealSetupCard
                     platformCompany={m.dealSetup.platformCompany}
+                    dealKind={m.dealSetup.dealKind || 'pe'}
                     onSubmit={handleDealSetupSubmit}
                   />
                 )}
