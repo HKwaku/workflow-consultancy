@@ -18562,6 +18562,92 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
 }
 
 /* ─────────────────────────────────────────────────────────────────
+   Real-time flow presence bar (FlowPresenceBar.jsx, useFlowPresence).
+   Stacked circular avatars + label showing other collaborators on
+   the same flow. Highlights collisions when peers are editing the
+   same step as the local user.
+   ───────────────────────────────────────────────────────────────── */
+.flow-presence-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 8px;
+  font-size: 11.5px;
+  color: var(--text-mid, #64748b);
+  background: rgba(13, 148, 136, 0.06);
+  border: 1px solid rgba(13, 148, 136, 0.18);
+  border-radius: 999px;
+  -webkit-tap-highlight-color: transparent;
+}
+[data-theme="dark"] .flow-presence-bar {
+  background: rgba(94, 234, 212, 0.06);
+  border-color: rgba(94, 234, 212, 0.16);
+  color: var(--text-mid, #94a3b8);
+}
+.flow-presence-label {
+  font-weight: 500;
+  white-space: nowrap;
+}
+.flow-presence-stack {
+  display: inline-flex;
+  align-items: center;
+  /* Negative margin between pills so they overlap slightly. */
+}
+.flow-presence-stack > * + * { margin-left: -6px; }
+.flow-presence-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--bg, #fff);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: default;
+  transition: transform 0.12s, box-shadow 0.12s;
+  flex-shrink: 0;
+}
+.flow-presence-pill:hover { transform: translateY(-1px); }
+[data-theme="dark"] .flow-presence-pill { border-color: var(--bg-panel, #18181a); }
+.flow-presence-pill--collision {
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.85);
+  animation: flowPresencePulse 1.6s ease-in-out infinite;
+}
+@keyframes flowPresencePulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.85); }
+  50%      { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.55); }
+}
+.flow-presence-pill--more {
+  background: var(--bg-alt, #f1f5f9);
+  color: var(--text-mid, #64748b);
+}
+[data-theme="dark"] .flow-presence-pill--more {
+  background: rgba(255,255,255,0.08);
+  color: var(--text, #f1f5f9);
+}
+@media (max-width: 768px) {
+  .flow-presence-bar {
+    font-size: 11px;
+    padding: 3px 8px 3px 6px;
+    gap: 6px;
+  }
+  .flow-presence-label {
+    /* Keep the label visible but allow truncation on tight viewports. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60vw;
+  }
+  .flow-presence-pill {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
    Mobile view gate (rendered by components/MobileViewGate.jsx).
    Position fixed + z-index above everything. Component itself only
    renders on mobile + when not acknowledged, so these styles never

@@ -72,8 +72,88 @@ export async function POST(request) {
     }
 
     let emailSent = false;
+    const isHandoverReq = isHandover === true || (isHandover !== false && !!senderName);
+
+    // Handover auto-attach: when the chat is scoped to a deal AND the
+    // user is handing over to a colleague by email, add the recipient
+    // to the deal's collaborator list so they have access. If a
+    // specific participant flow is named, also attach them on that
+    // participant_email column (only when it's currently null — never
+    // overwrite an existing lead). The resume link includes the deal
+    // and participant ids so the colleague lands in the right scope.
+    const dealId = parsed.data.dealId || null;
+    const participantId = parsed.data.participantId || null;
+    if (email && isHandoverReq && dealId) {
+      try {
+        const recipient = email.trim().toLowerCase();
+        // 1. Add to deals.collaborator_emails (idempotent — read-then-write
+        //    so we don't clobber existing entries).
+        const dealResp = await fetchWithTimeout(
+          `${supabaseUrl}/rest/v1/deals?id=eq.${dealId}&select=collaborator_emails`,
+          { method: 'GET', headers: getSupabaseHeaders(supabaseKey) },
+        );
+        if (dealResp.ok) {
+          const [row] = await dealResp.json().catch(() => []);
+          const current = Array.isArray(row?.collaborator_emails) ? row.collaborator_emails : [];
+          if (!current.includes(recipient)) {
+            const next = [...current, recipient];
+            await fetchWithTimeout(
+              `${supabaseUrl}/rest/v1/deals?id=eq.${dealId}`,
+              {
+                method: 'PATCH',
+                headers: { ...getSupabaseHeaders(supabaseKey), 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+                body: JSON.stringify({ collaborator_emails: next, updated_at: new Date().toISOString() }),
+              },
+            );
+          }
+        }
+        // 2. Attach to deal_participants.participant_email if a specific
+        //    participant was named AND that row currently has no lead
+        //    email. Don't overwrite an existing one — that'd silently
+        //    boot the original participant off the flow.
+        if (participantId) {
+          const partResp = await fetchWithTimeout(
+            `${supabaseUrl}/rest/v1/deal_participants?id=eq.${participantId}&select=participant_email,status`,
+            { method: 'GET', headers: getSupabaseHeaders(supabaseKey) },
+          );
+          if (partResp.ok) {
+            const [pRow] = await partResp.json().catch(() => []);
+            if (pRow && !pRow.participant_email) {
+              await fetchWithTimeout(
+                `${supabaseUrl}/rest/v1/deal_participants?id=eq.${participantId}`,
+                {
+                  method: 'PATCH',
+                  headers: { ...getSupabaseHeaders(supabaseKey), 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+                  body: JSON.stringify({
+                    participant_email: recipient,
+                    invited_at: new Date().toISOString(),
+                    status: pRow.status === 'complete' ? pRow.status : 'invited',
+                  }),
+                },
+              );
+            }
+          }
+        }
+        // Append deal + participant params to the resume URL so the
+        // recipient lands directly on the right flow scope.
+        if (!resumeUrl.includes('deal=')) {
+          resumeUrl += `${resumeUrl.includes('?') ? '&' : '?'}deal=${encodeURIComponent(dealId)}`;
+        }
+        if (participantId && !resumeUrl.includes('participant=')) {
+          resumeUrl += `&participant=${encodeURIComponent(participantId)}`;
+        }
+      } catch (attachErr) {
+        // Non-fatal — handover proceeds without the auto-attach.
+        logger.warn('Handover auto-attach to deal failed', {
+          requestId: getRequestId(request),
+          error: attachErr.message,
+          dealId,
+          participantId,
+        });
+      }
+    }
+
     if (email) {
-      const isHandoverReq = isHandover === true || (isHandover !== false && !!senderName);
       const webhookSuffix = isHandoverReq ? 'HANDOVER' : 'SAVE_PROGRESS';
       const { sent } = await triggerWebhook({
         requestType: isHandoverReq ? 'handover' : 'save-progress',
@@ -86,6 +166,8 @@ export async function POST(request) {
         senderName: senderName || null,
         comments: comments || null,
         timestamp: new Date().toISOString(),
+        dealId: dealId || undefined,
+        participantId: participantId || undefined,
       }, { envSuffix: webhookSuffix, requestId: getRequestId(request) });
       emailSent = sent;
     }

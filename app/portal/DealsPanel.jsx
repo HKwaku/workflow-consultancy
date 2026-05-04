@@ -595,10 +595,48 @@ export default function DealsPanel({ deals, loading, onRefresh, accessToken }) {
   }, [accessToken, detailByDeal, loadDetail]);
 
   const handleDeleteDeal = useCallback(async (deal) => {
-    if (!confirm(`Delete "${deal.name}"? This removes all companies, flows, and analyses. Saved reports are kept but unlinked.`)) return;
+    // Two-phase delete: first GET the impact preview (counts of every
+    // child that would be removed), show that to the user verbatim,
+    // then proceed only if they actively confirm. The user must type
+    // the deal name to confirm — protects against muscle-memory clicks
+    // when there's a lot of data attached.
+    let impact = null;
     try {
-      const resp = await apiFetch(`/api/deals/${encodeURIComponent(deal.id)}`, { method: 'DELETE' }, accessToken);
-      const data = await resp.json();
+      const probe = await apiFetch(`/api/deals/${encodeURIComponent(deal.id)}`, { method: 'DELETE' }, accessToken);
+      const data = await probe.json().catch(() => ({}));
+      if (!probe.ok) throw new Error(data.error || 'Failed to load delete impact.');
+      impact = data.impact;
+    } catch (err) {
+      flashToast(err.message);
+      return;
+    }
+    if (!impact) return;
+    const lines = [];
+    lines.push(`This will permanently delete "${deal.name}" and:`);
+    const c = impact.counts || {};
+    if (c.participants) lines.push(`  • ${c.participants} participant${c.participants === 1 ? '' : 's'}`);
+    if (c.flows) lines.push(`  • ${c.flows} flow${c.flows === 1 ? '' : 's'}`);
+    if (c.documents) lines.push(`  • ${c.documents} document${c.documents === 1 ? '' : 's'}${c.document_chunks ? ` (${c.document_chunks} indexed chunks)` : ''}`);
+    if (c.analyses) lines.push(`  • ${c.analyses} analys${c.analyses === 1 ? 'is' : 'es'}`);
+    if (c.findings) lines.push(`  • ${c.findings} finding${c.findings === 1 ? '' : 's'}${c.finding_comments ? ` + ${c.finding_comments} comments` : ''}${c.finding_reviews ? ` + ${c.finding_reviews} reviews` : ''}`);
+    if (c.qa_items) lines.push(`  • ${c.qa_items} Q&A item${c.qa_items === 1 ? '' : 's'}`);
+    if (c.connector_bindings) lines.push(`  • ${c.connector_bindings} folder binding${c.connector_bindings === 1 ? '' : 's'} (SharePoint / Drive)`);
+    if (c.chat_sessions) lines.push(`  • ${c.chat_sessions} chat conversation${c.chat_sessions === 1 ? '' : 's'} + every artefact attached to them`);
+    if (impact.collaborators_revoked) lines.push(`  • Access revoked for ${impact.collaborators_revoked} collaborator${impact.collaborators_revoked === 1 ? '' : 's'}`);
+    if (impact.reports_unlinked) lines.push(`  ${impact.reports_unlinked} saved diagnostic report${impact.reports_unlinked === 1 ? '' : 's'} will be UNLINKED (kept, but no longer attached to a deal).`);
+    lines.push('');
+    lines.push('This cannot be undone.');
+    lines.push('');
+    lines.push(`Type "${deal.name}" to confirm:`);
+    const typed = window.prompt(lines.join('\n'));
+    if (typed == null) return; // user cancelled
+    if (typed.trim() !== deal.name) {
+      flashToast('Deal name did not match — delete cancelled.');
+      return;
+    }
+    try {
+      const resp = await apiFetch(`/api/deals/${encodeURIComponent(deal.id)}?confirm=1`, { method: 'DELETE' }, accessToken);
+      const data = await resp.json().catch(() => ({}));
       if (!resp.ok) throw new Error(data.error || 'Failed to delete deal.');
       setExpandedId(null);
       setDetailByDeal((s) => { const n = { ...s }; delete n[deal.id]; return n; });

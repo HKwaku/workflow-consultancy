@@ -77,6 +77,23 @@ export default function DealContextChip() {
   const latestMode = summary?.summary?.latestAnalysisMode || null;
   const latestStat = summary?.summary?.latestAnalysisStatus || null;
 
+  // Resolve the active participant + the user's role label so the
+  // chip can clearly tell the user which flow they're in. Prefer
+  // matching by email; fall back to the first incomplete participant
+  // so the user always sees something concrete instead of a blank.
+  const ROLE_LABEL = {
+    acquirer: 'Acquirer', target: 'Target',
+    platform_company: 'Platform', portfolio_company: 'Portfolio',
+    self: 'Self',
+  };
+  const activeParticipant = me
+    || (summary?.participants || []).find((p) => p.status !== 'complete')
+    || null;
+  const activeRoleLabel = activeParticipant
+    ? (ROLE_LABEL[activeParticipant.role] || activeParticipant.role)
+    : null;
+  const activeCompany = activeParticipant?.companyName || activeParticipant?.company_name || null;
+
   return (
     <div className="chat-deal-context">
       <div className="chat-deal-chip" role="status" aria-live="polite">
@@ -86,7 +103,9 @@ export default function DealContextChip() {
         </svg>
         <span>
           Talking about <strong>{dealName || summary?.name || 'this deal'}</strong>
-          {myCompany && <> · mapping for <strong>{myCompany}</strong></>}
+          {activeCompany && (
+            <> · mapping the <strong>{activeRoleLabel}</strong> flow for <strong>{activeCompany}</strong></>
+          )}
         </span>
         <button
           type="button"

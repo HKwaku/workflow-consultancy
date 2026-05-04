@@ -28,6 +28,8 @@ import SettingsRailButton from '@/components/diagnostic/chat/SettingsRailButton'
 import DocsRailButton from '@/components/diagnostic/chat/DocsRailButton';
 import AnalyticsRailButton from '@/components/diagnostic/chat/AnalyticsRailButton';
 import DealContextChip from '@/components/diagnostic/chat/DealContextChip';
+import FlowPresenceBar from '@/components/diagnostic/chat/FlowPresenceBar';
+import { useFlowPresence } from '@/lib/useFlowPresence';
 import RailSlidePanel from '@/components/diagnostic/chat/RailSlidePanel';
 import CreditsWidget from '@/components/diagnostic/chat/CreditsWidget';
 import { IconEdit, IconRedesign, IconArchive, IconDelete } from '@/components/diagnostic/actionIcons';
@@ -353,6 +355,8 @@ function DealSetupCard({ platformCompany, onSubmit, dealKind = 'pe' }) {
       targetPlaceholder: 'Portfolio company name',
       ownerLabel: 'Platform',
       ownerPlaceholder: 'Platform company name',
+      ownerEmailLabel: 'Platform lead email (optional)',
+      targetEmailLabel: 'Portfolio lead email (optional)',
       missingTarget: 'Enter at least one portfolio company.',
       missingOwner: 'Enter the platform company name.',
     },
@@ -362,6 +366,8 @@ function DealSetupCard({ platformCompany, onSubmit, dealKind = 'pe' }) {
       targetPlaceholder: 'Company being acquired',
       ownerLabel: 'Acquirer',
       ownerPlaceholder: 'Acquirer name',
+      ownerEmailLabel: 'Acquirer lead email (optional)',
+      targetEmailLabel: 'Target lead email (optional)',
       missingTarget: 'Enter the target company.',
       missingOwner: 'Enter the acquirer name.',
     },
@@ -378,9 +384,17 @@ function DealSetupCard({ platformCompany, onSubmit, dealKind = 'pe' }) {
   const [dealName, setDealName] = useState('');
   const [targetCompany, setTargetCompany] = useState('');
   const [ownerCompany, setOwnerCompany] = useState(isPlaceholderOwner ? '' : platformCompany);
+  // Optional lead email for each side. When set, the participant gets
+  // an invite link in their email; the participant_email column also
+  // gets populated so any later handover-to-colleague auto-attaches
+  // to the right participant scope.
+  const [ownerEmail, setOwnerEmail] = useState('');
+  const [targetEmail, setTargetEmail] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+
+  const isValidEmail = (s) => !s || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -388,11 +402,22 @@ function DealSetupCard({ platformCompany, onSubmit, dealKind = 'pe' }) {
     const name = dealName.trim();
     const target = targetCompany.trim();
     const owner = ownerCompany.trim();
+    const ownerEm = ownerEmail.trim();
+    const targetEm = targetEmail.trim();
     if (!name) { setError('Enter a deal name.'); return; }
     if (!owner) { setError(copy.missingOwner); return; }
     if (!target) { setError(copy.missingTarget); return; }
+    if (!isValidEmail(ownerEm)) { setError('Owner email looks invalid.'); return; }
+    if (!isValidEmail(targetEm)) { setError('Target email looks invalid.'); return; }
     setSubmitting(true);
-    const res = await onSubmit({ dealName: name, targetCompany: target, platformCompany: owner, dealKind });
+    const res = await onSubmit({
+      dealName: name,
+      targetCompany: target,
+      platformCompany: owner,
+      ownerEmail: ownerEm || null,
+      targetEmail: targetEm || null,
+      dealKind,
+    });
     setSubmitting(false);
     if (res?.ok) setDone(true);
     else if (res?.error) setError(res.error);
@@ -433,6 +458,18 @@ function DealSetupCard({ platformCompany, onSubmit, dealKind = 'pe' }) {
         />
       </label>
       <label className="s7-deal-setup-field">
+        <span className="s7-deal-setup-label">{copy.ownerEmailLabel}</span>
+        <input
+          type="email"
+          className="s7-deal-setup-input"
+          value={ownerEmail}
+          onChange={(e) => setOwnerEmail(e.target.value)}
+          placeholder="lead@acquirer.com"
+          autoComplete="email"
+          disabled={submitting}
+        />
+      </label>
+      <label className="s7-deal-setup-field">
         <span className="s7-deal-setup-label">{copy.targetLabel}</span>
         <input
           type="text"
@@ -441,6 +478,18 @@ function DealSetupCard({ platformCompany, onSubmit, dealKind = 'pe' }) {
           onChange={(e) => setTargetCompany(e.target.value)}
           placeholder={copy.targetPlaceholder}
           autoComplete="off"
+          disabled={submitting}
+        />
+      </label>
+      <label className="s7-deal-setup-field">
+        <span className="s7-deal-setup-label">{copy.targetEmailLabel}</span>
+        <input
+          type="email"
+          className="s7-deal-setup-input"
+          value={targetEmail}
+          onChange={(e) => setTargetEmail(e.target.value)}
+          placeholder="lead@target.com"
+          autoComplete="email"
           disabled={submitting}
         />
       </label>
@@ -1902,6 +1951,29 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
 
   chatSeedCtxRef.current = { processData, moduleId, dealCanonicalProcessName, dealName, dealRole, chatMessages, myDealCompany };
 
+  /* ═══════ Real-time flow presence ═══════
+     Subscribes to the Supabase Realtime channel keyed on the active
+     flow scope. Other authenticated users on the same scope appear in
+     the FlowPresenceBar below the deal context chip. Soft presence —
+     no locks; collisions just become visible. */
+  const myParticipantId = (dealParticipants || []).find(
+    (p) => (p.participant_email || p.participantEmail || '').toLowerCase() === myEmail,
+  )?.id || null;
+  const { peers: presencePeers } = useFlowPresence({
+    user: sessionUser ? { email: sessionUser.email, name: sessionUser.name } : null,
+    dealId: dealId || null,
+    participantId: myParticipantId,
+    reportId: !dealId ? (editingReportId || null) : null,
+    // The currently-edited step is the one expanded in the inspector
+    // (or null when no step is selected). Peers see "editing step N"
+    // and the bar highlights collisions when two users are on the
+    // same step.
+    currentlyEditingStep: typeof expandedStepIdx === 'number' && expandedStepIdx >= 0
+      ? expandedStepIdx + 1
+      : null,
+    enabled: !!sessionUser?.email,
+  });
+
   /* ═══════ Walkthrough — first-visit only, re-openable via rail ═══════ */
   const GUIDE_SEEN_KEY = 'workflow-walkthrough-seen-v1';
   const [showGuide, setShowGuide] = useState(false);
@@ -2180,7 +2252,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
   }, [setModuleId, updateProcessData, addChatMessage, editingReportId, dealId, authUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── In-chat deal setup submission (PE roll-up + M&A) ── */
-  const handleDealSetupSubmit = useCallback(async ({ dealName: name, targetCompany, platformCompany, dealKind = 'pe' }) => {
+  const handleDealSetupSubmit = useCallback(async ({ dealName: name, targetCompany, platformCompany, ownerEmail, targetEmail, dealKind = 'pe' }) => {
     if (!accessToken) {
       addChatMessage({ role: 'assistant', content: 'You need to be signed in to create a deal. [Sign in](/portal?returnTo=%2Fprocess-audit)' });
       return { error: 'not signed in' };
@@ -2203,8 +2275,8 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
           type: dealType,
           name,
           participants: [
-            { role: ownerRole, companyName: platformCompany },
-            { role: counterpartRole, companyName: targetCompany },
+            { role: ownerRole, companyName: platformCompany, ...(ownerEmail ? { participantEmail: ownerEmail } : {}) },
+            { role: counterpartRole, companyName: targetCompany, ...(targetEmail ? { participantEmail: targetEmail } : {}) },
           ],
         }),
       }, accessToken);
@@ -4658,6 +4730,14 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
         </div>
       )}
       <DealContextChip />
+      {presencePeers.length > 0 && (
+        <div style={{ margin: '6px 16px 0', display: 'flex', justifyContent: 'flex-start' }}>
+          <FlowPresenceBar
+            peers={presencePeers}
+            currentlyEditingStep={typeof expandedStepIdx === 'number' && expandedStepIdx >= 0 ? expandedStepIdx + 1 : null}
+          />
+        </div>
+      )}
       <div className="s7-chat-messages">
         {chatMessages.map((m, i) => {
           const isLast = i === chatMessages.length - 1;
@@ -5148,18 +5228,32 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       });
     }
 
-    // 4. Live current map outside deal scope — for non-deal sessions, the
-    //    user's working map is the only "mapped process" and should be
-    //    visible as an artefact even before they pin or report it.
-    if (!dealId && Array.isArray(processData?.steps) && processData.steps.length > 0) {
+    // 4. Live current map — the user's working canvas should appear as
+    //    an artefact even before they generate a report or call
+    //    replace_all_steps. Previously gated on !dealId, which meant
+    //    deal-scoped users couldn't see their in-progress work in the
+    //    panel until the (one-shot) report generation finished. Now
+    //    surfaced for both contexts: outside a deal it's just "Current",
+    //    inside a deal it's tagged with the user's participant company
+    //    so it groups under the right deal/process/company tree.
+    if (Array.isArray(processData?.steps) && processData.steps.length > 0) {
+      // Find the current user's participant row (if any) so we can
+      // attach company + role context to the live entry.
+      const myEmail = (sessionUser?.email || '').toLowerCase();
+      const me = (dealParticipantsForArtefacts || []).find(
+        (p) => (p.participant_email || p.participantEmail || '').toLowerCase() === myEmail,
+      );
+      const liveProcessLabel = resolvedProcessName
+        || processData.processName
+        || (me ? (me.companyName || me.company_name || me.company) : null);
       list.push({
         kind: 'flow_snapshot',
         label: 'Current',
         snapshot: processData,
-        dealLabel: null,
-        processLabel: processData.processName || null,
+        dealLabel,
+        processLabel: liveProcessLabel,
         variantLabel: 'Current',
-        companyLabel: null,
+        companyLabel: dealId ? formatCompany(me) : null,
         source: 'live',
       });
     }

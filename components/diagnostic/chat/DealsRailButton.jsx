@@ -53,17 +53,54 @@ export default function DealsRailButton({ accessToken }) {
 
   const handleDelete = async (e, deal) => {
     e.stopPropagation();
-    if (typeof window !== 'undefined' && !window.confirm(`Delete "${deal.name}"? This removes all companies, flows, and analyses. Saved reports are kept but unlinked.`)) return;
+    if (typeof window === 'undefined') return;
+    // Two-phase delete: probe for the impact preview, show counts to
+    // the user, require typed confirmation before the actual delete.
     setBusy(true);
+    let impact = null;
     try {
-      const resp = await apiFetch(`/api/deals/${encodeURIComponent(deal.id)}`, { method: 'DELETE' }, accessToken);
+      const probe = await apiFetch(`/api/deals/${encodeURIComponent(deal.id)}`, { method: 'DELETE' }, accessToken);
+      const data = await probe.json().catch(() => ({}));
+      if (!probe.ok) throw new Error(data.error || 'Failed to load delete impact.');
+      impact = data.impact;
+    } catch (err) {
+      window.alert(err.message);
+      setBusy(false);
+      return;
+    }
+    if (!impact) { setBusy(false); return; }
+    const lines = [];
+    lines.push(`This will permanently delete "${deal.name}" and:`);
+    const c = impact.counts || {};
+    if (c.participants) lines.push(`  • ${c.participants} participant${c.participants === 1 ? '' : 's'}`);
+    if (c.flows) lines.push(`  • ${c.flows} flow${c.flows === 1 ? '' : 's'}`);
+    if (c.documents) lines.push(`  • ${c.documents} document${c.documents === 1 ? '' : 's'}${c.document_chunks ? ` (${c.document_chunks} indexed chunks)` : ''}`);
+    if (c.analyses) lines.push(`  • ${c.analyses} analys${c.analyses === 1 ? 'is' : 'es'}`);
+    if (c.findings) lines.push(`  • ${c.findings} finding${c.findings === 1 ? '' : 's'}${c.finding_comments ? ` + ${c.finding_comments} comments` : ''}${c.finding_reviews ? ` + ${c.finding_reviews} reviews` : ''}`);
+    if (c.qa_items) lines.push(`  • ${c.qa_items} Q&A item${c.qa_items === 1 ? '' : 's'}`);
+    if (c.connector_bindings) lines.push(`  • ${c.connector_bindings} folder binding${c.connector_bindings === 1 ? '' : 's'} (SharePoint / Drive)`);
+    if (c.chat_sessions) lines.push(`  • ${c.chat_sessions} chat conversation${c.chat_sessions === 1 ? '' : 's'} + every artefact attached to them`);
+    if (impact.collaborators_revoked) lines.push(`  • Access revoked for ${impact.collaborators_revoked} collaborator${impact.collaborators_revoked === 1 ? '' : 's'}`);
+    if (impact.reports_unlinked) lines.push(`  ${impact.reports_unlinked} saved diagnostic report${impact.reports_unlinked === 1 ? '' : 's'} will be UNLINKED (kept, but no longer attached to a deal).`);
+    lines.push('');
+    lines.push('This cannot be undone.');
+    lines.push('');
+    lines.push(`Type "${deal.name}" to confirm:`);
+    const typed = window.prompt(lines.join('\n'));
+    if (typed == null) { setBusy(false); return; }
+    if (typed.trim() !== deal.name) {
+      window.alert('Deal name did not match — delete cancelled.');
+      setBusy(false);
+      return;
+    }
+    try {
+      const resp = await apiFetch(`/api/deals/${encodeURIComponent(deal.id)}?confirm=1`, { method: 'DELETE' }, accessToken);
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) throw new Error(data.error || 'Failed to delete deal.');
       setDeals((prev) => prev.filter((d) => d.id !== deal.id));
-      // If the active scope was on this deal, clear it.
       if (dealId === deal.id) setDeal(null);
     } catch (err) {
-      if (typeof window !== 'undefined') window.alert(err.message);
+      window.alert(err.message);
     } finally {
       setBusy(false);
     }

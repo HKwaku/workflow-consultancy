@@ -129,6 +129,9 @@ export async function POST(request) {
   // verified dealAccess flag.
   let verifiedDealId = null;
   let dealAccessVerified = false;
+  let dealName = null;
+  let activeParticipant = null;
+  let availableParticipants = null;
   if (dealId) {
     if (!sessionInfo) {
       logger.warn('Anonymous user attempted to use dealId in diagnostic-chat', { requestId: getRequestId(request), dealId });
@@ -140,6 +143,44 @@ export async function POST(request) {
         if (access) {
           verifiedDealId = dealId;
           dealAccessVerified = true;
+          // Hydrate deal name + participants for the prompt's flow-scope
+          // block. Non-fatal — if any of these fail the chat still runs,
+          // just without flow disambiguation context.
+          try {
+            const { getSupabaseAdmin } = await import('@/lib/supabase');
+            const sb = getSupabaseAdmin();
+            const ROLE_LABEL = {
+              acquirer: 'Acquirer', target: 'Target',
+              platform_company: 'Platform', portfolio_company: 'Portfolio',
+              self: 'Self',
+            };
+            const [dealRow, participantsRows] = await Promise.all([
+              sb.from('deals').select('name').eq('id', dealId).maybeSingle(),
+              sb.from('deal_participants')
+                .select('id,role,company_name,participant_email,status,report_id')
+                .eq('deal_id', dealId),
+            ]);
+            if (dealRow?.data?.name) dealName = dealRow.data.name;
+            const participantList = (participantsRows?.data || []).map((p) => ({
+              id: p.id,
+              role: p.role,
+              roleLabel: ROLE_LABEL[p.role] || p.role,
+              companyName: p.company_name,
+              email: p.participant_email,
+              status: p.status,
+              reportId: p.report_id,
+            }));
+            availableParticipants = participantList;
+            // Active participant = the one the signed-in user owns.
+            // Match by participant_email (case-insensitive); fall back to
+            // the most recently in-progress one if no email match.
+            const myEmail = (sessionInfo.email || '').toLowerCase().trim();
+            activeParticipant = participantList.find((p) => (p.email || '').toLowerCase() === myEmail)
+              || participantList.find((p) => p.status === 'in_progress')
+              || null;
+          } catch (err) {
+            logger.warn('Failed to hydrate deal participants for chat scope', { error: err.message });
+          }
         } else {
           logger.warn('User attempted to use dealId without access', {
             requestId: getRequestId(request),
@@ -172,6 +213,7 @@ export async function POST(request) {
             message, currentSteps, currentHandoffs, processName, history, incompleteInfo, phaseState, attachments,
             editingReportId, editingRedesign, redesignContext,
             dealId: verifiedDealId, dealAccessVerified,
+            dealName, activeParticipant, availableParticipants,
             sessionContext, session: sessionInfo,
             apiKey: resolvedApiKey,
             modelOverride: resolvedModel,

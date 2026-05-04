@@ -277,6 +277,23 @@ export async function PATCH(request, { params }) {
  * via ON DELETE CASCADE. Linked diagnostic_reports are not removed (the FK
  * is SET NULL on deal_flows.report_id), so the underlying artefacts stay.
  */
+/**
+ * DELETE /api/deals/[id]
+ *
+ * Two-phase cascading deletion:
+ *   Phase 1 — `?confirm=1` is OMITTED → returns an "impact" payload
+ *     listing every child that would be deleted. The client renders
+ *     this in a confirmation dialog so the owner can see exactly what
+ *     they're about to lose. NOTHING is deleted.
+ *   Phase 2 — `?confirm=1` IS present → actually deletes the deal AND
+ *     every dependent row across 11 child tables, plus storage files
+ *     for any documents on the deal. Diagnostic_reports survive (the
+ *     participants' own work) but get unlinked (deal_id → null).
+ *
+ * Owner-only. Audit log entries are preserved for forensics; their
+ * deal_id remains set so the audit trail still surfaces "deal X
+ * deleted" downstream.
+ */
 export async function DELETE(request, { params }) {
   const originErr = checkOrigin(request);
   if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
@@ -298,16 +315,190 @@ export async function DELETE(request, { params }) {
     const guard = await requireDealOwner({ dealId: id, email: auth.email, userId: auth.userId });
     if (guard.error) return NextResponse.json(guard.error, { status: guard.status });
 
+    const confirm = request.nextUrl.searchParams.get('confirm') === '1';
+    const headers = getSupabaseHeaders(supabaseKey);
+    const writeHeaders = getSupabaseWriteHeaders(supabaseKey);
+
+    // Helper: count rows for a child table by deal_id.
+    const countBy = async (table) => {
+      try {
+        const r = await fetchWithTimeout(
+          `${supabaseUrl}/rest/v1/${table}?deal_id=eq.${encodeURIComponent(id)}&select=id`,
+          { method: 'GET', headers: { ...headers, Prefer: 'count=exact', Range: '0-0' } },
+        );
+        const range = r.headers.get('content-range') || '';
+        const m = range.match(/\/(\d+)$/);
+        if (m) return parseInt(m[1], 10);
+        const rows = await r.json().catch(() => []);
+        return Array.isArray(rows) ? rows.length : 0;
+      } catch { return 0; }
+    };
+
+    // Hydrate the deal name + all child counts in parallel for the
+    // impact preview. This is the response when ?confirm=1 is missing.
+    const dealResp = await fetchWithTimeout(
+      `${supabaseUrl}/rest/v1/deals?id=eq.${encodeURIComponent(id)}&select=name,deal_code,type,collaborator_emails`,
+      { method: 'GET', headers },
+    );
+    const dealRow = dealResp.ok ? (await dealResp.json().catch(() => []))[0] : null;
+    if (!dealRow) return NextResponse.json({ error: 'Deal not found.' }, { status: 404 });
+
+    const [
+      participants, flows, documents, chunks, analyses,
+      findings, findingComments, findingReviews, qaItems,
+      bindings, sessions,
+    ] = await Promise.all([
+      countBy('deal_participants'),
+      countBy('deal_flows'),
+      countBy('deal_documents'),
+      countBy('deal_document_chunks'),
+      countBy('deal_analyses'),
+      countBy('deal_findings'),
+      countBy('deal_finding_comments'),
+      countBy('deal_finding_reviews'),
+      countBy('deal_qa_items'),
+      countBy('deal_connector_bindings'),
+      countBy('chat_sessions'),
+    ]);
+
+    // Reports are unlinked, not deleted — they're the participants' work.
+    const reportsResp = await fetchWithTimeout(
+      `${supabaseUrl}/rest/v1/diagnostic_reports?deal_id=eq.${encodeURIComponent(id)}&select=id`,
+      { method: 'GET', headers },
+    );
+    const linkedReports = reportsResp.ok ? (await reportsResp.json().catch(() => [])).length : 0;
+
+    const impact = {
+      deal: { id, name: dealRow.name, dealCode: dealRow.deal_code, type: dealRow.type },
+      counts: {
+        participants, flows, documents, document_chunks: chunks,
+        analyses, findings, finding_comments: findingComments,
+        finding_reviews: findingReviews, qa_items: qaItems,
+        connector_bindings: bindings, chat_sessions: sessions,
+      },
+      reports_unlinked: linkedReports,
+      collaborators_revoked: Array.isArray(dealRow.collaborator_emails) ? dealRow.collaborator_emails.length : 0,
+    };
+
+    if (!confirm) {
+      // Dry-run — return the impact preview WITHOUT deleting anything.
+      return NextResponse.json({ success: true, dryRun: true, impact });
+    }
+
+    // ── Phase 2: actual deletion. Order matters because some FKs may
+    // not be CASCADE — explicit deletes guarantee a clean teardown
+    // regardless of the schema's FK actions. Each step is best-effort
+    // (4xx/5xx logged, not fatal) so a partial failure on one child
+    // doesn't leave the parent deal stuck behind. ──
+
+    // 0. Storage: delete every file under deal-documents/<dealId>/. Best
+    //    effort; if storage is misconfigured we still proceed with the
+    //    DB cascade so the user isn't blocked.
+    try {
+      const listResp = await fetchWithTimeout(
+        `${supabaseUrl}/storage/v1/list/deal-documents`,
+        {
+          method: 'POST',
+          headers: { ...writeHeaders, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prefix: `${id}/`, limit: 1000 }),
+        },
+      );
+      if (listResp.ok) {
+        const files = await listResp.json().catch(() => []);
+        const paths = (files || []).map((f) => `${id}/${f.name}`).filter(Boolean);
+        if (paths.length) {
+          await fetchWithTimeout(
+            `${supabaseUrl}/storage/v1/object/deal-documents`,
+            {
+              method: 'DELETE',
+              headers: { ...writeHeaders, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ prefixes: paths }),
+            },
+          );
+        }
+      }
+    } catch (e) {
+      logger.warn('Deal delete: storage cleanup failed (continuing)', { dealId: id, error: e.message });
+    }
+
+    // 1. Chat artefacts + messages + sessions. Sessions own artefacts
+    //    via session_id FK; delete bottom-up so we never leave orphans.
+    try {
+      const sessResp = await fetchWithTimeout(
+        `${supabaseUrl}/rest/v1/chat_sessions?deal_id=eq.${encodeURIComponent(id)}&select=id`,
+        { method: 'GET', headers },
+      );
+      const sessIds = sessResp.ok ? (await sessResp.json().catch(() => [])).map((r) => r.id) : [];
+      if (sessIds.length) {
+        const inList = sessIds.map(encodeURIComponent).join(',');
+        await fetchWithTimeout(
+          `${supabaseUrl}/rest/v1/chat_artefacts?session_id=in.(${inList})`,
+          { method: 'DELETE', headers: writeHeaders },
+        );
+        await fetchWithTimeout(
+          `${supabaseUrl}/rest/v1/chat_messages?session_id=in.(${inList})`,
+          { method: 'DELETE', headers: writeHeaders },
+        );
+      }
+      await fetchWithTimeout(
+        `${supabaseUrl}/rest/v1/chat_sessions?deal_id=eq.${encodeURIComponent(id)}`,
+        { method: 'DELETE', headers: writeHeaders },
+      );
+    } catch (e) {
+      logger.warn('Deal delete: chat cleanup failed (continuing)', { dealId: id, error: e.message });
+    }
+
+    // 2. Findings stack: comments → reviews → findings.
+    const cleanupOrder = [
+      'deal_finding_comments',
+      'deal_finding_reviews',
+      'deal_findings',
+      'deal_qa_items',
+      'deal_document_chunks',
+      'deal_documents',
+      'deal_analyses',
+      'deal_connector_bindings',
+      'deal_flows',
+      'deal_participants',
+    ];
+    for (const table of cleanupOrder) {
+      try {
+        await fetchWithTimeout(
+          `${supabaseUrl}/rest/v1/${table}?deal_id=eq.${encodeURIComponent(id)}`,
+          { method: 'DELETE', headers: writeHeaders },
+        );
+      } catch (e) {
+        logger.warn(`Deal delete: ${table} cleanup failed (continuing)`, { dealId: id, error: e.message });
+      }
+    }
+
+    // 3. Unlink (don't delete) any diagnostic_reports tied to this deal.
+    //    Reports are the participants' own work and outlive the deal.
+    try {
+      await fetchWithTimeout(
+        `${supabaseUrl}/rest/v1/diagnostic_reports?deal_id=eq.${encodeURIComponent(id)}`,
+        {
+          method: 'PATCH',
+          headers: { ...writeHeaders, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify({ deal_id: null, deal_role: null }),
+        },
+      );
+    } catch (e) {
+      logger.warn('Deal delete: report unlink failed (continuing)', { dealId: id, error: e.message });
+    }
+
+    // 4. The deal itself.
     const delResp = await fetchWithTimeout(
       `${supabaseUrl}/rest/v1/deals?id=eq.${encodeURIComponent(id)}`,
-      { method: 'DELETE', headers: getSupabaseWriteHeaders(supabaseKey) }
+      { method: 'DELETE', headers: writeHeaders },
     );
     if (!delResp.ok && delResp.status !== 204) {
+      logger.error('Deal delete failed at final step', { dealId: id, status: delResp.status });
       return NextResponse.json({ error: 'Failed to delete deal.' }, { status: 502 });
     }
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, deleted: { ...impact, dealName: dealRow.name } });
   } catch (err) {
-    logger.error('Delete deal error', { requestId: getRequestId(request), error: err.message });
+    logger.error('Delete deal error', { requestId: getRequestId(request), error: err.message, stack: err.stack });
     return NextResponse.json({ error: 'Failed to delete deal.' }, { status: 500 });
   }
 }

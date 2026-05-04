@@ -506,11 +506,21 @@ export function DiagnosticProvider({ children }) {
       ...(chatPersist?.length ? { chatMessages: chatPersist } : {}),
     };
     const emailTrimmed = typeof email === 'string' ? email.trim() : '';
+    // Resolve the SENDER's active participant on this deal so the
+    // server can attach the recipient as a collaborator on the right
+    // flow (acquirer vs target). Match the signed-in user's email
+    // against deal_participants.participant_email.
+    const myEmail = (state.authUser?.email || state.contact?.email || '').toLowerCase().trim();
+    const activeParticipant = (state.dealParticipants || []).find(
+      (p) => (p.participant_email || p.participantEmail || '').toLowerCase() === myEmail,
+    ) || null;
     const body = {
       progressData,
       currentScreen: state.currentScreen,
       processName: pd?.processName || '',
       ...(emailTrimmed ? { email: emailTrimmed } : {}),
+      ...(state.dealId ? { dealId: state.dealId } : {}),
+      ...(activeParticipant?.id ? { participantId: activeParticipant.id } : {}),
     };
     if (step != null) body.step = step;
     if (isHandover != null) body.isHandover = isHandover;
@@ -534,7 +544,7 @@ export function DiagnosticProvider({ children }) {
       emailSent: !!data.emailSent,
       message: data.message || '',
     };
-  }, [state.currentScreen, state.processData, state.completedProcesses, state.customDepartments, state.stepCount, state.diagnosticMode, state.teamMode, state.chatMessages, state.authUser, state.contact, state.auditTrail]);
+  }, [state.currentScreen, state.processData, state.completedProcesses, state.customDepartments, state.stepCount, state.diagnosticMode, state.teamMode, state.chatMessages, state.authUser, state.contact, state.auditTrail, state.dealId, state.dealParticipants]);
 
   /** POST to /api/send-diagnostic-report. Payload: { contact, summary, recommendations, automationScore, roadmap, processes, rawProcesses, customDepartments, editingReportId, timestamp } */
   const sendDiagnosticReport = useCallback(async (payload, options = {}) => {
