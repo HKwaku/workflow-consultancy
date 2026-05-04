@@ -13344,22 +13344,59 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
 
 /* Connector bindings inside data-room */
 .deal-connector-bindings {
-  margin: 6px 0 12px;
-  padding: 8px 10px;
-  border: 1px dashed var(--border, #e2e8f0);
-  border-radius: 6px;
-  background: var(--bg-alt, #f8fafc);
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--bg, #fff);
 }
-.deal-connector-bindings-head { display: flex; align-items: center; gap: 8px; }
-.deal-connector-bindings-title { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-mid, #64748b); }
-.deal-connector-bindings-add { margin-left: auto; display: flex; gap: 4px; flex-wrap: wrap; }
+[data-theme="dark"] .deal-connector-bindings {
+  background: rgba(15, 23, 42, 0.55);
+  border-color: var(--border, #334155);
+}
+.deal-connector-bindings-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.deal-connector-bindings-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-mid, #64748b);
+}
+.deal-connector-bindings-add { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
 .deal-connector-add-btn {
-  font-size: 10.5px; font-weight: 600; padding: 4px 9px;
-  border-radius: 4px; border: 1px solid var(--border, #e2e8f0);
-  background: var(--bg, #fff); color: var(--text-mid, #64748b); cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #e2e8f0);
+  background: transparent;
+  color: var(--text-mid, #64748b);
+  cursor: pointer;
   font-family: inherit;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+  -webkit-tap-highlight-color: transparent;
 }
-.deal-connector-add-btn:hover { color: #0d9488; border-color: rgba(13,148,136,0.32); }
+.deal-connector-add-btn:hover,
+.deal-connector-add-btn:focus-visible {
+  color: var(--accent, #0d9488);
+  border-color: rgba(13,148,136,0.42);
+  background: rgba(13,148,136,0.06);
+}
+[data-theme="dark"] .deal-connector-add-btn { border-color: rgba(255,255,255,0.10); }
+[data-theme="dark"] .deal-connector-add-btn:hover,
+[data-theme="dark"] .deal-connector-add-btn:focus-visible {
+  color: #5eead4;
+  border-color: rgba(94,234,212,0.42);
+  background: rgba(94,234,212,0.08);
+}
 .deal-connector-bindings-empty { font-size: 11.5px; color: var(--text-mid, #64748b); margin: 6px 0 0; }
 .deal-connector-bindings-list { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .deal-connector-binding {
@@ -14528,7 +14565,7 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   width: min(1200px, 100%);
   height: min(86vh, 920px);
   background: var(--bg, #ffffff);
-  border-radius: 12px;
+  border-radius: 14px;
   border: 1px solid var(--border, #e2e8f0);
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.42);
   display: flex;
@@ -14544,23 +14581,37 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 14px;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--border, #e2e8f0);
-  background: var(--bg-alt, #f1f5f9);
+  background: var(--bg-alt, #f8fafc);
+  flex-shrink: 0;
 }
-[data-theme="dark"] .deal-workspace-bar { background: rgba(15,23,42,0.55); border-bottom-color: var(--border, #334155); }
-.deal-workspace-bar-left { display: flex; flex-direction: column; gap: 2px; }
+[data-theme="dark"] .deal-workspace-bar {
+  background: rgba(15,23,42,0.55);
+  border-bottom-color: var(--border, #334155);
+}
+.deal-workspace-bar-left { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .deal-workspace-bar-eyebrow {
   font-size: 10.5px;
-  letter-spacing: 0.05em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-mid, #64748b);
 }
-.deal-workspace-bar-name { font-size: 14px; font-weight: 700; color: var(--text, #1e293b); }
+.deal-workspace-bar-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text, #1e293b);
+  letter-spacing: -0.01em;
+}
 [data-theme="dark"] .deal-workspace-bar-name { color: var(--text, #f8fafc); }
-.deal-workspace-bar-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.deal-workspace-bar-actions { display: flex; gap: 6px; flex-shrink: 0; align-items: center; }
 
-.deal-workspace-body { flex: 1; overflow-y: auto; padding: 18px 22px; }
+.deal-workspace-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 22px 28px;
+}
 
 /* Analytics modal — iframes /portal/analytics for hard CSS isolation. The
    chat surface and the analytics page share zero cascade. Update-immune by
@@ -14588,23 +14639,45 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-areas: "participants documents" "findings findings";
-  gap: 16px;
+  gap: 18px;
 }
-.deal-workspace-section { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+/* Each section is now a contained card so the workspace reads as
+   discrete modules instead of free-floating columns. */
+.deal-workspace-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px 18px;
+  background: var(--bg-alt, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+}
+[data-theme="dark"] .deal-workspace-section {
+  background: rgba(15, 23, 42, 0.45);
+  border-color: var(--border, #334155);
+}
 .deal-workspace-section:nth-child(1) { grid-area: participants; }
 .deal-workspace-section:nth-child(2) { grid-area: documents; }
 .deal-workspace-section:nth-child(3) { grid-area: findings; }
 @media (max-width: 720px) {
-  .deal-workspace-grid { grid-template-columns: 1fr; grid-template-areas: "participants" "documents" "findings"; }
+  .deal-workspace-grid { grid-template-columns: 1fr; grid-template-areas: "participants" "documents" "findings"; gap: 14px; }
+  .deal-workspace-section { padding: 14px 14px; }
 }
 .deal-workspace-section-title {
   font-size: 13px;
   font-weight: 700;
-  margin: 0 0 4px;
+  margin: 0 0 6px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border, #e2e8f0);
   display: flex;
   align-items: center;
   gap: 8px;
   color: var(--text, #1e293b);
+  letter-spacing: 0.01em;
+}
+[data-theme="dark"] .deal-workspace-section-title {
+  border-bottom-color: rgba(255,255,255,0.06);
 }
 [data-theme="dark"] .deal-workspace-section-title { color: var(--text, #f8fafc); }
 .deal-workspace-section-count {
@@ -15437,48 +15510,103 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
 .canvas-action-overlay-dismiss:hover { color: var(--text, #1e293b); }
 [data-theme="dark"] .canvas-action-overlay-dismiss:hover { color: var(--text, #f8fafc); }
 
-.chat-deal-context { margin: 8px 16px 0; display: flex; flex-direction: column; gap: 8px; }
-.chat-deal-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px 4px 8px;
-  font-size: 12px;
-  color: var(--accent, #0d9488);
-  background: rgba(13, 148, 136, 0.08);
+/* ── Deal context card ──
+   Previously two disconnected boxes — a teal pill and a grey stat
+   rectangle stacked beneath. Now one unified card with a header row
+   (briefcase + name + actions) divided from the stats row by a hairline.
+   Tied together visually with shared border and accent left edge. */
+.chat-deal-context {
+  margin: 8px 16px 0;
   border: 1px solid rgba(13, 148, 136, 0.22);
-  border-radius: 999px;
-  width: fit-content;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(13,148,136,0.05) 0%, transparent 100%);
 }
-.chat-deal-chip strong { font-weight: 600; }
+[data-theme="dark"] .chat-deal-context {
+  border-color: rgba(94, 234, 212, 0.24);
+  background: linear-gradient(180deg, rgba(20,184,166,0.10) 0%, rgba(15,23,42,0.20) 100%);
+}
+.chat-deal-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text, #1e293b);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  width: 100%;
+}
+[data-theme="dark"] .chat-deal-chip { color: var(--text, #f1f5f9); }
+.chat-deal-chip > svg {
+  flex-shrink: 0;
+  color: var(--accent, #0d9488);
+  width: 16px;
+  height: 16px;
+}
+.chat-deal-chip > span:first-of-type {
+  flex: 1 1 auto;
+  min-width: 0;
+  line-height: 1.4;
+  color: var(--text-mid, #64748b);
+}
+.chat-deal-chip strong {
+  font-weight: 600;
+  color: var(--text, #1e293b);
+}
+[data-theme="dark"] .chat-deal-chip strong { color: var(--text, #f8fafc); }
 .chat-deal-chip-toggle {
-  margin-left: 6px;
-  background: none;
-  border: none;
-  padding: 0 0 0 6px;
-  font-size: 11px;
+  margin-left: 0;
+  background: transparent;
+  border: 0;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--accent, #0d9488);
   cursor: pointer;
-  border-left: 1px solid rgba(13, 148, 136, 0.32);
-  text-decoration: underline;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: background 0.12s, color 0.12s;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+.chat-deal-chip-toggle:hover,
+.chat-deal-chip-toggle:focus-visible {
+  background: rgba(13, 148, 136, 0.10);
+  color: var(--accent, #0d9488);
+}
+[data-theme="dark"] .chat-deal-chip-toggle { color: #5eead4; }
+[data-theme="dark"] .chat-deal-chip-toggle:hover,
+[data-theme="dark"] .chat-deal-chip-toggle:focus-visible {
+  background: rgba(94, 234, 212, 0.12);
+  color: #99f6e4;
 }
 .chat-deal-pane {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 8px;
-  padding: 10px 12px;
-  border: 1px solid var(--border, #e2e8f0);
-  border-radius: 10px;
-  background: var(--bg-alt, #f1f5f9);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid rgba(13, 148, 136, 0.18);
+  border-radius: 0;
+  background: transparent;
 }
 [data-theme="dark"] .chat-deal-pane {
-  background: rgba(15, 23, 42, 0.45);
-  border-color: var(--border, #334155);
+  border-top-color: rgba(94, 234, 212, 0.20);
+  background: transparent;
 }
 .chat-deal-pane-stat {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  padding: 12px 14px;
+  border-right: 1px solid rgba(13, 148, 136, 0.10);
+  min-width: 0;
+}
+.chat-deal-pane-stat:last-child { border-right: 0; }
+[data-theme="dark"] .chat-deal-pane-stat {
+  border-right-color: rgba(255, 255, 255, 0.06);
 }
 .chat-deal-pane-num {
   font-size: 18px;
@@ -15487,17 +15615,24 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   line-height: 1.1;
 }
 [data-theme="dark"] .chat-deal-pane-num { color: var(--text, #f8fafc); }
-.chat-deal-pane-num--text { font-size: 13px; font-weight: 600; text-transform: capitalize; }
+.chat-deal-pane-num--text {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: capitalize;
+  overflow-wrap: anywhere;
+}
 .chat-deal-pane-num-of {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-mid, #64748b);
+  margin-left: 2px;
 }
 .chat-deal-pane-label {
   font-size: 10.5px;
-  letter-spacing: 0.04em;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-mid, #64748b);
+  color: var(--text-mid, #94a3b8);
 }
 .chat-deal-pane-status--collecting { color: #d97706; }
 .chat-deal-pane-status--complete   { color: #0d9488; }
@@ -18040,31 +18175,29 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
     color: #fff;
   }
 
-  /* ---- DealContextChip pass 4: full-width strip, allow wrapping ----
-     Pass 3 truncated the deal label with an ellipsis and the user
-     reported the text was cut off. Drop the truncation: let the chip
-     wrap to multiple lines if needed but stay flush full-width with
-     no rounded edges. */
+  /* ---- DealContextChip on mobile ----
+     Keep the unified-card styling from desktop but let it span the
+     full viewport width with no outer margin or rounded corners. The
+     header (chip) wraps; the stat row sits beneath. */
   .chat-deal-chip-toggle[aria-expanded] {
     display: none !important;
   }
   .chat-deal-context {
     margin: 0 !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    border-top: 0 !important;
+    border-radius: 0 !important;
   }
   .chat-deal-chip {
     display: flex !important;
     width: 100% !important;
     flex-wrap: wrap !important;
-    align-items: flex-start !important;
-    padding: 6px 12px !important;
-    font-size: 11px !important;
-    gap: 4px 6px !important;
-    line-height: 1.35;
-    border-radius: 0 !important;
-    border-left: 0 !important;
-    border-right: 0 !important;
-    border-top: 0 !important;
-    border-bottom: 1px solid rgba(13, 148, 136, 0.22) !important;
+    align-items: center !important;
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+    gap: 8px !important;
+    line-height: 1.4;
   }
   .chat-deal-chip > svg {
     width: 11px !important;
@@ -18081,9 +18214,25 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   }
   .chat-deal-chip-toggle:not([aria-expanded]) {
     flex-shrink: 0;
-    padding: 3px 8px !important;
-    font-size: 10.5px !important;
+    padding: 5px 10px !important;
+    font-size: 11.5px !important;
   }
+  /* Stat strip below the header: 2 columns instead of 4 on mobile,
+     thinner padding, no horizontal dividers (use bottom borders for
+     row separation in 2-col layout). */
+  .chat-deal-pane {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .chat-deal-pane-stat {
+    padding: 8px 12px !important;
+    border-right: 1px solid rgba(13, 148, 136, 0.10);
+    border-bottom: 1px solid rgba(13, 148, 136, 0.10);
+  }
+  .chat-deal-pane-stat:nth-child(2n) { border-right: 0; }
+  .chat-deal-pane-stat:nth-last-child(-n+2) { border-bottom: 0; }
+  .chat-deal-pane-num { font-size: 16px !important; }
+  .chat-deal-pane-num--text { font-size: 12px !important; }
+  .chat-deal-pane-label { font-size: 9.5px !important; }
 
   /* ---- Use the full mobile width for chat ----
      The chat surface had compounding horizontal padding from outer
