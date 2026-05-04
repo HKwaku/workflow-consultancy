@@ -48,7 +48,12 @@ body {
     font-family: 'Inter', 'Work Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     color: var(--text);
     background: var(--bg);
+    /* 100vh on mobile Safari/Chrome reports the URL-bar-collapsed height,
+       so when the bar is visible the body extends below the viewport and
+       leaves a strip of empty background. 100dvh tracks the actual visible
+       area. The 100vh line stays first as a fallback for older browsers. */
     min-height: 100vh;
+    min-height: 100dvh;
     overflow-x: hidden;
     line-height: 1.65;
     -webkit-font-smoothing: antialiased;

@@ -17964,17 +17964,42 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   .s7-inline-chat,
   .s7-inline-chat--sized { padding: 0 !important; }
 
-  /* ---- Popovers / dropdowns: clamp to viewport width ----
-     The model-picker pop had a fixed 340px width and was anchored
-     bottom-left — on a phone with the trigger near the right edge it
-     overflowed the screen. Constrain to viewport with a small inset. */
+  /* ---- Popovers / dropdowns: pin to viewport on mobile ----
+     The model-picker pop is position:absolute relative to its small
+     parent (the trigger pill). Setting left/right on it only moves it
+     within that tiny container, so it overflowed the screen edge.
+     position:fixed makes left/right viewport-relative; bottom pins it
+     above the chat input row regardless of where the trigger sits. */
   .model-picker-pop {
-    width: calc(100vw - 16px) !important;
-    max-width: 360px !important;
+    position: fixed !important;
+    bottom: 76px !important;       /* clears the chat composer + input */
     left: 8px !important;
     right: 8px !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: 60vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
-  .model-picker-pop-head { white-space: normal !important; }
+  .model-picker-pop-head {
+    white-space: normal !important;
+    flex-wrap: wrap;
+    gap: 6px !important;
+  }
+  /* Each model row: name + tier badge can fit on one line, but if the
+     name is long the badge would otherwise clip off the right edge.
+     Allow wrap and let the badge stay flush right. */
+  .model-picker-item-row {
+    flex-wrap: wrap;
+    gap: 6px 8px;
+  }
+  .model-picker-item-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .model-picker-item-tier { flex-shrink: 0; }
+  .model-picker-item-blurb { font-size: 12px; }
 
   /* Generic safety net for any other absolute popover that uses
      "right: 0" or fixed widths and ends up clipped: clamp the right
