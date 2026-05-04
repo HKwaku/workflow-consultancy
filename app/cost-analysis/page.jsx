@@ -1492,7 +1492,7 @@ function CostAnalysisContent() {
                 <Link href={`/report?id=${id}`} className="cost-next-step-card">
                   <span className="cost-next-step-icon">✦</span>
                   <span className="cost-next-step-label">Generate a redesign</span>
-                  <span className="cost-next-step-desc">Use the AI Redesign button on your report</span>
+                  <span className="cost-next-step-desc">Use the Redesign with AI button on your report</span>
                 </Link>
                 {redesign && (
                   <Link href={`/build?id=${id}`} className="cost-next-step-card">

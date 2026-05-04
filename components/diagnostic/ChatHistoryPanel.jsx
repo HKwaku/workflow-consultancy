@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { apiFetch } from '@/lib/api-fetch';
+import { IconEdit, IconRedesign, IconArchive, IconDelete, IconPin } from './actionIcons';
 
 /**
  * Chat history panel - lists every chat_sessions row the user can see,
@@ -93,43 +94,6 @@ function useDebounced(value, ms = 250) {
     return () => clearTimeout(id);
   }, [value, ms]);
   return v;
-}
-
-function IconEdit() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
-  );
-}
-
-function IconRedesign() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M12 3v1m0 16v1M4.22 4.22l.7.7m13.86 13.86l.7.7M3 12h1m16 0h1M4.22 19.78l.7-.7M18.36 5.64l.7-.7" />
-      <circle cx="12" cy="12" r="4" />
-    </svg>
-  );
-}
-
-function IconPin({ filled }) {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M12 17v5" />
-      <path d="M9 10.76V3h6v7.76l3 3.24H6z" />
-    </svg>
-  );
-}
-
-function IconArchive() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <rect x="2" y="3" width="20" height="5" rx="1" />
-      <path d="M4 8v11a2 2 0 002 2h12a2 2 0 002-2V8" />
-      <line x1="10" y1="12" x2="14" y2="12" />
-    </svg>
-  );
 }
 
 export default function ChatHistoryPanel({ onClose, onLoadReport, onRedesignReport }) {
@@ -301,6 +265,22 @@ export default function ChatHistoryPanel({ onClose, onLoadReport, onRedesignRepo
     patchSession(session, { archived: !session.archived });
   }, [patchSession]);
 
+  const handleDelete = useCallback(async (e, session) => {
+    e.stopPropagation();
+    if (session.legacy) return;
+    if (typeof window !== 'undefined' && !window.confirm('Delete this conversation? This cannot be undone.')) return;
+    // Optimistic remove from the list
+    const prev = sessions;
+    setSessions((list) => list.filter((s) => s.id !== session.id));
+    try {
+      const resp = await apiFetch(`/api/chat-sessions/${encodeURIComponent(session.id)}`, { method: 'DELETE' }, accessToken);
+      if (!resp.ok) throw new Error('delete failed');
+    } catch {
+      setSessions(prev);
+      if (typeof window !== 'undefined') window.alert('Delete failed.');
+    }
+  }, [accessToken, sessions]);
+
   return (
     <div className="s7-chat-inner chat-history-panel">
       <div className="chat-history-hd">
@@ -461,6 +441,16 @@ export default function ChatHistoryPanel({ onClose, onLoadReport, onRedesignRepo
                         title={session.archived ? 'Unarchive' : 'Archive'}
                       >
                         <IconArchive />
+                      </button>
+                    )}
+                    {!session.legacy && (
+                      <button
+                        type="button"
+                        className="chat-history-action-btn chat-history-action-btn--danger"
+                        onClick={(e) => handleDelete(e, session)}
+                        title="Delete"
+                      >
+                        <IconDelete />
                       </button>
                     )}
                   </div>

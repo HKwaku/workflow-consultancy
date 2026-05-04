@@ -138,7 +138,9 @@
       "Bash(npx --yes esbuild --loader:.js=jsx --bundle=false \"app/api/deals/[id]/route.js\")",
       "Bash(npx --yes esbuild --loader:.js=jsx --bundle=false lib/rate-limit.js)",
       "Bash(awk 'NR>=35 && NR<=70' app/portal/portal.css)",
-      "Bash(npx --yes esbuild --loader:.js=jsx --bundle=false app/api/diagnostic-chat/route.js)"
+      "Bash(npx --yes esbuild --loader:.js=jsx --bundle=false app/api/diagnostic-chat/route.js)",
+      "Bash(ls C:\\\\workflow\\\\workflow-consultancy\\\\app\\\\api\\\\reports\\\\\\\\[id\\\\\\\\])",
+      "Bash(dir \"C:\\\\workflow\\\\workflow-consultancy\\\\app\\\\api\\\\reports\")"
     ]
   },
   "hooks": {

@@ -14,7 +14,7 @@ const EVENT_META = {
   checklist:   { icon: '☑', label: 'Checklist',   cls: 'checklist' },
   navigate:    { icon: '→', label: 'Navigate',    cls: 'nav' },
   created:        { icon: '●', label: 'Session',         cls: 'session' },
-  redesign_ai:    { icon: '◇', label: 'AI Redesign',     cls: 'redesign' },
+  redesign_ai:    { icon: '◇', label: 'Redesign with AI', cls: 'redesign' },
   redesign_save:  { icon: '⬆', label: 'Redesign Saved', cls: 'save' },
   redesign_rename: { icon: '✎', label: 'Redesign Renamed', cls: 'edit' },
 };

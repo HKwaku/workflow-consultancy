@@ -55,6 +55,10 @@ body {
     min-height: 100vh;
     min-height: 100dvh;
     overflow-x: hidden;
+    /* Block iOS pull-to-refresh + the page-level rubber-band that fires
+       when an inner scroll container reaches its end. Inner containers
+       set their own contain rules; this is the outer guard. */
+    overscroll-behavior-y: none;
     line-height: 1.65;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;

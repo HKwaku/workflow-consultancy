@@ -16,6 +16,7 @@ import StepInsightPanel from '@/components/report/StepInsightPanel';
 import MetricDrillModal from '@/components/report/MetricDrillModal';
 import PortalAnalyticsPanel from '@/app/portal/PortalAnalyticsPanel';
 import DealsPanel from '@/app/portal/DealsPanel';
+import { IconEdit, IconRedesign, IconArchive, IconDelete } from '@/components/diagnostic/actionIcons';
 
 function formatCurrency(val) {
   if (val >= 1000000) return '\u00A3' + (val / 1000000).toFixed(1) + 'M';
@@ -493,6 +494,21 @@ export default function PortalDashboard({ user, accessToken, onSignOut, initialS
   const [processTypeFilter, setProcessTypeFilter] = useState('all'); // 'all' | 'process-only' | 'comprehensive'
   const [segmentFilter, setSegmentFilter] = useState('all'); // 'all' | 'scaling' | 'ma' | 'pe' | 'highstakes'
   const [settingsOpenId, setSettingsOpenId] = useState(null);
+  // Per-device archived-reports set. Localstorage-backed so we can ship
+  // the action without a schema migration; Archive is a UI-only filter.
+  const [archivedReportIds, setArchivedReportIds] = useState(() => {
+    if (typeof window === 'undefined') return new Set();
+    try { return new Set(JSON.parse(localStorage.getItem('vesno_archived_reports') || '[]')); }
+    catch { return new Set(); }
+  });
+  const toggleReportArchive = useCallback((reportId) => {
+    setArchivedReportIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(reportId)) next.delete(reportId); else next.add(reportId);
+      try { localStorage.setItem('vesno_archived_reports', JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }, []);
   const [processPage, setProcessPage] = useState(1);
   const [showOrgAdminLink, setShowOrgAdminLink] = useState(false);
   const [dealsEntitlement, setDealsEntitlement] = useState(false); // entitlements.deals or platform-admin
@@ -602,6 +618,7 @@ export default function PortalDashboard({ user, accessToken, onSignOut, initialS
     if (processTypeFilter === 'process-only' && mode !== 'map-only') return false;
     if (processTypeFilter === 'comprehensive' && mode !== 'comprehensive') return false;
     if (segmentFilter !== 'all' && r.segment !== segmentFilter) return false;
+    if (archivedReportIds.has(r.id)) return false;
     return true;
   });
   const teamSessions = reports?.teamSessions || [];
@@ -875,11 +892,7 @@ export default function PortalDashboard({ user, accessToken, onSignOut, initialS
         ) : (
           <Link href={'/report?id=' + reportId + '&portal=1'} className="portal-flow-btn portal-flow-btn-primary" target="_blank" rel="noopener noreferrer">View Full Report</Link>
         )}
-        <Link href={`/process-audit?edit=${encodeURIComponent(reportId)}&email=${encodeURIComponent(email)}`} className="portal-flow-btn">Edit</Link>
         <Link href={`/process-audit?reaudit=${encodeURIComponent(reportId)}`} className="portal-flow-btn" title="Run a new audit and compare results to this one">Re-audit</Link>
-        <Link href={`/process-audit?edit=${encodeURIComponent(reportId)}&email=${encodeURIComponent(email)}${variant === 'redesigned' ? '&editRedesign=1' : ''}&aiRedesign=1`} className="portal-flow-btn portal-flow-btn-primary">
-          {variant === 'redesigned' ? 'Redesign with AI' : 'AI redesign'}
-        </Link>
         {variant === 'redesigned' && isAccepted && (() => {
           const acceptedV = (r.redesignVersions || []).find((v) => v.status === 'accepted');
           return acceptedV ? (
@@ -901,6 +914,7 @@ export default function PortalDashboard({ user, accessToken, onSignOut, initialS
       }
     };
 
+    const isArchived = archivedReportIds.has(r.id);
     const parentActions = (
       <span className="portal-header-right">
         <span className="portal-report-labels">
@@ -908,6 +922,7 @@ export default function PortalDashboard({ user, accessToken, onSignOut, initialS
           {hasRedesign && <span className={`process-redesign-tag ${isAccepted ? '' : 'pending'}`}>{isAccepted ? 'Redesigned' : 'Redesign Pending'}</span>}
           {hasRedesign && r.redesignVersions?.length > 0 && <span className="portal-version-badge">{r.redesignVersions.length} version{r.redesignVersions.length > 1 ? 's' : ''}</span>}
           {costAnalysisPending && <span className="process-tag cost-analysis-pending-tag" title="A consultant is working on the cost model for this report">Pending cost analysis</span>}
+          {isArchived && <span className="process-tag">Archived</span>}
         </span>
         {costAnalysisComplete && costEditUrl && isCostAuthorized && (
           <Link
@@ -918,23 +933,63 @@ export default function PortalDashboard({ user, accessToken, onSignOut, initialS
             View/Edit Costs
           </Link>
         )}
-        <span className="portal-report-settings-wrap" ref={settingsOpenId === r.id ? settingsOpenRef : null}>
+        {/* Shared four-action icon row: Edit, Redesign with AI, Archive,
+            Delete. Same glyphs + sizing used in ChatHistoryPanel and
+            DiagnosticWorkspace artefacts so users get one mental model. */}
+        <span className="portal-report-actions" onClick={(e) => e.stopPropagation()}>
+          <Link
+            href={`/process-audit?edit=${encodeURIComponent(r.id)}&email=${encodeURIComponent(email)}`}
+            className="chat-history-action-btn"
+            title="Edit"
+            aria-label="Edit"
+          >
+            <IconEdit />
+          </Link>
+          <Link
+            href={`/process-audit?edit=${encodeURIComponent(r.id)}&email=${encodeURIComponent(email)}${hasRedesign ? '&editRedesign=1' : ''}&aiRedesign=1`}
+            className="chat-history-action-btn"
+            title="Redesign with AI"
+            aria-label="Redesign with AI"
+          >
+            <IconRedesign />
+          </Link>
           <button
             type="button"
-            className="portal-settings-icon-btn"
-            onClick={(e) => { e.stopPropagation(); setSettingsOpenId(settingsOpenId === r.id ? null : r.id); }}
-            title="More options"
-            aria-label="More options"
+            className={`chat-history-action-btn${isArchived ? ' active' : ''}`}
+            onClick={() => toggleReportArchive(r.id)}
+            title={isArchived ? 'Unarchive' : 'Archive'}
+            aria-label={isArchived ? 'Unarchive' : 'Archive'}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="12" cy="5" r="1.5"/>
-              <circle cx="12" cy="12" r="1.5"/>
-              <circle cx="12" cy="19" r="1.5"/>
-            </svg>
+            <IconArchive />
           </button>
-          {settingsOpenId === r.id && (
-            <span className="portal-settings-dropdown">
-              {costAnalysisPending && hasCostToken && (
+          <button
+            type="button"
+            className="chat-history-action-btn chat-history-action-btn--danger"
+            onClick={() => handleDeleteClick(r.id)}
+            disabled={isDeleting}
+            title="Delete"
+            aria-label="Delete"
+          >
+            <IconDelete />
+          </button>
+        </span>
+        {costAnalysisPending && hasCostToken && (
+          <span className="portal-report-settings-wrap" ref={settingsOpenId === r.id ? settingsOpenRef : null}>
+            <button
+              type="button"
+              className="portal-settings-icon-btn"
+              onClick={(e) => { e.stopPropagation(); setSettingsOpenId(settingsOpenId === r.id ? null : r.id); }}
+              title="More options"
+              aria-label="More options"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="5" r="1.5"/>
+                <circle cx="12" cy="12" r="1.5"/>
+                <circle cx="12" cy="19" r="1.5"/>
+              </svg>
+            </button>
+            {settingsOpenId === r.id && (
+              <span className="portal-settings-dropdown">
                 <button
                   type="button"
                   className="portal-flow-btn portal-cost-link-btn"
@@ -943,13 +998,10 @@ export default function PortalDashboard({ user, accessToken, onSignOut, initialS
                 >
                   {costLinkCopiedId === r.id ? 'Copied!' : 'Setup Costs'}
                 </button>
-              )}
-              <button type="button" className="portal-flow-btn danger compact" onClick={() => handleDeleteClick(r.id)} disabled={isDeleting}>
-                  {isDeleting ? 'Deleting...' : 'Delete'}
-              </button>
-            </span>
-          )}
-        </span>
+              </span>
+            )}
+          </span>
+        )}
       </span>
     );
 

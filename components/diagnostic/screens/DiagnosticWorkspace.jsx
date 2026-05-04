@@ -30,6 +30,7 @@ import AnalyticsRailButton from '@/components/diagnostic/chat/AnalyticsRailButto
 import DealContextChip from '@/components/diagnostic/chat/DealContextChip';
 import RailSlidePanel from '@/components/diagnostic/chat/RailSlidePanel';
 import CreditsWidget from '@/components/diagnostic/chat/CreditsWidget';
+import { IconEdit, IconRedesign, IconArchive, IconDelete } from '@/components/diagnostic/actionIcons';
 import { CanvasActionProvider, useCanvasAction } from '@/components/diagnostic/chat/CanvasActionContext';
 
 const INTAKE_PHASES_BY_ID = Object.fromEntries(INTAKE_PHASES.map((p) => [p.id, p]));
@@ -1776,6 +1777,25 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
   const [inlineGenerateStatus, setInlineGenerateStatus] = useState('idle'); // 'idle' | 'generating' | 'error'
   const [inlineGenerateProgress, setInlineGenerateProgress] = useState('');
   const [inlineGenerateError, setInlineGenerateError] = useState('');
+  // Per-device archived-artefact set. We store ids in localStorage rather
+  // than a server column so we can ship the action without a schema
+  // migration; archive is a UI-only filter and unarchiving means clearing
+  // this list. Keys are stable ids from sessionArtefacts: refId for
+  // report / cost_analysis / deal_analysis, and `flow:<idx>` for snapshots.
+  const [archivedArtefactIds, setArchivedArtefactIds] = useState(() => {
+    if (typeof window === 'undefined') return new Set();
+    try { return new Set(JSON.parse(localStorage.getItem('vesno_archived_artefacts') || '[]')); }
+    catch { return new Set(); }
+  });
+  const archiveArtefact = useCallback((id) => {
+    if (!id) return;
+    setArchivedArtefactIds((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev); next.add(id);
+      try { localStorage.setItem('vesno_archived_artefacts', JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }, []);
   const [artefactPreview, setArtefactPreview] = useState(null); // flow_snapshot viewer payload
   const [hasCostAccess, setHasCostAccess] = useState(false);
   const [snippets, setSnippets] = useState(() => { try { return loadSnippets(null); } catch { return []; } });
@@ -5983,8 +6003,12 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
             const FALLBACK_DEAL = 'Not in a deal';
             const FALLBACK_PROCESS = 'Other process';
             const FALLBACK_VARIANT = 'Other';
+            // Stable id for archive filter — uses refId for persisted
+            // artefacts and a synthetic key for in-memory snapshots.
+            const artefactId = (a) => a.refId || `${a.kind}:${a.label || ''}:${a.variantLabel || ''}`;
             const tree = new Map(); // dealKey → Map<processKey, Map<variantKey, [artefact]>>
             for (const a of sessionArtefacts) {
+              if (archivedArtefactIds.has(artefactId(a))) continue;
               const dKey = a.dealLabel || FALLBACK_DEAL;
               const pKey = a.processLabel || FALLBACK_PROCESS;
               const vKey = a.variantLabel || FALLBACK_VARIANT;
@@ -5995,6 +6019,25 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
               if (!variants.has(vKey)) variants.set(vKey, []);
               variants.get(vKey).push(a);
             }
+            const handleDeleteAnalysis = async (a) => {
+              if (!a || a.kind !== 'deal_analysis' || !a.refId || !dealId) return;
+              if (typeof window !== 'undefined' && !window.confirm('Delete this analysis? This cannot be undone.')) return;
+              try {
+                const resp = await fetch(`/api/deals/${encodeURIComponent(dealId)}/analyses/${encodeURIComponent(a.refId)}`, {
+                  method: 'DELETE',
+                  headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+                });
+                if (!resp.ok) {
+                  const err = await resp.json().catch(() => ({}));
+                  alert(err.error || 'Delete failed.');
+                  return;
+                }
+                // Hide locally now; the next deal-data refresh will drop it.
+                archiveArtefact(a.refId);
+              } catch (err) {
+                alert('Delete failed: ' + err.message);
+              }
+            };
             const renderLeaf = (a, key) => {
               // Pencil routes to the canonical canvas edit mode:
               //   - report (current participant maps) → ?edit=<reportId>
@@ -6010,10 +6053,13 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
               } else if (a.kind === 'deal_analysis' && a.refId && dealId) {
                 editHref = `/process-audit?editAnalysis=${encodeURIComponent(a.refId)}&deal=${encodeURIComponent(dealId)}`;
               }
+              const canRedesign = a.kind === 'report' && a.refId;
+              const canDelete = a.kind === 'deal_analysis' && a.refId && dealId;
+              const aId = artefactId(a);
               return (
                 <li key={key}>
-                  <div className="s7-rail-pane-item s7-rail-pane-item--row" style={{ display: 'flex', alignItems: 'stretch', gap: 4 }}>
-                    <button type="button" className="s7-rail-pane-item-body" onClick={handle(a)} style={{ flex: '1 1 auto', minWidth: 0 }}>
+                  <div className="s7-rail-pane-item s7-rail-pane-item--row">
+                    <button type="button" className="s7-rail-pane-item-body" onClick={handle(a)}>
                       <span className="s7-rail-pane-item-name">
                         {a.companyLabel || a.label || labelFor(a.kind)}
                       </span>
@@ -6021,14 +6067,36 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                         <span className="s7-rail-pane-item-meta">{a.label}</span>
                       )}
                     </button>
-                    {editHref && (
-                      <a
-                        href={editHref}
-                        title="Open in edit mode"
-                        aria-label="Edit"
-                        style={{ flex: '0 0 auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: 'var(--text-mid, #64748b)', padding: '0 8px', fontSize: 13 }}
-                      >✎</a>
-                    )}
+                    <div className="s7-rail-pane-item-actions">
+                      {editHref && (
+                        <a href={editHref} className="chat-history-action-btn" title="Open in edit mode" aria-label="Edit"><IconEdit /></a>
+                      )}
+                      {canRedesign && (
+                        <button
+                          type="button"
+                          className="chat-history-action-btn"
+                          title="Redesign with AI"
+                          aria-label="Redesign with AI"
+                          onClick={(e) => { e.stopPropagation(); setShowArtefactsPanel(false); handleRedesignInChat(a.refId); }}
+                        ><IconRedesign /></button>
+                      )}
+                      <button
+                        type="button"
+                        className="chat-history-action-btn"
+                        title="Archive"
+                        aria-label="Archive"
+                        onClick={(e) => { e.stopPropagation(); archiveArtefact(aId); }}
+                      ><IconArchive /></button>
+                      {canDelete && (
+                        <button
+                          type="button"
+                          className="chat-history-action-btn chat-history-action-btn--danger"
+                          title="Delete"
+                          aria-label="Delete"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteAnalysis(a); }}
+                        ><IconDelete /></button>
+                      )}
+                    </div>
                   </div>
                 </li>
               );
