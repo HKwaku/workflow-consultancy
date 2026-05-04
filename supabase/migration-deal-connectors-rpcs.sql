@@ -24,7 +24,7 @@ CREATE OR REPLACE FUNCTION public.set_org_integration_tokens(
 ) RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, vault
+SET search_path = public, extensions, vault
 AS $$
 DECLARE
   v_secret text;
@@ -86,7 +86,7 @@ CREATE OR REPLACE FUNCTION public.get_org_integration_tokens(
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, vault
+SET search_path = public, extensions, vault
 AS $$
 DECLARE
   v_secret text;
@@ -125,7 +125,7 @@ CREATE OR REPLACE FUNCTION public.rotate_org_integration_access_token(
 ) RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, vault
+SET search_path = public, extensions, vault
 AS $$
 DECLARE
   v_secret text;
