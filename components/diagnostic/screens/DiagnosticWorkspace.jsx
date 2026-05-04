@@ -1880,14 +1880,25 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
   }, []);
   // Replay handler exposed to the rail's help icon.
   const replayGuide = useCallback(() => setShowGuide(true), []);
-  // Have they seen it before? Only auto-open on first visit.
+  // Have they seen it before? Only auto-open on the FIRST chat-workspace
+  // load this device has ever had. After that, the user opens it via
+  // the rail's "Replay walkthrough" icon — never automatically.
   const guideSeenRef = useRef(false);
+  // Per-mount guard: even within a single page-load, the seed effect's
+  // multiple branches must never auto-open the guide more than once.
+  // Without this, restoring a session + a stale state both fire
+  // maybeAutoShowGuide and the modal flickers up on re-render.
+  const guideAutoOpenedRef = useRef(false);
   useEffect(() => {
     try { guideSeenRef.current = window.localStorage.getItem(GUIDE_SEEN_KEY) === '1'; } catch { /* ignore */ }
   }, []);
-  // Convenience: only call setShowGuide(true) automatically if not yet seen.
+  // Convenience: only call setShowGuide(true) automatically if not yet
+  // seen AND this mount hasn't already opened it.
   const maybeAutoShowGuide = useCallback(() => {
-    if (!guideSeenRef.current) setShowGuide(true);
+    if (guideSeenRef.current) return;
+    if (guideAutoOpenedRef.current) return;
+    guideAutoOpenedRef.current = true;
+    setShowGuide(true);
   }, []);
 
   /* ═══════ Layout state (floating panels) ═══════ */
@@ -2121,7 +2132,11 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       const opening = buildOpeningMessage({ mid: segmentId, dName: null, dRole: null, canonical: null, processName: null });
       addChatMessage({ role: 'assistant', content: opening });
     }
-    if (!editingReportId) setShowGuide(true);
+    // The walkthrough only auto-opens on the very first chat-workspace
+    // load (handled by the seed effect's maybeAutoShowGuide). Picking
+    // a segment chip is NOT a fresh load — don't reopen it here. The
+    // user can replay it any time via the rail's "Replay walkthrough"
+    // icon.
   }, [setModuleId, updateProcessData, addChatMessage, editingReportId, dealId, authUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── In-chat deal setup submission (PE roll-up + M&A) ── */
