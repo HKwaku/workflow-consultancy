@@ -6586,7 +6586,7 @@ body { line-height: 1.65; }
             .report-title { font-size: 1.35rem; }
             .report-collapsible-header { padding: 0.75rem 0.85rem; }
             .report-collapsible-header h3 { font-size: 1rem; }
-            .report-metric-grid { grid-template-columns: 1fr; gap: 0.65rem; }
+            .report-metric-grid { grid-template-columns: repeat(2, 1fr); gap: 0.65rem; }
             .report-metric-card { padding: 0.75rem; }
         }
         .report-progress-bar {
@@ -18188,6 +18188,103 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
     text-overflow: ellipsis;
   }
 
+  /* ---- Mobile analytics overlay: lives inside the canvas column so it
+     participates in data-mobile-view='canvas'/'chat' switching. The
+     Chat tab still hides it (the parent column has display:none). ---- */
+  .s7-mobile-analytics-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg, #f8fafc);
+  }
+  [data-theme="dark"] .s7-mobile-analytics-overlay {
+    background: var(--bg-panel, #18181a);
+  }
+  .s7-mobile-analytics-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border, #e2e8f0);
+    flex-shrink: 0;
+    background: inherit;
+  }
+  .s7-mobile-analytics-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text, #1e293b);
+  }
+  .s7-mobile-analytics-iframe {
+    flex: 1 1 auto;
+    width: 100%;
+    border: 0;
+    background: var(--bg, #f8fafc);
+  }
+  /* Canvas column needs to be a positioned ancestor so the absolute
+     overlay above pins to it (not to the page). */
+  .s7-canvas-column,
+  .s7-map-landing {
+    position: relative;
+  }
+
+  /* ---- Desktop-experience hint banner ---- */
+  .s7-mobile-desktop-hint {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 6px 8px 0;
+    padding: 8px 10px;
+    background: rgba(13,148,136,0.08);
+    border: 1px solid rgba(13,148,136,0.18);
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--text, #1e293b);
+    flex-wrap: wrap;
+  }
+  [data-theme="dark"] .s7-mobile-desktop-hint {
+    background: rgba(94,234,212,0.06);
+    border-color: rgba(94,234,212,0.18);
+    color: var(--text, #f1f5f9);
+  }
+  .s7-mobile-desktop-hint-cta {
+    border: 0;
+    background: var(--accent, #0d9488);
+    color: #fff;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+  }
+
+  /* ---- Flowchart visibility on mobile ----
+     The previous cap was height: min(50vh, 360px). On a 6-inch phone
+     50vh is ~330px which clipped the flowchart's bottom edge once a
+     handoff label or branch indicator extended below the last node.
+     Use the full available canvas-area space and let the flow itself
+     scroll inside if it overflows — react-flow has its own pan/zoom
+     that handles this gracefully. */
+  .report-flow-canvas-wrap,
+  .portal-flow-canvas-wrap,
+  .edit-flow-canvas-wrap {
+    height: auto !important;
+    min-height: 360px !important;
+    max-height: none !important;
+  }
+  /* The s7-canvas-area itself should grow to fill, with internal scroll
+     for content beyond the visible viewport. */
+  .s7-canvas-area,
+  .s7-canvas-area-main {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
   /* ---- Workspace fills the visible viewport, not 100vh ----
      base.css now uses min-height: 100dvh on body. Reinforce here so
      the workspace + container-wide shells track the dynamic viewport
@@ -18233,7 +18330,7 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
     flex: 1 1 100%;
   }
   .report-page.report-page--portal .report-metric-card {
-    flex: 1 1 100%;
+    flex: 1 1 calc(50% - 0.5rem);
   }
   .report-page.report-page--portal .report-section-title {
     font-size: 18px !important;

@@ -45,12 +45,26 @@ export default function AnalyticsRailButton({ accessToken, sessionUserEmail }) {
   // iframe boundary (the whole reason we picked this approach).
   const iframeSrc = '/portal/analytics/embed';
 
+  // On mobile we don't want the modal to slap a full-screen iframe over
+  // the chat — the user wants analytics to live in the Canvas tab so
+  // they can flip between chat + analytics with the existing tab toggle.
+  // The button dispatches a custom event the workspace listens for; the
+  // workspace then mounts the iframe inside the canvas column and flips
+  // mobileView to 'canvas'. Desktop keeps the overlay behaviour.
+  const handleClick = () => {
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches) {
+      window.dispatchEvent(new CustomEvent('vesno:open-analytics-canvas'));
+      return;
+    }
+    setOpen(true);
+  };
+
   return (
     <div className="s7-split-rail-deals">
       <button
         type="button"
         className={`s7-split-rail-btn${open ? ' active' : ''}`}
-        onClick={() => setOpen(true)}
+        onClick={handleClick}
         title="Analytics"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

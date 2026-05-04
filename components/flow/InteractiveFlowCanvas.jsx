@@ -25,7 +25,9 @@ import WrapEdge from './WrapEdge';
 
 const nodeTypes = { start: StartNode, end: EndNode, step: StepNode, decision: DecisionNode, merge: MergeNode, laneLabel: LaneLabelNode, laneSeparator: LaneSeparatorNode };
 const edgeTypes = { decisionBranch: DecisionBranchEdge, deletable: DeletableEdge, wrapConnector: WrapEdge };
-const DEPT_LABEL_WIDTH = 180;
+const DEPT_LABEL_WIDTH_DESKTOP = 180;
+const DEPT_LABEL_WIDTH_MOBILE = 72; // narrow rail with vertical lane name on phones
+const isMobileViewport = () => (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
 
 /**
  * Given a set of nodes and the initial lanes, recompute lane bounds from current
@@ -63,11 +65,29 @@ function SwimlaneLabelsPanel({ lanes, layoutHeight, darkTheme }) {
   const bg = darkTheme ? '#252525' : '#f1f5f9';
   const borderColor = darkTheme ? '#404040' : '#e2e8f0';
 
+  // On phones, 180px of department-label rail leaves ~195px of usable
+  // canvas — too narrow to read the flowchart. Drop to a 72px rail with
+  // the lane name rotated 90° so it stays legible without devouring
+  // horizontal real estate. Track the breakpoint on resize so the
+  // layout updates if the orientation flips.
+  const [isMobile, setIsMobile] = useState(() => isMobileViewport());
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const mq = window.matchMedia('(max-width: 768px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener?.('change', update);
+    return () => mq.removeEventListener?.('change', update);
+  }, []);
+
+  const labelWidth = isMobile ? DEPT_LABEL_WIDTH_MOBILE : DEPT_LABEL_WIDTH_DESKTOP;
+  const fontSize = isMobile ? 11 : 24;
+
   return (
     <div
       className="flow-labels-panel"
       style={{
-        width: DEPT_LABEL_WIDTH,
+        width: labelWidth,
         flexShrink: 0,
         overflow: 'hidden',
         position: 'relative',
@@ -83,7 +103,7 @@ function SwimlaneLabelsPanel({ lanes, layoutHeight, darkTheme }) {
           transformOrigin: '0 0',
           minHeight: layoutHeight,
           position: 'relative',
-          width: `${DEPT_LABEL_WIDTH / Math.max(zoom, 0.01)}px`,
+          width: `${labelWidth / Math.max(zoom, 0.01)}px`,
         }}
       >
         {lanes?.map((lane, li) => (
@@ -94,21 +114,23 @@ function SwimlaneLabelsPanel({ lanes, layoutHeight, darkTheme }) {
               position: 'absolute',
               left: 0,
               top: lane.y,
-              width: `${DEPT_LABEL_WIDTH / Math.max(zoom, 0.01)}px`,
+              width: `${labelWidth / Math.max(zoom, 0.01)}px`,
               height: lane.h,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               textAlign: 'center',
-              padding: '0 12px',
+              padding: isMobile ? '0 4px' : '0 12px',
               backgroundColor: bg,
               borderRight: `1px solid ${borderColor}`,
-              fontSize: 24,
+              fontSize,
               fontWeight: 600,
               color: textColor,
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
               boxSizing: 'border-box',
+              writingMode: isMobile ? 'vertical-rl' : 'horizontal-tb',
+              transform: isMobile ? 'rotate(180deg)' : undefined,
             }}
           >
             {lane.dept || 'Team'}

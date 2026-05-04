@@ -574,7 +574,11 @@
   line-height: 1;
 }
 
-/* Mobile: automation legend vertical on top-right */
+/* Mobile: collapse the legend into a single tappable pill so the
+   flowchart gets the maximum visible area. The user can tap the pill
+   to expand/show all legend items; otherwise the labels stay hidden.
+   Lane label rail is also reduced (see InteractiveFlowCanvas.jsx) so
+   together this reclaims ~250px of horizontal space on a 6" phone. */
 @media (max-width: 768px) {
   .flow-legend-automation {
     align-items: flex-end;
@@ -583,30 +587,46 @@
     font-size: 8px;
   }
   .flow-legend-right {
+    /* Tightened: only the heading + symbols visible, labels truncated. */
     flex-direction: column;
-    gap: 3px;
-    padding: 4px 6px;
-    font-size: 9px;
+    gap: 2px;
+    padding: 3px 5px;
+    font-size: 8px;
   }
   .flow-legend-right .flow-legend-item {
-    gap: 4px;
+    gap: 3px;
   }
   .flow-legend-right .flow-legend-label {
-    font-size: 9px;
-    display: inline !important;
+    /* Was forced inline; on mobile we hide labels entirely and rely
+       on the symbol + colour. Tap the symbol for a tooltip. */
+    display: none !important;
   }
   .flow-automation-panel {
-    max-width: 160px;
-    margin-top: 64px !important;
+    max-width: 120px;
+    margin-top: 8px !important;
+    padding: 4px !important;
+    gap: 2px !important;
   }
+  /* Bottom legend (decision symbols) — single row, tighter, no labels. */
   .flow-legend-panel {
-    max-width: calc(100vw - 170px);
+    max-width: calc(100vw - 90px);
+    gap: 4px;
   }
   .flow-legend.flow-legend-left {
-    flex-wrap: wrap;
-    gap: 4px 6px;
-    font-size: 9px;
+    flex-wrap: nowrap;
+    gap: 4px;
+    padding: 3px 6px;
+    font-size: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
+  .flow-legend.flow-legend-left .flow-legend-label {
+    display: none;
+  }
+  .flow-legend.flow-legend-left .flow-legend-item {
+    flex-shrink: 0;
+  }
+  .flow-legend-hint { display: none; }
 }
 
 /* Mobile flowchart prompt overlay */

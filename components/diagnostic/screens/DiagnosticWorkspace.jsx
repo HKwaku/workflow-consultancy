@@ -1796,6 +1796,31 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       return next;
     });
   }, []);
+
+  // Mobile-only: when AnalyticsRailButton dispatches the event we mount
+  // the analytics embed inline in the canvas column. Tapping the Chat
+  // tab still hides it (data-mobile-view selectors), tapping the close
+  // button clears it.
+  const [mobileAnalyticsOpen, setMobileAnalyticsOpen] = useState(false);
+  // Per-device dismissal of the "best on desktop" hint when a flowchart
+  // is on the canvas. Stored in localStorage so the user only sees it
+  // until they acknowledge it once.
+  const [desktopHintDismissed, setDesktopHintDismissed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try { return localStorage.getItem('vesno_desktop_hint_dismissed') === '1'; } catch { return false; }
+  });
+  const dismissDesktopHint = useCallback(() => {
+    setDesktopHintDismissed(true);
+    try { localStorage.setItem('vesno_desktop_hint_dismissed', '1'); } catch {}
+  }, []);
+  useEffect(() => {
+    const onOpenAnalytics = () => {
+      setMobileAnalyticsOpen(true);
+      setMobileView('canvas');
+    };
+    window.addEventListener('vesno:open-analytics-canvas', onOpenAnalytics);
+    return () => window.removeEventListener('vesno:open-analytics-canvas', onOpenAnalytics);
+  }, []);
   const [artefactPreview, setArtefactPreview] = useState(null); // flow_snapshot viewer payload
   const [hasCostAccess, setHasCostAccess] = useState(false);
   const [snippets, setSnippets] = useState(() => { try { return loadSnippets(null); } catch { return []; } });
@@ -5633,6 +5658,38 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
             onPointerDown={handleSplitResizeStart}
           />
           <div className="s7-canvas-column">
+          {isMobile && mobileAnalyticsOpen && (
+            <div className="s7-mobile-analytics-overlay">
+              <div className="s7-mobile-analytics-bar">
+                <span className="s7-mobile-analytics-title">Analytics</span>
+                <button
+                  type="button"
+                  className="chat-history-action-btn"
+                  onClick={() => setMobileAnalyticsOpen(false)}
+                  aria-label="Close analytics"
+                  title="Close"
+                >×</button>
+              </div>
+              <iframe
+                src="/portal/analytics/embed"
+                className="s7-mobile-analytics-iframe"
+                title="Analytics"
+                loading="lazy"
+              />
+            </div>
+          )}
+          {/* Desktop-experience hint banner. Shows on mobile when a
+              flowchart is on screen and the user hasn't dismissed it. */}
+          {isMobile && !desktopHintDismissed && (steps?.length > 0 || inlineAnalysisId) && (
+            <div className="s7-mobile-desktop-hint" role="status">
+              <span>Flow charts work best on desktop or laptop.</span>
+              <button
+                type="button"
+                className="s7-mobile-desktop-hint-cta"
+                onClick={dismissDesktopHint}
+              >Continue on mobile</button>
+            </div>
+          )}
           {inlineAnalysisId ? (
             <>
               <div className="s7-canvas-topbar s7-canvas-topbar--report">
@@ -5903,11 +5960,34 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
             <CanvasActionOverlay />
             {activeChatContent}
           </div>
+          {/* Mobile-only: analytics embed + desktop hint (no-flow branch).
+              The Canvas tab in this branch normally only shows the empty
+              state, so we mount the analytics overlay here too. */}
+          {isMobile && mobileAnalyticsOpen && (
+            <div className="s7-mobile-analytics-overlay">
+              <div className="s7-mobile-analytics-bar">
+                <span className="s7-mobile-analytics-title">Analytics</span>
+                <button
+                  type="button"
+                  className="chat-history-action-btn"
+                  onClick={() => setMobileAnalyticsOpen(false)}
+                  aria-label="Close analytics"
+                  title="Close"
+                >×</button>
+              </div>
+              <iframe
+                src="/portal/analytics/embed"
+                className="s7-mobile-analytics-iframe"
+                title="Analytics"
+                loading="lazy"
+              />
+            </div>
+          )}
           {/* Mobile-only empty state for the Canvas tab when there's
               nothing yet to render — without this the user picks
               Canvas and sees a blank screen. CSS shows it only when
               data-mobile-view='canvas' on the parent. */}
-          {isMobile && (
+          {isMobile && !mobileAnalyticsOpen && (
             <div className="s7-mobile-canvas-empty">
               <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>No canvas yet</div>
               <p style={{ fontSize: 13, color: 'var(--text-mid, #64748b)', maxWidth: 320, lineHeight: 1.5 }}>
