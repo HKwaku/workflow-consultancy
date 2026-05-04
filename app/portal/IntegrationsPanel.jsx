@@ -76,10 +76,31 @@ export default function IntegrationsPanel({ orgId, accessToken }) {
     }
   }, []);
 
-  const connect = (providerId) => {
+  const connect = async (providerId) => {
     if (!orgId) return;
-    const url = `/api/integrations/${providerId}/oauth/start?orgId=${encodeURIComponent(orgId)}&returnTo=${encodeURIComponent('/portal/org-admin')}`;
-    window.location.assign(url);
+    setBusy(true); setErr(null);
+    try {
+      // Browsers don't send Authorization headers on top-level navigations,
+      // so the OAuth start route can't auth us via window.location. Fetch
+      // it with the Bearer token instead — it returns the Google /
+      // Microsoft authorize URL plus sets the state cookie — and then
+      // hand off to the provider via a normal navigation.
+      const r = await apiFetch(
+        `/api/integrations/${providerId}/oauth/start?orgId=${encodeURIComponent(orgId)}&returnTo=${encodeURIComponent('/portal/org-admin')}`,
+        {},
+        accessToken,
+      );
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.authorizeUrl) {
+        setErr(j.error || 'Failed to start OAuth.');
+        return;
+      }
+      window.location.assign(j.authorizeUrl);
+    } catch (e) {
+      setErr(e?.message || 'Network error.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const disconnect = async (providerId) => {

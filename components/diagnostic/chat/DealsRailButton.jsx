@@ -13,6 +13,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useDiagnostic } from '../DiagnosticContext';
 import { apiFetch } from '@/lib/api-fetch';
 import RailSlidePanel from './RailSlidePanel';
+import { IconDelete } from '../actionIcons';
 
 const DEAL_TYPE_LABEL = { pe_rollup: 'PE roll-up', ma: 'M&A', scaling: 'Scaling' };
 
@@ -49,6 +50,24 @@ export default function DealsRailButton({ accessToken }) {
       .catch((e) => setError(e?.message || 'Failed to load deals.'))
       .finally(() => setLoading(false));
   }, [open, accessToken, deals.length, loading]);
+
+  const handleDelete = async (e, deal) => {
+    e.stopPropagation();
+    if (typeof window !== 'undefined' && !window.confirm(`Delete "${deal.name}"? This removes all companies, flows, and analyses. Saved reports are kept but unlinked.`)) return;
+    setBusy(true);
+    try {
+      const resp = await apiFetch(`/api/deals/${encodeURIComponent(deal.id)}`, { method: 'DELETE' }, accessToken);
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(data.error || 'Failed to delete deal.');
+      setDeals((prev) => prev.filter((d) => d.id !== deal.id));
+      // If the active scope was on this deal, clear it.
+      if (dealId === deal.id) setDeal(null);
+    } catch (err) {
+      if (typeof window !== 'undefined') window.alert(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   // setDeal expects { dealId, dealCode, dealName, ... }; deal records use
   // { id, deal_code, name }. Normalise so callers can pass raw deal rows.
@@ -309,6 +328,20 @@ export default function DealsRailButton({ accessToken }) {
                           {d.deal_code ? ` · ${d.deal_code}` : ''}
                         </span>
                       </button>
+                      {(d.role === 'owner' || d.accessMode === 'owner') && (
+                        <div className="s7-rail-pane-item-actions">
+                          <button
+                            type="button"
+                            className="chat-history-action-btn chat-history-action-btn--danger"
+                            onClick={(e) => handleDelete(e, d)}
+                            disabled={busy}
+                            title="Delete deal"
+                            aria-label="Delete deal"
+                          >
+                            <IconDelete />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </li>
                 );

@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api-fetch';
+import { IconDelete } from '@/components/diagnostic/actionIcons';
 
 /* ── labels / colours ─────────────────────────────────────────── */
 
@@ -675,6 +676,17 @@ export default function DealsPanel({ deals, loading, onRefresh, accessToken }) {
                       </span>
                     )}
                     <span className={`deal-status-pill deal-status-pill--${d.status}`}>{statusText}</span>
+                    {(d.accessMode === 'owner') && (
+                      <button
+                        type="button"
+                        className="chat-history-action-btn chat-history-action-btn--danger"
+                        onClick={(e) => { e.stopPropagation(); handleDeleteDeal(d); }}
+                        title="Delete deal"
+                        aria-label="Delete deal"
+                      >
+                        <IconDelete />
+                      </button>
+                    )}
                   </div>
                 </div>
 

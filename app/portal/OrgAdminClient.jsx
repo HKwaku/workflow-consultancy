@@ -271,9 +271,6 @@ export default function OrgAdminClient({ user, accessToken, onSignOut }) {
         </div>
         <div className="header-right">
           <ThemeToggle className="header-theme-btn" />
-          <Link href="/portal" className="header-primary-cta" style={{ textDecoration: 'none' }}>
-            Dashboard
-          </Link>
           <span className="header-email">{(user?.email || '').slice(0, 24)}{(user?.email || '').length > 24 ? '…' : ''}</span>
           <button type="button" onClick={onSignOut} className="header-btn">
             Sign Out

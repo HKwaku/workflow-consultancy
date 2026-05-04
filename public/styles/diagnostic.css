@@ -6541,7 +6541,7 @@ body { line-height: 1.65; }
         /* ============================================
            Report Page - Diagnostic Complete layout
            ============================================ */
-        .report-page { min-height: 100vh; background: var(--bg, #f8fafc); overflow-x: hidden; }
+        .report-page { min-height: 100vh; min-height: 100dvh; background: var(--bg, #f8fafc); overflow-x: hidden; }
         .report-container { max-width: 1400px; width: 100%; margin: 0 auto; padding: 0 1.5rem 2rem; box-sizing: border-box; }
         @media (max-width: 768px) {
             .top-bar { padding: 12px 16px; height: auto; min-height: 50px; }
@@ -18197,6 +18197,31 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   .container.container-wide {
     height: 100dvh !important;
     min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+  }
+
+  /* ---- HARD STOP for "scroll past the bottom" on iOS Safari ----
+     overscroll-behavior alone is unreliable on Safari < 16, and even
+     when supported the page can still rubber-band if the body itself
+     is scrollable. When a workspace mounts on the page, lock html +
+     body to the visible viewport: position:fixed kills both the page
+     scroll and the rubber-band entirely. The workspace itself sets
+     its own internal scroll containers (chat messages, rail panels)
+     so content remains reachable. */
+  html:has(.s7-workspace),
+  body:has(.s7-workspace) {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
   }
 }
 
