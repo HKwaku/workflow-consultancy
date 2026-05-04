@@ -1932,6 +1932,23 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
         || sp.get('reaudit') || sp.get('editAnalysis') || sp.get('editFromDeal')
         || sp.get('focusFinding'));
     })();
+    // Helper: nuke the stale persistence keys that DiagnosticClient's
+    // pre-report hydrate effect (lib/.../DiagnosticClient.jsx ~line
+    // 1205) reads after this seed runs. Without this, the hydrate
+    // effect refetches the previous chat session async and overwrites
+    // our fresh seeded chips, producing the "chips load then vanish"
+    // flicker the user reported.
+    const wipeStalePersistence = () => {
+      if (typeof window === 'undefined') return;
+      try {
+        window.localStorage.removeItem('vesno_chat_session_active');
+        window.localStorage.removeItem('processDiagnosticProgress');
+        for (let i = window.localStorage.length - 1; i >= 0; i--) {
+          const k = window.localStorage.key(i);
+          if (k && k.startsWith('vesno_chat_session_')) window.localStorage.removeItem(k);
+        }
+      } catch {}
+    };
     let mutableMid = mid;
     let mutableDealId = dealId;
     let mutableDName = dName;
@@ -1948,7 +1965,9 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       if (!hasUserTurn) {
         setChatMessages([]);
         // No user turn AND no URL scope → fully reset to a fresh chat,
-        // matching what the Home button produces.
+        // matching what the Home button produces. Also wipe the stale
+        // persistence keys so DiagnosticClient's async hydrate effect
+        // doesn't refetch and overwrite our seed.
         if (!hasUrlScope) {
           mutableMid = null;
           mutableDealId = null;
@@ -1957,6 +1976,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
           mutableCanonical = null;
           mutableProcessName = '';
           mutableMyCo = null;
+          wipeStalePersistence();
         }
         // fall through — let the seed below run
       } else {
@@ -1974,6 +1994,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       mutableCanonical = null;
       mutableProcessName = '';
       mutableMyCo = null;
+      wipeStalePersistence();
     }
 
     hasSeededChatRef.current = true;
