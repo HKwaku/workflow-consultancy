@@ -1918,6 +1918,27 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     //    we're either restoring a session or Screen2 remounted after the
     //    user picked a pillar - don't seed another intro in either case) ──
     if (initialSteps.length > 0) return;
+    // First-load alignment with the Home button: when there's no real
+    // conversation (no user turn) AND no URL param explicitly scoping
+    // the chat to a deal / report / module, we treat the persisted
+    // state as stale and seed the same four-pillar intro the Home
+    // button shows. Without this, a returning user lands on whatever
+    // moduleId / dealName was saved last time, which produces a
+    // different intro than they'd see clicking Home.
+    const hasUrlScope = (() => {
+      if (typeof window === 'undefined') return false;
+      const sp = new URLSearchParams(window.location.search);
+      return !!(sp.get('deal') || sp.get('chatSession') || sp.get('edit')
+        || sp.get('reaudit') || sp.get('editAnalysis') || sp.get('editFromDeal')
+        || sp.get('focusFinding'));
+    })();
+    let mutableMid = mid;
+    let mutableDealId = dealId;
+    let mutableDName = dName;
+    let mutableDRole = dRole;
+    let mutableCanonical = canonical;
+    let mutableProcessName = processName;
+    let mutableMyCo = myCo;
     if (ctxMsgs.length > 0) {
       // Heuristic: if every persisted message is from the assistant (no user
       // turns yet), this is a stale opener leaking from localStorage. Drop
@@ -1926,26 +1947,47 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       const hasUserTurn = ctxMsgs.some((m) => m.role === 'user');
       if (!hasUserTurn) {
         setChatMessages([]);
+        // No user turn AND no URL scope → fully reset to a fresh chat,
+        // matching what the Home button produces.
+        if (!hasUrlScope) {
+          mutableMid = null;
+          mutableDealId = null;
+          mutableDName = null;
+          mutableDRole = null;
+          mutableCanonical = null;
+          mutableProcessName = '';
+          mutableMyCo = null;
+        }
         // fall through — let the seed below run
       } else {
         hasSeededChatRef.current = true;
         if (!editingReportId) maybeAutoShowGuide();
         return;
       }
+    } else if (!hasUrlScope) {
+      // Empty chat history AND no URL scope = blank canvas → show the
+      // canonical intro every time, ignoring stale localStorage scope.
+      mutableMid = null;
+      mutableDealId = null;
+      mutableDName = null;
+      mutableDRole = null;
+      mutableCanonical = null;
+      mutableProcessName = '';
+      mutableMyCo = null;
     }
 
     hasSeededChatRef.current = true;
 
-    if (dealId && !mid && !processName) {
+    if (mutableDealId && !mutableMid && !mutableProcessName) {
       // Deal-scoped chat with no module / no map yet — seed a deal-aware
       // opener with one-click action chips. Don't show pillars: the user
       // has already chosen a scope by picking the deal.
       addChatMessage({
         role: 'assistant',
         content:
-          (myCo
-            ? `I'm scoped to **${dName || 'this deal'}** — and you're mapping for **${myCo}**. Pick something to get started — or just ask me anything about the deal:`
-            : `I'm scoped to **${dName || 'this deal'}**. Pick something to get started — or just ask me anything about the deal:`),
+          (mutableMyCo
+            ? `I'm scoped to **${mutableDName || 'this deal'}** — and you're mapping for **${mutableMyCo}**. Pick something to get started — or just ask me anything about the deal:`
+            : `I'm scoped to **${mutableDName || 'this deal'}**. Pick something to get started — or just ask me anything about the deal:`),
         chips: [
           { name: 'Summarise the data room',     tagline: 'Top-line read of every document' },
           { name: 'Run a diligence analysis',    tagline: 'Findings, red flags, Day-1 / TSA / Separation' },
@@ -1955,7 +1997,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
           { name: 'What is missing?',            tagline: 'Suggest documents we should still upload' },
         ],
       });
-    } else if (!mid && !dName) {
+    } else if (!mutableMid && !mutableDName) {
       // No segment selected yet - introduce Reina and ask which situation fits
       addChatMessage({
         role: 'assistant',
@@ -1964,7 +2006,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       });
       if (!editingReportId) maybeAutoShowGuide();
     } else {
-      addChatMessage({ role: 'assistant', content: buildOpeningMessage({ mid, dName, dRole, canonical, processName }) });
+      addChatMessage({ role: 'assistant', content: buildOpeningMessage({ mid: mutableMid, dName: mutableDName, dRole: mutableDRole, canonical: mutableCanonical, processName: mutableProcessName }) });
       if (!editingReportId) maybeAutoShowGuide();
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
