@@ -343,12 +343,6 @@ function MapGuide({ onDismiss }) {
 
 /** In-chat PE deal setup card - rendered as part of an assistant message. */
 function DealSetupCard({ platformCompany, onSubmit, dealKind = 'pe' }) {
-  const [dealName, setDealName] = useState('');
-  const [targetCompany, setTargetCompany] = useState('');
-  const [error, setError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(false);
-
   // Per-kind copy. PE roll-up: platform + portfolio. M&A: acquirer +
   // target. The submit shape stays the same — handleDealSetupSubmit
   // routes the kind to the correct deal type and participant roles.
@@ -358,27 +352,47 @@ function DealSetupCard({ platformCompany, onSubmit, dealKind = 'pe' }) {
       targetLabel: 'First portfolio company',
       targetPlaceholder: 'Portfolio company name',
       ownerLabel: 'Platform',
+      ownerPlaceholder: 'Platform company name',
       missingTarget: 'Enter at least one portfolio company.',
+      missingOwner: 'Enter the platform company name.',
     },
     ma: {
       namePlaceholder: 'e.g. Acme acquires Beta — 2026',
       targetLabel: 'Target company',
       targetPlaceholder: 'Company being acquired',
       ownerLabel: 'Acquirer',
+      ownerPlaceholder: 'Acquirer name',
       missingTarget: 'Enter the target company.',
+      missingOwner: 'Enter the acquirer name.',
     },
   };
   const copy = COPY[dealKind] || COPY.pe;
+
+  // Seed the owner field from authUser.company (passed in via the
+  // platformCompany prop) UNLESS it's the placeholder fallback the
+  // chat opener uses ("your company" / "your platform company"). When
+  // we got a real company name, prefill it; otherwise leave the field
+  // empty so the user actively types the acquirer / platform name.
+  const isPlaceholderOwner = !platformCompany
+    || /^your (platform )?company$/i.test(platformCompany.trim());
+  const [dealName, setDealName] = useState('');
+  const [targetCompany, setTargetCompany] = useState('');
+  const [ownerCompany, setOwnerCompany] = useState(isPlaceholderOwner ? '' : platformCompany);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     const name = dealName.trim();
     const target = targetCompany.trim();
+    const owner = ownerCompany.trim();
     if (!name) { setError('Enter a deal name.'); return; }
+    if (!owner) { setError(copy.missingOwner); return; }
     if (!target) { setError(copy.missingTarget); return; }
     setSubmitting(true);
-    const res = await onSubmit({ dealName: name, targetCompany: target, platformCompany, dealKind });
+    const res = await onSubmit({ dealName: name, targetCompany: target, platformCompany: owner, dealKind });
     setSubmitting(false);
     if (res?.ok) setDone(true);
     else if (res?.error) setError(res.error);
@@ -407,6 +421,18 @@ function DealSetupCard({ platformCompany, onSubmit, dealKind = 'pe' }) {
         />
       </label>
       <label className="s7-deal-setup-field">
+        <span className="s7-deal-setup-label">{copy.ownerLabel}</span>
+        <input
+          type="text"
+          className="s7-deal-setup-input"
+          value={ownerCompany}
+          onChange={(e) => setOwnerCompany(e.target.value)}
+          placeholder={copy.ownerPlaceholder}
+          autoComplete="organization"
+          disabled={submitting}
+        />
+      </label>
+      <label className="s7-deal-setup-field">
         <span className="s7-deal-setup-label">{copy.targetLabel}</span>
         <input
           type="text"
@@ -420,7 +446,6 @@ function DealSetupCard({ platformCompany, onSubmit, dealKind = 'pe' }) {
       </label>
       {error && <div className="s7-deal-setup-error">{error}</div>}
       <div className="s7-deal-setup-footer">
-        <div className="s7-deal-setup-platform">{copy.ownerLabel}: <strong>{platformCompany}</strong></div>
         <button type="submit" className="s7-deal-setup-submit" disabled={submitting}>
           {submitting ? 'Creating…' : 'Create deal & continue'}
         </button>
@@ -2121,11 +2146,20 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     // the deal context chip can mount and the user gets the workspace
     // (data room, participants, findings) right away.
     if ((segmentId === 'pe' || segmentId === 'ma') && !dealId) {
-      const ownerCompany = (authUser?.company || '').trim()
+      const knownCompany = (authUser?.company || '').trim();
+      // Use the real company name when we have it; the form's owner
+      // field will be prefilled with this. When we don't, pass the
+      // placeholder so the form recognises it (`/^your (platform )?
+      // company$/i`) and starts the field empty for the user to type.
+      const ownerCompany = knownCompany
         || (segmentId === 'ma' ? 'your company' : 'your platform company');
       const intro = segmentId === 'ma'
-        ? `Great — let's set up the M&A. I'll create a deal with **${ownerCompany}** as the acquirer and one target company to start (you can add more participants later).`
-        : `Great — let's set up your roll-up. I'll create a deal for **${ownerCompany}** and one portfolio company to start (you can invite more later).`;
+        ? (knownCompany
+            ? `Great — let's set up the M&A. I'll create a deal with **${knownCompany}** as the acquirer and one target company to start (you can add more participants later).`
+            : `Great — let's set up the M&A. Tell me the acquirer and the target company below; I'll create the deal so you can add documents and findings as we go.`)
+        : (knownCompany
+            ? `Great — let's set up your roll-up. I'll create a deal for **${knownCompany}** and one portfolio company to start (you can invite more later).`
+            : `Great — let's set up your roll-up. Tell me the platform company and a first portfolio company below; we can invite more later.`);
       addChatMessage({
         role: 'assistant',
         content: intro,
