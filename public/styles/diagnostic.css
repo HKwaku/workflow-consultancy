@@ -18204,6 +18204,12 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
     text-overflow: ellipsis;
   }
 
+  /* ---- Mobile view gate: full-screen modal that fronts any flow /
+     report surface on mobile until the user actively chooses to view
+     on mobile. The user said the previous inline banner wasn't strong
+     enough — they want a hard gate. ---- */
+  /* (see global rule outside this @media for the actual styling) */
+
   /* ---- Mobile analytics overlay: lives inside the canvas column so it
      participates in data-mobile-view='canvas'/'chat' switching. The
      Chat tab still hides it (the parent column has display:none). ---- */
@@ -18336,6 +18342,91 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
     overflow: hidden !important;
     overscroll-behavior: none !important;
   }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Mobile view gate (rendered by components/MobileViewGate.jsx).
+   Position fixed + z-index above everything. Component itself only
+   renders on mobile + when not acknowledged, so these styles never
+   reach desktop sessions.
+   ───────────────────────────────────────────────────────────────── */
+.mobile-view-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.mobile-view-gate-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--bg, #fff);
+  border-radius: 16px;
+  padding: 28px 22px 22px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+  text-align: center;
+  color: var(--text, #1e293b);
+}
+[data-theme="dark"] .mobile-view-gate-card {
+  background: var(--bg-panel, #18181a);
+  color: var(--text, #f1f5f9);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.7);
+}
+.mobile-view-gate-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: rgba(13, 148, 136, 0.10);
+  color: var(--accent, #0d9488);
+}
+.mobile-view-gate-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  font-family: inherit;
+}
+.mobile-view-gate-body {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-mid, #64748b);
+  margin: 0 0 18px;
+}
+.mobile-view-gate-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.mobile-view-gate-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent, #0d9488);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.mobile-view-gate-cta:hover { filter: brightness(1.08); }
+.mobile-view-gate-hint {
+  font-size: 11.5px;
+  color: var(--text-light, #94a3b8);
+  margin: 0;
 }
 
 /* Sub-mobile: <=480px. Stacks bulk buttons fully and shrinks more. */

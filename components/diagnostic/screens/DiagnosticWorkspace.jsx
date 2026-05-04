@@ -31,6 +31,7 @@ import DealContextChip from '@/components/diagnostic/chat/DealContextChip';
 import RailSlidePanel from '@/components/diagnostic/chat/RailSlidePanel';
 import CreditsWidget from '@/components/diagnostic/chat/CreditsWidget';
 import { IconEdit, IconRedesign, IconArchive, IconDelete } from '@/components/diagnostic/actionIcons';
+import MobileViewGate from '@/components/MobileViewGate';
 import { CanvasActionProvider, useCanvasAction } from '@/components/diagnostic/chat/CanvasActionContext';
 
 const INTAKE_PHASES_BY_ID = Object.fromEntries(INTAKE_PHASES.map((p) => [p.id, p]));
@@ -1802,17 +1803,8 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
   // tab still hides it (data-mobile-view selectors), tapping the close
   // button clears it.
   const [mobileAnalyticsOpen, setMobileAnalyticsOpen] = useState(false);
-  // Per-device dismissal of the "best on desktop" hint when a flowchart
-  // is on the canvas. Stored in localStorage so the user only sees it
-  // until they acknowledge it once.
-  const [desktopHintDismissed, setDesktopHintDismissed] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    try { return localStorage.getItem('vesno_desktop_hint_dismissed') === '1'; } catch { return false; }
-  });
-  const dismissDesktopHint = useCallback(() => {
-    setDesktopHintDismissed(true);
-    try { localStorage.setItem('vesno_desktop_hint_dismissed', '1'); } catch {}
-  }, []);
+  // (Per-device desktop-hint flags moved to the shared MobileViewGate
+  // component — keys: vesno_mobile_view_acknowledged.)
   useEffect(() => {
     const onOpenAnalytics = () => {
       setMobileAnalyticsOpen(true);
@@ -5678,18 +5670,11 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
               />
             </div>
           )}
-          {/* Desktop-experience hint banner. Shows on mobile when a
-              flowchart is on screen and the user hasn't dismissed it. */}
-          {isMobile && !desktopHintDismissed && (steps?.length > 0 || inlineAnalysisId) && (
-            <div className="s7-mobile-desktop-hint" role="status">
-              <span>Flow charts work best on desktop or laptop.</span>
-              <button
-                type="button"
-                className="s7-mobile-desktop-hint-cta"
-                onClick={dismissDesktopHint}
-              >Continue on mobile</button>
-            </div>
-          )}
+          {/* Full-screen mobile gate — fronts any flow / report surface
+              until the user actively chooses to continue on mobile. */}
+          <MobileViewGate
+            active={!!(steps?.length > 0 || inlineAnalysisId || inlineReportId || inlineCostReportId)}
+          />
           {inlineAnalysisId ? (
             <>
               <div className="s7-canvas-topbar s7-canvas-topbar--report">

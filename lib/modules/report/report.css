@@ -2100,4 +2100,82 @@
     flex-wrap: wrap;
     gap: 8px;
   }
+
+  /* Automation Opportunities — desktop uses a 5-column grid which
+     squeezes the description into a tiny cell on phones. Stack
+     everything vertically: badge + label + count on one row, desc
+     full-width below, chevron pinned right. */
+  .report-page .report-auto-group-summary {
+    display: grid !important;
+    grid-template-columns: auto 1fr auto !important;
+    grid-template-areas:
+      'badge label chev'
+      'desc desc desc' !important;
+    gap: 6px 10px !important;
+    padding: 12px 14px !important;
+  }
+  .report-page .report-auto-group-summary > .report-auto-group-badge { grid-area: badge; }
+  .report-page .report-auto-group-summary > .report-auto-group-label { grid-area: label; align-self: center; }
+  .report-page .report-auto-group-summary > .report-auto-group-count {
+    grid-area: label;
+    justify-self: end;
+    align-self: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    margin-left: auto;
+  }
+  .report-page .report-auto-group-summary > .report-auto-group-desc {
+    grid-area: desc;
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: normal !important;
+  }
+  .report-page .report-auto-group-summary > .report-auto-group-chevron { grid-area: chev; }
+
+  /* Per-step rows inside each group: detailed rows have head + meta
+     pills + systems chips. Force them to stack and use min-width:0 so
+     long step names wrap instead of clipping. */
+  .report-page .report-auto-step-row,
+  .report-page .report-auto-step-row--detailed {
+    display: flex !important;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0 !important;
+  }
+  .report-page .report-auto-step-head {
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+  }
+  .report-page .report-auto-step-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .report-page .report-auto-step-sys,
+  .report-page .report-auto-step-sys--more {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+  .report-page .report-auto-group-intro-meta {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* Generic anti-truncation guard for owner / department / impact /
+     etc. lines — ensures word-wrap kicks in instead of overflow. */
+  .report-page .report-redesign-change-desc,
+  .report-page .report-redesign-change-principle,
+  .report-page .report-redesign-change-step,
+  .report-redesign-change-desc,
+  .report-redesign-change-principle,
+  .report-redesign-change-step {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
 }
