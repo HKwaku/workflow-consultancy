@@ -38,7 +38,12 @@ body {
     font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     color: var(--text);
     background: var(--bg);
+    /* 100vh on mobile Safari/Chrome includes the URL bar, leaving
+       whitespace below the app once the bar collapses. 100dvh tracks
+       the visible area dynamically. The 100vh declaration stays first
+       as a fallback for browsers that don't support dvh. */
     min-height: 100vh;
+    min-height: 100dvh;
     -webkit-font-smoothing: antialiased;
 }
 

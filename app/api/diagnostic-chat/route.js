@@ -13,7 +13,11 @@ import { requireBudgetClearance } from '@/lib/trialBudget';
 import { resolveAllowedModels } from '@/lib/orgModels';
 import { logger } from '@/lib/logger';
 
-export const maxDuration = 60;
+// Long replies + tool-use loops can exceed 60s on Anthropic's side.
+// Hitting Vercel's hard timeout closes the SSE stream mid-token, which
+// the user reports as "the response just stops". 300s = Vercel Pro
+// max; falls back to 60s on Hobby plan automatically.
+export const maxDuration = 300;
 
 const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024; // 2MB
 

@@ -17985,7 +17985,6 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
     right: auto !important;
     left: 8px !important;
   }
-}
 
   /* ---- Chat-input keyboard-shortcut hint ----
      "Enter to send · Alt+Enter new line" is a desktop affordance; on
@@ -18018,6 +18017,37 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   .trial-gate-banner-link {
     flex-shrink: 0;
     font-size: 11.5px;
+  }
+
+  /* ---- Typing indicator: keep spinner + label + (Ns) on ONE row ----
+     On a narrow phone bubble the inline-flex children were wrapping —
+     "Reina is thinking…" landed below the spinner and (12s) below
+     that, stacking the indicator vertically. Force nowrap, let the
+     label ellipsise instead of forcing the row to wrap. */
+  .s7-typing { padding: 8px 12px !important; }
+  .s7-typing-text {
+    flex-wrap: nowrap !important;
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 100%;
+  }
+  .s7-typing-text > span { flex-shrink: 0; }
+  .s7-typing-text > span:nth-child(2) {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ---- Workspace fills the visible viewport, not 100vh ----
+     base.css now uses min-height: 100dvh on body. Reinforce here so
+     the workspace + container-wide shells track the dynamic viewport
+     height — without this the URL-bar collapse left ~80-120px of
+     whitespace below the chat on mobile Safari/Chrome. */
+  .s7-workspace,
+  .container.container-wide {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
   }
 }
 
