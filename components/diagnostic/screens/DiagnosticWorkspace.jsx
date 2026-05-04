@@ -1191,9 +1191,25 @@ function DealProposalCards({ proposals, accessToken }) {
         const data = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(data?.error || `Apply failed (${r.status})`);
         const analysisId = data.analysis_id;
+
+        // If the worker queue is unconfigured (Inngest dev server not
+        // running, INNGEST_EVENT_KEY missing), the row was inserted but
+        // will never run. Surface that to the user immediately rather
+        // than silently spinning for 5 minutes.
+        if (data.enqueued === false) {
+          setStateById((s) => ({
+            ...s,
+            [idx]: {
+              applied: false,
+              error: data.hint || 'The analysis worker (Inngest) is not configured — the analysis was created but cannot run. Set INNGEST_EVENT_KEY in env (or start the local Inngest dev server) and try again.',
+            },
+          }));
+          return;
+        }
+
         setStateById((s) => ({
           ...s,
-          [idx]: { applied: true, info: `${p.mode} analysis running on the canvas…` },
+          [idx]: { applied: true, info: `${p.mode} analysis queued — checking progress…` },
         }));
 
         // Surface the loading state on the right canvas via CanvasActionContext.
@@ -1205,12 +1221,18 @@ function DealProposalCards({ proposals, accessToken }) {
           status: 'queued',
         });
 
-        // Poll status every 2s until terminal. ~5 min ceiling.
+        // Poll status. Faster cadence at the start (1s for the first
+        // 10 polls) so a quick failure surfaces immediately; back off
+        // to 3s after that. Total ceiling ~5 min.
         (async () => {
           const start = Date.now();
           const ceiling = 5 * 60_000;
+          let pollCount = 0;
+          let lastStatus = null;
           while (Date.now() - start < ceiling) {
-            await new Promise((res) => setTimeout(res, 2000));
+            const wait = pollCount < 10 ? 1000 : 3000;
+            await new Promise((res) => setTimeout(res, wait));
+            pollCount += 1;
             try {
               const sr = await apiFetch(
                 `/api/deals/${p.dealId}/analyses/${analysisId}/status`,
@@ -1219,23 +1241,75 @@ function DealProposalCards({ proposals, accessToken }) {
               );
               if (!sr.ok) continue;
               const sd = await sr.json();
+              lastStatus = sd.status;
+              const progress = sd.progress_message || sd.status || 'running';
               updateAction({
                 id: `analysis:${analysisId}`,
-                status: sd.progress_message || sd.status || 'running',
+                status: progress,
               });
+              // ALSO mirror progress to the chat proposal card so users
+              // looking at the chat (not the canvas overlay) see what's
+              // happening. Otherwise the card freezes on "queued —
+              // checking progress…" forever.
+              setStateById((s) => ({
+                ...s,
+                [idx]: { applied: true, info: progress },
+              }));
+
               if (sd.complete) {
-                updateAction({ id: `analysis:${analysisId}`, status: '✓ complete — open the workspace to see findings' });
+                const doneMsg = '✓ Analysis complete.';
+                updateAction({ id: `analysis:${analysisId}`, status: doneMsg });
+                setStateById((s) => ({ ...s, [idx]: { applied: true, info: doneMsg } }));
+                // Refresh the deal's analyses list so the new row
+                // surfaces in the artefacts panel without a page reload.
+                setDealRefreshNonce((n) => n + 1);
+                // Auto-open the freshly-completed analysis inline so
+                // the user immediately sees the redesign / synergy /
+                // diligence output instead of having to hunt for it.
+                if (p.mode === 'redesign' || p.mode === 'synergy' || p.mode === 'comparison' || p.mode === 'diligence') {
+                  setInlineReportId(null);
+                  setInlineCostReportId(null);
+                  setInlineAnalysisId(analysisId);
+                  if (isMobile) setMobileView('canvas');
+                }
+                // Drop a chat message that links the new artefact so
+                // future scrolls back through history can re-open it.
+                addChatMessage({
+                  role: 'assistant',
+                  content: `${p.mode.charAt(0).toUpperCase() + p.mode.slice(1)} analysis ready — view the findings on the canvas.`,
+                  artefact: {
+                    kind: 'deal_analysis',
+                    refId: analysisId,
+                    label: `${p.mode.charAt(0).toUpperCase() + p.mode.slice(1)} analysis`,
+                  },
+                });
                 setTimeout(() => endAction({ id: `analysis:${analysisId}` }), 4000);
                 return;
               }
               if (sd.failed) {
-                updateAction({ id: `analysis:${analysisId}`, status: `failed: ${sd.error || 'unknown'}` });
+                const failMsg = `Analysis failed: ${sd.error || 'unknown error'}`;
+                updateAction({ id: `analysis:${analysisId}`, status: failMsg });
+                setStateById((s) => ({
+                  ...s,
+                  [idx]: { applied: false, error: failMsg },
+                }));
                 setTimeout(() => endAction({ id: `analysis:${analysisId}` }), 6000);
                 return;
               }
+              // Stuck-at-pending heuristic: after 30s with no status
+              // movement past 'pending', surface a hint so the user
+              // knows to check the Inngest dashboard / config.
+              if (sd.status === 'pending' && Date.now() - start > 30_000) {
+                const stuckMsg = 'Still queued — the analysis worker (Inngest) may not be running. Check the Inngest dashboard or INNGEST_EVENT_KEY env.';
+                setStateById((s) => ({ ...s, [idx]: { applied: true, info: stuckMsg } }));
+              }
             } catch { /* swallow — try next tick */ }
           }
-          updateAction({ id: `analysis:${analysisId}`, status: 'still running — check back later' });
+          const timeoutMsg = lastStatus === 'pending'
+            ? 'Worker never picked up the analysis. Most likely cause: Inngest is not configured (INNGEST_EVENT_KEY missing or dev server stopped).'
+            : 'Still running — check back later in the workspace.';
+          updateAction({ id: `analysis:${analysisId}`, status: timeoutMsg });
+          setStateById((s) => ({ ...s, [idx]: { applied: true, info: timeoutMsg } }));
           setTimeout(() => endAction({ id: `analysis:${analysisId}` }), 4000);
         })();
 
@@ -1670,6 +1744,11 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
   // from DiagnosticContext is only populated on deal-flow / participant-
   // token entry paths, so it's null for deal owners landing via ?deal=<id>.
   const [dealProcessName, setDealProcessName] = useState(null);
+  // Refresh nonce — bumped after a deal analysis completes so the
+  // artefacts panel and the participants/analyses fetch re-fire and
+  // pull the new row. Without this, a completed redesign would land in
+  // the DB but never surface in the UI until the user re-opened the deal.
+  const [dealRefreshNonce, setDealRefreshNonce] = useState(0);
   useEffect(() => {
     if (!dealId || !accessToken) {
       setDealParticipantsForArtefacts([]);
@@ -1679,8 +1758,8 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     }
     let cancelled = false;
     Promise.all([
-      apiFetch(`/api/deals/${dealId}`, {}, accessToken).then((r) => (r.ok ? r.json() : null)).catch(() => null),
-      apiFetch(`/api/deals/${dealId}/analyses`, {}, accessToken).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      apiFetch(`/api/deals/${dealId}`, { dedupe: false }, accessToken).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      apiFetch(`/api/deals/${dealId}/analyses`, { dedupe: false }, accessToken).then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]).then(([dealData, analysesData]) => {
       if (cancelled) return;
       setDealParticipantsForArtefacts(Array.isArray(dealData?.participants) ? dealData.participants : []);
@@ -1688,7 +1767,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       setDealProcessName(dealData?.deal?.processName || null);
     });
     return () => { cancelled = true; };
-  }, [dealId, accessToken]);
+  }, [dealId, accessToken, dealRefreshNonce]);
 
   /* ── Cost-analysis entitlement: platform admin OR any membership with cost_analyst ── */
   useEffect(() => {
