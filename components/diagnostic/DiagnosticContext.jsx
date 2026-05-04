@@ -27,6 +27,22 @@ function sanitizeChatMessagesForPersist(msgs) {
     if (Array.isArray(m.suggestions) && m.suggestions.length) {
       item.suggestions = m.suggestions.filter((s) => typeof s === 'string').slice(0, 12);
     }
+    // Preserve chips so the four-pillar intro / artefact-opened greeting
+    // / deal-aware opener don't lose their action buttons after a save
+    // round-trip. Without this, restoreChatFromLocal reads a stripped
+    // copy and chips visibly disappear right after first paint.
+    if (Array.isArray(m.chips) && m.chips.length) {
+      item.chips = m.chips
+        .filter((c) => c && typeof c.name === 'string')
+        .slice(0, 12)
+        .map((c) => {
+          const out = { name: c.name };
+          if (typeof c.tagline === 'string' && c.tagline) out.tagline = c.tagline;
+          if (typeof c.segmentId === 'string' && c.segmentId) out.segmentId = c.segmentId;
+          return out;
+        });
+      if (!item.chips.length) delete item.chips;
+    }
     if (m.reportActions && m.reportActions.id) {
       item.reportActions = { id: m.reportActions.id, processName: m.reportActions.processName || '' };
     }
