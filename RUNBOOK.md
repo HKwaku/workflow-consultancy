@@ -145,6 +145,36 @@
 
 ---
 
+## Deal analysis stuck at "running" forever / "Still running — check back later"
+
+**Symptoms:** A redesign / synergy / diligence run (`/api/deals/[id]/analyse`) flips to `running` then never completes. The chat-card progress shows "Designing the unified target process… · 144s" and never advances. Polling client times out after 8 minutes with "Analysis exceeded 8 minutes…".
+
+**Root cause priority list:**
+
+1. **Vercel function timeout** — `/api/inngest` is the route Inngest invokes for each function step. Default is 10s on Hobby / 60s on Pro. The LLM step generating ~6K-token JSON takes 25–40s on Haiku, 90–150s on Sonnet. If `maxDuration` isn't declared or the model is mismatched to the plan tier, Vercel kills the request mid-step and the row stays at `running`.
+   - **Hobby fix:** `app/api/inngest/route.js` declares `maxDuration = 60`, AND `runDealAnalysis.js` uses `getFastModel(...)` (Haiku 4.5, ~30s wall-clock).
+   - **Pro fix:** raise `maxDuration` to 300 in `app/api/inngest/route.js` AND switch back to `getChatModel(...)` (Sonnet 4.6, ~120s wall-clock, higher narrative quality).
+
+2. **Inngest concurrency above plan limit** — error message: `"The function 'X' has higher concurrency limits (8) than your plan limit of 5"`. Inngest free tier caps function concurrency at 5. `runDealAnalysis` and `syncConnectorBinding` both declare `concurrency: { limit: 5 }`. On a paid plan you can raise to 8+.
+
+3. **`INNGEST_EVENT_KEY` missing** — function never enqueued. Status endpoint returns `pending` indefinitely. The chat card now surfaces this with: "Worker never picked up the analysis. Most likely cause: Inngest is not configured."
+
+4. **Stuck rows from prior attempts** — if a previous run was killed mid-pipeline before the fix, the row may sit at `running` forever (no Inngest retry will rescue it because the event has expired). Manual cleanup:
+   ```sql
+   UPDATE deal_analyses
+     SET status='failed', error='Cleared (stale running)', completed_at=now()
+     WHERE status='running' AND created_at < now() - interval '15 minutes';
+   ```
+
+**Recovery:**
+- Confirm `app/api/inngest/route.js` has `export const maxDuration = 60` (or 300 on Pro) — update + redeploy.
+- Confirm the model in `lib/inngest/functions/runDealAnalysis.js:252` matches the plan: `getFastModel` for Hobby, `getChatModel` for Pro.
+- Inngest dashboard → Apps → **Sync** after every code change (the dashboard caches function definitions).
+- Clear stuck rows with the SQL above.
+- For new runs, check Inngest dashboard → Functions → `run-deal-analysis` → Runs to see exactly which step failed.
+
+---
+
 ## SharePoint / OneDrive connector — "Failed to persist tokens"
 
 **Symptoms:** OAuth callback redirects with `?integration_error=Failed%20to%20persist%20tokens%3A%20<cause>`.

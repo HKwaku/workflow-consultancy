@@ -1223,10 +1223,12 @@ function DealProposalCards({ proposals, accessToken }) {
 
         // Poll status. Faster cadence at the start (1s for the first
         // 10 polls) so a quick failure surfaces immediately; back off
-        // to 3s after that. Total ceiling ~5 min.
+        // to 3s after that. Total ceiling ~8 min — the redesign LLM
+        // call alone can take ~150s on Sonnet 4.6, plus pre/post
+        // pipeline steps and Inngest's worker boot time.
         (async () => {
           const start = Date.now();
-          const ceiling = 5 * 60_000;
+          const ceiling = 8 * 60_000;
           let pollCount = 0;
           let lastStatus = null;
           while (Date.now() - start < ceiling) {
@@ -1307,7 +1309,9 @@ function DealProposalCards({ proposals, accessToken }) {
           }
           const timeoutMsg = lastStatus === 'pending'
             ? 'Worker never picked up the analysis. Most likely cause: Inngest is not configured (INNGEST_EVENT_KEY missing or dev server stopped).'
-            : 'Still running — check back later in the workspace.';
+            : lastStatus === 'running'
+              ? 'Analysis exceeded 8 minutes. The function step may have exceeded the Vercel timeout — check Inngest dashboard runs for the failure point and re-run.'
+              : 'Still running — check back later in the workspace.';
           updateAction({ id: `analysis:${analysisId}`, status: timeoutMsg });
           setStateById((s) => ({ ...s, [idx]: { applied: true, info: timeoutMsg } }));
           setTimeout(() => endAction({ id: `analysis:${analysisId}` }), 4000);
