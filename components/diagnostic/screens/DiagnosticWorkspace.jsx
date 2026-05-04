@@ -135,10 +135,10 @@ function ensureHandoffs(steps, handoffs) {
 // always moves downward. Canonical rail (DiagnosticWorkspace):
 //   Home · Admin dashboard · Reports · Deals · Chat history · Artefacts
 //   · View report · Save to report · Cost analysis · Steps list
-//   · Analytics · Docs & guides · Replay walkthrough · Activity log
-//   · Settings (footer)
-// Conditional icons (View / Save / Cost) are auto-skipped when their
-// selector doesn't resolve (see MapGuide effect).
+//   · Handover to colleague · Analytics · Docs & guides
+//   · Replay walkthrough · Activity log · Settings (footer)
+// Conditional icons (View / Save / Cost / Handover) are auto-skipped
+// when their selector doesn't resolve (see MapGuide effect).
 const GUIDE_TOUR = [
   {
     title: "Hi, I'm Reina",
@@ -204,6 +204,12 @@ const GUIDE_TOUR = [
     title: "Steps list",
     desc: "Open the steps panel to add or edit steps manually. Useful for fine-tuning names, reordering, or adding details Reina hasn't filled in yet.",
     selector: '[title="Steps list"],[title="Add steps manually"]',
+    cta: "Next →",
+  },
+  {
+    title: "Handover to a colleague",
+    desc: "Pass the in-progress audit to someone else without losing state. Captures the recipient's email, your name, and any notes you'd like them to see, then emails them a resume link that drops them straight into this conversation with the full canvas, chat history, and progress intact. Use it for a teammate who owns one of the steps, the actual process owner, or just to send yourself a link from another device.",
+    selector: '[title="Handover to a colleague"]',
     cta: "Next →",
   },
   {
