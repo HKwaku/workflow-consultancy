@@ -4842,6 +4842,46 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                   </span>
                 )}
               </div>
+              {/* Secondary progress line — shows BELOW the bubble whenever
+                  text has streamed but the agent is still working (i.e.,
+                  text complete, now executing tools). Without this, the
+                  user sees a streamed paragraph end and then just a
+                  blinking cursor while Reina builds the flow / searches
+                  the data room / runs the redesign. The message tracks
+                  chatProgress, which the server updates per-tool. */}
+              {chatStreamedText && chatLoading && (
+                <div
+                  className="s7-typing-text"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '4px 10px',
+                    fontSize: 12,
+                  }}
+                >
+                  <span
+                    aria-hidden
+                    style={{
+                      width: 11,
+                      height: 11,
+                      borderRadius: '50%',
+                      border: '2px solid currentColor',
+                      borderTopColor: 'transparent',
+                      animation: 'spin 0.9s linear infinite',
+                      flex: '0 0 auto',
+                    }}
+                  />
+                  <span style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {chatProgress || 'Working on it…'}
+                  </span>
+                  {chatElapsedSeconds >= 4 && (
+                    <span style={{ opacity: 0.6, flex: '0 0 auto' }}>
+                      ({chatElapsedSeconds}s)
+                    </span>
+                  )}
+                </div>
+              )}
               <div className="s7-msg-actions">
                 <button
                   type="button"
