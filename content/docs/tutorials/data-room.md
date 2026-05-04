@@ -93,6 +93,31 @@ Click **Reprocess** on a document to re-run the whole pipeline. Use cases:
 
 When a document is reprocessed, every finding citing it is **eagerly flagged STALE** in the workspace (yellow badge on the row). The finding isn't deleted — the partner needs to see what was claimed and decide whether the new chunk text still supports it. Click **Mark verified** on the in-row stale bar to clear once you've checked.
 
+## External sources — SharePoint and Google Drive
+
+Customers who already keep documents in SharePoint, OneDrive for Business, or Google Drive can connect their account once at the org level, then bind specific folders to each deal. Vesno polls the source for changes and pulls new files into the data room automatically.
+
+**One-time org setup** (org admin only): **Org admin → Integrations** → click **Connect** on Microsoft 365 / SharePoint or Google Drive → sign in with the work / Google Workspace account that owns the folders → consent. Vesno stores the encrypted refresh token; raw tokens never reach the browser.
+
+**Per-deal binding** (any deal editor): **Workspace → Data room → + Microsoft 365 / SharePoint** or **+ Google Drive** → pick a folder from the picker. The picker walks sites → drives → folders for SharePoint, or top-level folders for Drive. The binding shows up under "Synced from" with a status pill (active / syncing / error).
+
+**What syncs:**
+- Existing files in the bound folder land as documents in the data room on the first sync, going through the same parse / OCR / chunk / embed pipeline as manual uploads
+- New files added to the bound folder pull in on the next sync (every ~10 minutes)
+- Files removed from the source are not deleted from Vesno — Vesno snapshots evidence at chunk-creation time so findings citing them remain valid even after the source file is gone
+- File renames / moves within the bound folder are tracked as updates rather than re-uploads
+
+**SharePoint specifics:**
+- The OAuth flow uses `/organizations` (work / school accounts only) — personal Microsoft accounts (outlook.com / hotmail.com) are excluded since they have no SharePoint
+- If your tenant blocks user consent for unverified multi-tenant apps, your Microsoft 365 admin needs to grant org-wide consent once: `https://login.microsoftonline.com/<tenant-id>/adminconsent?client_id=<vesno-app-id>` (your operator can give you these IDs). Vesno is working toward Verified Publisher status to remove this step.
+- The picker falls back to OneDrive for Business if SharePoint sites aren't accessible from the connected account — useful for users without an SPO licence but with OneDrive
+
+**Google Drive specifics:**
+- Bound folder must be under "My Drive" or a Shared Drive the connecting account has at least Viewer access on
+- Files in subfolders are picked up; subfolder structure is flattened in the data room view
+
+**Disconnect:** Org admin → Integrations → **Disconnect** on the provider card. Existing synced documents stay in the deal (so findings keep their evidence); future syncs stop. Re-connect any time without losing prior history.
+
 ## Privacy + visibility
 
 Each document carries a `visibility` setting:

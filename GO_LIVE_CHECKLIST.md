@@ -112,6 +112,37 @@ Each is a paid-or-free signup outside the codebase.
 - [ ] Configure notification channels (Slack / PagerDuty / email)
 - [ ] Test: trigger a fake incident from the vendor's UI; verify notifications arrive
 
+### External data-room connectors (SharePoint / Google Drive — optional)
+
+For customers who want Vesno to pull documents from their existing SharePoint or Google Drive instead of uploading manually. Each provider needs an OAuth app registered in their console with Vesno as the verified redirect target.
+
+#### Microsoft 365 / SharePoint
+- [ ] Microsoft Entra (entra.microsoft.com) → **App registrations** → **New registration** → name `Vesno – Production`
+- [ ] **Supported account types:** "Accounts in any organizational directory (Multitenant)". Single-tenant only if Vesno is for one customer.
+- [ ] **Redirect URI:** `https://<your-prod-host>/api/integrations/sharepoint/oauth/callback` (exact match, https in prod)
+- [ ] Copy the Application (client) ID → `SHAREPOINT_CLIENT_ID` in Vercel
+- [ ] **Certificates & secrets** → New client secret → copy the **Value** (not the Secret ID) → `SHAREPOINT_CLIENT_SECRET` in Vercel
+- [ ] **API permissions** → Add **Microsoft Graph → Delegated** → `Files.Read.All`, `Sites.Read.All`, `User.Read`, `offline_access` → click **Grant admin consent for <your-tenant>**
+- [ ] **Branding & properties** → **Add MPN ID to verify publisher** — without Verified Publisher status, end users in customer tenants cannot self-consent (their admin must consent first via `https://login.microsoftonline.com/<tenant-id>/adminconsent?client_id=<vesno-client-id>`). Free Microsoft Partner Network signup at https://partner.microsoft.com.
+- [ ] Re-deploy. Test: Org admin → Integrations → SharePoint → Connect → pick a work account on a tenant with SPO licence → consent → folder picker should show your sites + OneDrive drives.
+- [ ] If picker errors with "Tenant does not have a SPO license", see RUNBOOK § "SharePoint connector — Tenant does not have a SPO license".
+
+#### Google Drive
+- [ ] Google Cloud Console → **APIs & Services** → **Library** → enable **Google Drive API**
+- [ ] **OAuth consent screen** → External (or Internal if Workspace) → fill app name, support email, dev contact → add scopes `.../auth/drive.readonly` + `.../auth/userinfo.email` → add yourself as a Test user (or publish for production)
+- [ ] **Credentials** → Create Credentials → **OAuth client ID** → type Web application
+- [ ] **Authorized redirect URIs:** `https://<your-prod-host>/api/integrations/google_drive/oauth/callback`
+- [ ] Copy the Client ID → `GOOGLE_DRIVE_CLIENT_ID` in Vercel
+- [ ] Copy the Client secret → `GOOGLE_DRIVE_CLIENT_SECRET` in Vercel
+- [ ] Re-deploy. Test: Org admin → Integrations → Google Drive → Connect → consent → folder picker should list your Drive folders.
+- [ ] Production checklist: switch the OAuth consent screen from "Testing" to "In production" (otherwise only listed test users complete the flow).
+
+#### Database prerequisites for both
+- [ ] Run `supabase/migration-deal-connectors.sql` then `supabase/migration-deal-connectors-rpcs.sql` (creates `org_integrations` table + the SECURITY DEFINER RPCs that pgcrypto-encrypt tokens with the same Vault secret as `customer_api_keys`)
+- [ ] Verify pgcrypto is installed and on the RPC search_path: `SELECT n.nspname, p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE p.proname = 'pgp_sym_encrypt';` should return rows under `extensions`
+
+---
+
 ### n8n (outbound email)
 
 - [ ] Provision an n8n instance (self-hosted or n8n.cloud)

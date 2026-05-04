@@ -145,6 +145,46 @@
 
 ---
 
+## SharePoint / OneDrive connector — "Failed to persist tokens"
+
+**Symptoms:** OAuth callback redirects with `?integration_error=Failed%20to%20persist%20tokens%3A%20<cause>`.
+
+**Causes (the actual cause is now appended to the error message):**
+- `function pgp_sym_encrypt(text, text) does not exist` → pgcrypto not on the RPC's search_path. Run:
+  ```sql
+  ALTER FUNCTION public.set_org_integration_tokens(uuid,text,text,text,text,text,timestamptz,text[],jsonb,text)
+    SET search_path = public, extensions, vault;
+  ALTER FUNCTION public.get_org_integration_tokens(uuid,text)
+    SET search_path = public, extensions, vault;
+  ALTER FUNCTION public.rotate_org_integration_access_token(uuid,text,timestamptz)
+    SET search_path = public, extensions, vault;
+  ```
+  The migration `supabase/migration-deal-connectors-rpcs.sql` now sets this up correctly for fresh deployments.
+- `Could not find the function public.set_org_integration_tokens` → migration #33 not applied. Run `supabase/migration-deal-connectors.sql` then `migration-deal-connectors-rpcs.sql`.
+- `Vault secret "model_key_encryption_secret" is not set` → `SELECT vault.create_secret('<32-byte-base64>', 'model_key_encryption_secret');`
+
+---
+
+## SharePoint connector — "Tenant does not have a SPO license"
+
+**Symptoms:** OAuth completes, but the folder picker fails with `Graph /sites/root failed (400): Tenant does not have a SPO license`.
+
+**Likely causes (in order):**
+1. **The connecting account has no SPO licence** — verify by signing into `https://<tenant>.sharepoint.com` in a browser with the same account. If it 404s or shows an upsell, the account genuinely lacks SPO.
+2. **Multi-tenant Entra app not consented to in the customer's tenant** — by Microsoft policy, multi-tenant apps without a Verified Publisher require admin consent before end users can use them. Without consent, OAuth succeeds but the token has no real Graph scope binding → every Graph call returns the SPO message.
+3. **Wrong account picked at the OAuth picker** — the user has multiple Microsoft accounts cached and Microsoft picked one without SPO. The OAuth flow now uses `/organizations` (work/school only), but if the user has multiple work tenants they can still pick the wrong one.
+
+**Recovery (depending on cause):**
+- For #1: M365 admin assigns a SharePoint plan to the user, or pick a different account.
+- For #2: customer admin opens this URL (replace placeholders):
+  `https://login.microsoftonline.com/<customer-tenant-id>/adminconsent?client_id=<vesno-app-id>` — grants org-wide consent. After that any user in that tenant can connect.
+- For #2 long-term fix: register Vesno's Entra app for **Verified Publisher** (Branding & properties → Add MPN ID). After Microsoft auto-verifies, end users in any tenant can self-consent without admin involvement.
+- For #3: disconnect, reconnect, pick the correct work account at the picker. The OAuth flow forces account selection via `prompt=select_account`.
+
+The picker now also falls back to `/me/drives` and `/me/drive` (OneDrive) when SharePoint sites are unreachable, so users without SPO but with OneDrive for Business can still bind a folder.
+
+---
+
 ## Auth-cache staleness
 
 **Symptoms:** A user signs out / rotates a token but the server still accepts the old JWT for up to 60 seconds.

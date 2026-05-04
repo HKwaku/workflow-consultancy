@@ -721,8 +721,16 @@ Test helper: `_clearAuthCacheForTesting()` exported for tests that mint syntheti
 | Sentry | Error monitoring. `lib/logger.js` `error()` calls auto-capture with `requestId` tags. Optional — degrades to no-op. | `SENTRY_DSN` (server), `NEXT_PUBLIC_SENTRY_DSN` (browser) |
 | Vercel Cron | Stuck-document reaper (every 15m) + monthly budget reset (daily 04:00). | `CRON_SECRET` (auto-injected) |
 | n8n | Webhook for report email + followup campaigns; HMAC-SHA256 signed | `N8N_*_WEBHOOK_URL` family + `WEBHOOK_SIGNING_SECRET` |
+| Microsoft Graph | OAuth + folder-level sync from SharePoint sites + OneDrive for Business. Multi-tenant Entra app, `/organizations` endpoint (work / school accounts only — personal accounts excluded since they have no SPO). Picker falls back to `/me/drives` + `/me/drive` so users without an SPO licence can still bind a OneDrive folder. Tokens encrypted via `set_org_integration_tokens` RPC (same Vault secret as `customer_api_keys`). | `SHAREPOINT_CLIENT_ID`, `SHAREPOINT_CLIENT_SECRET`, `NEXT_PUBLIC_APP_URL` |
+| Google Drive API | OAuth + folder-level sync. `drive.readonly` + `userinfo.email` scopes; `prompt=consent` so refresh tokens are reissued every connect. Same encrypted-token storage as SharePoint. | `GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`, `NEXT_PUBLIC_APP_URL` |
 
 No Resend, OpenAI, Gemini, or direct SMTP — all email goes through n8n. (Voyage is the only non-Anthropic AI vendor; chosen because Anthropic does not ship an embedding model and recommends Voyage.)
+
+### Connector consent model
+
+Org admin connects once at the org level (Org admin → Integrations); deal editors then bind specific folders per deal (Workspace → Data room → + Microsoft 365 / SharePoint or + Google Drive). Synced files flow through the same parse / OCR / chunk / embed pipeline as manual uploads, so findings can cite them with no special handling.
+
+For multi-tenant SharePoint deployments, the Vesno Entra app needs **Verified Publisher** status (Microsoft Partner Network ID added under Branding & properties) before end users in customer tenants can self-consent. Until that's resolved, customer admins grant org-wide consent once via `https://login.microsoftonline.com/<tenant-id>/adminconsent?client_id=<vesno-app-id>` — see `RUNBOOK.md` § "SharePoint connector — Tenant does not have a SPO license" for the full diagnosis tree.
 
 ---
 
