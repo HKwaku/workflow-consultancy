@@ -5555,14 +5555,25 @@ body { line-height: 1.65; }
 
         .s7-typing {
             display: flex;
+            align-items: center;
             gap: 5px;
             padding: 0.65rem 1rem !important;
+            /* The typing label can't wrap or shrink to a single-character
+               column. Without these, the parent flex chain (msg-content
+               flex-column with min-width:0) sometimes collapses the
+               bubble down to ~1ch wide and the label renders vertically
+               (one letter per line). */
+            flex-wrap: nowrap;
+            white-space: nowrap;
+            width: max-content;
+            max-width: 100%;
         }
         .s7-typing span:not(.s7-typing-text) {
             width: 7px; height: 7px;
             border-radius: 50%;
             background: var(--accent);
             animation: s7Dot 1.4s infinite;
+            flex-shrink: 0;
         }
         .s7-typing span:not(.s7-typing-text):nth-child(2) { animation-delay: 0.2s; }
         .s7-typing span:not(.s7-typing-text):nth-child(3) { animation-delay: 0.4s; }
@@ -5571,6 +5582,16 @@ body { line-height: 1.65; }
             color: var(--accent, #1a7a6c);
             font-style: italic;
             animation: s7TypingPulse 2s ease-in-out infinite;
+            white-space: nowrap;
+            flex-wrap: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+            max-width: 100%;
+        }
+        .s7-typing-text > span {
+            white-space: nowrap;
+            flex-shrink: 0;
         }
         @keyframes s7Dot {
             0%, 60%, 100% { transform: translateY(0); opacity: 0.3; }
