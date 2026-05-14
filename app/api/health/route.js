@@ -84,12 +84,11 @@ export async function GET(request) {
     inngestStatus = 'not-configured';
   } else {
     try {
-      const [{ processDealDocument }, { runDealAnalysis }, { syncConnectorBinding }] = await Promise.all([
+      const [{ processDealDocument }, { syncConnectorBinding }] = await Promise.all([
         import('@/lib/inngest/functions/processDealDocument'),
-        import('@/lib/inngest/functions/runDealAnalysis'),
         import('@/lib/inngest/functions/syncConnectorBinding'),
       ]);
-      registeredFunctions = [processDealDocument, runDealAnalysis, syncConnectorBinding]
+      registeredFunctions = [processDealDocument, syncConnectorBinding]
         .filter((f) => typeof f === 'object' && (f.id || f.opts?.id))
         .map((f) => f.id || f.opts?.id || 'unknown');
       inngestStatus = registeredFunctions.length > 0 ? 'ok' : 'fail';

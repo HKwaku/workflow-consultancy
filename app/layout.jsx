@@ -2,8 +2,8 @@ import './globals.css';
 import { ThemeProvider } from '@/components/ThemeProvider';
 
 export const metadata = {
-  title: 'Vesno | Process Audit',
-  description: 'Evidence-based process audit. Analyse your processes with real data.',
+  title: 'Vesno | Operating Model Workspace',
+  description: 'Living operating-model workspace. Map, run, and improve your processes — every edit is live.',
   icons: {
     icon: [{ url: '/favicon.svg?v=4', type: 'image/svg+xml' }],
   },

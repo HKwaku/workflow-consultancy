@@ -11,7 +11,7 @@
  * nothing — their cap is the per-IP rate limit, not a token budget.
  *
  * The "Create org & add API key" CTA hard-navigates to
- * /portal/org-admin?firstRun=1 which kicks the streamlined onboarding.
+ * /org-admin?firstRun=1 which kicks the streamlined onboarding.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -55,7 +55,7 @@ export default function TrialGateBanner({ accessToken, onGateOpen, refreshTrigge
           </div>
         </div>
         <a
-          href="/portal/org-admin?firstRun=1"
+          href="/org-admin?firstRun=1"
           className="trial-gate-banner-cta"
           onClick={() => onGateOpen?.()}
         >Create org &amp; add key →</a>
@@ -71,7 +71,7 @@ export default function TrialGateBanner({ accessToken, onGateOpen, refreshTrigge
       <span className="trial-gate-banner-pill">
         Trial: {fmtTokens(mode.remaining)} of {fmtTokens(mode.granted)} tokens left
       </span>
-      <a href="/portal/org-admin?firstRun=1" className="trial-gate-banner-link">
+      <a href="/org-admin?firstRun=1" className="trial-gate-banner-link">
         Add your API key →
       </a>
     </div>

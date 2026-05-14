@@ -10,8 +10,8 @@ import { logger } from '@/lib/logger';
 
 /**
  * PATCH /api/deals/[id]/flows/[flowId]
- * Owner or collaborator updates flow label / kind / report_id / status.
- * Body: { label?, flowKind?, reportId?, status? }
+ * Owner or collaborator updates flow label / kind / process_id / status.
+ * Body: { label?, flowKind?, processId? | reportId?, status? }
  */
 export async function PATCH(request, { params }) {
   const originErr = checkOrigin(request);
@@ -35,8 +35,14 @@ export async function PATCH(request, { params }) {
   const update = {};
   if (typeof body.label === 'string' && body.label.trim()) update.label = body.label.trim().slice(0, 200);
   if (typeof body.flowKind === 'string') update.flow_kind = body.flowKind.trim().slice(0, 100) || null;
-  if (typeof body.reportId === 'string' && body.reportId.trim()) update.report_id = body.reportId.trim();
-  if (body.status && ['draft', 'in_progress', 'complete'].includes(body.status)) update.status = body.status;
+  const pid = typeof body.processId === 'string' ? body.processId.trim()
+            : typeof body.reportId  === 'string' ? body.reportId.trim()
+            : null;
+  if (pid) update.process_id = pid;
+  // Living-workspace contract: flows don't terminate. Allow draft /
+  // in_progress lifecycle states but reject 'complete' — participants
+  // keep editing the canvas indefinitely.
+  if (body.status && ['draft', 'in_progress'].includes(body.status)) update.status = body.status;
   if (Object.keys(update).length === 0) return NextResponse.json({ error: 'No valid fields.' }, { status: 400 });
 
   const sb = requireSupabase();
@@ -58,8 +64,7 @@ export async function PATCH(request, { params }) {
 /**
  * DELETE /api/deals/[id]/flows/[flowId]
  * Owner or collaborator removes a flow slot. Does NOT delete the linked
- * diagnostic_reports row - that stays so the flow artefact survives and
- * can be re-linked later.
+ * process row — that stays so the artefact survives and can be relinked.
  */
 export async function DELETE(request, { params }) {
   const originErr = checkOrigin(request);

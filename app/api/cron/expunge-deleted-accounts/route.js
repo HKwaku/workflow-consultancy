@@ -4,7 +4,7 @@
  * Vercel Cron — runs daily at 03:00. Processes user_deletion_requests
  * where status='pending' AND expunge_after <= now(). For each:
  *
- *   1. Anonymise diagnostic_reports owned by the user
+ *   1. Anonymise processes owned by the user
  *      (contact_email/contact_name/company → redacted strings).
  *   2. Anonymise chat_sessions
  *      (email/title/summary → redacted; user_id stays for FK integrity).
@@ -16,10 +16,10 @@
  *
  * Failures: status='failed' + failure_reason; admin can retry.
  *
- * NOTE: this cron does NOT delete chat_messages or chat_artefacts. They
- * may contain MNPI shared by other users and there's no clean way to
- * separate "what the deleted user contributed" from "what they responded
- * to". Anonymising the session is sufficient for GDPR.
+ * NOTE: this cron does NOT delete chat_messages. They may contain MNPI
+ * shared by other users and there's no clean way to separate "what the
+ * deleted user contributed" from "what they responded to". Anonymising
+ * the session is sufficient for GDPR.
  */
 
 import { NextResponse } from 'next/server';
@@ -57,9 +57,9 @@ export const GET = withCron('expunge-deleted-accounts', async () => {
     const userId = req.user_id;
     const email = req.email_at_request;
     try {
-      // 1. Diagnostic reports
+      // 1. Processes
       await fetchWithTimeout(
-        `${sb.url}/rest/v1/diagnostic_reports?or=(user_id.eq.${userId},contact_email.eq.${encodeURIComponent(email)})`,
+        `${sb.url}/rest/v1/processes?or=(user_id.eq.${userId},contact_email.eq.${encodeURIComponent(email)})`,
         {
           method: 'PATCH',
           headers: { ...getSupabaseWriteHeaders(sb.key), 'Content-Type': 'application/json' },

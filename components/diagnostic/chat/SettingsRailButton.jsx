@@ -182,7 +182,7 @@ export default function SettingsRailButton({ accessToken, sessionUser, onSignOut
                   // navigating. localStorage + sessionStorage + cookies.
                   // If we let useAuth.signOut do this async, /signin
                   // reads storage on mount, finds the still-not-cleared
-                  // session, and redirects right back to /process-audit.
+                  // session, and redirects right back to /workspace/map.
                   // Drop the in-memory apiFetch dedupe/cache so a new
                   // user signing in next doesn't pick up the previous
                   // user's cached responses (in particular /api/deals/…).

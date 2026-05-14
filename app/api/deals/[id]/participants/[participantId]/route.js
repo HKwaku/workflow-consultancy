@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/auth';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { requireDealEditor } from '@/lib/dealAuth';
 import { logger } from '@/lib/logger';
+import { recordTransition } from '@/lib/changes/repo';
 
 /**
  * DELETE /api/deals/[id]/participants/[participantId]
@@ -81,12 +82,17 @@ export async function PATCH(request, { params }) {
   let body;
   try { body = await request.json(); } catch { return NextResponse.json({ error: 'Invalid JSON.' }, { status: 400 }); }
 
-  const wantsUnlink = body && Object.prototype.hasOwnProperty.call(body, 'report_id') && body.report_id === null;
+  // Living-workspace migration: external callers still pass report_id;
+  // the underlying column is process_id. Accept either body key.
+  const wantsUnlink = body && (
+    (Object.prototype.hasOwnProperty.call(body, 'report_id')  && body.report_id  === null) ||
+    (Object.prototype.hasOwnProperty.call(body, 'process_id') && body.process_id === null)
+  );
   const metaKeys = ['role', 'companyName', 'participantEmail', 'participantName'];
   const hasMetaEdit = metaKeys.some((k) => Object.prototype.hasOwnProperty.call(body || {}, k));
 
   if (!wantsUnlink && !hasMetaEdit) {
-    return NextResponse.json({ error: 'Pass either { report_id: null } or one of { role, companyName, participantEmail, participantName }.' }, { status: 400 });
+    return NextResponse.json({ error: 'Pass either { process_id: null } or one of { role, companyName, participantEmail, participantName }.' }, { status: 400 });
   }
   if (wantsUnlink && hasMetaEdit) {
     return NextResponse.json({ error: 'Unlink and metadata edit are mutually exclusive — call separately.' }, { status: 400 });
@@ -100,35 +106,40 @@ export async function PATCH(request, { params }) {
   if (guard.error) return NextResponse.json(guard.error, { status: guard.status });
 
   const verify = await fetchWithTimeout(
-    `${supabaseUrl}/rest/v1/deal_participants?id=eq.${encodeURIComponent(participantId)}&deal_id=eq.${encodeURIComponent(id)}&select=id,report_id,role`,
+    `${supabaseUrl}/rest/v1/deal_participants?id=eq.${encodeURIComponent(participantId)}&deal_id=eq.${encodeURIComponent(id)}&select=id,process_id,role`,
     { method: 'GET', headers: getSupabaseHeaders(supabaseKey) },
   );
   const [row] = verify.ok ? await verify.json() : [];
   if (!row) return NextResponse.json({ error: 'Participant not found on this deal.' }, { status: 404 });
 
   if (wantsUnlink) {
-    const previousReportId = row.report_id;
+    const previousReportId = row.process_id;
     const patchPart = await fetchWithTimeout(
       `${supabaseUrl}/rest/v1/deal_participants?id=eq.${encodeURIComponent(participantId)}`,
       {
         method: 'PATCH',
         headers: getSupabaseWriteHeaders(supabaseKey),
-        body: JSON.stringify({ report_id: null, status: 'invited', completed_at: null }),
+        body: JSON.stringify({ process_id: null, status: 'invited', completed_at: null }),
       },
     );
     if (!patchPart.ok) {
-      logger.warn('Unlink participant report: Supabase error', { requestId: getRequestId(request), status: patchPart.status });
-      return NextResponse.json({ error: 'Failed to unlink report.' }, { status: 502 });
+      logger.warn('Unlink participant process: Supabase error', { requestId: getRequestId(request), status: patchPart.status });
+      return NextResponse.json({ error: 'Failed to unlink process.' }, { status: 502 });
     }
     if (previousReportId) {
+      // Living-workspace migration: deal_role column dropped.
       await fetchWithTimeout(
-        `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${encodeURIComponent(previousReportId)}`,
+        `${supabaseUrl}/rest/v1/processes?id=eq.${encodeURIComponent(previousReportId)}`,
         {
           method: 'PATCH',
           headers: getSupabaseWriteHeaders(supabaseKey),
-          body: JSON.stringify({ deal_id: null, deal_role: null }),
+          body: JSON.stringify({ deal_id: null }),
         },
       ).catch(() => {});
+    }
+    if (typeof body?.change_id === 'string' && body.change_id) {
+      recordTransition({ id: body.change_id, state: 'applied', actor_email: auth.email })
+        .catch((e) => logger.warn('Change transition (unlink participant) failed', { requestId: getRequestId(request), message: e.message }));
     }
     return NextResponse.json({ success: true });
   }

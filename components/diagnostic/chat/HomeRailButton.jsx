@@ -4,7 +4,7 @@
  * Home icon — always visible at the very top of the rail. Click resets
  * the chat surface to the canonical fresh state: drops every URL param
  * (deal / chatSession / edit / focusFinding / etc.), clears any deal scope
- * + canvas state, and pushes `/process-audit`. The DiagnosticWorkspace
+ * + canvas state, and pushes `/workspace/map`. The DiagnosticWorkspace
  * seed effect then renders Reina's four-pillar intro.
  *
  * Visible to anonymous + signed-in users. Doesn't ask the user to confirm —
@@ -17,7 +17,7 @@ export default function HomeRailButton() {
     // Strategy: clear every persistence layer that would otherwise restore
     // state on the next mount, then hard-navigate. We don't try to reset
     // React state in-place because:
-    //   - When the user is already on a fresh URL, router.push('/process-audit')
+    //   - When the user is already on a fresh URL, router.push('/workspace/map')
     //     is a no-op for routing, so DiagnosticWorkspace doesn't remount
     //     and its seed-effect ref keeps `hasSeededChatRef.current = true`.
     //   - Hard nav (`window.location.assign`) is guaranteed to remount
@@ -45,7 +45,7 @@ export default function HomeRailButton() {
       }
     } catch { /* storage disabled / quota — fall through to nav anyway */ }
 
-    window.location.assign('/process-audit');
+    window.location.assign('/workspace/map');
   };
 
   return (

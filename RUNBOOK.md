@@ -1,24 +1,26 @@
 # Runbook: Common Failures & Recovery
 
+> Living-workspace model (2026-05). Removed surfaces (deal-analyses, redesigns, report exports, follow-ups, team surveys) have been physically deleted - if a request lands on one of those paths it 404s. See [`docs/ARCHITECTURE.html`](./docs/ARCHITECTURE.html) for the current shape.
+
 ## "Everything feels slow"
 
-**First, eliminate the obvious:** are you on `next dev`? Dev mode compiles each route on first hit, runs without minification, includes React's strict-mode double-invocation, and serves modules un-bundled. **Real perf bar is `npm run build && npm start`** — typically 2-5× faster on the same hardware. If perf only matters for a specific route, hit that route once with `next dev` to warm the compile, then test.
+**First, eliminate the obvious:** are you on `next dev`? Dev mode compiles each route on first hit, runs without minification, includes React's strict-mode double-invocation, and serves modules un-bundled. **Real perf bar is `npm run build && npm start`** - typically 2-5x faster on the same hardware. If perf only matters for a specific route, hit that route once with `next dev` to warm the compile, then test.
 
 **If still slow on production builds:**
 - Check the Network tab. Slow API responses = backend issue. Slow JS parse = bundle size issue.
-- Confirm `SUPABASE_JWT_SECRET` is set (saves ~200ms of `auth.getUser` round-trip per first-of-key authenticated request — see `lib/auth.js:verifyJwtLocal`).
+- Confirm `SUPABASE_JWT_SECRET` is set (saves ~200ms of `auth.getUser` round-trip per first-of-key authenticated request - see `lib/auth.js:verifyJwtLocal`).
 - Confirm `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are reachable. The 800 ms allow-cache in `lib/rate-limit.js` masks Upstash latency for the second-and-onwards request from a key, but the first call still pays the full Upstash round-trip if Upstash is in a different region.
 - Apply `supabase/migration-perf-indexes.sql` if not already applied.
-- Run a real production build (`npm run build`) and watch the bundle-size warnings — anything > 250 kB gzip on a route is a problem.
+- Run a real production build (`npm run build`) and watch the bundle-size warnings - anything > 250 kB gzip on a route is a problem.
 
 ## Supabase Unavailable
 
-**Symptoms:** 502, "Failed to fetch report", "Storage not configured"
+**Symptoms:** 502, "Failed to fetch", "Storage not configured"
 
 **Checks:**
 - Verify `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` in env
 - Check [Supabase status](https://status.supabase.com)
-- Check [Vercel dashboard](https://vercel.com) → Project → Logs for errors
+- Check [Vercel dashboard](https://vercel.com) -> Project -> Logs for errors
 
 **Recovery:**
 - If Supabase is down: wait for recovery; no code change needed
@@ -28,45 +30,33 @@
 
 ## Anthropic AI Failures
 
-**Symptoms:** "AI not configured", "Analysis failed", 503
+**Symptoms:** "AI not configured", chat agent errors, 503 from `/api/diagnostic-chat`
 
 **Checks:**
-- Verify `ANTHROPIC_API_KEY` is set and valid
-- Check Anthropic rate limits / quota
-- App falls back to rule-based analysis when AI fails; user still gets results
+- Verify `ANTHROPIC_API_KEY` is set and valid (platform fallback)
+- Per-org BYO: check `customer_api_keys` for the active row; consider rotating
+- Check Anthropic rate limits / quota in their dashboard
+- Chat-side errors surface in the SSE stream as an `error` event; the UI renders an inline retry button
 
 **Recovery:**
 - Rotate API key if compromised
-- Check Anthropic dashboard for usage
+- For BYO key issues: org admin re-pastes the key at **Org admin -> API keys -> Anthropic**
 
 ---
 
 ## Webhook / n8n Failures
 
-**Symptoms:** Emails not sent, "webhook-status-XXX"
+**Symptoms:** Outbound webhooks not firing, "webhook-status-XXX" in logs
 
 **Checks:**
-- `N8N_SAVE_PROGRESS_WEBHOOK_URL`, `N8N_HANDOVER_WEBHOOK_URL`, `N8N_DIAGNOSTIC_COMPLETE_WEBHOOK_URL`, `N8N_TEAM_WEBHOOK_URL` correct
+- n8n webhook URLs set in Vercel env (see `.env.local.example` for the active set)
 - n8n workflow is active and reachable
-- Check logs for "Webhook error" in structured logs
+- Check structured logs for "Webhook error"
+- Webhooks soft-fail: a missing URL or 5xx never blocks the user-facing request
 
 **Recovery:**
 - Restart n8n workflow if stuck
-- Verify webhook URL in n8n matches env
-
----
-
-## Follow-up API (get-followups)
-
-**Symptoms:** 401 "Invalid or missing API key"
-
-**Checks:**
-- `FOLLOWUP_API_KEY` set in env
-- n8n cron passes `X-API-Key` or `Authorization: Bearer <key>` header
-
-**Recovery:**
-- Add `FOLLOWUP_API_KEY` to Vercel env
-- Update n8n HTTP request node to include header
+- Verify webhook URL matches the env var
 
 ---
 
@@ -74,17 +64,17 @@
 
 **Symptoms:** 429 "Too many requests"
 
-**Behavior:** In-memory store; resets on cold start. Per-IP: 100 req/60s.
+**Behaviour:** Per-IP and per-user buckets. In-memory store (resets on cold start) unless Upstash Redis is configured.
 
 **Recovery:**
 - User waits for retry-after (typically 60s)
-- For shared rate limiting: add Upstash Redis, set `KV_REST_API_URL` and `KV_REST_API_TOKEN`
+- For shared rate limiting across instances: set `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`
 
 ---
 
 ## Origin / CSRF Rejection
 
-**Symptoms:** 403 "Invalid origin" on POST to process-diagnostic, survey-submit, send-diagnostic-report
+**Symptoms:** 403 "Invalid origin" on a POST/PUT request
 
 **Checks:**
 - `NEXT_PUBLIC_APP_URL` matches the domain users are on
@@ -102,85 +92,37 @@
 
 **Checks:**
 - `INNGEST_EVENT_KEY` set? Without it the upload route can't enqueue work and the row stays at `pending`.
-- Inngest dashboard → `process-deal-document` function → recent runs. Failures are visible there with stack traces.
+- Inngest dashboard -> `process-deal-document` function -> recent runs. Failures are visible there with stack traces.
 - Storage: `deal_documents.storage_path` populated? If null, upload-to-storage failed; row should already be `failed` with `processing_error`.
-- Voyage rate limit / quota: if `VOYAGE_API_KEY` set but Voyage is rate-limiting, the embed step retries up to 3× and then the whole step fails.
+- Voyage rate limit / quota: if `VOYAGE_API_KEY` set but Voyage is rate-limiting, the embed step retries up to 3x and then the whole step fails.
 
 **Recovery:**
-- Run `POST /api/deals/[id]/documents/[docId]/reprocess` (with `?wipe=1` if previous chunks should be cleared first). This eagerly stales any findings citing the doc.
+- Run `POST /api/deals/[id]/documents/[docId]/reprocess` (with `?wipe=1` if previous chunks should be cleared first).
 - If the pipeline is genuinely broken, mark the row `stored` manually so the file remains downloadable while the user investigates.
 
 ---
 
 ## OCR not running
 
-**Symptoms:** Scanned PDFs and images land as `stored` with `processing_error: "Scanned PDF — no text layer detected. Enable OCR (MISTRAL_API_KEY) to index this document."`
+**Symptoms:** Scanned PDFs and images land as `stored` with `processing_error: "Scanned PDF - no text layer detected. Enable OCR (MISTRAL_API_KEY) to index this document."`
 
 **Checks:**
-- Org admin path: **Org admin → API keys → Mistral (OCR)**. Active key set?
+- Org admin path: **Org admin -> API keys -> Mistral (OCR)**. Active key set?
 - Platform fallback: `MISTRAL_API_KEY` env set in Vercel?
 - The `process-deal-document` step `extract-text` calls `ocrConfigured({ orgId })` first; if it returns false, OCR is skipped silently.
 
 **Recovery:**
-- Paste a Mistral key in org admin (preferred — billed to the org, audit-logged) or set `MISTRAL_API_KEY` env (platform fallback).
+- Paste a Mistral key in org admin (preferred - billed to the org, audit-logged) or set `MISTRAL_API_KEY` env (platform fallback).
 - Reprocess the affected docs.
 
 ---
 
-## Auto-trigger analysis fired unexpectedly / not at all
-
-**Behaviour:** `lib/deal-analysis/autoTrigger.js` queues a delta diligence run from `processDealDocument` when ALL of:
-1. There is at least one prior `complete` analysis on this deal
-2. No analysis is currently `pending` / `running`
-3. The most recent completed analysis finished ≥ 1 hour ago (`MIN_GAP_MS`)
-4. An Anthropic key resolves for the deal owner's org
-
-**Checks:**
-- `deal_analyses.auto_triggered = true` for the suspect row
-- `progress_message` starts with "Auto-queued — new document landed in the data room."
-
-**Tuning:**
-- Tighter throttle: lower `MIN_GAP_MS` in `autoTrigger.js` (defaults to 60min)
-- Disable entirely: comment out the `maybe-auto-trigger-analysis` step in `lib/inngest/functions/processDealDocument.js`
-
----
-
-## Deal analysis stuck at "running" forever / "Still running — check back later"
-
-**Symptoms:** A redesign / synergy / diligence run (`/api/deals/[id]/analyse`) flips to `running` then never completes. The chat-card progress shows "Designing the unified target process… · 144s" and never advances. Polling client times out after 8 minutes with "Analysis exceeded 8 minutes…".
-
-**Root cause priority list:**
-
-1. **Vercel function timeout** — `/api/inngest` is the route Inngest invokes for each function step. Default is 10s on Hobby / 60s on Pro. The LLM step generating ~6K-token JSON takes 25–40s on Haiku, 90–150s on Sonnet. If `maxDuration` isn't declared or the model is mismatched to the plan tier, Vercel kills the request mid-step and the row stays at `running`.
-   - **Hobby fix:** `app/api/inngest/route.js` declares `maxDuration = 60`, AND `runDealAnalysis.js` uses `getFastModel(...)` (Haiku 4.5, ~30s wall-clock).
-   - **Pro fix:** raise `maxDuration` to 300 in `app/api/inngest/route.js` AND switch back to `getChatModel(...)` (Sonnet 4.6, ~120s wall-clock, higher narrative quality).
-
-2. **Inngest concurrency above plan limit** — error message: `"The function 'X' has higher concurrency limits (8) than your plan limit of 5"`. Inngest free tier caps function concurrency at 5. `runDealAnalysis` and `syncConnectorBinding` both declare `concurrency: { limit: 5 }`. On a paid plan you can raise to 8+.
-
-3. **`INNGEST_EVENT_KEY` missing** — function never enqueued. Status endpoint returns `pending` indefinitely. The chat card now surfaces this with: "Worker never picked up the analysis. Most likely cause: Inngest is not configured."
-
-4. **Stuck rows from prior attempts** — if a previous run was killed mid-pipeline before the fix, the row may sit at `running` forever (no Inngest retry will rescue it because the event has expired). Manual cleanup:
-   ```sql
-   UPDATE deal_analyses
-     SET status='failed', error='Cleared (stale running)', completed_at=now()
-     WHERE status='running' AND created_at < now() - interval '15 minutes';
-   ```
-
-**Recovery:**
-- Confirm `app/api/inngest/route.js` has `export const maxDuration = 60` (or 300 on Pro) — update + redeploy.
-- Confirm the model in `lib/inngest/functions/runDealAnalysis.js:252` matches the plan: `getFastModel` for Hobby, `getChatModel` for Pro.
-- Inngest dashboard → Apps → **Sync** after every code change (the dashboard caches function definitions).
-- Clear stuck rows with the SQL above.
-- For new runs, check Inngest dashboard → Functions → `run-deal-analysis` → Runs to see exactly which step failed.
-
----
-
-## SharePoint / OneDrive connector — "Failed to persist tokens"
+## SharePoint / OneDrive connector - "Failed to persist tokens"
 
 **Symptoms:** OAuth callback redirects with `?integration_error=Failed%20to%20persist%20tokens%3A%20<cause>`.
 
 **Causes (the actual cause is now appended to the error message):**
-- `function pgp_sym_encrypt(text, text) does not exist` → pgcrypto not on the RPC's search_path. Run:
+- `function pgp_sym_encrypt(text, text) does not exist` -> pgcrypto not on the RPC's search_path. Run:
   ```sql
   ALTER FUNCTION public.set_org_integration_tokens(uuid,text,text,text,text,text,timestamptz,text[],jsonb,text)
     SET search_path = public, extensions, vault;
@@ -190,28 +132,42 @@
     SET search_path = public, extensions, vault;
   ```
   The migration `supabase/migration-deal-connectors-rpcs.sql` now sets this up correctly for fresh deployments.
-- `Could not find the function public.set_org_integration_tokens` → migration #33 not applied. Run `supabase/migration-deal-connectors.sql` then `migration-deal-connectors-rpcs.sql`.
-- `Vault secret "model_key_encryption_secret" is not set` → `SELECT vault.create_secret('<32-byte-base64>', 'model_key_encryption_secret');`
+- `Could not find the function public.set_org_integration_tokens` -> migration #33 not applied. Run `supabase/migration-deal-connectors.sql` then `migration-deal-connectors-rpcs.sql`.
+- `Vault secret "model_key_encryption_secret" is not set` -> `SELECT vault.create_secret('<32-byte-base64>', 'model_key_encryption_secret');`
 
 ---
 
-## SharePoint connector — "Tenant does not have a SPO license"
+## SharePoint connector - "Tenant does not have a SPO license"
 
 **Symptoms:** OAuth completes, but the folder picker fails with `Graph /sites/root failed (400): Tenant does not have a SPO license`.
 
 **Likely causes (in order):**
-1. **The connecting account has no SPO licence** — verify by signing into `https://<tenant>.sharepoint.com` in a browser with the same account. If it 404s or shows an upsell, the account genuinely lacks SPO.
-2. **Multi-tenant Entra app not consented to in the customer's tenant** — by Microsoft policy, multi-tenant apps without a Verified Publisher require admin consent before end users can use them. Without consent, OAuth succeeds but the token has no real Graph scope binding → every Graph call returns the SPO message.
-3. **Wrong account picked at the OAuth picker** — the user has multiple Microsoft accounts cached and Microsoft picked one without SPO. The OAuth flow now uses `/organizations` (work/school only), but if the user has multiple work tenants they can still pick the wrong one.
+1. **The connecting account has no SPO licence** - verify by signing into `https://<tenant>.sharepoint.com` in a browser with the same account. If it 404s or shows an upsell, the account genuinely lacks SPO.
+2. **Multi-tenant Entra app not consented to in the customer's tenant** - by Microsoft policy, multi-tenant apps without a Verified Publisher require admin consent before end users can use them. Without consent, OAuth succeeds but the token has no real Graph scope binding -> every Graph call returns the SPO message.
+3. **Wrong account picked at the OAuth picker** - the user has multiple Microsoft accounts cached and Microsoft picked one without SPO. The OAuth flow now uses `/organizations` (work/school only), but if the user has multiple work tenants they can still pick the wrong one.
 
 **Recovery (depending on cause):**
 - For #1: M365 admin assigns a SharePoint plan to the user, or pick a different account.
 - For #2: customer admin opens this URL (replace placeholders):
-  `https://login.microsoftonline.com/<customer-tenant-id>/adminconsent?client_id=<vesno-app-id>` — grants org-wide consent. After that any user in that tenant can connect.
-- For #2 long-term fix: register Vesno's Entra app for **Verified Publisher** (Branding & properties → Add MPN ID). After Microsoft auto-verifies, end users in any tenant can self-consent without admin involvement.
+  `https://login.microsoftonline.com/<customer-tenant-id>/adminconsent?client_id=<vesno-app-id>` - grants org-wide consent. After that any user in that tenant can connect.
+- For #2 long-term fix: register Vesno's Entra app for **Verified Publisher** (Branding & properties -> Add MPN ID). After Microsoft auto-verifies, end users in any tenant can self-consent without admin involvement.
 - For #3: disconnect, reconnect, pick the correct work account at the picker. The OAuth flow forces account selection via `prompt=select_account`.
 
-The picker now also falls back to `/me/drives` and `/me/drive` (OneDrive) when SharePoint sites are unreachable, so users without SPO but with OneDrive for Business can still bind a folder.
+The picker also falls back to `/me/drives` and `/me/drive` (OneDrive) when SharePoint sites are unreachable, so users without SPO but with OneDrive for Business can still bind a folder.
+
+---
+
+## Chat agent says "no deal context" / 401 on a deal-bound chat
+
+**Symptoms:** Reina refuses to use deal tools, saying "no deal context on this chat session", even though the user IS on a deal page.
+
+**Checks:**
+- The chat session row in `chat_sessions` has `deal_id` set
+- `lib/dealAuth.js` verifies the requester is owner, collaborator, or participant on the deal. RLS will also gate the underlying read.
+- `chat-deal-binding` migration applied (see `supabase/migration-chat-deal-binding.sql`)
+
+**Recovery:**
+- If the user genuinely has access, the session may have been started outside the deal scope; the workspace banner should offer "Re-anchor to this deal" - that PATCHes `chat_sessions.deal_id`.
 
 ---
 
@@ -219,11 +175,10 @@ The picker now also falls back to `/me/drives` and `/me/drive` (OneDrive) when S
 
 **Symptoms:** A user signs out / rotates a token but the server still accepts the old JWT for up to 60 seconds.
 
-**Behaviour:** `requireAuth` caches verifications in a per-instance Map for `min(60s, JWT exp)`. This is intentional — eliminates per-request Supabase Auth round-trips. Cache is in-memory, evicts after the TTL, and respects the JWT's own `exp` claim.
+**Behaviour:** `requireAuth` caches verifications in a per-instance Map for `min(60s, JWT exp)`. This is intentional - eliminates per-request Supabase Auth round-trips. Cache is in-memory, evicts after the TTL, and respects the JWT's own `exp` claim.
 
 **Recovery:**
 - Wait up to 60s for the cache to expire
-- Or call `_clearAuthCacheForTesting()` from a test harness — not exposed in production
 - For genuine emergency rotation, deploy a new function instance (every Vercel deploy is a fresh process)
 
 ---
@@ -232,4 +187,4 @@ The picker now also falls back to `/me/drives` and `/me/drive` (OneDrive) when S
 
 - Structured JSON logs via `lib/logger.js`
 - Set `LOG_LEVEL=debug` for verbose
-- Vercel: Project → Logs → filter by route, status, or search
+- Vercel: Project -> Logs -> filter by route, status, or search

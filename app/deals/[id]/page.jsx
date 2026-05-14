@@ -1,7 +1,7 @@
 /**
  * Legacy deal page — replaced by the chat-first workspace as of Phase 18.
  *
- * This is now a redirect to /process-audit?deal=<id>, preserving:
+ * This is now a redirect to /workspace/map?deal=<id>, preserving:
  *   - the deal scope on the chat surface (DealsRailButton hydrates from ?deal=)
  *   - any ?focusFinding=<key> deep-link (DealWorkspaceModal auto-opens to it)
  *
@@ -21,5 +21,5 @@ export default async function LegacyDealPageRedirect({ params, searchParams }) {
   if (id) qs.set('deal', id);
   if (sp?.focusFinding) qs.set('focusFinding', String(sp.focusFinding));
   if (sp?.focus) qs.set('focus', String(sp.focus));
-  redirect(`/process-audit?${qs.toString()}`);
+  redirect(`/workspace/map?${qs.toString()}`);
 }

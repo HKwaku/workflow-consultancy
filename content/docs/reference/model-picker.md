@@ -28,7 +28,7 @@ Depends on your org's allowlist:
 - **Customer Anthropic key, no allowlist** — full active Anthropic catalogue (Opus 4.7, Sonnet 4.6, Haiku 4.5).
 - **Custom allowlist** — exactly what the admin ticked.
 
-Org admins manage the list at `/portal/org-admin → API keys → Allowed models`. They can include legacy models (Sonnet 4.5, Opus 4.6) for backward-compat use cases.
+Org admins manage the list at `/org-admin → API keys → Allowed models`. They can include legacy models (Sonnet 4.5, Opus 4.6) for backward-compat use cases.
 
 OpenAI models appear in the admin catalogue but are tagged "Coming soon" and hidden from your picker — the runtime can't actually call OpenAI yet.
 

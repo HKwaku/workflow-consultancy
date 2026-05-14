@@ -11,7 +11,6 @@ export async function GET(request) {
     const id = sp.get('id');
     const redesignId = sp.get('redesignId');
     const editable = sp.get('editable');
-    const editRedesign = sp.get('editRedesign') === '1';
 
     if (!id) return NextResponse.json({ error: 'Report ID is required. Use ?id=xxx' }, { status: 400 });
     if (!isValidUUID(id)) return NextResponse.json({ error: 'Invalid report ID format.' }, { status: 400 });
@@ -28,7 +27,12 @@ export async function GET(request) {
       if (!session) return NextResponse.json({ error: 'Authentication required for editing.' }, { status: 401 });
       const email = session.email;
       const editHeaders = getSupabaseHeaders(supabaseKey);
-      const url = `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${id}&select=id,contact_email,contact_name,company,diagnostic_data,created_at`;
+      // Living-workspace migration: target_data + state_kind dropped.
+      // A process is a single living thing — no separate target surface.
+      // We keep the `surface` echo for client back-compat but always
+      // serve the live flow.
+      const surface = sp.get('surface') === 'target' ? 'target' : 'current';
+      const url = `${supabaseUrl}/rest/v1/processes?id=eq.${id}&select=id,contact_email,contact_name,company,flow_data,created_at`;
       const sbResp = await fetchWithTimeout(url, { method: 'GET', headers: editHeaders });
       if (!sbResp.ok) return NextResponse.json({ error: 'Failed to fetch report.' }, { status: 502 });
       let rows;
@@ -40,42 +44,8 @@ export async function GET(request) {
     if (editReportEmail !== email.toLowerCase()) {
         return NextResponse.json({ error: 'You do not have permission to edit this diagnostic.' }, { status: 403 });
       }
-      const diagData = report.diagnostic_data || {};
+      const diagData = report.flow_data || {};
       let rawProcesses = diagData.rawProcesses;
-
-      if (editRedesign) {
-        const rdUrl = `${supabaseUrl}/rest/v1/report_redesigns?report_id=eq.${encodeURIComponent(id)}&select=redesign_data,status,accepted_at&order=created_at.desc&limit=1`;
-        const rdResp = await fetchWithTimeout(rdUrl, { method: 'GET', headers: editHeaders });
-        let rdRows = [];
-        if (rdResp.ok) {
-          try { rdRows = await rdResp.json(); } catch (e) { rdRows = []; }
-        }
-        const rd = rdRows?.[0];
-        const rdData = rd?.redesign_data || diagData.redesign || {};
-        const redesignProcs = rdData.acceptedProcesses ?? rdData.optimisedProcesses ?? [];
-        if (redesignProcs && redesignProcs.length > 0) {
-          rawProcesses = redesignProcs.map((op) => ({
-            processName: op.processName || op.name,
-            processType: op.processType || 'other',
-            steps: (op.steps || [])
-              .filter((s) => s.status !== 'removed')
-              .map((s, si) => ({
-                number: s.number ?? si + 1,
-                name: s.name || s.stepName || `Step ${si + 1}`,
-                department: s.department || '',
-                isDecision: !!s.isDecision,
-                isMerge: !!s.isMerge,
-                parallel: !!s.parallel,
-                inclusive: !!s.inclusive,
-                isExternal: !!s.isExternal,
-                branches: s.branches || [],
-              })),
-            handoffs: op.handoffs || [],
-          }));
-        } else if (editRedesign) {
-          return NextResponse.json({ error: 'No redesign found to edit. Generate an AI redesign first.' }, { status: 404 });
-        }
-      }
 
       if (!rawProcesses || rawProcesses.length === 0) {
         const processes = diagData.processes || [];
@@ -102,22 +72,28 @@ export async function GET(request) {
           id: report.id, contactEmail: report.contact_email, contactName: report.contact_name,
           company: report.company, createdAt: report.created_at,
           contact: diagData.contact || {}, rawProcesses, customDepartments: diagData.customDepartments || [],
-          editRedesign: editRedesign || undefined,
+          // Surface echo kept for client back-compat — target_data is
+          // gone, so there's never a "target" to flip to.
+          surface,
+          stateKind: null,
+          hasTarget: false,
         }
       });
     }
 
-    // Read-only view: public by design for shareable links (UUID is unguessable)
+    // Read-only view: public by design for shareable links (UUID is unguessable).
+    // Living-workspace migration: lead_score, lead_grade, and diagnostic_mode
+    // are dropped columns. implementation_status still exists on the table
+    // but the surface that consumed it (ImplementationTracker) is gone, so
+    // we deliberately don't pull it. Pull only what survives + is used.
     const sbHeaders = getSupabaseHeaders(supabaseKey);
-    const url = `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${id}&select=id,contact_email,contact_name,company,lead_score,lead_grade,diagnostic_data,diagnostic_mode,implementation_status,parent_report_id,created_at,updated_at`;
+    const url = `${supabaseUrl}/rest/v1/processes?id=eq.${id}&select=id,contact_email,contact_name,company,flow_data,parent_report_id,created_at,updated_at`;
     let sbResp = await fetchWithTimeout(url, { method: 'GET', headers: sbHeaders });
 
-    // If Supabase returns 400, optional columns (implementation_status, parent_report_id)
-    // may not exist yet - retry without them (migration-v2.sql not yet applied).
     if (sbResp.status === 400) {
       const errBody = await sbResp.text().catch(() => '');
       logger.warn('Get diagnostic: column error, falling back to minimal query', { requestId: getRequestId(request), sbError: errBody.slice(0, 200) });
-      const fallbackUrl = `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${id}&select=id,contact_email,contact_name,company,lead_score,lead_grade,diagnostic_data,diagnostic_mode,created_at,updated_at`;
+      const fallbackUrl = `${supabaseUrl}/rest/v1/processes?id=eq.${id}&select=id,contact_email,contact_name,company,flow_data,created_at,updated_at`;
       sbResp = await fetchWithTimeout(fallbackUrl, { method: 'GET', headers: sbHeaders });
     }
 
@@ -131,71 +107,25 @@ export async function GET(request) {
     if (!rows || rows.length === 0) return NextResponse.json({ error: 'Report not found.' }, { status: 404 });
 
     const report = rows[0];
-    const diagData = report.diagnostic_data || {};
+    const diagData = report.flow_data || {};
 
-    // Fetch redesign from dedicated table (fall back to diagnostic_data)
-    let redesign = diagData.redesign || null;
-    try {
-      const rdUrl = redesignId
-        ? `${supabaseUrl}/rest/v1/report_redesigns?report_id=eq.${id}&id=eq.${redesignId}&select=redesign_data,decisions,status,accepted_at`
-        : `${supabaseUrl}/rest/v1/report_redesigns?report_id=eq.${id}&select=redesign_data,decisions,status,accepted_at&order=created_at.desc&limit=1`;
-      const rdResp = await fetchWithTimeout(rdUrl, { method: 'GET', headers: sbHeaders });
-      let rdRows;
-      try { rdRows = rdResp.ok ? await rdResp.json() : []; } catch (e) { rdRows = []; }
-      if (rdRows.length > 0) {
-        const rd = rdRows[0];
-        redesign = { ...rd.redesign_data, decisions: rd.decisions || {}, acceptedAt: rd.accepted_at };
-        if (rd.status === 'accepted' && rd.redesign_data?.acceptedProcesses) {
-          redesign.acceptedProcesses = rd.redesign_data.acceptedProcesses;
-        }
-      }
-    } catch { /* fall back to diagnostic_data.redesign */ }
+    // Living-workspace migration: report_redesigns dropped. Any redesign
+    // captured before the cut still lives on flow_data.redesign; new
+    // suggestions are inline `changes` rows.
 
-    if (redesign) diagData.redesign = redesign;
-
-    const session = await verifySupabaseSession(request);
-    const costAuthorizedEmails = (diagData.costAuthorizedEmails || []).map(e => e.toLowerCase());
-    const isCostAuthorized = session && costAuthorizedEmails.includes(session.email.toLowerCase());
-
-    // Always strip the raw cost analysis token from the response - it is only
-    // needed for the /cost-analysis page and must not leak into the report view.
-    delete diagData.costAnalysisToken;
-
-    let costDataHidden = false;
-    if (!isCostAuthorized) {
-      // User is not in the cost-authorized list - scrub all cost data
-      costDataHidden = true;
-      delete diagData.costAnalysis;
-      delete diagData.financialModel;
-      delete diagData.costAnalysisHistory;
-      delete diagData.costAuthorizedEmails;
-      if (diagData.summary) {
-        diagData.summary = { ...diagData.summary, totalAnnualCost: 0, potentialSavings: 0 };
-      }
-      if (Array.isArray(diagData.processes)) {
-        diagData.processes = diagData.processes.map((p) => ({ ...p, annualCost: 0 }));
-      }
-      if (Array.isArray(diagData.rawProcesses)) {
-        diagData.rawProcesses = diagData.rawProcesses.map((rp) => {
-          const { costs, ...rest } = rp;
-          return costs ? { ...rest, costs: {} } : rest;
-        });
-      }
-      if (diagData.redesign?.costSummary) {
-        diagData.redesign = { ...diagData.redesign, costSummary: null };
-      }
-    }
+    // The cost-analyst handoff (token-gated read access for a consultant)
+    // is gone — owners always edit costs directly on the canvas. The
+    // costAuthorizedEmails / costAnalysisToken gating that used to scrub
+    // cost data for non-authorised viewers is removed; access control
+    // happens at the RLS / contact_email level on the row itself.
 
     return NextResponse.json({
       success: true,
       report: {
         id: report.id, contactEmail: report.contact_email, contactName: report.contact_name,
-        company: report.company, leadScore: report.lead_score, leadGrade: report.lead_grade,
-        diagnosticMode: report.diagnostic_mode,
+        company: report.company,
         diagnosticData: diagData, createdAt: report.created_at, updatedAt: report.updated_at,
-        implementationStatus: report.implementation_status || {},
         parentReportId: report.parent_report_id || null,
-        costDataHidden: costDataHidden || undefined,
       }
     });
   } catch (error) {
@@ -231,7 +161,7 @@ export async function PATCH(request) {
     if (!sbConfig) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
     const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
-    const readResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${id}&select=id,contact_email,diagnostic_data`, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
+    const readResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/processes?id=eq.${id}&select=id,contact_email,flow_data`, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
     if (!readResp.ok) return NextResponse.json({ error: 'Failed to read report.' }, { status: 502 });
     let rows;
     try { rows = await readResp.json(); } catch (e) { logger.error('PATCH diagnostic: Supabase parse error', { requestId: getRequestId(request), error: e.message }); return NextResponse.json({ error: 'Failed to read report.' }, { status: 502 }); }
@@ -243,7 +173,7 @@ export async function PATCH(request) {
       return NextResponse.json({ error: 'You do not have permission to edit this report.' }, { status: 403 });
     }
 
-    const dd = row.diagnostic_data || {};
+    const dd = row.flow_data || {};
     const pi = processIndex || 0;
 
     if (!dd.rawProcesses) dd.rawProcesses = [];
@@ -262,9 +192,9 @@ export async function PATCH(request) {
       });
     }
 
-    const writeResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${id}`, {
+    const writeResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/processes?id=eq.${id}`, {
       method: 'PATCH', headers: getSupabaseWriteHeaders(supabaseKey),
-      body: JSON.stringify({ diagnostic_data: dd, updated_at: new Date().toISOString() })
+      body: JSON.stringify({ flow_data: dd, updated_at: new Date().toISOString() })
     });
     if (!writeResp.ok) { const t = await writeResp.text(); return NextResponse.json({ error: 'Write failed: ' + t }, { status: 502 }); }
     return NextResponse.json({ success: true, stepsCount: steps.length });

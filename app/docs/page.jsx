@@ -16,8 +16,8 @@ export default function DocsIndex() {
       <header className="docs-article-head">
         <h1>Vesno documentation</h1>
         <p className="docs-article-lede">
-          Guides and reference for using the platform — process audits, deal diligence, M&A workflows.
-          New here? Start with <Link href="/docs/tutorials/your-first-audit">Your first process audit</Link>.
+          Guides and reference for using the platform — operating-model management, process mapping, deal diligence, M&A workflows.
+          New here? Start with <Link href="/docs/tutorials/your-first-audit">Mapping your first process</Link>.
         </p>
       </header>
 

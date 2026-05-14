@@ -1,13 +1,44 @@
 # Workflow Consultancy — Developer Guide
 
-> **Last updated:** 2026-05-02
+> **Last updated:** 2026-05-13
 > Reference document for engineers working on the workflow-consultancy app. Covers the full surface area: routes, agents, persistence, modules, deals, RBAC. Update this file when you add a route, table, agent tool, or module.
 >
-> **Building this from scratch?** See [`BUILD_GUIDE.md`](./BUILD_GUIDE.md) — a self-contained rebuild spec covering schema, prompts, tool architecture, diligence pipeline, workers, and a 7-phase implementation plan. This file is the in-codebase reference; that one is the buildable spec.
+> **Architecture diagram** (start here): open [`docs/ARCHITECTURE.html`](./docs/ARCHITECTURE.html) in a browser - the visual single-source-of-truth for what's live in the codebase right now.
 >
-> **Going live?** See [`GO_LIVE_CHECKLIST.md`](./GO_LIVE_CHECKLIST.md) — single source of truth for every action between "engineering done" and "real customer paying us." Covers env vars, vendor signups, operational drills, legal handoff, customer-facing surface. Tick boxes as you go.
+> **Building this from scratch?** See [`BUILD_GUIDE.md`](./BUILD_GUIDE.md) - rebuild spec covering schema, prompts, tool architecture, workers. Same caveat applies: read the architecture diagram first to know what's actually live.
+>
+> **Going live?** See [`GO_LIVE_CHECKLIST.md`](./GO_LIVE_CHECKLIST.md) - single source of truth for every action between "engineering done" and "real customer paying us."
 >
 > **Customer-facing docs** live in `content/docs/*.md`, rendered at `/docs`. Different audience from this file.
+
+> [!IMPORTANT]
+> **This file mixes current and historical content.** It was the in-codebase reference before the living-workspace migration. The migration physically removed many surfaces this file once described in detail. The `docs/ARCHITECTURE.html` diagram is the authoritative map of what's live now. Treat any section below that describes a removed capability as historical; the migration preamble lists exactly what's gone.
+
+---
+
+## Living-workspace migration (2026-05)
+
+A foundational shift: **processes are live, not snapshots**. The "generate a report, redesign it, export a deck" paradigm is gone. The canvas + chat surface IS the deliverable, and every metric is derived on read from `flow_data`.
+
+The migration was applied in two waves: first as 410 stubs (back-compat), then as physical deletions. **Routes and components for the removed surfaces are now 404 / not-imported** - older sections in this doc that describe `runDealAnalysis`, the deal-analysis pipeline, PPTX exports, redesign flows, the scorecard, the report page, etc. refer to capabilities that no longer exist in the codebase. They're left here only where the historical context aids understanding of the post-migration design choices.
+
+**Database (see `supabase/migration-living-workspace-{1,2,3}*.sql`)**
+- `diagnostic_reports` → renamed to **`processes`**. `diagnostic_data` JSONB → renamed to **`flow_data`**.
+- Foreign-key columns `report_id` → renamed to **`process_id`** on `process_systems`, `process_instances`, `discovery_sessions`, `changes`, `chat_sessions`, `deal_flows`, `deal_participants`.
+- Dropped tables: `deal_analyses`, `report_redesigns`, `chat_artefacts`, `team_diagnostics`, `team_responses`, `diagnostic_progress`, `followup_events`.
+- Dropped columns on `processes`: `cost_analysis_*`, `target_data`, `state_kind`, `lead_score`, `lead_grade`, `display_code`, `automation_grade`, `automation_percentage`, `total_annual_cost`, `potential_savings`, `contributor_emails`, `diagnostic_mode`, `design_owner_email`. Also dropped: `deal_participants.deal_role`.
+- Findings are reparented from `(analysis_id, finding_key)` to **`(deal_id, finding_key)`**.
+
+**Code paradigm**
+- AI improvement suggestions become inline rows in the **`changes`** table on the live process (`proposed → accepted → applied → live → measured`). No more "redesign" artefact.
+- Cost / savings / automation come from **`lib/processMetrics.js`** at read time. The helper prefers a cached `flow_data.summary.*` / `flow_data.automationScore.*` written by the save path; otherwise it walks `flow_data.rawProcesses[].steps[]` and derives totals from per-step `workMinutes` × `costAnalysis.labourRates`.
+- Snapshot-era surfaces are **physically deleted** (not 410-stubbed any more): redesign, cost-analysis, deal-analysis runs + analyses sub-routes, exports (PPTX / build guides / CSV), scorecard, target-state promote, team-survey, progress-save, follow-up nurture, /report, /cost-analysis, /deal-analysis, /build. See `README.md` for the full list and `docs/ARCHITECTURE.html` for the resulting shape.
+
+**Workspace UX**
+- `/workspace` hosts `DiagnosticClient` (the same shell `/process-audit` uses) and auto-opens the workspace overlay scoped to the user's default operating model. The graph view is the default tab.
+- Clicking a process anywhere dispatches **`vesno:open-process`** — `DiagnosticWorkspace` listens and runs the same silent-swap path the chat agent's `open_process` tool uses (no route change, no remount, chat thread intact, URL updated via `history.replaceState`).
+- The "Continue mapping" row above the chat input is **context-aware**: filtered by `dealId` > `operatingModelId` > user email via `/api/me/recent-processes?...`.
+- The view-only banner pill and the canned read-only chat greeting are gone — the agent silently switches between view and edit intent.
 
 ---
 
@@ -79,10 +110,9 @@ Every page under `app/` (excluding `app/api/`):
 | `/` | Marketing landing | Public |
 | `/process-audit` | Run / resume a diagnostic (the chat-driven canvas) | Optional (required for comprehensive + team) |
 | `/report` | View a saved diagnostic report by `?id=` | Public read by ID |
-| `/portal` | Authenticated hub: reports, deals, org admin, analytics | Required |
-| `/portal/org-admin` | Manage org members + entitlements | Org admin |
-| `/portal/analytics` | Cross-report benchmarking | `analytics` entitlement |
-| `/portal/reports/[reportId]` | Edit a saved diagnostic | Owner / collaborator |
+| `/workspace/map` | Authenticated workspace: canvas, chat, deals briefcase, analytics, settings (all via chat-rail popovers) | Required |
+| `/org-admin` | Manage org members, entitlements, API keys, usage | Org admin |
+| `/signin` | Sign in / sign up | Public |
 | `/deals` | Deal portal landing | `deals` entitlement |
 | `/deals/[id]` | PE / M&A / Scaling deal page (per-type renderer) | Owner / collaborator |
 | `/cost-analysis` | Standalone labour-rate + ROI editor (also embedded as iframe) | `cost_analyst` |
@@ -274,17 +304,26 @@ Deterministic (no LLM) generators that take a redesigned `processData` and emit 
 
 | Tier | Model ID | Max tokens | Temp | Used for |
 |------|----------|-----------|------|----------|
-| **Fast** | `claude-haiku-4-5-20251001` | 4 096 | 0.3 | Recommendations, team analysis, survey analysis, redesign summarizer, flow extraction |
-| **Chat (primary)** | `claude-sonnet-4-6` | 16 384 | 0.3 | Diagnostic chat, redesign-chat, cost-chat |
+| **Fast** | `claude-haiku-4-5-20251001` | 4 096 | 0.3 | Recommendations, team analysis, survey analysis, redesign summarizer, flow extraction, deal-analysis pipeline (Hobby plan) |
+| **Chat (primary)** | `claude-sonnet-4-6` | 16 384 | 0.3 | Diagnostic chat, redesign-chat, cost-chat, deal-analysis pipeline (Pro plan) |
 | **Deep** | `claude-opus-4-7` | 16 000 | 0 | Redesign planner/repair |
 
 Override any with `getXModel({ temperature, maxTokens, model })`.
+
+**Deal analysis model selection** is plan-tier-aware. The `runDealAnalysis` Inngest function runs an LLM step that produces a 6–8K-token JSON redesign / synergy / diligence output. Wall-clock cost vs Vercel timeout caps:
+
+| Vercel plan | Per-route timeout | Model | Wall-clock | Quality |
+|---|---|---|---|---|
+| Hobby (free) | 60s | `getFastModel` (Haiku 4.5, `maxTokens: 6144`) | 25–40s | Structurally identical; narrative slightly less nuanced |
+| Pro ($20/mo) | 300s | `getChatModel` (Sonnet 4.6, `maxTokens: 8192`) | 90–150s | Higher narrative quality on phasing / risks |
+
+Switch in `lib/inngest/functions/runDealAnalysis.js:252` (model + maxTokens) and `app/api/inngest/route.js` (`maxDuration`). Re-sync the Inngest app after every flip.
 
 ---
 
 ## Report system
 
-The report is rendered at `/report?id=<reportId>` and re-renders on edit at `/portal/reports/[reportId]`.
+The report is rendered at `/report?id=<reportId>` and re-renders on edit at `/workspace/map?view=<reportId>`.
 
 `components/report/`:
 
@@ -439,7 +478,7 @@ These pieces close the parity gap with the legacy diligence memo. Reviewers can 
 | Rail icon | Component | Replaces |
 |---|---|---|
 | 🏠 (top) | `HomeRailButton.jsx` | Returns to a fresh chat with the standard intro — clears deal scope, canvas, and any in-flight conversation via hard navigation to `/process-audit` |
-| ▦ | Admin dashboard link | `/portal/org-admin` opens in new tab |
+| ▦ | Admin dashboard link | `/org-admin` opens in new tab |
 | 📄 | `ReportsRailButton.jsx` | Slide-in panel listing user's diagnostic reports grouped by company → recency bucket. Per-row +/− toggles, edit/redesign/delete at child level (current process + each redesign), delete + collapse at parent. Risk-orderable companies. Powered by `/api/get-dashboard` and `/api/save-redesign` (DELETE) |
 | 💼 | `DealsRailButton.jsx` | Slide-in panel listing user's deals (owner / collaborator / participant). Sorted by `riskScore` desc with coloured pill (`critical`/`high`/`medium`/`low`) + `criticalFindings` count. Click → scopes the chat to that deal (URL `?deal=<id>&chatSession=<sessionId>`) |
 | 💬 | Chat history | Toggles `ChatHistoryPanel` |
@@ -448,7 +487,7 @@ These pieces close the parity gap with the legacy diligence memo. Reviewers can 
 | 💾 | Save to report | Visible when `editingReportId` set |
 | 💲 | Cost analysis | Visible when `hasCostAccess && editingReportId` |
 | ☰ | Steps list | Slide-in panel hosting `stepListContent` |
-| 📊 | `AnalyticsRailButton.jsx` | Full-screen modal that iframes `/portal/analytics/embed` to isolate the analytics CSS from the chat surface |
+| 📊 | `AnalyticsRailButton.jsx` | Full-screen modal that mounts `AnalyticsCanvasPanel` natively (auth + fetch + render). On mobile, dispatches `vesno:open-analytics-canvas` so the workspace mounts the same panel in its canvas column. |
 | 📚 (bottom group) | `DocsRailButton.jsx` | Slide-in panel listing doc groups → click opens `/docs/<slug>` in new tab; backed by `GET /api/docs/list` |
 | 🔁 | Replay walkthrough | Re-opens the GUIDE_TOUR from the first stop |
 | 🕒 | Activity log | Slide-in panel hosting `<AuditTrailPanel embedded />` (drops outer floater chrome) |
@@ -456,7 +495,7 @@ These pieces close the parity gap with the legacy diligence memo. Reviewers can 
 
 The five popover-style rail icons (Reports / Deals / Docs / Steps / Artefacts / Activity log) all use the shared `RailSlidePanel` component (`components/diagnostic/chat/RailSlidePanel.jsx`) — same anchoring (rail right edge), close affordance (× button + outside-click + Escape), and width (default 420px from `.s7-rail-pane` CSS).
 
-Legacy routes redirect into `/process-audit` with auto-open params: `?openDeals=1`, `?openAnalytics=1`, `?openSettings=1`. The corresponding rail button reads the flag on mount and auto-opens. `/portal` itself now redirects to `/portal/org-admin` (the only surface left on the legacy dashboard); `?edit=<reportId>` and `?returnTo=` legacy params are preserved on the way through. The duplicate `MapRailPortalNav` (Your Processes / Analytics / Deals "open in new tab" links inside `DiagnosticWorkspace`) is removed since the new rail icons replace it. Org admin stays on `/portal/org-admin` because: members + BYO API keys + budgets are infrequent, dense, and benefit from a full-page UI rather than a modal.
+The chat-rail popovers respond to auto-open params on `/workspace/map`: `?openDeals=1`, `?openAnalytics=1`, `?openSettings=1`. The corresponding rail button reads the flag on mount and auto-opens. `/portal`, `/portal/analytics`, `/portal/deals`, and `/portal/settings` are gone — bare `/portal` and the analytics / deals / settings sub-routes were deleted (analytics is now `components/workspace/AnalyticsCanvasPanel.jsx` mounted natively in the canvas). Org admin stays on `/org-admin` because: members + BYO API keys + budgets are infrequent, dense, and benefit from a full-page UI rather than a modal.
 
 **Inline document viewer.** Document filenames in chat (both `DealDocsSources` source cards and `DealMetaCards` document rows) now open a `DealDocViewer` modal — full-screen lightbox, `<iframe>` for PDFs, `<img>` for images, "Open in new tab" fallback for everything else. Closes on overlay click / Close button. The signed URL still flows through the same `GET /api/deals/[id]/documents/[docId]/signed-url` endpoint (any deal viewer; audit-logged).
 
@@ -467,20 +506,26 @@ Legacy routes redirect into `/process-audit` with auto-open params: `?openDeals=
 
 ---
 
-## Portal & org admin
+## Org admin
 
-`app/portal/`:
+Route: `/org-admin` (`app/org-admin/page.jsx`). The route shell mounts `OrgAdminClient` from `components/org-admin/`. The whole `/portal/*` namespace has been removed.
+
+`components/org-admin/`:
 
 | File | Purpose |
 |------|---------|
-| `PortalAuth.jsx` | Supabase login/signup; reused by `TeamAuthGate` |
-| `PortalDashboard.jsx` | Hub page; tiles for reports, deals, org admin, analytics |
-| `DealsPanel.jsx` | Company-centric deal list with create/filter/invite |
 | `OrgAdminClient.jsx` | Org member management UI |
-| `DiagnosticEdit.jsx` | Reopen a saved diagnostic — full editor for `processData` and "legacy" detail fields (userTime, biggestDelay, approvals, timeAccuracy, performance, newHire, priority) |
-| `PortalAnalyticsPanel.jsx` | Cross-report benchmarking, metrics rollup |
+| `CustomerKeyPanel.jsx` | BYO API key set/rotate/revoke per org |
+| `UsageAnalyticsPanel.jsx` | Per-org usage rollup (tokens, surface, budget) |
+| `ModelAllowlistPanel.jsx` | Allow-list of models the org may pick + default |
+| `IntegrationsPanel.jsx` | Per-org OAuth integrations (Google Drive, etc.) |
+| `FirstRunOnboarding.jsx` | One-shot onboarding when `?firstRun=1` |
+| `AreaChart.jsx` | SVG area chart used by `UsageAnalyticsPanel` |
+| `org-admin.css` / `org-admin-byo.css` | Shared admin styles (class prefix `.portal-*` is historical) |
 
-Subroutes: `/portal/analytics`, `/portal/org-admin`, `/portal/reports/[reportId]`.
+`components/auth/SignInForm.jsx` — Supabase login/signup form. Mounted by `/signin`, `/org-admin`, the analytics canvas auth gate, and `TeamAuthGate`.
+
+Analytics moved to `components/workspace/AnalyticsCanvasPanel.jsx` and renders natively in the canvas. Deals and settings live in chat-rail popovers reachable via `/workspace/map?openDeals=1` / `?openSettings=1`.
 
 ---
 
@@ -490,10 +535,10 @@ Subroutes: `/portal/analytics`, `/portal/org-admin`, `/portal/reports/[reportId]
 
 | Key | Default | Gates |
 |-----|---------|-------|
-| `portal` | `true` | `/portal` and authenticated diagnostic |
+| `portal` | `true` | `/workspace/map` and authenticated diagnostic |
 | `cost_analyst` | `false` | `/cost-analysis`, cost copilot, labour-rate edits |
 | `deals` | `false` | `/deals` create/edit |
-| `analytics` | `false` | `/portal/analytics` |
+| `analytics` | `false` | The Analytics popover (chat rail) and workspace analytics tab |
 
 Plus `is_org_admin` (boolean column) which overrides individual entitlements at the org level.
 
@@ -546,31 +591,39 @@ API: `POST /api/generate-workflow-export` with `{ reportId, platform }`. Cost-re
 
 ## Database schema
 
+> ⚠️ **Living-workspace migration (2026-05)** — Several tables and columns below were dropped or renamed. The list is kept for back-compat context (shims still accept the old names). See the [migration section](#living-workspace-migration-2026-05) at the top of this doc for the full delta.
+>
+> Quick deltas vs the listing below:
+> - `diagnostic_reports` → renamed to **`processes`**, `diagnostic_data` → **`flow_data`**
+> - `report_id` columns → renamed to **`process_id`** on every FK
+> - Dropped: `diagnostic_progress`, `report_redesigns`, `followup_events`, `chat_artefacts`, `deal_analyses`, `team_diagnostics`, `team_responses`
+> - Dropped columns on `processes`: `cost_analysis_*`, `target_data`, `state_kind`, `total_annual_cost`, `potential_savings`, `automation_percentage`, `automation_grade`, `lead_score`, `lead_grade`, `display_code`, `diagnostic_mode`, `contributor_emails`, `design_owner_email`
+> - Findings reparented to **`(deal_id, finding_key)`** (was `(analysis_id, finding_key)`)
+
 ### Diagnostic core
-- **`diagnostic_reports`** (text id) — submitted reports. `contact_email`, `diagnostic_data` (full processData JSON), `cost_analysis_status`, `recommendations`, `diagnostic_mode` (`comprehensive | pe | ma | scaling`), `user_id`
-- **`diagnostic_progress`** — mid-session resume state by email; `intake_state` JSONB
-- **`process_instances`** — team member survey responses; `email`, `process_name`, `responses` JSONB, `report_id` FK
-- **`report_redesigns`** — named AI redesigns; `redesign_data`, `decisions`, `status` (pending/accepted), `name`
-- **`followup_events`** — email/SMS campaign tracking (e.g., `e2_sent`, `d3_sent`)
+- **`processes`** (text id) — live process rows (formerly `diagnostic_reports`). `contact_email`, `flow_data` JSONB (formerly `diagnostic_data`), `user_id`, `operating_model_id`, `function_id`, `deal_id`, `parent_report_id` (kept for lineage)
+- **`process_instances`** — team-member survey responses; `email`, `process_name`, `responses` JSONB, `process_id` FK (renamed from `report_id`)
+- **`changes`** — inline change-proposal rows (`proposed → accepted → applied → live → measured`); replaces `report_redesigns` as the lineage surface
+- ~~`diagnostic_progress`~~, ~~`report_redesigns`~~, ~~`followup_events`~~ — dropped
 
 ### Chat
-- **`chat_sessions`** (uuid) — conversation containers; FTS on `title`+`summary`
+- **`chat_sessions`** (uuid) — conversation containers; FTS on `title`+`summary`. `process_id` FK (renamed from `report_id`)
 - **`chat_messages`** (uuid) — turns with `role`, `content`, `actions`, `attachments`, `artefact_id`
-- **`chat_artefacts`** (uuid) — durable outputs (`flow_snapshot | report | cost_analysis | deal_analysis`)
+- ~~`chat_artefacts`~~ — dropped; helpers in `lib/chatPersistence.js` are stubbed (no-op returning `[]` / `null`) so callers don't crash
 
 ### Deals
 - **`deals`** (uuid) — `deal_code` (8-char), `type`, `name`, `process_name`, `owner_email`, `owner_user_id`, `status`, `settings` JSONB, `collaborator_emails` TEXT[]
-- **`deal_participants`** — companies/entities; `role`, `status`
-- **`deal_flows`** — process slot per participant; `report_id` FK populated when diagnostic saved
-- **`deal_analyses`** — cross-flow output; `mode`, `source_flow_ids` UUID[], `source_report_ids` TEXT[], `result` JSONB
+- **`deal_participants`** — companies/entities; `role`, `status`, `process_id` FK (renamed from `report_id`)
+- **`deal_flows`** — flow slot per participant; `process_id` FK populated when a process is mapped
+- **`deal_findings`** + **`deal_finding_reviews`** + **`deal_finding_comments`** — diligence findings keyed on `(deal_id, finding_key)` rather than an analysis snapshot
+- ~~`deal_analyses`~~ — dropped; insights derive live from documents / flows / changes
 
 ### Org & RBAC
 - **`organizations`** — tenant container
 - **`organization_members`** — `is_org_admin` boolean, `entitlements` JSONB
 
-### Team alignment (legacy team flow)
-- **`team_diagnostics`** — team session metadata (code, process, status)
-- **`team_responses`** — individual perspectives (upserted by email)
+### Team alignment (removed)
+- ~~`team_diagnostics`~~, ~~`team_responses`~~ — dropped. Multiple users now collaborate directly on the live process rather than through a one-shot survey flow.
 
 ### Migration files
 
@@ -582,44 +635,48 @@ API: `POST /api/generate-workflow-export` with `{ reportId, platform }`. Cost-re
 
 ## API routes
 
-42 endpoints under `app/api/`. Grouped:
+> ⚠️ **Living-workspace migration (2026-05)** — Several endpoints listed below now return **410 Gone**. README.md has the authoritative live + disabled list; the table below remains as historical context for anything still referencing the old surfaces. Stubs return a friendly error message so older clients fail loudly.
+>
+> 410-stubbed: `/api/generate-redesign`, `/api/save-redesign`, `/api/report-redesigns`, `/api/rename-redesign`, `/api/cost-analysis*`, `/api/share-cost-analysis`, `/api/cost-authorized-emails`, `/api/export-pptx`, `/api/generate-workflow-export`, `/api/recommend-workflow-platform`, `/api/diagnostic-recommendations/[reportId]`, `/api/progress`, `/api/get-followups`, `/api/team`, `/api/deals/[id]/analyses*`, `/api/deals/[id]/analyse`, `/api/deals/[id]/export-diligence-pptx`, `/api/deals/[id]/export.csv`, `/api/deals/[id]/scorecard`, `/api/portfolio/findings`.
 
 ### Diagnostic
 | Method + path | Purpose | Auth |
 |---|---|---|
-| `POST /api/diagnostic-chat` | Chat agent (49 tools), `maxDuration: 60`. If body includes `dealId`, the route runs `resolveDealAccess` and only forwards the id to the agent if the user is owner/collaborator/participant — silently dropping it on access failure. The `search_deal_documents` tool refuses unless `ctx.dealAccessVerified` is true (defence in depth). | Optional (required for `dealId` to be honoured) |
-| `POST /api/process-diagnostic` | Generate report from processData (recommendations) | Public |
-| `POST /api/send-diagnostic-report` | Persist report, trigger n8n, send email link | Rate-limited |
-| `GET/PATCH /api/get-diagnostic` | Fetch / update a report | Owner |
-| `POST /api/update-diagnostic` | Save processData + intake state | Owner |
-| `GET /api/get-dashboard` | Dashboard summary, prunes old reports | Required |
-| `GET/POST /api/progress` | Cloud save / resume by id | Public by id |
-| `POST /api/get-followups` | Followup campaign timeline | Owner |
+| `POST /api/diagnostic-chat` | Chat agent (SSE), `maxDuration: 300`. If body includes `dealId`, the route runs `resolveDealAccess` and only forwards the id to the agent if the user is owner/collaborator/participant — silently dropping it on access failure. The `search_deal_documents` tool refuses unless `ctx.dealAccessVerified` is true (defence in depth). | Optional (required for `dealId` to be honoured) |
+| `POST /api/process-diagnostic` | Generate findings from processData | Public |
+| `POST /api/send-diagnostic-report` | Persist a freshly-mapped process | Rate-limited |
+| `GET/PATCH /api/get-diagnostic` | Fetch / update a process | Owner |
+| `PUT /api/update-diagnostic` | Save flow steps + JSONB state | Owner |
+| `GET /api/get-dashboard` | Dashboard summary | Required |
+| `GET /api/me/recent-processes` | Continue-mapping cards (context-aware via `?operatingModelId=` / `?dealId=`) | Required |
+| ~~`GET/POST /api/progress`~~ | **410** — `diagnostic_progress` table dropped | — |
+| ~~`POST /api/get-followups`~~ | **410** — `followup_events` table dropped | — |
 
 ### Chat persistence
 | `POST /api/chat-sessions` | Create session | Required |
 | `GET/PATCH /api/chat-sessions/[id]` | Fetch session + messages + artefacts | Owner |
 | `POST /api/chat-messages` | Append message | Required |
 
-### Redesign
-| `POST /api/generate-redesign` | Run redesign agent, store, pin artefact | Required |
-| `POST /api/save-redesign` | Save selected variant | Owner |
-| `POST /api/rename-redesign` | Rename | Owner |
-| `GET /api/report-redesigns` | List for a report | Owner |
+### ~~Redesign~~ — removed
+All redesign endpoints return **410 Gone**. AI improvements now land as inline rows on the **`changes`** table via the chat agent's `propose_*` tools; the lifecycle (`proposed → accepted → applied → live → measured`) is observable via `/api/diagnostic-changes/[reportId]`.
 
-### Cost analysis
-| `GET/POST/PATCH /api/cost-analysis` | Fetch / update labour rates, savings, ROI | `cost_analyst` |
-| `POST /api/cost-analysis/suggest-savings` | AI labour-rate suggestions | `cost_analyst` |
-| `POST /api/cost-authorized-emails` | Set who can access cost panel | Owner |
-| `POST /api/share-cost-analysis` | Email cost link with expiry token | Rate-limited |
-| `GET /api/cost-copilot` | Streaming cost Q&A | `cost_analyst` |
+### ~~Cost analysis~~ — removed
+All standalone cost endpoints return **410 Gone**. Cost / savings derive on read from `flow_data.rawProcesses[].steps[]` via `lib/processMetrics.js`; the dashboard, deal-summary, and operating-model rollups all consume that helper.
+
+### Inline change proposals (replaces redesign + cost)
+| Method + path | Purpose | Auth |
+|---|---|---|
+| `GET /api/diagnostic-changes/[reportId]` | Change timeline for one process | Owner |
+| `PATCH /api/diagnostic-changes/[reportId]/[changeId]` | Advance state (e.g. `proposed → accepted`) | Owner |
+| `POST /api/diagnostic-changes/[reportId]/[changeId]/outcomes` | Record a measured outcome (`metric`, `delta`, `source`) | Owner |
+| `GET /api/deals/[id]/changes` | Deal-scoped change timeline | Owner / collab / participant |
 
 ### Deals
 | `GET/POST/PATCH /api/deals` | List / create / bulk update | Required |
-| `GET/PATCH /api/deals/[id]` | Detail / update | Owner / collab |
-| `POST /api/deals/[id]/analyse` | Inserts pending row + enqueues `deal-analysis.requested` Inngest event + returns `{ analysis_id, poll_url, status: 'pending' }`. Async: actual LLM work happens in `runDealAnalysis`. | Owner / collab |
-| `GET /api/deals/[id]/analyses/[analysisId]/status` | Lightweight polling endpoint. Returns `{ status, progress_message, complete, failed, error }`. Polled every 2s by the client. | Any deal viewer |
-| `GET/PATCH /api/deals/[id]/analyses` (+ `/[analysisId]`) | List / fetch / save analysis | Owner |
+| `GET/PATCH /api/deals/[id]` | Detail / update — `report:` block now carries **derived** `totalAnnualCost` / `potentialSavings` / `automationPercentage` (not cached columns) | Owner / collab |
+| ~~`POST /api/deals/[id]/analyse`~~ | **410** — `deal_analyses` table dropped; insights derive live | — |
+| ~~`GET /api/deals/[id]/analyses/[analysisId]/*`~~ | **410** — same | — |
+| `GET /api/deals/[id]/analyses` | Returns `{ analyses: [] }` shape so legacy clients render an empty timeline rather than 404 | Any deal viewer |
 | `GET/POST/PATCH /api/deals/[id]/collaborators` | Manage edit-rights emails | Owner |
 | `GET/POST/PATCH /api/deals/[id]/flows` (+ `/[flowId]`) | Flow slots + metadata | Owner / participant |
 | `GET/POST/PATCH /api/deals/[id]/invite` | Send invites; create/accept tokens | Owner |
@@ -686,7 +743,7 @@ Supabase Auth (email + password) is required for:
 - Deals routes
 - Cost analysis
 
-`components/diagnostic/TeamAuthGate.jsx` wraps `PortalAuth` and stores the resolved user as `authUser` in `DiagnosticContext`. From there, name/email pre-populate Screen 5 and creator identity for team sessions.
+`components/diagnostic/TeamAuthGate.jsx` wraps `SignInForm` (from `components/auth/SignInForm.jsx`) and stores the resolved user as `authUser` in `DiagnosticContext`. From there, name/email pre-populate Screen 5 and creator identity for team sessions.
 
 Required env vars (client):
 - `NEXT_PUBLIC_SUPABASE_URL`
@@ -935,7 +992,7 @@ SHA-256 of bytes computed at upload. Pre-check by `(deal_id, content_hash)`; if 
   6. Mark request `status='completed'`.
 
 ### UI
-- `/portal/settings` — user-facing page with both controls. Mounted as `app/portal/settings/page.jsx` + `SettingsClient.jsx`.
+- Settings popover on the chat rail (gear icon) in `/workspace/map` — hosts both controls (data export + account deletion). Auto-opens on `/workspace/map?openSettings=1`. Implemented in `components/diagnostic/chat/SettingsRailButton.jsx`.
 
 ### Required env
 - `PLATFORM_ADMIN_TRANSFER_EMAIL` — email of the platform-admin account that becomes the new owner of expunged users' deals. Without it, the cron skips ownership transfer (deals become un-owned but still accessible to collaborators).
@@ -1023,8 +1080,8 @@ When `source === 'customer'`, the analysis route SKIPS `preflightTokenBudget` (t
 
 ### Admin UI
 
-- `app/portal/CustomerKeyPanel.jsx` — set/rotate/revoke, masked display (`sk-ant-...XYZW`), set-by + last-used + rotation-due columns, rotation banner (overdue / soon), expandable audit log table.
-- `app/portal/UsageAnalyticsPanel.jsx` — periods (7d/30d/90d/MTD), groupBy (day/vendor/surface), token totals, budget progress bar with 80% threshold marker, inline bar-chart of buckets.
+- `components/org-admin/CustomerKeyPanel.jsx` — set/rotate/revoke, masked display (`sk-ant-...XYZW`), set-by + last-used + rotation-due columns, rotation banner (overdue / soon), expandable audit log table.
+- `components/org-admin/UsageAnalyticsPanel.jsx` — periods (7d/30d/90d/MTD), groupBy (day/vendor/surface), token totals, budget progress bar with 80% threshold marker, inline bar-chart of buckets.
 - Both mounted as new tabs in `OrgAdminClient.jsx` next to Members.
 
 ### Required env / DB setup
@@ -1116,7 +1173,7 @@ No CHECK constraint on the array values — the catalogue lives in code and chan
 
 | File | Role |
 |---|---|
-| `app/portal/ModelAllowlistPanel.jsx` | Admin: checkbox list + radio for default + Save/Reset. Mounted under the API keys tab. |
+| `components/org-admin/ModelAllowlistPanel.jsx` | Admin: checkbox list + radio for default + Save/Reset. Mounted under the API keys tab. |
 | `components/diagnostic/chat/ModelPicker.jsx` | User: pill above the chat input. Click → popover with allowed models + tier badges + cost-aware blurbs. Hides itself when allowlist size ≤ 1. |
 | Sticks for the session — selection is in `useState` in `DiagnosticWorkspace`; resets on page reload (intentional, see decision rationale in BUILD_GUIDE §5.10). |
 
@@ -1332,43 +1389,11 @@ The five things to do this week regardless of the rest:
 - **Update it when triggers fire.** When you implement an item, delete its row. Don't leave done items here — that's what the rest of this doc is for.
 - **Question old entries.** Quarterly, ask: "is this still true? did circumstances change?" Triggers age.
 
-### Legacy archive — pending decision
+### Legacy archive — completed
 
-The chat-rail-driven `/process-audit` workspace replaced an earlier "portal dashboard" layout. Some files from the older layout are still on disk. They're not strictly orphans (most have at least one inbound import), but their continued existence creates a class of bug where the app silently falls back to legacy UI on a failure path instead of surfacing the failure cleanly. Two recent symptoms in this category:
+The chat-rail-driven `/workspace/map` surface replaced the earlier "portal dashboard" layout. The legacy files (`PortalDashboard.jsx`, `PortalAnalyticsPanel.jsx`, `DealsPanel.jsx`, `DiagnosticEdit.jsx`, `app/portal/page.jsx`, and the `/portal/analytics`, `/portal/deals`, `/portal/settings` route directories) have been deleted. Analytics now lives in `components/workspace/AnalyticsCanvasPanel.jsx` and is mounted natively by `WorkspaceAnalyticsTab`, `AnalyticsRailButton`, and the workspace's mobile analytics overlay.
 
-- Sign-out infinite-recursion → tab crash → on recovery, `/signin` rendered `PortalAuth` with a hydration-mismatched "Supabase is not configured" banner that was a stale SSR DOM (fixed: gated banner on `hydrated` flag in `app/portal/PortalAuth.jsx`).
-- Brief flash of the `AuditGate` form when an authenticated user enters `/process-audit` (fixed: spinner gate in `components/diagnostic/DiagnosticClient.jsx` for the `willAutoComplete` window).
-
-**Inventory captured here** so the work can be picked up later. Counts are inbound imports (excludes self-references):
-
-| File | Imports | Status |
-|------|---------|--------|
-| `app/portal/DiagnosticEdit.jsx` | 0 | Orphaned. Safe to delete or move to `archive/`. |
-| `app/portal/PortalDashboard.jsx` | 1 (`app/portal/analytics/page.jsx`) | Old reports+deals+analytics dashboard. Only entry left is `/portal/analytics`. Decide: kill `/portal/analytics` (rail buttons go to other routes) and archive both PortalDashboard + DealsPanel, or keep as the analytics surface. |
-| `app/portal/DealsPanel.jsx` | 1 (`PortalDashboard.jsx`) | Tied to PortalDashboard's fate. |
-| `app/portal/FirstRunOnboarding.jsx` | 1 (`OrgAdminClient.jsx`) | First-run helper for org admins. Reachable; verify it still fires in current admin flow before deciding. |
-| `app/portal/PortalAuth.jsx` | 4 (`signin`, `analytics/embed`, `analytics/page`, `org-admin`) | **Not legacy** — this is the current sign-in form. Misnamed; lives under `app/portal/` for historical reasons. Rename + relocate to `components/auth/` would clarify. |
-| `app/deals/[id]/DealAnalysisSection.jsx`, `DealPageMA.jsx`, `DealPagePE.jsx`, `DealPageScaling.jsx` | already deleted (uncommitted in `git status`) | Stage the deletion (`git rm`) so it's permanent. |
-| `cursor_study_workflow_consultancy_proje.md` | n/a | Stray analysis dump at repo root. Move to `archive/` or delete. |
-
-**Proposed archive shape (when decision is made):**
-
-```
-archive/
-  README.md                     ← what's here, when archived, why, removal date
-  portal-dashboard/             ← if /portal/analytics is killed
-  diagnostic-edit/              ← orphan
-  ...
-```
-
-Plus an ESLint `no-restricted-imports` rule blocking `archive/*` from `app/**` and `components/**`, so any silent fallback to archived code becomes a build error rather than a stale-UI bug.
-
-**Open questions for the deciding session:**
-
-1. Is `/portal/analytics` still a live surface, or has the analytics rail button replaced it? (If replaced: archive PortalDashboard + DealsPanel.)
-2. Is `FirstRunOnboarding` still firing on first-time org-admin visits? (If yes: keep, just rename out of `portal/`. If no: archive.)
-3. Rename `PortalAuth.jsx` → `components/auth/SignInForm.jsx` to remove the "portal" implication, since the file is the canonical current sign-in surface.
-4. Should `app/portal/page.jsx` (currently a redirect dispatcher to `/portal/org-admin`) become `/admin/page.jsx` to match the actual semantic, freeing `/portal/*` as the archive namespace?
+`app/portal/` and `components/portal/` have been deleted. The sign-in form lives at `components/auth/SignInForm.jsx`; the org-admin shell and panels live at `components/org-admin/` (including the `org-admin.css` + `org-admin-byo.css` stylesheets). The `.portal-*` CSS class prefix is a cosmetic-only historical artifact and was left alone.
 
 ---
 

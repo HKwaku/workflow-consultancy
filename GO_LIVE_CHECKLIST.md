@@ -2,7 +2,7 @@
 
 > **Living document.** Tick boxes as you complete each step. The order is roughly the order you'd do them in; some can run in parallel (legal review, vendor signups).
 >
-> Last updated: 2026-04-26 — keep this current as items get done or new ones land.
+> Last updated: 2026-05-13 - reflects living-workspace model. The architecture overview is in [`docs/ARCHITECTURE.html`](./docs/ARCHITECTURE.html).
 
 This is the **single source of truth** for everything that needs to happen between "engineering done" and "real customer paying us." Engineering is mostly complete; what's left is procedural, vendor signups, legal, and people-process.
 
@@ -27,11 +27,9 @@ These block everything else. Do them now.
 - [ ] `NEXT_PUBLIC_SUPABASE_URL`
 - [ ] `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - [ ] `SUPABASE_SERVICE_ROLE_KEY`
-- [ ] `WEBHOOK_SIGNING_SECRET` (`openssl rand -base64 32`)
-- [ ] `N8N_REPORT_WEBHOOK_URL`
-- [ ] `N8N_FOLLOWUP_WEBHOOK_URL`
-- [ ] `PLATFORM_ADMIN_TRANSFER_EMAIL` — required for the GDPR cron; if unset, the cron silently skips deal ownership transfer
-- [ ] `NEXT_PUBLIC_SITE_URL` — your production URL
+- [ ] `WEBHOOK_SIGNING_SECRET` (`openssl rand -base64 32`) - HMAC signs any outbound n8n webhooks
+- [ ] `PLATFORM_ADMIN_TRANSFER_EMAIL` - required for the GDPR cron; if unset, the cron silently skips deal ownership transfer
+- [ ] `NEXT_PUBLIC_SITE_URL` - your production URL
 
 See `.env.example` for the full set with descriptions.
 
@@ -53,15 +51,18 @@ Each is a paid-or-free signup outside the codebase.
 
 ### Inngest (async worker)
 
-- [ ] Sign up at https://app.inngest.com (free tier covers ≤50k function runs / 25k step runs per month)
+- [ ] Sign up at https://app.inngest.com (free tier covers ≤50k function runs / 25k step runs per month + concurrency cap of 5 per function)
 - [ ] Create an app named `workflow-consultancy-prod`
 - [ ] Settings → Event Keys → copy production key → set `INNGEST_EVENT_KEY` in Vercel
 - [ ] Settings → Signing Keys → copy production key → set `INNGEST_SIGNING_KEY` in Vercel
 - [ ] Re-deploy
-- [ ] Inngest dashboard → Apps → **Sync new app** → URL: `https://<your-host>/api/inngest`
-- [ ] Verify **both** `process-deal-document` AND `run-deal-analysis` functions appear in the Functions tab
-- [ ] Upload a small PDF in a deal as a smoke test; watch the document run appear under Runs
-- [ ] Run a deal analysis end-to-end; watch the analysis run appear under Runs (steps: load-deal-context → load-reports → rag-grounding → llm-call → record-token-usage → parse-and-normalise → verify-evidence → persist-result)
+- [ ] Inngest dashboard -> Apps -> **Sync new app** -> URL: `https://<your-host>/api/inngest`
+- [ ] Verify the two registered functions appear in the Functions tab: `process-deal-document`, `sync-connector-binding`
+- [ ] Upload a small PDF in a deal as a smoke test; watch the document run appear under Runs (steps: download -> extract -> chunk -> embed -> mark-ready)
+
+Inngest free tier caps function concurrency at 5. `syncConnectorBinding` declares `concurrency: { limit: 5 }`. On a paid Inngest plan you can bump higher but document throughput rarely needs it at small/mid scale.
+
+After any code change to a function, **re-sync the app in Inngest** (Apps -> click app -> Sync) so the dashboard picks up the new function definition.
 
 ### Voyage AI (embeddings)
 
@@ -74,7 +75,7 @@ Each is a paid-or-free signup outside the codebase.
 
 - [ ] Sign up at https://console.mistral.ai (pay-per-page; cheap)
 - [ ] Generate an API key
-- [ ] **Preferred path:** sign in as an org admin, open `/portal/org-admin` → API keys → Mistral (OCR), paste the key. Audit-logged + per-org billing.
+- [ ] **Preferred path:** sign in as an org admin, open `/org-admin` → API keys → Mistral (OCR), paste the key. Audit-logged + per-org billing.
 - [ ] **Or platform fallback:** set `MISTRAL_API_KEY` in Vercel.
 - [ ] Smoke test: upload a scanned PDF (or any image-based document). Watch the worker run — `extract-text` step should produce non-zero chunks via OCR. Verify with: `SELECT status, processing_error FROM deal_documents ORDER BY created_at DESC LIMIT 1;` — status should land at `ready`, not `stored`.
 
@@ -143,13 +144,13 @@ For customers who want Vesno to pull documents from their existing SharePoint or
 
 ---
 
-### n8n (outbound email)
+### n8n (outbound transactional webhooks - optional)
 
-- [ ] Provision an n8n instance (self-hosted or n8n.cloud)
-- [ ] Build the report-email workflow + the followup workflow (use `triggerWebhook.js` HMAC pattern)
-- [ ] Set `N8N_REPORT_WEBHOOK_URL` + `N8N_FOLLOWUP_WEBHOOK_URL` in Vercel
+The living-workspace model dropped the "email the report" + "follow-up nurture" flows along with their tables. n8n is only needed if you wire up an outbound transactional flow (invite emails, password reset). Optional.
+
+- [ ] Provision an n8n instance (self-hosted or n8n.cloud) if you want outbound webhooks
+- [ ] HMAC-sign requests with `WEBHOOK_SIGNING_SECRET` via `lib/triggerWebhook.js`
 - [ ] Configure SPF + DKIM + DMARC on your sending domain
-- [ ] Test: submit a diagnostic with your own email; verify the report email lands within 1 minute (check spam folder too)
 
 ---
 
@@ -158,7 +159,7 @@ For customers who want Vesno to pull documents from their existing SharePoint or
 Things you only know work because you've actually done them.
 
 - [ ] **Backup-restore drill #1.** Block 90 minutes. Follow `RUNBOOK_BACKUP_RESTORE.md` end-to-end against a fresh staging Supabase project. Update the "Last drill" date in that file.
-- [ ] **GDPR account-deletion test.** Create a throwaway test account, schedule deletion via `/portal/settings`, manually trigger `/api/cron/expunge-deleted-accounts` via curl, verify the user can no longer sign in and their data is anonymised.
+- [ ] **GDPR account-deletion test.** Create a throwaway test account, schedule deletion via the Settings popover on the chat rail (gear icon in `/workspace/map`), manually trigger `/api/cron/expunge-deleted-accounts` via curl, verify the user can no longer sign in and their data is anonymised.
 - [ ] **BYO key end-to-end.** Set a customer Anthropic key for your test org, send a chat, verify the call appears in your Anthropic console (not the platform's).
 - [ ] **Customer key revocation.** Revoke the BYO key, send another chat, verify it falls back to the platform key cleanly.
 - [ ] **Cron failure visibility.** Force a cron to fail (e.g. break the Supabase URL temporarily), verify the failure shows up in Sentry tagged `cron:<name>`.
@@ -257,9 +258,9 @@ What a paying customer sees and uses.
 Items from the deferred register that move from "deferred" to "must" once you have someone paying you. Pick up as triggers fire.
 
 - [ ] **Stripe / payment integration** — entire engineering arc; start when business has plan tiers defined
-- [x] ~~**Findings out of JSONB → relational table**~~ — closed (`deal_findings` shipped + backfill in migration 24)
-- [x] ~~**SSE → enqueue+poll for analyse route**~~ — closed (Inngest `runDealAnalysis` + polling endpoint)
-- [x] ~~**JWT decode local instead of `auth.getUser()` round-trip**~~ — closed (`lib/auth.js:verifyJwtLocal`; gated on `SUPABASE_JWT_SECRET` env var being set, falls through to network path otherwise)
+- [x] ~~**Findings out of JSONB -> relational table**~~ - closed (`deal_findings` shipped + backfill in migration 24)
+- [x] ~~**SSE -> enqueue+poll for analyse route**~~ - closed in original migration; the whole analyse pipeline was subsequently retired in the living-workspace migration (deal_analyses table dropped). Findings hang on `(deal_id, finding_key)` directly.
+- [x] ~~**JWT decode local instead of `auth.getUser()` round-trip**~~ - closed (`lib/auth.js:verifyJwtLocal`; gated on `SUPABASE_JWT_SECRET` env var being set, falls through to network path otherwise)
 - [ ] **49 chat tools → consolidate to ~15** — when adding new tools makes the model pick wrong ones
 - [ ] **Per-process `_cache` → Upstash Redis cache** — at ~10+ concurrent paid users
 - [ ] **Audit-trail history on findings + reviews** — first compliance-driven customer
@@ -279,21 +280,20 @@ See `DIAGNOSTICS_CAPABILITIES.md → Deferred work — decision register` for th
 Run all of these end-to-end on production. Block 2-3 hours.
 
 - [ ] Sign up via the marketing site landing page
-- [ ] Run a process audit; receive the report email
-- [ ] Open the report URL; export to PowerPoint
-- [ ] Trigger a redesign; export build guide for at least one platform (n8n or Zapier)
+- [ ] Map a process on `/workspace/map`; verify the canvas saves and the process appears in the Reports popover (chat rail)
+- [ ] Re-open the same process via `/workspace/map?view=<id>` and confirm the canvas hydrates with the saved steps
+- [ ] In the chat, ask Reina to "add a step after step 3" - verify the proposal renders an Apply button and the change lands on the canvas
 - [ ] Create an organisation; invite a second user; verify they can join
 - [ ] As an admin, set a customer Anthropic key
 - [ ] Create a deal; invite a target participant via email
 - [ ] Both participants complete their maps
-- [ ] Upload a small data room (3–5 documents); wait for `Ready`
-- [ ] Run a diligence analysis; review findings; approve some, reject some
-- [ ] Export the diligence memo to PowerPoint
-- [ ] Use Reina with citation click-through; verify the modal opens the source
-- [ ] Open `/status` — should be green
-- [ ] Open `/portal/org-admin → Usage` — should show all the calls just made
-- [ ] Schedule account deletion in `/portal/settings`; cancel it; verify both events appear in audit
-- [ ] Hit `/api/health` — should return 200 with all checks green
+- [ ] Upload a small data room (3-5 documents); wait for `Ready` status on each
+- [ ] Ask Reina to "summarise the financials" - verify she calls `search_deal_documents` and renders citations
+- [ ] Open the workspace modal; expand a finding; click **Inspect** on an evidence row - chunk text should render inline
+- [ ] Open `/status` - should be green
+- [ ] Open `/org-admin -> Usage` - should show all the calls just made
+- [ ] Schedule account deletion via the Settings popover (chat rail, gear icon); cancel it; verify both events appear in audit
+- [ ] Hit `/api/health` - should return 200 with all checks green
 
 ---
 

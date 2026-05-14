@@ -56,7 +56,7 @@ export async function GET(request) {
 
     try {
       const resp = await fetchWithTimeout(
-        `${supabaseUrl}/rest/v1/deal_flows?id=eq.${encodeURIComponent(flowId)}&select=id,label,flow_kind,status,report_id,deal_participants(id,role,company_name,participant_name,participant_email,status),deals(id,deal_code,type,name,process_name,settings,status,owner_email,collaborator_emails)`,
+        `${supabaseUrl}/rest/v1/deal_flows?id=eq.${encodeURIComponent(flowId)}&select=id,label,flow_kind,status,process_id,deal_participants(id,role,company_name,participant_name,participant_email,status),deals(id,deal_code,type,name,process_name,settings,status,owner_email,collaborator_emails)`,
         { method: 'GET', headers: getSupabaseHeaders(supabaseKey) }
       );
       if (!resp.ok) {
@@ -88,7 +88,8 @@ export async function GET(request) {
         flowLabel: flow.label,
         flowKind: flow.flow_kind || null,
         flowStatus: flow.status,
-        existingReportId: flow.report_id || null,
+        existingProcessId: flow.process_id || null,
+        existingReportId:  flow.process_id || null,
         participantId: part.id,
         role: part.role,
         companyName: part.company_name,

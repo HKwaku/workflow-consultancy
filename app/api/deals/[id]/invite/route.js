@@ -92,7 +92,7 @@ export async function POST(request, { params }) {
     }
 
     const [participant] = await partResp.json();
-    const inviteUrl = `${baseUrl}/process-audit?participant=${participant.invite_token}`;
+    const inviteUrl = `${baseUrl}/workspace/map?participant=${participant.invite_token}`;
 
     // Send invite email if email provided
     if (participantEmail) {

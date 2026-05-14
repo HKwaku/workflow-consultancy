@@ -20,6 +20,7 @@ import { apiFetch } from '@/lib/api-fetch';
 import DealConnectorBindings from './DealConnectorBindings';
 import WorkspaceSearchBar from './WorkspaceSearchBar';
 import DealActivityTimeline from './DealActivityTimeline';
+import ChangesTimeline from './ChangesTimeline';
 
 const SEVERITY_PILL = {
   critical: 'sev--critical',
@@ -396,7 +397,7 @@ function FindingDetail({ finding, review, displayedBody, dealId, accessToken }) 
   );
 }
 
-function CrosscutColumns({ findings, reviewsByKey, dealId }) {
+function CrosscutColumns({ findings, reviewsByKey, dealId, onClose }) {
   const byAxis = (axis) => findings.filter((f) => Array.isArray(f.impact) && f.impact.includes(axis));
   const day1 = byAxis(DAY1_AXIS);
   const tsa  = byAxis(TSA_AXIS);
@@ -412,14 +413,14 @@ function CrosscutColumns({ findings, reviewsByKey, dealId }) {
 
   return (
     <div className="deal-workspace-crosscut">
-      <CrosscutCol label="Day 1"      findings={day1} reviewsByKey={reviewsByKey} dealId={dealId} />
-      <CrosscutCol label="TSA"        findings={tsa}  reviewsByKey={reviewsByKey} dealId={dealId} />
-      <CrosscutCol label="Separation" findings={sep}  reviewsByKey={reviewsByKey} dealId={dealId} />
+      <CrosscutCol label="Day 1"      findings={day1} reviewsByKey={reviewsByKey} dealId={dealId} onClose={onClose} />
+      <CrosscutCol label="TSA"        findings={tsa}  reviewsByKey={reviewsByKey} dealId={dealId} onClose={onClose} />
+      <CrosscutCol label="Separation" findings={sep}  reviewsByKey={reviewsByKey} dealId={dealId} onClose={onClose} />
     </div>
   );
 }
 
-function CrosscutCol({ label, findings, reviewsByKey, dealId }) {
+function CrosscutCol({ label, findings, reviewsByKey, dealId, onClose }) {
   return (
     <div className="deal-workspace-crosscut-col">
       <h4 className="deal-workspace-crosscut-col-title">{label} <span>{findings.length}</span></h4>
@@ -438,10 +439,19 @@ function CrosscutCol({ label, findings, reviewsByKey, dealId }) {
                 )}
                 <a
                   className="deal-workspace-name deal-workspace-name--link"
-                  href={`/process-audit?deal=${encodeURIComponent(dealId)}&focusFinding=${encodeURIComponent(key)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href={`/workspace/map?deal=${encodeURIComponent(dealId)}&focusFinding=${encodeURIComponent(key)}`}
+                  title="Focus this finding (Cmd/Ctrl+click to open in new tab)"
                   style={{ flex: '1 1 auto' }}
+                  onClick={(e) => {
+                    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+                    e.preventDefault();
+                    if (typeof window === 'undefined') return;
+                    const sp = new URLSearchParams(window.location.search);
+                    sp.set('focusFinding', key);
+                    window.history.replaceState(null, '', window.location.pathname + (sp.toString() ? `?${sp.toString()}` : ''));
+                    window.dispatchEvent(new CustomEvent('vesno:focus-finding', { detail: { findingKey: key } }));
+                    onClose?.();
+                  }}
                 >
                   {review?.edited_title || f.title}
                 </a>
@@ -471,7 +481,7 @@ function writeModalCache(dealId, snap) {
   }
 }
 
-export default function DealWorkspaceModal({ open, onClose, dealId, accessToken, focusFindingKey = null }) {
+export default function DealWorkspaceModal({ open, onClose, dealId, accessToken, focusFindingKey = null, focusChangeId = null }) {
   // Per-section loading flags so the modal renders progressively. Deal +
   // docs + Q&A all share `loadingCore`; findings have their own flag so
   // the rest of the surface paints while the analysis fetch is in flight.
@@ -555,10 +565,12 @@ export default function DealWorkspaceModal({ open, onClose, dealId, accessToken,
     const dealP   = apiFetch(`/api/deals/${dealId}`, {}, accessToken).then((r) => r.json()).catch(() => null);
     const docsP   = apiFetch(`/api/deals/${dealId}/documents`, {}, accessToken).then((r) => r.ok ? r.json() : null).catch(() => null);
     const qaP     = apiFetch(`/api/deals/${dealId}/qa`, {}, accessToken).then((r) => r.ok ? r.json() : null).catch(() => null);
-    const lresP   = apiFetch(`/api/deals/${dealId}/analyses?status=complete&limit=2`, {}, accessToken)
-      .then((r) => r.ok ? r.json() : null).catch(() => null);
 
-    // ── Core: deal + docs + QA → progressive paint as soon as ready ──
+    // Living-workspace migration: deal_analyses + per-analysis findings /
+    // reviews snapshots are gone. Findings hang on (deal_id, finding_key)
+    // directly; UI for them ships on the deal page, not here.
+    setLoadingFindings(false);
+
     Promise.all([dealP, docsP, qaP]).then(([dealResp, docsResp, qaResp]) => {
       if (cancelled) return;
       const deal = dealResp?.deal || null;
@@ -571,50 +583,6 @@ export default function DealWorkspaceModal({ open, onClose, dealId, accessToken,
       }
       setLoadingCore(false);
     }).catch((e) => { if (!cancelled) setError(e?.message || 'Failed to load deal.'); });
-
-    // ── Findings: independent path, paints when ready ────────────────
-    lresP.then(async (ldata) => {
-      try {
-        const completed = ldata?.analyses || [];
-        const latest = completed[0];
-        const previous = completed[1];
-        if (!latest?.id) {
-          if (!cancelled) {
-            setData((prev) => ({ ...prev, findings: [], analysis: null, reviewsByKey: {}, newFindingKeys: new Set() }));
-            setLoadingFindings(false);
-          }
-          return;
-        }
-        const calls = [
-          apiFetch(`/api/deals/${dealId}/analyses/${latest.id}`, {}, accessToken),
-          apiFetch(`/api/deals/${dealId}/analyses/${latest.id}/reviews`, {}, accessToken),
-        ];
-        if (previous?.id) {
-          calls.push(apiFetch(`/api/deals/${dealId}/analyses/${previous.id}`, {}, accessToken));
-        }
-        const [fresp, rresp, presp] = await Promise.all(calls);
-        if (cancelled) return;
-        const fdata = fresp.ok ? await fresp.json() : null;
-        const findings = (fdata?.analysis?.findings || []).slice(0, 30);
-        const rdata = rresp.ok ? await rresp.json() : null;
-        const reviewsByKey = {};
-        for (const r of rdata?.reviews || []) reviewsByKey[r.finding_key] = r;
-        let newFindingKeys = new Set();
-        if (presp) {
-          const pdata = presp.ok ? await presp.json() : null;
-          const prevKeys = new Set(
-            (pdata?.analysis?.findings || []).map((f) => f.key || f.finding_key).filter(Boolean),
-          );
-          newFindingKeys = new Set(
-            findings.map((f) => f.key || f.finding_key).filter((k) => k && !prevKeys.has(k)),
-          );
-        }
-        if (!cancelled) {
-          setData((prev) => ({ ...prev, findings, analysis: latest, reviewsByKey, newFindingKeys }));
-        }
-      } catch { /* swallow — modal still works without findings */ }
-      finally { if (!cancelled) setLoadingFindings(false); }
-    });
 
     return () => { cancelled = true; };
   }, [open, dealId, accessToken]);
@@ -755,24 +723,16 @@ export default function DealWorkspaceModal({ open, onClose, dealId, accessToken,
     } catch { /* swallow */ }
   };
 
-  // Lazy-fetch the scorecard on first open + whenever the underlying
-  // analysis id changes (so a fresh auto-trigger run refreshes it).
+  // Living-workspace migration: scorecard endpoint removed. The data was a
+  // derived snapshot of the most-recent completed analysis; analyses are
+  // gone, so the scorecard panel is permanently empty.
   useEffect(() => {
-    if (!open || !scorecardOpen || !dealId || !accessToken) return undefined;
-    let cancelled = false;
-    setScorecardLoading(true);
+    if (!open || !scorecardOpen) return undefined;
+    setScorecardLoading(false);
     setScorecardError(null);
-    apiFetch(`/api/deals/${dealId}/scorecard`, {}, accessToken)
-      .then((r) => r.json().then((j) => ({ ok: r.ok, j })))
-      .then(({ ok, j }) => {
-        if (cancelled) return;
-        if (!ok) setScorecardError(j?.error || 'Failed to load scorecard.');
-        else setScorecard(j);
-      })
-      .catch((e) => { if (!cancelled) setScorecardError(e?.message || 'Network error.'); })
-      .finally(() => { if (!cancelled) setScorecardLoading(false); });
-    return () => { cancelled = true; };
-  }, [open, scorecardOpen, dealId, accessToken, data.analysis?.id]);
+    setScorecard(null);
+    return undefined;
+  }, [open, scorecardOpen]);
 
   // Refresh the expected-docs checklist whenever the document list changes —
   // newly uploaded / categorised docs may now satisfy a checklist item.
@@ -1443,7 +1403,7 @@ export default function DealWorkspaceModal({ open, onClose, dealId, accessToken,
                         <p className="deal-workspace-empty">No findings yet — run a diligence analysis to surface them.</p>
                       )
                     ) : findingsLens === 'crosscut' ? (
-                      <CrosscutColumns findings={bodyFindings} reviewsByKey={data.reviewsByKey} dealId={dealId} />
+                      <CrosscutColumns findings={bodyFindings} reviewsByKey={data.reviewsByKey} dealId={dealId} onClose={onClose} />
                     ) : (
                   <ul className="deal-workspace-list">
                     {bodyFindings.map((f) => {
@@ -1722,6 +1682,19 @@ export default function DealWorkspaceModal({ open, onClose, dealId, accessToken,
                   </section>
                 );
               })()}
+
+              {/* Decision-lifecycle timeline (proposed → applied → live →
+                  measured). Reads from the `changes` table, populated by
+                  the redesign agent and chat-side propose_* tools. Sits
+                  above Activity because reviewers care about decisions
+                  more than ops events. */}
+              <ChangesTimeline
+                dealId={dealId}
+                accessToken={accessToken}
+                canEdit={editable}
+                focusChangeId={focusChangeId}
+                defaultOpen={Boolean(focusChangeId)}
+              />
 
               {/* Per-deal activity timeline — collapsed by default. Lazy-loaded
                   on first expand so the modal first paint isn't slowed. */}

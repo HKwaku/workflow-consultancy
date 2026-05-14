@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/auth';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { resolveDealAccess, requireDealEditor, requireDealOwner } from '@/lib/dealAuth';
 import { logger } from '@/lib/logger';
+import { deriveProcessMetrics } from '@/lib/processMetrics';
 
 function buildBaseUrl(request) {
   const proto = request.headers.get('x-forwarded-proto') || 'https';
@@ -35,7 +36,19 @@ export async function GET(request, { params }) {
   const baseUrl = buildBaseUrl(request);
 
   try {
-    // Auth check: owner, collaborator, or participant
+    // Auth check: owner, collaborator, or participant. resolveDealAccess
+    // returns null both when the deal doesn't exist and when the caller
+    // isn't allowed to see it; differentiate here so a stale URL gets a
+    // clear 404 instead of a misleading 403.
+    const sbHeaders = getSupabaseHeaders(supabaseKey);
+    const existsResp = await fetchWithTimeout(
+      `${supabaseUrl}/rest/v1/deals?id=eq.${encodeURIComponent(id)}&select=id&limit=1`,
+      { method: 'GET', headers: sbHeaders },
+    );
+    const existsRows = existsResp.ok ? await existsResp.json() : [];
+    if (!existsRows.length) {
+      return NextResponse.json({ error: 'Deal not found.' }, { status: 404 });
+    }
     const access = await resolveDealAccess({ dealId: id, email: auth.email, userId: auth.userId });
     if (!access) return NextResponse.json({ error: 'Access denied.' }, { status: 403 });
     const deal = access.deal;
@@ -48,8 +61,10 @@ export async function GET(request, { params }) {
     // parallelises its two sub-fetches. Trim select= to the columns
     // actually consumed below to cut payload size.
     const headers = getSupabaseHeaders(supabaseKey);
-    const PARTICIPANT_COLS = 'id,role,company_name,participant_email,participant_name,invite_token,report_id,status,invited_at,completed_at';
-    const FLOW_COLS = 'id,participant_id,label,flow_kind,report_id,status,created_at,updated_at';
+    // Living-workspace migration: deal_participants.report_id and
+    // deal_flows.report_id columns renamed to process_id.
+    const PARTICIPANT_COLS = 'id,role,company_name,participant_email,participant_name,invite_token,process_id,status,invited_at,completed_at';
+    const FLOW_COLS = 'id,participant_id,label,flow_kind,process_id,status,created_at,updated_at';
     const [partResp, flowsResp, auxiliary] = await Promise.all([
       fetchWithTimeout(
         `${supabaseUrl}/rest/v1/deal_participants?deal_id=eq.${id}&select=${PARTICIPANT_COLS}&order=created_at.asc`,
@@ -70,72 +85,74 @@ export async function GET(request, { params }) {
     // first). Detail columns are only needed for the participant
     // path, so we only run the heavy SELECT on participant ids and
     // the lighter SELECT on flow-only extras.
-    const participantReportIds = participants.filter((p) => p.report_id).map((p) => p.report_id);
+    const participantReportIds = participants.filter((p) => p.process_id).map((p) => p.process_id);
     const flowOnlyReportIds = flowRows
-      .map((f) => f.report_id)
+      .map((f) => f.process_id)
       .filter(Boolean)
       .filter((rid) => !participantReportIds.includes(rid));
     const reportSummaries = {};
+
+    // Living-workspace migration: cost / savings / automation columns
+    // dropped; diagnostic_data renamed to flow_data. Cost / savings are
+    // derived on-the-fly from step minutes — leave the headline numbers
+    // as null until we wire computeProcessCost(steps) here too.
+    const PROCESS_SELECT = 'id,created_at,updated_at,flow_data';
+
     const [participantReportsResp, flowOnlyReportsResp] = await Promise.all([
       participantReportIds.length
         ? fetchWithTimeout(
-          `${supabaseUrl}/rest/v1/diagnostic_reports?id=in.(${participantReportIds.map(encodeURIComponent).join(',')})&select=id,total_annual_cost,potential_savings,automation_percentage,automation_grade,diagnostic_mode,created_at,updated_at,diagnostic_data`,
+          `${supabaseUrl}/rest/v1/processes?id=in.(${participantReportIds.map(encodeURIComponent).join(',')})&select=${PROCESS_SELECT}`,
           { method: 'GET', headers },
         )
         : Promise.resolve(null),
       flowOnlyReportIds.length
         ? fetchWithTimeout(
-          `${supabaseUrl}/rest/v1/diagnostic_reports?id=in.(${flowOnlyReportIds.map(encodeURIComponent).join(',')})&select=id,total_annual_cost,potential_savings,automation_percentage,automation_grade,created_at,updated_at`,
+          `${supabaseUrl}/rest/v1/processes?id=in.(${flowOnlyReportIds.map(encodeURIComponent).join(',')})&select=${PROCESS_SELECT}`,
           { method: 'GET', headers },
         )
         : Promise.resolve(null),
     ]);
+
+    const buildSummary = (r) => {
+      const dd = r.flow_data || {};
+      const rawSteps = (dd.rawProcesses?.[0]?.steps || []).slice(0, 150).map((s) => ({
+        name: s.name || '',
+        department: s.department || '',
+        isDecision: !!s.isDecision,
+        isExternal: !!s.isExternal,
+        workMinutes: s.workMinutes ?? null,
+        waitMinutes: s.waitMinutes ?? null,
+        systems: Array.isArray(s.systems) ? s.systems.filter((x) => typeof x === 'string') : [],
+        durationMinutes: s.durationMinutes || s.workMinutes || 0,
+      }));
+      const m = deriveProcessMetrics(r);
+      return {
+        id: r.id,
+        totalAnnualCost:     m.total_annual_cost,
+        potentialSavings:    m.potential_savings,
+        automationPercentage: m.automation_percentage,
+        automationGrade:     m.automation_grade,
+        processCount: dd.summary?.totalProcesses || dd.processes?.length || 0,
+        processes: (dd.processes || []).map((p) => ({
+          name: p.name,
+          annualCost: p.annualCost,
+          stepsCount: p.stepsCount,
+          quality: p.quality,
+          automationPct: p.automationPct,
+        })),
+        rawSteps,
+        reportUrl: `/workspace/map?view=${r.id}`,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+      };
+    };
+
     if (participantReportsResp?.ok) {
       const reports = await participantReportsResp.json();
-      for (const r of reports) {
-        const dd = r.diagnostic_data || {};
-        const rawSteps = (dd.rawProcesses?.[0]?.steps || []).slice(0, 150).map((s) => ({
-          name: s.name || '',
-          department: s.department || '',
-          isDecision: !!s.isDecision,
-          isExternal: !!s.isExternal,
-          durationMinutes: s.durationMinutes || s.workMinutes || 0,
-        }));
-        reportSummaries[r.id] = {
-          id: r.id,
-          totalAnnualCost: r.total_annual_cost,
-          potentialSavings: r.potential_savings,
-          automationPercentage: r.automation_percentage,
-          automationGrade: r.automation_grade,
-          diagnosticMode: r.diagnostic_mode,
-          processCount: dd.summary?.totalProcesses || dd.processes?.length || 0,
-          processes: (dd.processes || []).map((p) => ({
-            name: p.name,
-            annualCost: p.annualCost,
-            stepsCount: p.stepsCount,
-            quality: p.quality,
-            automationPct: p.automationPct,
-          })),
-          rawSteps,
-          reportUrl: `/report?id=${r.id}`,
-          createdAt: r.created_at,
-          updatedAt: r.updated_at,
-        };
-      }
+      for (const r of reports) reportSummaries[r.id] = buildSummary(r);
     }
     if (flowOnlyReportsResp?.ok) {
-      for (const r of await flowOnlyReportsResp.json()) {
-        reportSummaries[r.id] = {
-          id: r.id,
-          totalAnnualCost: r.total_annual_cost,
-          potentialSavings: r.potential_savings,
-          automationPercentage: r.automation_percentage,
-          automationGrade: r.automation_grade,
-          reportUrl: `/report?id=${r.id}`,
-          createdAt: r.created_at,
-          updatedAt: r.updated_at,
-        };
-      }
+      for (const r of await flowOnlyReportsResp.json()) reportSummaries[r.id] = buildSummary(r);
     }
 
     const enrichedParticipants = participants.map((p) => ({
@@ -145,9 +162,11 @@ export async function GET(request, { params }) {
       participantEmail: canSeePII ? p.participant_email : undefined,
       participantName: p.participant_name,
       status: p.status,
-      inviteUrl: canSeePII ? `${baseUrl}/process-audit?participant=${p.invite_token}` : undefined,
-      reportId: p.report_id,
-      report: p.report_id ? reportSummaries[p.report_id] || null : null,
+      inviteUrl: canSeePII ? `${baseUrl}/workspace/map?participant=${p.invite_token}` : undefined,
+      // Legacy field name `reportId` retained in the API response for
+      // client back-compat — DB column underneath is `process_id`.
+      reportId: p.process_id,
+      report: p.process_id ? reportSummaries[p.process_id] || null : null,
       invitedAt: p.invited_at,
       completedAt: p.completed_at,
     }));
@@ -156,13 +175,13 @@ export async function GET(request, { params }) {
       participantId: f.participant_id,
       label: f.label,
       flowKind: f.flow_kind,
-      reportId: f.report_id,
+      reportId: f.process_id,
       status: f.status,
       createdAt: f.created_at,
       updatedAt: f.updated_at,
-      report: f.report_id ? reportSummaries[f.report_id] || null : null,
-      startUrl: f.report_id ? null : `/process-audit?dealFlowId=${encodeURIComponent(f.id)}`,
-      openUrl: f.report_id ? `/process-audit?dealFlowId=${encodeURIComponent(f.id)}&resume=1` : null,
+      report: f.process_id ? reportSummaries[f.process_id] || null : null,
+      startUrl: f.process_id ? null : `/workspace/map?dealFlowId=${encodeURIComponent(f.id)}`,
+      openUrl: f.process_id ? `/workspace/map?dealFlowId=${encodeURIComponent(f.id)}&resume=1` : null,
     }));
 
     return NextResponse.json({
@@ -238,7 +257,10 @@ export async function PATCH(request, { params }) {
     const update = {};
     if (body.name && typeof body.name === 'string') update.name = body.name.trim().slice(0, 200);
     if (typeof body.processName === 'string') update.process_name = body.processName.trim().slice(0, 200) || null;
-    if (body.status && ['draft', 'collecting', 'complete'].includes(body.status)) update.status = body.status;
+    // Living-workspace contract: deals don't terminate. Allow flipping
+    // between draft / collecting (active lifecycle states) but reject
+    // 'complete' — there is no done state for a living deal.
+    if (body.status && ['draft', 'collecting'].includes(body.status)) update.status = body.status;
     // settings is merged (not replaced) to allow incremental updates from different UI panels
     if (body.settings && typeof body.settings === 'object' && !Array.isArray(body.settings)) {
       // Fetch current settings first to merge
@@ -343,8 +365,9 @@ export async function DELETE(request, { params }) {
     const dealRow = dealResp.ok ? (await dealResp.json().catch(() => []))[0] : null;
     if (!dealRow) return NextResponse.json({ error: 'Deal not found.' }, { status: 404 });
 
+    // Living-workspace migration: deal_analyses dropped — count omitted.
     const [
-      participants, flows, documents, chunks, analyses,
+      participants, flows, documents, chunks,
       findings, findingComments, findingReviews, qaItems,
       bindings, sessions,
     ] = await Promise.all([
@@ -352,7 +375,6 @@ export async function DELETE(request, { params }) {
       countBy('deal_flows'),
       countBy('deal_documents'),
       countBy('deal_document_chunks'),
-      countBy('deal_analyses'),
       countBy('deal_findings'),
       countBy('deal_finding_comments'),
       countBy('deal_finding_reviews'),
@@ -360,10 +382,11 @@ export async function DELETE(request, { params }) {
       countBy('deal_connector_bindings'),
       countBy('chat_sessions'),
     ]);
+    const analyses = 0;
 
-    // Reports are unlinked, not deleted — they're the participants' work.
+    // Processes are unlinked, not deleted — they're the participants' work.
     const reportsResp = await fetchWithTimeout(
-      `${supabaseUrl}/rest/v1/diagnostic_reports?deal_id=eq.${encodeURIComponent(id)}&select=id`,
+      `${supabaseUrl}/rest/v1/processes?deal_id=eq.${encodeURIComponent(id)}&select=id`,
       { method: 'GET', headers },
     );
     const linkedReports = reportsResp.ok ? (await reportsResp.json().catch(() => [])).length : 0;
@@ -421,8 +444,8 @@ export async function DELETE(request, { params }) {
       logger.warn('Deal delete: storage cleanup failed (continuing)', { dealId: id, error: e.message });
     }
 
-    // 1. Chat artefacts + messages + sessions. Sessions own artefacts
-    //    via session_id FK; delete bottom-up so we never leave orphans.
+    // 1. Chat messages + sessions. chat_artefacts table dropped in the
+    //    living-workspace migration — sessions own messages via session_id.
     try {
       const sessResp = await fetchWithTimeout(
         `${supabaseUrl}/rest/v1/chat_sessions?deal_id=eq.${encodeURIComponent(id)}&select=id`,
@@ -431,10 +454,6 @@ export async function DELETE(request, { params }) {
       const sessIds = sessResp.ok ? (await sessResp.json().catch(() => [])).map((r) => r.id) : [];
       if (sessIds.length) {
         const inList = sessIds.map(encodeURIComponent).join(',');
-        await fetchWithTimeout(
-          `${supabaseUrl}/rest/v1/chat_artefacts?session_id=in.(${inList})`,
-          { method: 'DELETE', headers: writeHeaders },
-        );
         await fetchWithTimeout(
           `${supabaseUrl}/rest/v1/chat_messages?session_id=in.(${inList})`,
           { method: 'DELETE', headers: writeHeaders },
@@ -448,7 +467,10 @@ export async function DELETE(request, { params }) {
       logger.warn('Deal delete: chat cleanup failed (continuing)', { dealId: id, error: e.message });
     }
 
-    // 2. Findings stack: comments → reviews → findings.
+    // 2. Living-workspace migration: deal_analyses dropped — removed
+    //    from the cleanup list. Findings / reviews / comments now hang
+    //    directly on (deal_id, finding_key) so they still need cleaning
+    //    in the same order.
     const cleanupOrder = [
       'deal_finding_comments',
       'deal_finding_reviews',
@@ -456,7 +478,6 @@ export async function DELETE(request, { params }) {
       'deal_qa_items',
       'deal_document_chunks',
       'deal_documents',
-      'deal_analyses',
       'deal_connector_bindings',
       'deal_flows',
       'deal_participants',
@@ -472,19 +493,20 @@ export async function DELETE(request, { params }) {
       }
     }
 
-    // 3. Unlink (don't delete) any diagnostic_reports tied to this deal.
-    //    Reports are the participants' own work and outlive the deal.
+    // 3. Unlink (don't delete) any processes tied to this deal.
+    //    Processes are the participants' own work and outlive the deal.
+    //    Living-workspace migration: table renamed, deal_role column gone.
     try {
       await fetchWithTimeout(
-        `${supabaseUrl}/rest/v1/diagnostic_reports?deal_id=eq.${encodeURIComponent(id)}`,
+        `${supabaseUrl}/rest/v1/processes?deal_id=eq.${encodeURIComponent(id)}`,
         {
           method: 'PATCH',
           headers: { ...writeHeaders, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-          body: JSON.stringify({ deal_id: null, deal_role: null }),
+          body: JSON.stringify({ deal_id: null }),
         },
       );
     } catch (e) {
-      logger.warn('Deal delete: report unlink failed (continuing)', { dealId: id, error: e.message });
+      logger.warn('Deal delete: process unlink failed (continuing)', { dealId: id, error: e.message });
     }
 
     // 4. The deal itself.
@@ -515,18 +537,19 @@ export async function DELETE(request, { params }) {
 async function buildDealAuxiliaryStats({ dealId, supabaseUrl, supabaseKey }) {
   try {
     const headers = getSupabaseHeaders(supabaseKey);
-    const [docsResp, anaResp] = await Promise.all([
-      fetchWithTimeout(`${supabaseUrl}/rest/v1/deal_documents?deal_id=eq.${dealId}&select=id,status`, { method: 'GET', headers }),
-      fetchWithTimeout(`${supabaseUrl}/rest/v1/deal_analyses?deal_id=eq.${dealId}&select=id,mode,status,created_at&order=created_at.desc&limit=1`, { method: 'GET', headers }),
-    ]);
+    // Living-workspace migration: deal_analyses table dropped. No more
+    // latest-run status to surface; findings are live editable rows on
+    // the deal directly.
+    const docsResp = await fetchWithTimeout(
+      `${supabaseUrl}/rest/v1/deal_documents?deal_id=eq.${dealId}&select=id,status`,
+      { method: 'GET', headers },
+    );
     const docs = docsResp.ok ? await docsResp.json() : [];
-    const ana  = anaResp.ok  ? await anaResp.json()  : [];
-    const latest = ana[0] || null;
     return {
       documentsTotal: docs.length,
       documentsReady: docs.filter((d) => d.status === 'ready').length,
-      latestAnalysisMode: latest?.mode || null,
-      latestAnalysisStatus: latest?.status || null,
+      latestAnalysisMode: null,
+      latestAnalysisStatus: null,
     };
   } catch {
     return { documentsTotal: null, documentsReady: null, latestAnalysisMode: null, latestAnalysisStatus: null };

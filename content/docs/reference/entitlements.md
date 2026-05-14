@@ -9,10 +9,10 @@ Entitlements live on `organization_members.entitlements` (a JSONB column). Each 
 
 | Key | Default | What it gates |
 |-----|---------|---------------|
-| `portal` | `true` | Access to `/portal` and the authenticated diagnostic flow |
-| `cost_analyst` | `false` | The `/cost-analysis` page, the cost copilot, labour-rate edits in reports |
-| `deals` | `false` | Creating + editing deals; the `/deals` portal |
-| `analytics` | `false` | The `/portal/analytics` cross-report benchmarking page |
+| `portal` | `true` | Access to `/workspace/map` and the authenticated process flow |
+| `cost_analyst` | `false` | Edit cost inputs (labour rates, frequency, hours) on the live canvas. Without it, cost fields are read-only. |
+| `deals` | `false` | Creating + editing deals; the Deals briefcase popover on the chat rail |
+| `analytics` | `false` | The Analytics popover on the chat rail and workspace analytics tab (cross-process benchmarking) |
 
 Plus one column override:
 
@@ -24,7 +24,7 @@ Routes call `hasEntitlement(member.entitlements, 'deals')` from `lib/entitlement
 
 ## How to set them
 
-Org admin → `/portal/org-admin` → Members → click a member → toggle entitlement checkboxes → Save.
+Org admin → `/org-admin` → Members → click a member → toggle entitlement checkboxes → Save.
 
 Platform admin (you) — via SQL when bootstrapping:
 

@@ -22,7 +22,7 @@ You'll also want to set a spend limit on your Anthropic account (Console → Set
 
 You need to be an organisation admin to do this.
 
-1. Open **/portal/org-admin → API keys**.
+1. Open **/org-admin → API keys**.
 2. In the **Anthropic** card, paste the key into "Paste new API key".
 3. Click **Save key**.
 
@@ -38,7 +38,7 @@ The card now shows:
 
 Send a chat message in `/process-audit`. Then:
 
-- Check the **Usage** tab in `/portal/org-admin` — your call should appear.
+- Check the **Usage** tab in `/org-admin` — your call should appear.
 - Check your Anthropic console (console.anthropic.com → Settings → Usage) — the same call should appear within ~1 minute.
 
 If Vesno's Usage panel shows the call but Anthropic's console doesn't, your BYO key isn't being used (membership lookup probably failed). Email support@vesno.io.

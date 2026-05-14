@@ -241,7 +241,28 @@ function VisibilityStripVisual() {
 export default function MarketingClient() {
   const navRef = useRef(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const { user: sessionUser, signOut: sessionSignOut } = useAuth();
+  const { user: sessionUser, accessToken, signOut: sessionSignOut } = useAuth();
+
+  // Returning signed-in users with a default operating model bypass
+  // marketing — they want their workspace. Done client-side because
+  // marketing must stay statically renderable for SEO. The /api/me
+  // probe is cheap (one round-trip) and only fires for signed-in users.
+  useEffect(() => {
+    if (!sessionUser || !accessToken || typeof window === 'undefined') return;
+    let cancelled = false;
+    fetch('/api/me/operating-model', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }).then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (cancelled || !data?.modelId) return;
+        // Skip the redirect when the user explicitly opts in via ?stay=1
+        // — handy for admins demoing the marketing site or developers.
+        if (new URLSearchParams(window.location.search).get('stay') === '1') return;
+        window.location.replace('/workspace/map');
+      })
+      .catch(() => { /* never block marketing on a probe failure */ });
+    return () => { cancelled = true; };
+  }, [sessionUser, accessToken]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -353,7 +374,7 @@ export default function MarketingClient() {
             
               </p>
               <div className="hero-cta-row">
-                <Link href="/process-audit" className="btn-primary" target="_blank" rel="noopener noreferrer">
+                <Link href="/workspace/map" className="btn-primary" target="_blank" rel="noopener noreferrer">
                   Start Free Process Discovery <ArrowIcon />
                 </Link>
                 <a href="#comparison" className="btn-secondary" onClick={scrollTo('comparison')}>
@@ -374,7 +395,7 @@ export default function MarketingClient() {
             <div className="hero-stat-divider" />
             <div className="hero-stat-item">
               <span className="hero-stat-num">Human + AI</span>
-              <span className="hero-stat-label">Expert-led analysis, accelerated by audit tooling</span>
+              <span className="hero-stat-label">Expert-led analysis, accelerated by workspace tooling</span>
             </div>
             <div className="hero-stat-divider" />
             <div className="hero-stat-item">
@@ -393,7 +414,7 @@ export default function MarketingClient() {
             <div className="section-label">Our Value Add</div>
             <h2 className="section-title">Wherever the complexity lives,<br /><em>we work there</em></h2>
             <p className="section-desc">
-              Four contexts we see most often, each with its own operating rhythm and failure modes. Same audit discipline; different pressure points.
+              Four contexts we see most often, each with its own operating rhythm and failure modes. Same operational discipline; different pressure points.
             </p>
           </div>
           <ServicesSegments />
@@ -625,7 +646,7 @@ export default function MarketingClient() {
                 <div className="portal-slide portal-slide--fast">
                   <div className="ps-bar">
                     <span className="ps-dot r"/><span className="ps-dot y"/><span className="ps-dot g"/>
-                    <span className="ps-bar-title">Process Audit Report · XYZ Group</span>
+                    <span className="ps-bar-title">Operating Model · XYZ Group</span>
                     <span className="ps-bar-grade">B+</span>
                   </div>
                   <div className="ps-body">
@@ -734,7 +755,7 @@ export default function MarketingClient() {
             <div className="section-label">Our Approach</div>
             <h2 className="section-title">The modern approach to<br /><em>operational efficiency</em></h2>
             <p className="section-desc">
-              Most audits end in a deck that goes stale the week it lands. Vesno keeps your processes, costs, and bottlenecks in a living workspace, so you have ongoing visibility and can steer as operations change.
+              Most operating reviews end in a deck that goes stale the week it lands. Vesno keeps your processes, costs, and bottlenecks in a living workspace, so you have ongoing visibility and can steer as operations change.
             </p>
           </div>
 
@@ -745,7 +766,7 @@ export default function MarketingClient() {
                 <img src="https://randomuser.me/api/portraits/men/30.jpg" alt="You" width="48" height="48" style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} />
               </div>
               <div className="flow-input-name">You</div>
-              <div className="flow-input-org">Complete the process audit</div>
+              <div className="flow-input-org">Map your operating model</div>
               <div className="flow-input-fields">
                 <div className="flow-input-row">
                   <span className="flow-input-key">Your processes</span>
@@ -783,7 +804,7 @@ export default function MarketingClient() {
                     </svg>
                   </div>
                   <div className="flow-engine-module-text">
-                    <div className="flow-engine-module-label">Audit Engine</div>
+                    <div className="flow-engine-module-label">Workspace Engine</div>
                     <div className="flow-engine-module-sub">Maps processes, quantifies waste, and gives you a baseline you can track over time</div>
                   </div>
                 </div>
@@ -904,7 +925,7 @@ export default function MarketingClient() {
             <h4>Company</h4>
             <ul>
               <li><a href="#approach" onClick={scrollTo('approach')}>Approach</a></li>
-              <li><a href="#diagnostic" onClick={scrollTo('diagnostic')}>Process Audit</a></li>
+              <li><a href="#diagnostic" onClick={scrollTo('diagnostic')}>Operating Model Workspace</a></li>
               <li><a href="#diagnostic" onClick={scrollTo('diagnostic')}>Contact</a></li>
             </ul>
           </div>

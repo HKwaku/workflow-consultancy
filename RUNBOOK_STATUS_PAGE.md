@@ -27,7 +27,7 @@ Configure synthetic checks against four endpoints. Cadence: 1 minute for `/api/h
 |-----|-------------|-----|
 | `https://<your-host>/api/health` | HTTP 200 + `ok: true` in body | Primary signal. DB-backed; tells you the database is reachable. |
 | `https://<your-host>/` | HTTP 200 | Marketing landing — front door. |
-| `https://<your-host>/portal` | HTTP 200 (will redirect to login if anon — that's fine) | Portal availability. |
+| `https://<your-host>/workspace/map` | HTTP 200 (will redirect to `/signin` if anon — that's fine) | Workspace availability. |
 | `https://<your-host>/api/inngest` | HTTP 200 (Inngest serve handler responds to GET with introspection JSON) | Worker connectivity. |
 
 **Better Stack JSON-response check** (recommended for `/api/health`):

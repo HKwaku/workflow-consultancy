@@ -1,6 +1,9 @@
 # Study workflow consultancy project details
 _Exported on 4/21/2026 at 20:12:23 GMT+1 from Cursor (2.6.19)_
 
+> [!WARNING]
+> **Historical Cursor session transcript** - not authoritative documentation. Captured before the 2026-05 living-workspace migration; references to /report, /cost-analysis, /build, /api/process-diagnostic, redesign flows, PPTX exports, deal-analysis runs, etc. describe surfaces that have since been removed. For current architecture see [`docs/ARCHITECTURE.html`](./docs/ARCHITECTURE.html); for current routes see [`README.md`](./README.md).
+
 ---
 
 **User**

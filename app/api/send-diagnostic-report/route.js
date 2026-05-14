@@ -1,13 +1,10 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { getSupabaseHeaders, getSupabaseWriteHeaders, fetchWithTimeout, requireSupabase, isValidEmail, checkOrigin, getRequestId, generateDisplayCode } from '@/lib/api-helpers';
+import { getSupabaseHeaders, getSupabaseWriteHeaders, fetchWithTimeout, requireSupabase, isValidEmail, checkOrigin, getRequestId } from '@/lib/api-helpers';
 import { verifySupabaseSession } from '@/lib/auth';
 import { SendDiagnosticReportInputSchema } from '@/lib/ai-schemas';
-import { triggerWebhook } from '@/lib/triggerWebhook';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
-import { normalizeCostAuthorizedEmails, getCostAnalystNotificationTargets } from '@/lib/costAnalystEnv';
-import { maybeCompleteDeal } from '@/lib/dealStatus';
 
 export async function POST(request) {
   const originErr = checkOrigin(request);
@@ -29,7 +26,12 @@ export async function POST(request) {
       const msg = err.formErrors?.join?.(' ') || err.errors?.[0]?.message || 'Invalid request.';
       return NextResponse.json({ error: msg, details: err }, { status: 400 });
     }
-    let { editingReportId, contact, fallbackEmail, authToken, summary, recommendations, automationScore, roadmap, processes, rawProcesses, customDepartments, diagnosticMode, timestamp, userId, progressId, auditTrail, costAnalystEmail, parentReportId, dealParticipantToken, dealCode, dealFlowId, dealId } = parsed.data;
+    let { focusedProcessId, editingReportId, contact, fallbackEmail, authToken, summary, recommendations, automationScore, roadmap, processes, rawProcesses, customDepartments, timestamp, userId, progressId, auditTrail, parentReportId, dealParticipantToken, dealCode, dealFlowId, dealId, operatingModelId, functionId } = parsed.data;
+    // Living-workspace contract: prefer focusedProcessId (new key) over
+    // editingReportId (legacy alias). Both mean "this is the live row
+    // to upsert"; we collapse them into a single local that the rest of
+    // the function uses.
+    editingReportId = focusedProcessId || editingReportId;
     let resolvedEmail = (contact?.email || '').trim() || (fallbackEmail || '').trim() || '';
     if (!resolvedEmail || !isValidEmail(resolvedEmail)) {
       const token = authToken || request.headers.get('Authorization')?.replace(/^Bearer\s+/i, '')?.trim();
@@ -45,13 +47,9 @@ export async function POST(request) {
 
     const reportId = editingReportId || crypto.randomUUID();
     const isUpdate = !!editingReportId;
-    const proto = request.headers.get('x-forwarded-proto') || 'https';
-    const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'localhost:3000';
-    const baseUrl = `${proto}://${host}`;
-    const reportUrl = `${baseUrl}/report?id=${reportId}`;
-    const portalUrl = `${baseUrl}/portal`;
-    const costAnalysisToken = crypto.randomBytes(24).toString('base64url');
-    const leadScore = calculateLeadScore(contact, summary, automationScore, processes);
+    // Lead-scoring removed: it was a one-shot snapshot of "how qualified
+    // is this user as a sales lead" — pure lead-gen artefact, irrelevant
+    // to a living workspace.
     const now = new Date().toISOString();
 
     const sbConfig = requireSupabase();
@@ -63,27 +61,12 @@ export async function POST(request) {
       supabaseError = 'Supabase not configured (missing env vars)';
     }
 
-    // Collect contributor emails automatically from sharing events
+    // Collect contributor emails automatically from sharing events.
+    // diagnostic_progress table dropped — handover-by-forwarded-link
+    // no longer captures a second email. The cost-analyst hand-off is
+    // also gone, so this is currently always an empty set; kept as the
+    // collection point in case future sharing features need it.
     const autoContributors = new Set();
-    // Cost analyst is always a contributor
-    if (costAnalystEmail) {
-      const ca = (costAnalystEmail || '').trim().toLowerCase();
-      if (ca && isValidEmail(ca) && ca !== resolvedEmailLower) autoContributors.add(ca);
-    }
-    // Fetch the progress record to see if the link was forwarded to someone
-    if (sbConfig && progressId && !isUpdate) {
-      try {
-        const { url: supabaseUrl, key: supabaseKey } = sbConfig;
-        const pgResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_progress?id=eq.${progressId}&select=email`, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
-        if (pgResp.ok) {
-          const [pgRow] = await pgResp.json();
-          const pgEmail = (pgRow?.email || '').trim().toLowerCase();
-          if (pgEmail && isValidEmail(pgEmail) && pgEmail !== resolvedEmailLower) {
-            autoContributors.add(pgEmail);
-          }
-        }
-      } catch { /* non-fatal */ }
-    }
     const contributorEmailsToSave = [...autoContributors];
 
     // Resolve deal participant token → deal link data (non-fatal if missing/invalid)
@@ -198,7 +181,7 @@ export async function POST(request) {
             // Look for an existing participant on this deal that the
             // signed-in user owns (by email).
             const partsResp = await fetchWithTimeout(
-              `${supabaseUrl}/rest/v1/deal_participants?deal_id=eq.${encodeURIComponent(dealId)}&select=id,role,participant_email,status,report_id`,
+              `${supabaseUrl}/rest/v1/deal_participants?deal_id=eq.${encodeURIComponent(dealId)}&select=id,role,participant_email,status,process_id`,
               { method: 'GET', headers: getSupabaseHeaders(supabaseKey) },
             );
             if (partsResp.ok) {
@@ -246,35 +229,13 @@ export async function POST(request) {
     if (sbConfig) {
       const { url: supabaseUrl, key: supabaseKey } = sbConfig;
       try {
-        const costAnalysisPending = (summary?.totalAnnualCost || 0) === 0 && diagnosticMode === 'comprehensive';
-        let costStatus = costAnalysisPending ? 'pending' : 'complete';
-        let costToken = costAnalysisPending ? costAnalysisToken : undefined;
-        let existingAuthorizedEmails = [];
-
-        if (isUpdate) {
-          const readResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}&select=diagnostic_data`, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
-          if (readResp.ok) {
-            try {
-              const [existing] = await readResp.json();
-              const dd = existing?.diagnostic_data || {};
-              if (dd.costAnalysisStatus === 'complete') {
-                costStatus = 'complete';
-                costToken = undefined;
-              } else if (dd.costAnalysisToken) {
-                costToken = dd.costAnalysisToken;
-              }
-              if (Array.isArray(dd.costAuthorizedEmails)) {
-                existingAuthorizedEmails = dd.costAuthorizedEmails;
-              }
-            } catch { /* keep new token */ }
-          }
-        }
-
-        const mergedCostAuthorizedEmails = normalizeCostAuthorizedEmails({
-          costAnalystEmail,
-          existing: existingAuthorizedEmails,
-          ownerEmail: contact.email || '',
-        });
+        // Living-workspace contract: no consultant token, no
+        // costAnalysisStatus gate, no costAuthorizedEmails list. The owner
+        // edits costs directly on the canvas. The previous flow persisted
+        // a token + 'pending' status to invite a cost analyst to fill in
+        // the numbers via a separate URL — that surface was 410'd and the
+        // dashboard link became inert. Stop persisting the fields so the
+        // dashboard stops advertising a flow that doesn't work.
 
         // Guard: only write known segment values to the DB column (has a CHECK constraint).
         // Unknown values (e.g. a new module not yet in the migration) are stored in
@@ -282,52 +243,54 @@ export async function POST(request) {
         const VALID_DB_SEGMENTS = ['scaling', 'ma', 'pe', 'highstakes', 'high-risk-ops'];
         const safeSegment = VALID_DB_SEGMENTS.includes(contact.segment) ? contact.segment : null;
 
+        // Living-workspace contract: the row is the live state of the
+        // process, not a captured submission. We DO NOT persist a
+        // submission-time `summary` / `recommendations` / `automationScore`
+        // / `leadScore` snapshot — those are derived on read from
+        // rawProcesses[].steps[] via lib/processMetrics.js, and any
+        // captured copy goes stale the moment the user edits a step.
+        // The fields we keep on flow_data are the canvas state itself
+        // (rawProcesses, processes, customDepartments), the contact +
+        // segment metadata for routing, and the auditTrail tail.
         const reportPayload = {
           id: reportId,
-          display_code: !isUpdate ? generateDisplayCode() : undefined,
           contact_email: contact.email || '',
           contact_name: contact.name || '',
           company: contact.company || '',
-          contributor_emails: contributorEmailsToSave,
-          lead_score: leadScore.score,
-          lead_grade: leadScore.grade,
-          diagnostic_mode: diagnosticMode || 'comprehensive',
           segment: safeSegment,
-          cost_analysis_status: costStatus,
-          cost_analysis_token: costToken || null,
-          cost_analysis_token_expires_at: costToken ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null,
-          total_annual_cost: summary?.totalAnnualCost || null,
-          potential_savings: summary?.potentialSavings || null,
-          automation_percentage: automationScore?.percentage || null,
-          automation_grade: automationScore?.grade || null,
-          diagnostic_data: {
-            contact, summary, recommendations, automationScore, roadmap, processes, rawProcesses: rawProcesses || null, customDepartments: customDepartments || [], leadScore, diagnosticMode: diagnosticMode || 'comprehensive', auditTrail: (auditTrail || []).slice(-50),
-            costAnalysisStatus: costStatus,
-            ...(costToken ? { costAnalysisToken: costToken } : {}),
-            // Only users in this list (or holders of the cost_analysis_token) can see cost data.
-            // Seeded from DEFAULT_COST_ANALYST_EMAILS + per-request costAnalystEmail + any
-            // addresses already persisted on the report.
-            costAuthorizedEmails: mergedCostAuthorizedEmails,
+          flow_data: {
+            contact,
+            processes,
+            rawProcesses: rawProcesses || null,
+            customDepartments: customDepartments || [],
+            // auditTrail is NOT persisted any more — the `changes` table
+            // is the canonical relational audit log. The in-memory
+            // auditTrail array on DiagnosticContext stays as a real-time
+            // activity feed for the UI; it just doesn't land in flow_data.
+            //
+            // costAnalysisToken / costAnalysisStatus / costAuthorizedEmails
+            // are NOT persisted - the cost-analyst hand-off flow is gone.
           },
           updated_at: now,
           ...(userId ? { user_id: userId } : {}),
           ...(parentReportId && !isUpdate ? { parent_report_id: parentReportId } : {}),
-          ...(dealLink && !isUpdate ? { deal_id: dealLink.dealId, deal_role: dealLink.dealRole } : {}),
+          ...(dealLink && !isUpdate ? { deal_id: dealLink.dealId } : {}),
+          ...(operatingModelId && !isUpdate ? { operating_model_id: operatingModelId } : {}),
+          ...(functionId && !isUpdate     ? { function_id: functionId } : {}),
         };
         if (!isUpdate) reportPayload.created_at = timestamp || now;
 
-        // Optional columns that may not exist in older deployed schemas. If
-        // PostgREST returns "Could not find the 'X' column" (PGRST204), drop
-        // that column from the payload and retry. This makes us resilient to
-        // un-applied migrations (segment, contributor_emails, deal_id, etc.).
-        const OPTIONAL_COLUMNS = ['segment', 'contributor_emails', 'deal_id', 'deal_role', 'parent_report_id', 'display_code', 'cost_analysis_token_expires_at'];
+        // Optional columns that may not exist in older deployed schemas.
+        // After the living-workspace migration the dropped columns won't
+        // be in the payload at all, so this list is much shorter.
+        const OPTIONAL_COLUMNS = ['segment', 'deal_id', 'parent_report_id', 'operating_model_id', 'function_id'];
 
         async function attemptWrite(payload) {
           if (isUpdate) {
             const updatePayload = { ...payload }; delete updatePayload.id; delete updatePayload.created_at;
-            return fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}`, { method: 'PATCH', headers: getSupabaseWriteHeaders(supabaseKey), body: JSON.stringify(updatePayload) });
+            return fetchWithTimeout(`${supabaseUrl}/rest/v1/processes?id=eq.${reportId}`, { method: 'PATCH', headers: getSupabaseWriteHeaders(supabaseKey), body: JSON.stringify(updatePayload) });
           }
-          return fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports`, { method: 'POST', headers: getSupabaseWriteHeaders(supabaseKey), body: JSON.stringify(payload) });
+          return fetchWithTimeout(`${supabaseUrl}/rest/v1/processes`, { method: 'POST', headers: getSupabaseWriteHeaders(supabaseKey), body: JSON.stringify(payload) });
         }
 
         let sbResp;
@@ -356,19 +319,19 @@ export async function POST(request) {
           supabaseError = `Supabase write failed (${sbResp.status}): ${lastBody.slice(0, 200)}`;
         }
 
-        if (storedInSupabase && !isUpdate) {
-          // Email follow-ups disabled — keep linkProgressRecord and deal updates only.
-          linkProgressRecord(supabaseUrl, supabaseKey, progressId, reportId, getRequestId(request));
-          if (dealLink) {
-            const dealReqId = getRequestId(request);
-            (async () => {
-              await completeDealParticipant(supabaseUrl, supabaseKey, dealLink.participantId, reportId, now, dealReqId);
-              if (dealLink.dealFlowId) {
-                await completeDealFlow(supabaseUrl, supabaseKey, dealLink.dealFlowId, reportId, now, dealReqId);
-              }
-              await maybeCompleteDeal({ dealId: dealLink.dealId, supabaseUrl, supabaseKey, requestId: dealReqId });
-            })();
-          }
+        // Living-workspace contract: link the process to the deal
+        // participant + flow slot, but DO NOT freeze them. There is no
+        // 'complete' terminal state — the participant keeps editing on
+        // the live canvas. `maybeCompleteDeal` is also gone; deals
+        // don't have a derived-complete state anymore.
+        if (storedInSupabase && !isUpdate && dealLink) {
+          const dealReqId = getRequestId(request);
+          (async () => {
+            await linkParticipantToProcess(supabaseUrl, supabaseKey, dealLink.participantId, reportId, dealReqId);
+            if (dealLink.dealFlowId) {
+              await linkFlowToProcess(supabaseUrl, supabaseKey, dealLink.dealFlowId, reportId, dealReqId);
+            }
+          })();
         }
       } catch (sbErr) {
         supabaseError = sbErr.message;
@@ -376,49 +339,19 @@ export async function POST(request) {
       }
     }
 
-    const notif = buildNotificationSummary(contact, summary, leadScore, automationScore);
-    const n8nPayload = {
-      requestType: 'diagnostic-complete',
-      reportId,
-      reportUrl,
-      portalUrl,
-      contact: {
-        name: contact.name || '',
-        email: contact.email || '',
-        company: contact.company || '',
-        segment: contact.segment || '',
-      },
-      leadScore: { score: leadScore.score, grade: leadScore.grade },
-      summary: {
-        totalProcesses: summary?.totalProcesses || 0,
-        totalAnnualCost: summary?.totalAnnualCost || 0,
-        potentialSavings: summary?.potentialSavings || 0,
-      },
-      automationScore: {
-        percentage: automationScore?.percentage || 0,
-        grade: automationScore?.grade || 'N/A',
-      },
-      notification: notif,
-      timestamp: timestamp || now,
-      contributorEmails: contributorEmailsToSave,
-    };
-
-    // All report-related email webhooks disabled.
-    const webhookConfigured = false;
-    const webhookResponse = null;
-    void n8nPayload;
-
-    const costAnalysisPending = (summary?.totalAnnualCost || 0) === 0 && diagnosticMode === 'comprehensive';
-    const costAnalysisUrl = costAnalysisPending ? `${baseUrl}/cost-analysis?id=${reportId}&token=${costAnalysisToken}` : null;
+    // Living-workspace contract: this endpoint is just an upsert into
+    // `processes`. There are no follow-on "deliverable" side effects
+    // (no email notification, no lead-score snapshot, no cost-analysis
+    // pending workflow). The earlier code shipped all of those — n8n
+    // notification with lead-score/summary, separate cost-analysis
+    // share link with pending state. All gone.
+    void contributorEmailsToSave;
 
     return NextResponse.json({
-      success: true, reportId,
-      reportUrl: storedInSupabase ? reportUrl : null,
-      costAnalysisUrl: costAnalysisPending ? costAnalysisUrl : null,
-      webhookConfigured, storedInSupabase, leadScore,
+      success: true,
+      reportId,
+      storedInSupabase,
       ...(supabaseError && { supabaseError }),
-      message: webhookConfigured ? 'Report sent successfully.' : 'Report generated.',
-      ...(webhookResponse || {}),
     });
   } catch (error) {
     logger.error('Send diagnostic report error', { requestId: getRequestId(request), error: error.message, stack: error.stack });
@@ -426,101 +359,41 @@ export async function POST(request) {
   }
 }
 
-async function scheduleFollowups(supabaseUrl, supabaseKey, reportId, contact, now, requestId) {
-  try {
-    const base = new Date(now);
-    const rows = [
-      { followup_type: 'day3', scheduled_for: new Date(base.getTime() + 3 * 86400000).toISOString() },
-      { followup_type: 'day14', scheduled_for: new Date(base.getTime() + 14 * 86400000).toISOString() },
-      { followup_type: 'day30', scheduled_for: new Date(base.getTime() + 30 * 86400000).toISOString() },
-    ].map((r) => ({
-      id: crypto.randomUUID(),
-      report_id: reportId,
-      contact_email: contact.email,
-      // contact_name and company are sourced via FK join on report; not duplicated here
-      ...r,
-      status: 'pending',
-      created_at: now,
-    }));
-
-    await fetchWithTimeout(`${supabaseUrl}/rest/v1/followup_events`, {
-      method: 'POST',
-      headers: { ...getSupabaseWriteHeaders(supabaseKey), 'Prefer': 'return=minimal' },
-      body: JSON.stringify(rows),
-    });
-  } catch (err) {
-    logger.warn('Failed to schedule follow-ups', { requestId, message: err.message });
-  }
-}
-
-async function completeDealParticipant(supabaseUrl, supabaseKey, participantId, reportId, now, requestId) {
+// Link the process row to a deal_participant slot. Does NOT flip the
+// participant to status='complete' — there is no terminal state in the
+// living-workspace model; participants keep editing on the live canvas.
+async function linkParticipantToProcess(supabaseUrl, supabaseKey, participantId, reportId, requestId) {
   try {
     await fetchWithTimeout(
       `${supabaseUrl}/rest/v1/deal_participants?id=eq.${encodeURIComponent(participantId)}`,
       {
         method: 'PATCH',
         headers: getSupabaseWriteHeaders(supabaseKey),
-        body: JSON.stringify({ report_id: reportId, status: 'complete', completed_at: now }),
+        body: JSON.stringify({ process_id: reportId }),
       }
     );
   } catch (err) {
-    logger.warn('Failed to mark deal participant complete', { requestId, message: err.message });
+    logger.warn('Failed to link participant to process', { requestId, message: err.message });
   }
 }
 
-async function completeDealFlow(supabaseUrl, supabaseKey, dealFlowId, reportId, _now, requestId) {
+// Link the process row to a deal_flow slot. Does NOT flip the flow to
+// status='complete'. The deal stays open as the participant keeps editing.
+async function linkFlowToProcess(supabaseUrl, supabaseKey, dealFlowId, reportId, requestId) {
   try {
     await fetchWithTimeout(
       `${supabaseUrl}/rest/v1/deal_flows?id=eq.${encodeURIComponent(dealFlowId)}`,
       {
         method: 'PATCH',
         headers: getSupabaseWriteHeaders(supabaseKey),
-        body: JSON.stringify({ report_id: reportId, status: 'complete' }),
+        body: JSON.stringify({ process_id: reportId }),
       }
     );
   } catch (err) {
-    logger.warn('Failed to mark deal flow complete', { requestId, message: err.message });
+    logger.warn('Failed to link flow to process', { requestId, message: err.message });
   }
 }
 
-async function linkProgressRecord(supabaseUrl, supabaseKey, progressId, reportId, requestId) {
-  if (!progressId) return;
-  try {
-    await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_progress?id=eq.${encodeURIComponent(progressId)}`, {
-      method: 'PATCH',
-      headers: getSupabaseWriteHeaders(supabaseKey),
-      body: JSON.stringify({ report_id: reportId }),
-    });
-  } catch (err) {
-    logger.warn('Failed to link progress record to report', { requestId, message: err.message });
-  }
-}
-
-function calculateLeadScore(contact, summary, automationScore, processes) {
-  let score = 0; const factors = [];
-  const sizeMap = { '1-10': 5, '11-50': 10, '51-200': 15, '201-500': 18, '500+': 20 };
-  const sizeScore = sizeMap[contact.teamSize] || 8; score += sizeScore; factors.push({ factor: 'Company size', value: contact.teamSize || 'unknown', points: sizeScore });
-  const cost = summary?.totalAnnualCost || 0;
-  let costScore = cost >= 500000 ? 25 : cost >= 200000 ? 20 : cost >= 100000 ? 15 : cost >= 50000 ? 10 : cost >= 20000 ? 5 : 0;
-  score += costScore; factors.push({ factor: 'Annual process cost', value: '£' + (cost / 1000).toFixed(0) + 'K', points: costScore });
-  const autoPerc = automationScore?.percentage || 0;
-  let autoScore = autoPerc >= 70 ? 20 : autoPerc >= 50 ? 15 : autoPerc >= 30 ? 10 : autoPerc > 0 ? 5 : 0;
-  score += autoScore; factors.push({ factor: 'Automation readiness', value: autoPerc + '%', points: autoScore });
-  const numProc = summary?.totalProcesses || 0;
-  const procScore = Math.min(10, numProc * 4); score += procScore;
-  const qualScore = summary?.qualityScore || 0;
-  let engScore = qualScore >= 80 ? 15 : qualScore >= 60 ? 10 : qualScore >= 40 ? 5 : 0; score += engScore;
-  let contactScore = 0;
-  if (contact.email) contactScore += 3; if (contact.phone) contactScore += 3; if (contact.title) contactScore += 2; if (contact.industry) contactScore += 2;
-  score += contactScore;
-  score = Math.max(0, Math.min(100, score));
-  const grade = score >= 80 ? 'Hot' : score >= 60 ? 'Warm' : score >= 40 ? 'Interested' : 'Cold';
-  return { score, grade, factors };
-}
-
-function buildNotificationSummary(contact, summary, leadScore, automationScore) {
-  const cost = summary?.totalAnnualCost || 0;
-  const headline = `New Process Audit Completed: ${contact.company || 'Unknown Company'}`;
-  const subject = `[${leadScore.grade}] New Process Audit: ${contact.company || 'Unknown'} - £${(cost / 1000).toFixed(0)}K annual cost`;
-  return { headline, subject, priority: leadScore.grade === 'Hot' ? 'high' : leadScore.grade === 'Warm' ? 'medium' : 'low' };
-}
+// calculateLeadScore and buildNotificationSummary removed — both were
+// lead-gen helpers for the email notification that a "new audit" had
+// arrived. There is no "audit completion" event in the living model.

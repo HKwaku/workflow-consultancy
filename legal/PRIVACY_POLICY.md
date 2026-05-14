@@ -88,11 +88,11 @@ You have the right to:
 
 | Right | How to exercise |
 |-------|-----------------|
-| Access your data | `/portal/settings` → Download my data |
+| Access your data | Settings popover (gear icon on the chat rail in `/workspace/map`) → Download my data |
 | Correct inaccurate data | Edit in-app or email `privacy@vesno.io` |
-| Delete your data ("right to erasure") | `/portal/settings` → Delete account (30-day grace) |
+| Delete your data ("right to erasure") | Settings popover → Delete account (30-day grace) |
 | Restrict processing | Email `privacy@vesno.io` |
-| Data portability | `/portal/settings` → Download my data (JSON) |
+| Data portability | Settings popover → Download my data (JSON) |
 | Object to processing | Email `privacy@vesno.io` |
 | Withdraw consent | Unsubscribe links in marketing email; in-app for in-product notifications |
 | Lodge a complaint | UK: ICO. EU: your local data protection authority |

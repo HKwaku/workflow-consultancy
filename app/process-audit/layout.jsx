@@ -1,8 +1,7 @@
-import '../../public/styles/diagnostic.css';
-import '../../public/styles/flow-canvas.css';
-import '../../lib/modules/report/report.css';
-import '../../lib/modules/cost/cost.css';
+// Legacy alias route: the page-level redirect fires before any layout
+// renders, so no CSS imports are needed here. Kept as a no-op layout to
+// preserve the directory structure during the rename to /workspace/map.
 
-export default function DiagnosticLayout({ children }) {
+export default function ProcessAuditLegacyLayout({ children }) {
   return children;
 }

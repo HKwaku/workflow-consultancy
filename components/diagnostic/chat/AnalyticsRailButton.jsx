@@ -1,32 +1,23 @@
 'use client';
 
 /**
- * Rail icon for the diagnostic chat that opens the legacy /portal/analytics
- * page inside an iframe. We use an iframe deliberately:
+ * Rail icon for the diagnostic chat that opens analytics in an overlay.
+ * Renders AnalyticsCanvasPanel directly — no iframe — so analytics lives
+ * in the canvas alongside the rest of the workspace.
  *
- * Previous attempts re-hosted `PortalAnalyticsPanel` directly inside the
- * modal and side-effect imported portal.css + report.css + cost.css to make
- * its classes resolve. That joined ~1,300 rules to the chat page's cascade,
- * which interacted unpredictably with diagnostic.css depending on Next.js
- * bundle ordering. Every component change reordered the cascade and broke
- * the analytics styling again. Patches were band-aids coupled to a specific
- * load order and stopped winning the moment the bundler re-ordered.
- *
- * An iframe gives us a hard CSS boundary. Whatever /portal/analytics
- * renders, renders — independent of the chat page's CSS. The trade-off is
- * the iframe scroll feel inside a modal, which is acceptable for a surface
- * the user opens infrequently.
+ * Mobile dispatches `vesno:open-analytics-canvas` which the workspace
+ * listens for and mounts the same panel inside its canvas column.
  */
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import AnalyticsCanvasPanel from '@/components/workspace/AnalyticsCanvasPanel';
 
 export default function AnalyticsRailButton({ accessToken, sessionUserEmail }) {
-  void accessToken; // iframe authenticates via the user's existing Supabase cookie
+  void accessToken;
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
 
-  // Legacy /portal/analytics → redirect → ?openAnalytics=1 — auto-open once.
   useEffect(() => {
     if (searchParams?.get('openAnalytics') === '1') setOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -39,18 +30,6 @@ export default function AnalyticsRailButton({ accessToken, sessionUserEmail }) {
     return () => document.removeEventListener('keydown', onKey);
   }, [open]);
 
-  // Stripped embed route — renders only PortalAnalyticsPanel + auth gate.
-  // No portal header / dashboard chrome / sidebar. CSS still side-effect
-  // imported inside the iframe but isolated from the chat surface by the
-  // iframe boundary (the whole reason we picked this approach).
-  const iframeSrc = '/portal/analytics/embed';
-
-  // On mobile we don't want the modal to slap a full-screen iframe over
-  // the chat — the user wants analytics to live in the Canvas tab so
-  // they can flip between chat + analytics with the existing tab toggle.
-  // The button dispatches a custom event the workspace listens for; the
-  // workspace then mounts the iframe inside the canvas column and flips
-  // mobileView to 'canvas'. Desktop keeps the overlay behaviour.
   const handleClick = () => {
     if (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches) {
       window.dispatchEvent(new CustomEvent('vesno:open-analytics-canvas'));
@@ -84,16 +63,12 @@ export default function AnalyticsRailButton({ accessToken, sessionUserEmail }) {
                 <span className="deal-workspace-bar-name">{sessionUserEmail || ''}</span>
               </div>
               <div className="deal-workspace-bar-actions">
-                <a className="deal-doc-viewer-btn" href="/portal/analytics" target="_blank" rel="noopener noreferrer">Open in new tab</a>
                 <button type="button" className="deal-doc-viewer-btn" onClick={() => setOpen(false)} aria-label="Close">Close</button>
               </div>
             </div>
-            <iframe
-              src={iframeSrc}
-              className="analytics-modal-iframe"
-              title="Analytics"
-              loading="lazy"
-            />
+            <div className="analytics-modal-content" style={{ flex: 1, overflow: 'auto' }}>
+              <AnalyticsCanvasPanel />
+            </div>
           </div>
         </div>
       )}

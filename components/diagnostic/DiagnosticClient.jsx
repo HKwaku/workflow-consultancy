@@ -10,7 +10,6 @@ import { apiFetch } from '@/lib/api-fetch';
 import { DEPT_INTERNAL, DEPT_EXTERNAL } from '@/lib/diagnostic/stepConstants';
 import DealsRailButton from './chat/DealsRailButton';
 import HomeRailButton from './chat/HomeRailButton';
-import ReportsRailButton from './chat/ReportsRailButton';
 import SettingsRailButton from './chat/SettingsRailButton';
 import DocsRailButton from './chat/DocsRailButton';
 import AnalyticsRailButton from './chat/AnalyticsRailButton';
@@ -18,6 +17,7 @@ import DealContextChip from './chat/DealContextChip';
 import CreditsWidget from './chat/CreditsWidget';
 import SignInRequired from './chat/SignInRequired';
 import { CanvasActionProvider } from './chat/CanvasActionContext';
+import CapabilityIntakePicker from './CapabilityIntakePicker';
 
 const STANDARD_DEPTS = new Set([...DEPT_INTERNAL, ...DEPT_EXTERNAL]);
 
@@ -37,88 +37,19 @@ function extractCustomDepts(rawProcesses) {
   return custom;
 }
 
-/* Build a personalised redesign opening message from raw process data */
-function buildAiRedesignGreeting(raw, processName) {
-  const BOTTLENECK_LABELS = {
-    waiting: 'waiting time',
-    approvals: 'approval bottlenecks',
-    handoffs: 'handoff issues',
-    'manual-work': 'manual work',
-    rework: 'rework and errors',
-    systems: 'system and tool issues',
-  };
-
-  const name = processName || raw.processName || 'your process';
-  const stepCount = (raw.steps || []).length;
-  const bottleneckReason = raw.bottleneck?.reason;
-  const bottleneckDetail = raw.bottleneck?.why;
-  const biggestDelay = raw.biggestDelay;
-  const issues = raw.issues || [];
-  const waitMins = raw.userTime?.waiting || 0;
-  const emailHandoffs = (raw.handoffs || []).filter(h => h.method === 'email').length;
-  const savingsPct = raw.savings?.estimatedSavingsPercent || 0;
-
-  const findings = [];
-  if (bottleneckReason) {
-    const label = BOTTLENECK_LABELS[bottleneckReason] || bottleneckReason;
-    findings.push(`**${label}** flagged as the main bottleneck`);
-  }
-  if (issues.length > 0) findings.push(`${issues.length} issue${issues.length > 1 ? 's' : ''} identified`);
-  if (emailHandoffs > 0) findings.push(`${emailHandoffs} email handoff${emailHandoffs > 1 ? 's' : ''} in the flow`);
-  if (waitMins > 0) findings.push(`${waitMins} minutes of waiting time per run`);
-
-  const detailClause = bottleneckDetail || biggestDelay
-    ? ` - "${bottleneckDetail || biggestDelay}"`
-    : '';
-
-  const savingsClause = savingsPct > 0 ? ` with a ~${savingsPct}% estimated saving opportunity` : '';
-
-  const findingsLine = findings.length > 0
-    ? `I've reviewed your **${name}** diagnostic (${stepCount} steps). We found ${findings.join(', ')}${detailClause}${savingsClause}.`
-    : `I've reviewed your **${name}** diagnostic (${stepCount} steps)${savingsClause}.`;
-
-  return `${findingsLine}\n\nWould you like to start with the highest bottleneck area, or focus on the highest cost savings first?`;
-}
-
 /* Lazy load heavy screens and panels – diagnostic opens with minimal bundle */
 const DiagnosticWorkspace = dynamic(() => import('./screens/DiagnosticWorkspace'), {
   ssr: false,
   loading: () => <div className="loading-state"><div className="loading-spinner" /><p>Loading workspace...</p></div>,
 });
 const ScreenLoading = () => <div className="loading-state"><div className="loading-spinner" /><p>Loading...</p></div>;
-const Screen1SelectTemplate = dynamic(() => import('./screens/Screen1SelectTemplate'), { ssr: false, loading: ScreenLoading });
-const Screen6Complete = dynamic(() => import('./screens/Screen6Complete'), { ssr: false, loading: ScreenLoading });
+// Screen1SelectTemplate + Screen6Complete removed in living-workspace
+// migration. There is no mandatory template-picker step (the chat agent
+// can apply a template via replace_all_steps when the user asks) and no
+// terminal "complete the audit" screen (saves land via inline upsert).
+// AUDIT_SEGMENTS removed: it was a four-tile picker constant that was
+// never actually rendered — pure dead code from the report-gen era.
 const AuditTrailPanel = dynamic(() => import('./AuditTrailPanel'), { ssr: false });
-const AUDIT_SEGMENTS = [
-  {
-    id: 'scaling',
-    variant: 'teal',
-    label: 'Scaling Business',
-    tagline: 'Growing fast, processes breaking',
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width={22} height={22}><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>,
-  },
-  {
-    id: 'ma',
-    variant: 'violet',
-    label: 'M&A Integration',
-    tagline: 'Day 1 baseline, integration clarity',
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width={22} height={22}><circle cx="8" cy="18" r="3"/><circle cx="16" cy="6" r="3"/><path d="M8 15V9a6 6 0 016-6"/><path d="M16 9v6a6 6 0 01-6 6"/></svg>,
-  },
-  {
-    id: 'pe',
-    variant: 'amber',
-    label: 'Private Equity',
-    tagline: 'Acquisition baseline to exit-ready',
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width={22} height={22}><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>,
-  },
-  {
-    id: 'high-risk-ops',
-    variant: 'rose',
-    label: 'High Risk Ops',
-    tagline: 'Compliance gaps, key-person risk, failure points',
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width={22} height={22}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
-  },
-];
 
 // Map deal type + role to the closest audit segment for AI context
 function dealRoleToSegment(dealType, role) {
@@ -141,7 +72,7 @@ const ROLE_LABEL = {
   self: 'Self',
 };
 
-function AuditGate({ onComplete, dealContext, onDealCodeResolved, sessionUser }) {
+function AuditGate({ onComplete, dealContext, onDealCodeResolved, sessionUser, accessToken }) {
   // dealContext: { participantToken, dealName, dealType, processName, companyName, role, participantName }
   const fromDeal = !!dealContext?.participantToken;
 
@@ -150,6 +81,10 @@ function AuditGate({ onComplete, dealContext, onDealCodeResolved, sessionUser })
   const [company, setCompany] = useState(dealContext?.companyName || '');
   const [title, setTitle] = useState('');
   const [error, setError] = useState('');
+  // Workspace anchors picked via CapabilityIntakePicker (signed-in users
+  // with a default operating model only). Threaded into onComplete so the
+  // new diagnostic_report row files under the chosen capability on insert.
+  const [workspaceAnchor, setWorkspaceAnchor] = useState(null);
 
   const [dealCodeInput, setDealCodeInput] = useState('');
   const [dealCodeExpanded, setDealCodeExpanded] = useState(false);
@@ -192,6 +127,13 @@ function AuditGate({ onComplete, dealContext, onDealCodeResolved, sessionUser })
       segment,
       dealParticipantToken: dealContext?.participantToken || null,
       dealCode: dealContext?.dealCode || resolvedFromCode?.dealCode || null,
+      // Workspace anchors — only present for signed-in users who picked a
+      // capability above. Deal-bound flows skip this; their anchoring
+      // happens through deal_participants → deal_flows.
+      operatingModelId:   !fromDeal ? (workspaceAnchor?.operatingModelId   || null) : null,
+      functionId:       !fromDeal ? (workspaceAnchor?.functionId       || null) : null,
+      functionPath:     !fromDeal ? (workspaceAnchor?.functionPath     || null) : null,
+      operatingModelName: !fromDeal ? (workspaceAnchor?.modelName          || null) : null,
     });
   };
 
@@ -230,9 +172,9 @@ function AuditGate({ onComplete, dealContext, onDealCodeResolved, sessionUser })
             </>
           ) : (
             <>
-              <h1 className="audit-gate-hero-title">Start your process audit</h1>
+              <h1 className="audit-gate-hero-title">Map a new process</h1>
               <p className="audit-gate-hero-lede">
-                We&apos;ll tailor the audit to your situation and send your report to your inbox.
+                Reina will walk you through it. Once you&apos;re done, the process lands in your workspace, already filed under the capability you pick.
               </p>
             </>
           )}
@@ -322,6 +264,12 @@ function AuditGate({ onComplete, dealContext, onDealCodeResolved, sessionUser })
               )}
             </div>
           )}
+          {!fromDeal && accessToken && (
+            <CapabilityIntakePicker
+              accessToken={accessToken}
+              onChange={setWorkspaceAnchor}
+            />
+          )}
           {!fromDeal && resolvedFromCode && (
             <div className="audit-gate-deal-confirmed">
               <span className="audit-gate-deal-confirmed-icon">✓</span>
@@ -339,12 +287,12 @@ function AuditGate({ onComplete, dealContext, onDealCodeResolved, sessionUser })
           {error && <p className="audit-gate-error">{error}</p>}
 
           <button type="submit" className="audit-gate-submit">
-            Start Audit →
+            Map this process →
           </button>
         </form>
 
         <p className="audit-gate-footer">
-          Already have an account? <a href="/portal">Sign in</a>
+          Already have an account? <a href="/signin">Sign in</a>
         </p>
       </div>
     </div>
@@ -365,7 +313,7 @@ function ChatWorkspaceShell({ children, sessionUser, accessToken, onSignOut }) {
             <HomeRailButton />
             {sessionUser && (
               <a
-                href="/portal/org-admin"
+                href="/org-admin"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="s7-split-rail-btn s7-split-rail-link"
@@ -380,9 +328,8 @@ function ChatWorkspaceShell({ children, sessionUser, accessToken, onSignOut }) {
                 </svg>
               </a>
             )}
-            {sessionUser && <ReportsRailButton accessToken={accessToken} sessionUserEmail={sessionUser.email} />}
-            {sessionUser && <DealsRailButton accessToken={accessToken} />}
-            {sessionUser && <AnalyticsRailButton accessToken={accessToken} sessionUserEmail={sessionUser.email} />}
+            {/* Deals + Analytics moved to the workspace tabs.
+                Users get there via the "Open workspace" affordance. */}
             {/* Bottom group — Docs sits just above the Settings footer to
                 match the canonical rail order in DiagnosticWorkspace. */}
             <div className="s7-split-rail-bottom-group" style={{ marginTop: 'auto' }}>
@@ -394,7 +341,7 @@ function ChatWorkspaceShell({ children, sessionUser, accessToken, onSignOut }) {
               <SettingsRailButton accessToken={accessToken} sessionUser={sessionUser} onSignOut={onSignOut} />
             ) : (
               <a
-                href="/portal"
+                href="/signin"
                 className="s7-split-rail-btn s7-split-rail-link"
                 title="Sign in"
               >
@@ -428,7 +375,7 @@ function DiagnosticContent() {
     currentScreen, loadProgress, restoreProgress, goToScreen,
     setAuthUser, authUser,
     updateProcessData, setModuleId, moduleId,
-    setEditingReportId, editingReportId, setEditingRedesign, setEditingAnalysis, setDiagnosticMode,
+    setEditingReportId, editingReportId, setViewOnlyProcessId, setEditingSurface, setWorkspaceAnchors,
     setChatMessages, addAuditEvent, auditTrail,
     dealId, setDeal, resetProcess, setCompletedProcesses,
   } = useDiagnostic();
@@ -442,7 +389,6 @@ function DiagnosticContent() {
   const [gateCompleted, setGateCompleted] = useState(false);
   const [dealContext, setDealContext] = useState(null); // resolved from ?participant=TOKEN
   const [reportToLoad, setReportToLoad] = useState(null); // report object to load into Screen2
-  const [redesignReportId, setRedesignReportId] = useState(null); // trigger redesign in Screen2
   const { user: sessionUser, accessToken, loading: authLoading, signOut: sessionSignOut } = useAuth();
 
   // Resolve ?participant=TOKEN deal invite link
@@ -584,7 +530,7 @@ function DiagnosticContent() {
   }, [urlDealFlowId, accessToken, authLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Restore pending module context saved before a sign-in redirect
-  // (e.g. a PE roll-up user who was sent to /portal?returnTo=/process-audit).
+  // (e.g. a PE roll-up user who was sent to /portal?returnTo=/workspace/map).
   // Only skips the audit gate when there is a context to restore - plain signed-in
   // visits from the marketing page should still see the gate (module selection).
   useEffect(() => {
@@ -614,7 +560,7 @@ function DiagnosticContent() {
     if (authUser?.email) setGateCompleted(true);
   }, [authUser?.email]);
 
-  // Skip gate for signed-in users arriving at /process-audit directly.
+  // Skip gate for signed-in users arriving at /workspace/map directly.
   // Segment selection happens via chips inside Screen2 so the gate isn't needed.
   // Deal participant flows still need the gate (they have a participantToken).
   // Deal flow slot (dealFlowId) is handled by its own resolver above, which seeds
@@ -642,9 +588,20 @@ function DiagnosticContent() {
 
   const urlReaudit = searchParams.get('reaudit');
   const urlEdit = searchParams.get('edit');
+  // ?view=<processId> → load the flow read-only on the canvas. Same data
+  // path as ?edit, but we never set editingReportId so the chat / save
+  // / mutation chrome stays inert. The user explicitly opts into editing
+  // via the "Edit flow" CTA in the view-mode banner.
+  const urlView = searchParams.get('view');
   const urlEditEmail = searchParams.get('email');
-  const urlEditRedesign = searchParams.get('editRedesign') === '1';
-  const urlAiRedesign = searchParams.get('aiRedesign') === '1';
+  // Resolve the load id once: edit takes precedence (full edit chrome),
+  // otherwise view loads the same data without the editingReportId flag.
+  const loadId = urlEdit || urlView || null;
+  const isViewOnly = !!(urlView && !urlEdit);
+  // surface=target → edits target_data instead of diagnostic_data. The
+  // workspace's process design surface deep-links here when the user
+  // clicks "Edit target in chat".
+  const urlSurface = searchParams.get('surface') === 'target' ? 'target' : 'current';
   const urlViewCost = searchParams.get('view') === 'cost';
   // When the user enters edit mode from a deal artefact, this flag
   // tells the loader to also fetch the deal and rehydrate the
@@ -695,9 +652,9 @@ function DiagnosticContent() {
           .map((p) => p.processName || p.name || '')
           .filter(Boolean);
         updateProcessData({ parentReportId: urlReaudit, seedProcessNames: processNames });
-        goToScreen(1.5);
+        goToScreen(2);
       })
-      .catch(() => { goToScreen(1.5); });
+      .catch(() => { goToScreen(2); });
   }, [urlReaudit]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Skip gate for portal editing flows
@@ -731,7 +688,17 @@ function DiagnosticContent() {
         const r = await apiFetch(`/api/chat-sessions/${encodeURIComponent(urlChatSession)}`, {}, accessToken);
         const data = r.ok ? await r.json() : null;
         if (!data?.success || !Array.isArray(data.messages)) {
-          setEditError('Could not load this chat. It may have been deleted.');
+          // Soft-fail: a stale chatSession URL (e.g. localStorage held
+          // an id whose underlying session was deleted, or the deal it
+          // belonged to was wiped + reseeded) shouldn't block the rest
+          // of the page. Strip the param from the URL so the user can
+          // proceed normally and refreshes don't keep retrying it.
+          if (typeof window !== 'undefined') {
+            const sp = new URLSearchParams(window.location.search);
+            sp.delete('chatSession');
+            const next = sp.toString();
+            window.history.replaceState(null, '', window.location.pathname + (next ? `?${next}` : ''));
+          }
           return;
         }
         const snapshot = data.session?.process_snapshot;
@@ -750,9 +717,7 @@ function DiagnosticContent() {
           // would otherwise re-hydrate the canvas from the previous report.
           resetProcess();
           setEditingReportId(null);
-          setEditingRedesign(false);
           setReportToLoad(null);
-          setRedesignReportId(null);
           setCompletedProcesses([]);
         } else if (reportId) {
           // No snapshot (older session) - hydrate from the report's rawProcesses.
@@ -779,7 +744,6 @@ function DiagnosticContent() {
                   costs: raw.costs || { hourlyRate: 50, teamSize: 1 },
                 },
                 contact: dd.contact || report.contact || null,
-                diagnosticMode: report?.diagnosticMode || dd.diagnosticMode || 'comprehensive',
                 editingReportId: reportId,
               });
             }
@@ -788,7 +752,6 @@ function DiagnosticContent() {
 
         if (reportId) {
           setEditingReportId(reportId);
-          if (data.session.kind === 'redesign') setEditingRedesign(true);
         }
         try {
           const key = reportId ? `vesno_chat_session_${reportId}` : 'vesno_chat_session_active';
@@ -832,20 +795,27 @@ function DiagnosticContent() {
         setChatMessages(restoredMessages);
         goToScreen(2);
       } catch {
-        setEditError('Could not load this chat.');
+        // Soft-fail (see comment above). Network blip / orphaned
+        // session shouldn't kill the page.
+        if (typeof window !== 'undefined') {
+          const sp = new URLSearchParams(window.location.search);
+          sp.delete('chatSession');
+          const next = sp.toString();
+          window.history.replaceState(null, '', window.location.pathname + (next ? `?${next}` : ''));
+        }
       }
     })();
-  }, [urlChatSession, accessToken, authLoading, setChatMessages, goToScreen, updateProcessData, restoreProgress, setEditingReportId, setEditingRedesign, resetProcess, setCompletedProcesses]);
+  }, [urlChatSession, accessToken, authLoading, setChatMessages, goToScreen, updateProcessData, restoreProgress, setEditingReportId, resetProcess, setCompletedProcesses]);
 
   useEffect(() => {
-    if (!urlEdit || editLoadedRef.current) return;
+    if (!loadId || editLoadedRef.current) return;
     // Wait for auth when we need it: (a) editable=true mode requires
     // a token; (b) editFromDeal=<dealId> needs a token to fetch the
     // deal record so the workspace can rehydrate dealId / dealName /
     // dealRole. Without (b) the effect ran before accessToken was
     // ready, fetchDealContextSlice bailed null, and the deal chip /
     // rail tools disappeared during the edit session.
-    const authRequired = !!(urlEditEmail || urlEditFromDeal);
+    const authRequired = !!(urlEditEmail || urlEditFromDeal || urlSurface === 'target');
     if (authRequired && authLoading) return;
     if (authRequired && !accessToken) {
       setEditError('Please sign in to edit this report.');
@@ -856,11 +826,15 @@ function DiagnosticContent() {
     setEditLoading(true);
     setEditError(null);
 
-    const url = urlEditEmail
-      ? `/api/get-diagnostic?id=${encodeURIComponent(urlEdit)}&editable=true${urlEditRedesign ? '&editRedesign=1' : ''}`
-      : `/api/get-diagnostic?id=${encodeURIComponent(urlEdit)}`;
+    // surface=target needs editable=true (writes go through the editable
+    // codepath which gates on contact_email ownership). Force it on.
+    const needsEditable = !!urlEditEmail || urlSurface === 'target';
+    const surfaceQs = urlSurface === 'target' ? '&surface=target' : '';
+    const url = needsEditable
+      ? `/api/get-diagnostic?id=${encodeURIComponent(loadId)}&editable=true${surfaceQs}`
+      : `/api/get-diagnostic?id=${encodeURIComponent(loadId)}`;
 
-    apiFetch(url, {}, urlEdit ? accessToken : null)
+    apiFetch(url, {}, loadId ? accessToken : null)
       .then(async r => { try { return await r.json(); } catch { throw new Error('Invalid response'); } })
       .then(async data => {
         if (!data.success || !data.report) {
@@ -894,6 +868,12 @@ function DiagnosticContent() {
             waitExternal: s.waitExternal,
             capacity: s.capacity,
             durationUnit: s.durationUnit,
+            // Workspace anchors needed by the swimlane Sub-function /
+            // Function toggle. Without these, the toggle has no data to
+            // resolve from and silently falls back to the role label.
+            roleId:       s.roleId       ?? null,
+            functionId:   s.functionId   ?? s.function_id   ?? null,
+            capabilityId: s.capabilityId ?? s.capability_id ?? null,
           })),
           handoffs: (raw.handoffs || []).map(h => ({
             from: h.from || {},
@@ -919,19 +899,29 @@ function DiagnosticContent() {
           flowNodePositions: raw.flowNodePositions || {},
         };
 
-        const mode = r.diagnosticMode || dd.diagnosticMode || 'comprehensive';
-        setEditingReportId(urlEdit);
-        setDiagnosticMode(mode);
-        const isEditRedesign = !!data.report?.editRedesign || urlAiRedesign;
-        setEditingRedesign(isEditRedesign);
-        const editGreeting = urlAiRedesign
-          ? buildAiRedesignGreeting(raw, raw.processName)
-          : urlViewCost
-          ? "You're working on the cost analysis for this process. Update labour rates, non-labour costs, or implementation investment on the right - or ask me to adjust figures, explain the payback/ROI math, or call out where the biggest savings are. What would you like to do?"
-          : isEditRedesign
-          ? "You're editing your redesigned flow. I can help you refine steps, add details, or adjust the process. What would you like to change?"
-          : "You're editing your process audit. I can help you refine steps, add details, or adjust the process. What would you like to change?";
-        setChatMessages([{ role: 'assistant', content: editGreeting }]);
+        // In view-only mode we keep editingReportId null so the edit chrome
+        // (save buttons, chat-driven mutation tools, etc.) stays inert.
+        // viewOnlyProcessId carries the process id for the banner CTA.
+        setEditingReportId(isViewOnly ? null : urlEdit);
+        if (isViewOnly && setViewOnlyProcessId) setViewOnlyProcessId(loadId);
+        // Surface comes from the API echo (preferred - survives query-string
+        // edits) or falls back to the URL param. Determines whether the
+        // upcoming save lands in diagnostic_data or target_data.
+        setEditingSurface(r.surface || urlSurface);
+        // Don't clobber the chat thread when opening a process from the
+        // workspace — the chat is a continuous conversation, not a
+        // per-process greeting surface. The hydrate-from-session block
+        // below restores any prior turns for this report; otherwise the
+        // pillar intro in DiagnosticWorkspace seeds the first message
+        // when the chat is genuinely empty. The view-only banner already
+        // tells the user they're viewing on the canvas, so we don't need
+        // a canned assistant turn to repeat that.
+        if (!isViewOnly) {
+          const editGreeting = urlViewCost
+            ? "You're working on the cost analysis for this process. Update labour rates, non-labour costs, or implementation investment on the right - or ask me to adjust figures, explain the payback/ROI math, or call out where the biggest savings are. What would you like to do?"
+            : "You're editing this process. I can help you refine steps, add details, or adjust the flow. What would you like to change?";
+          setChatMessages([{ role: 'assistant', content: editGreeting }]);
+        }
         const editContact = {
           name: r.contactName || contact.name || '',
           email: r.contactEmail || contact.email || urlEditEmail || '',
@@ -968,18 +958,24 @@ function DiagnosticContent() {
               waitExternal: s.waitExternal,
               capacity: s.capacity,
               durationUnit: s.durationUnit,
+              roleId:       s.roleId       ?? null,
+              functionId:   s.functionId   ?? s.function_id   ?? null,
+              capabilityId: s.capabilityId ?? s.capability_id ?? null,
             })),
             handoffs: rp.handoffs || [],
           })),
           customDepartments: [...new Set([...(dd.customDepartments || []), ...extractCustomDepts(r.rawProcesses || dd.rawProcesses || [])])],
           stepCount: processData.steps.length,
-          editingReportId: urlEdit,
-          editingRedesign: isEditRedesign,
-          aiRedesignMode: urlAiRedesign,
-          diagnosticMode: mode,
+          editingReportId: urlEdit, // null in view-only mode → no edit chrome
+          viewOnlyProcessId: isViewOnly ? loadId : null,
           ...(dealCtx || {}),
         });
-        queueMicrotask(() => addAuditEvent({ type: 'edit', detail: `Opened report ${urlEdit} for editing` }));
+        queueMicrotask(() => addAuditEvent({
+          type: isViewOnly ? 'view' : 'edit',
+          detail: isViewOnly
+            ? `Opened report ${loadId} (view only)`
+            : `Opened report ${urlEdit} for editing`,
+        }));
 
         // Hydrate chat + artefacts from the associated chat session so a
         // refresh preserves history (the greeting above is a fallback when
@@ -1024,128 +1020,17 @@ function DiagnosticContent() {
         setEditError('Failed to load report. Please check your connection and try again.');
         setEditLoading(false);
       });
-  }, [urlEdit, urlEditEmail, urlEditRedesign, urlEditFromDeal, fetchDealContextSlice, authLoading, accessToken, restoreProgress, setEditingReportId, setEditingRedesign, setChatMessages, setDiagnosticMode, addAuditEvent]);
+  }, [urlEdit, urlView, loadId, isViewOnly, urlEditEmail, urlEditFromDeal, fetchDealContextSlice, authLoading, accessToken, restoreProgress, setEditingReportId, setViewOnlyProcessId, setChatMessages, addAuditEvent]);
 
-  // Handle ?editAnalysis=<id>&deal=<dealId> — open a deal-analysis
-  // (typically a redesign output) in the canvas edit mode. Converts
-  // result.redesignedProcess to the steps[] / handoffs[] shape the
-  // workspace expects, sets editingAnalysisId so save knows where to
-  // PATCH back. Same surface as the diagnostic_reports edit path.
-  const urlEditAnalysisId = searchParams.get('editAnalysis');
-  const urlEditAnalysisDealId = searchParams.get('deal');
-  const editAnalysisLoadedRef = useRef(false);
+  // ?step=N deep-links to a specific step. ?resume=xxx was a resume-link
+  // hydrator that read /api/progress (now 410, diagnostic_progress table
+  // dropped). Resume URLs were a snapshot-era "send a colleague a link to
+  // your half-done diagnostic" feature; superseded by autosave + deal
+  // collaborators.
   useEffect(() => {
-    if (!urlEditAnalysisId || !urlEditAnalysisDealId || editAnalysisLoadedRef.current) return;
-    if (authLoading) return;
-    if (!accessToken) {
-      setEditError('Please sign in to edit this redesign.');
-      setEditLoading(false);
-      return;
-    }
-    editAnalysisLoadedRef.current = true;
-    setEditLoading(true);
-    setEditError(null);
-
-    Promise.all([
-      apiFetch(`/api/deals/${encodeURIComponent(urlEditAnalysisDealId)}/analyses/${encodeURIComponent(urlEditAnalysisId)}`, {}, accessToken)
-        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))),
-      // Pull deal context in parallel so DealContextChip / rail tools
-      // light up alongside the canvas — without this the user lands in
-      // "edit mode" but the surrounding UI thinks they're not in a deal.
-      fetchDealContextSlice(urlEditAnalysisDealId),
-    ])
-      .then(([d, dealCtx]) => {
-        const analysis = d?.analysis || d;
-        const result = analysis?.result || {};
-        const rp = Array.isArray(result.redesignedProcess) ? result.redesignedProcess : [];
-        if (rp.length === 0) {
-          setEditError('This analysis has no redesigned process to edit.');
-          setEditLoading(false);
-          return;
-        }
-        const steps = rp.map((s, i) => ({
-          number: s.stepNumber || i + 1,
-          name: s.name || '',
-          department: s.department || '',
-          isDecision: !!s.isDecision,
-          isExternal: false,
-          branches: [],
-          systems: s.systems || [],
-        }));
-        const handoffs = steps.slice(0, -1).map(() => ({ from: {}, to: {}, method: 'system', clarity: '' }));
-        const processData = {
-          processType: 'pe',
-          processName: result.processName || analysis?.name || 'Redesigned process',
-          definition: { startsWhen: '', completesWhen: '', complexity: '', departments: [] },
-          lastExample: { name: '', startDate: '', endDate: '', elapsedDays: 0 },
-          userTime: { meetings: 0, emails: 0, execution: 0, waiting: 0, rework: 0, total: 0 },
-          steps,
-          handoffs,
-          systems: [],
-          frequency: { type: '', annual: 0 },
-          costs: { hourlyRate: 50, teamSize: 1 },
-          flowCustomEdges: [],
-          flowDeletedEdges: [],
-          flowNodePositions: {},
-        };
-        setEditingReportId(null);
-        setEditingRedesign(true);
-        setEditingAnalysis({ analysisId: urlEditAnalysisId, dealId: urlEditAnalysisDealId });
-        setChatMessages([{ role: 'assistant', content: "You're editing the redesigned flow for this deal. Save once you're happy with the changes." }]);
-        restoreProgress({
-          currentScreen: 2,
-          processData,
-          stepCount: steps.length,
-          editingReportId: null,
-          editingRedesign: true,
-          editingAnalysisId: urlEditAnalysisId,
-          editingAnalysisDealId: urlEditAnalysisDealId,
-          ...(dealCtx || { dealId: urlEditAnalysisDealId }),
-        });
-        queueMicrotask(() => addAuditEvent({ type: 'edit', detail: `Opened analysis ${urlEditAnalysisId} for editing` }));
-        setEditLoading(false);
-      })
-      .catch(() => {
-        setEditError('Failed to load analysis. Please check your connection and try again.');
-        setEditLoading(false);
-      });
-  }, [urlEditAnalysisId, urlEditAnalysisDealId, fetchDealContextSlice, authLoading, accessToken, restoreProgress, setEditingReportId, setEditingRedesign, setEditingAnalysis, setChatMessages, addAuditEvent]);
-
-  // Handle ?resume=xxx - load from API; ?step=N deep-links to a specific step
-  useEffect(() => {
-    const resumeId = searchParams.get('resume');
     const stepParam = searchParams.get('step');
     if (stepParam != null) setInitialStepIdx(parseInt(stepParam, 10) || 0);
-    if (resumeId && !resumeChecked) {
-      setResumeChecked(true);
-      fetch(`/api/progress?id=${encodeURIComponent(resumeId)}`)
-        .then(async (r) => { try { return await r.json(); } catch { throw new Error('Invalid response'); } })
-        .then((result) => {
-          if (result.success && result.progress?.progressData) {
-            const d = result.progress.progressData;
-            setSavedData({
-              currentScreen: d.currentScreen ?? result.progress.currentScreen,
-              processData: d.processData,
-              completedProcesses: d.completedProcesses || [],
-              customDepartments: [...new Set([...(d.customDepartments || []), ...extractCustomDepts(d.processData ? [d.processData, ...(d.completedProcesses || [])] : [])])],
-              stepCount: d.stepCount ?? 0,
-              diagnosticMode: d.diagnosticMode || 'comprehensive',
-              teamMode: d.teamMode || null,
-              contact: d.contact || null,
-              authUser: d.authUser || null,
-              chatMessages: d.chatMessages,
-              timestamp: result.progress.updatedAt || result.progress.createdAt || new Date().toISOString(),
-              handoverSender: d.handoverSender || null,
-              handoverComments: d.handoverComments || null,
-              processName: d.processData?.processName || result.progress.processName || null,
-            });
-            setShowResume(true);
-          }
-        })
-        .catch(() => setResumeChecked(true));
-      return;
-    }
-    if (!resumeId && !resumeChecked) {
+    if (!resumeChecked) {
       setResumeChecked(true);
       const data = loadProgress();
       if (data && data.currentScreen > 0) {
@@ -1156,11 +1041,11 @@ function DiagnosticContent() {
   }, [searchParams, resumeChecked, loadProgress]);
 
   /*
-   * Pre-report refresh hydration: plain /diagnostic (no ?chatSession, no ?edit,
-   * no ?resume) relies on localStorage for chat history, which misses
-   * chat_artefacts rows saved in the cloud. Pull the active session from
+   * Pre-report refresh hydration: plain /workspace/map (no ?chatSession,
+   * no ?edit) relies on localStorage for chat history, which misses
+   * cloud-persisted chat sessions. Pull the active session from
    * /api/chat-sessions so pills (flow snapshots, phase transitions, pins)
-   * survive a refresh before any report exists.
+   * survive a refresh before any process row exists.
    */
   const preReportHydrateRef = useRef(false);
   // Explicit "New chat" intent (?new=1): clear the active-session pointer
@@ -1300,10 +1185,8 @@ function DiagnosticContent() {
     if (savedData) {
       restoreProgress(savedData);
       addAuditEvent({
-        type: savedData.handoverSender ? 'handover' : 'resume',
-        description: savedData.handoverSender
-          ? `Handover accepted from ${savedData.handoverSender}`
-          : 'Resumed from saved progress',
+        type: 'resume',
+        description: 'Resumed from saved progress',
         actor: authUser?.name || authUser?.email || sessionUser?.email || null,
       });
       setShowResume(false);
@@ -1358,56 +1241,35 @@ function DiagnosticContent() {
     }
   }, [currentScreen]);
 
-  const handleScreen6Complete = useCallback(async (reportId) => {
-    try {
-      const data = await apiFetch(`/api/get-diagnostic?id=${encodeURIComponent(reportId)}`, {}, accessToken || undefined);
-      if (data.success && data.report) {
-        setReportToLoad(data.report);
-      }
-    } catch { /* non-fatal - Screen2 will show an empty workspace */ }
-    goToScreen(2);
-  }, [accessToken, goToScreen]);
+  // handleScreen6Complete removed: the completion screen is gone, so
+  // there's no terminal callback to hook. Saves transition the canvas
+  // in place via setEditingReportId.
 
-  // Force-remount the workspace when the bound context changes — switching
-  // deals, opening a different report, or unbinding any of them. Without
-  // this, DiagnosticWorkspace's *local* useState(steps) (seeded once via
-  // useMemo) survives the switch and re-paints the previous flow on the
-  // canvas, even though global processData has been reset.
-  const workspaceKey = `ws:${editingReportId || ''}:${dealId || ''}:${urlChatSession || ''}`;
+  // Force-remount the workspace when the bound context changes —
+  // opening a different report or chat session, or unbinding either.
+  // Earlier this also keyed on dealId so picking a deal would reset
+  // local state, but that wiped the canvas overlay (workspaceCanvasOpen)
+  // every time the user picked a deal in the in-canvas Deals picker
+  // — which read like the canvas was being "overridden". Deal context
+  // now flows through React context only; DiagnosticWorkspace adapts
+  // without remounting.
+  const workspaceKey = `ws:${editingReportId || ''}:${urlChatSession || ''}`;
 
   const renderScreen = () => {
-    switch (currentScreen) {
-      case 1.5:
-        return <Screen1SelectTemplate />;
-      case 2:
-        return (
-          <DiagnosticWorkspace
-            key={workspaceKey}
-            initialStepIdx={initialStepIdx}
-            onAuditTrailToggle={() => setShowAuditTrail((v) => !v)}
-            auditTrailOpen={showAuditTrail}
-            reportToLoad={reportToLoad}
-            onReportLoaded={() => setReportToLoad(null)}
-            redesignReportId={redesignReportId}
-            onRedesignConsumed={() => setRedesignReportId(null)}
-          />
-        );
-      case 6:
-        return <Screen6Complete onComplete={handleScreen6Complete} />;
-      default:
-        return (
-          <DiagnosticWorkspace
-            key={workspaceKey}
-            initialStepIdx={initialStepIdx}
-            onAuditTrailToggle={() => setShowAuditTrail((v) => !v)}
-            auditTrailOpen={showAuditTrail}
-            reportToLoad={reportToLoad}
-            onReportLoaded={() => setReportToLoad(null)}
-            redesignReportId={redesignReportId}
-            onRedesignConsumed={() => setRedesignReportId(null)}
-          />
-        );
-    }
+    // Living-workspace contract: there is one render — the canvas.
+    // No screen switch, no template-picker step, no completion screen.
+    // The `currentScreen` field survives only as a back-compat hook for
+    // legacy persisted state (it's no longer driving render branches).
+    return (
+      <DiagnosticWorkspace
+        key={workspaceKey}
+        initialStepIdx={initialStepIdx}
+        onAuditTrailToggle={() => setShowAuditTrail((v) => !v)}
+        auditTrailOpen={showAuditTrail}
+        reportToLoad={reportToLoad}
+        onReportLoaded={() => setReportToLoad(null)}
+      />
+    );
   };
 
   const handleDealCodeResolved = useCallback((data) => {
@@ -1424,7 +1286,7 @@ function DiagnosticContent() {
     });
   }, []);
 
-  const handleGateComplete = ({ name, email, company, title, segment, dealParticipantToken, dealCode }) => {
+  const handleGateComplete = ({ name, email, company, title, segment, dealParticipantToken, dealCode, operatingModelId, functionId, functionPath, operatingModelName }) => {
     const resolvedModuleId = segment ? normaliseModuleId(segment) : null;
     setAuthUser({
       name, email, company, title,
@@ -1432,6 +1294,15 @@ function DiagnosticContent() {
       dealCode: dealCode || null,
     });
     if (resolvedModuleId) setModuleId(resolvedModuleId);
+    // Stash workspace anchors so sendDiagnosticReport pulls them in on
+    // submit, and so the chat agent's system prompt can mention the
+    // picked capability. Setting nulls is fine — context allows it.
+    setWorkspaceAnchors({
+      operatingModelId:   operatingModelId   || null,
+      functionId:       functionId       || null,
+      functionPath:     functionPath     || null,
+      operatingModelName: operatingModelName || null,
+    });
     updateProcessData({
       ...(resolvedModuleId ? { segment: resolvedModuleId } : {}),
       ...(dealParticipantToken ? { dealParticipantToken } : {}),
@@ -1478,7 +1349,7 @@ function DiagnosticContent() {
   // can't be metered against an unidentified user.
   const isParticipantInvite = !!dealContext?.participantToken;
   if (!sessionUser && !isParticipantInvite) {
-    return <SignInRequired returnTo="/process-audit" />;
+    return <SignInRequired returnTo="/workspace/map" />;
   }
 
   if (!gateCompleted) {
@@ -1490,23 +1361,39 @@ function DiagnosticContent() {
     if (willAutoComplete) {
       return <div className="loading-state" style={{ minHeight: '100dvh' }}><div className="loading-spinner" /></div>;
     }
-    return <AuditGate onComplete={handleGateComplete} dealContext={dealContext} onDealCodeResolved={handleDealCodeResolved} sessionUser={sessionUser} />;
+    return <AuditGate onComplete={handleGateComplete} dealContext={dealContext} onDealCodeResolved={handleDealCodeResolved} sessionUser={sessionUser} accessToken={accessToken} />;
   }
 
   if (editLoading || editError) {
+    // Scoped loader: keep the rail (and rest of the chrome) mounted so
+    // the spinner only covers the chat / canvas area, not the whole
+    // viewport. Without this, the loader mounts before any shell and
+    // the user loses the workspace rail / nav while the flow hydrates.
     return (
-      <div className="loading-state" style={{ padding: 80, textAlign: 'center' }}>
-        {editError ? (
-          <>
-            <p style={{ color: 'var(--red, #dc2626)', marginBottom: 16 }}>{editError}</p>
-            <a href="/portal" style={{ color: 'var(--accent)', fontWeight: 500 }}>Back to Dashboard</a>
-          </>
-        ) : (
-          <>
-            <div className="loading-spinner" />
-            <p style={{ marginTop: 16, color: 'var(--text-mid)' }}>Loading audit data for editing...</p>
-          </>
-        )}
+      <div className="diagnostic-shell container container-wide">
+        <ChatWorkspaceShell sessionUser={sessionUser} accessToken={accessToken} onSignOut={sessionSignOut}>
+          <div className="loading-state" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', textAlign: 'center', padding: 32 }}>
+            {editError ? (
+              <>
+                <p style={{ color: 'var(--red, #dc2626)', marginBottom: 16 }}>{editError}</p>
+                <a
+                  href="/workspace"
+                  style={{ color: 'var(--accent)', fontWeight: 500 }}
+                  onClick={(e) => {
+                    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+                    e.preventDefault();
+                    window.dispatchEvent(new CustomEvent('vesno:open-workspace'));
+                  }}
+                >&larr; Back to workspace</a>
+              </>
+            ) : (
+              <>
+                <div className="loading-spinner" />
+                <p style={{ marginTop: 16, color: 'var(--text-mid)' }}>{isViewOnly ? 'Loading flow...' : 'Loading process data for editing...'}</p>
+              </>
+            )}
+          </div>
+        </ChatWorkspaceShell>
       </div>
     );
   }
@@ -1522,37 +1409,15 @@ function DiagnosticContent() {
             <ChatWorkspaceShell sessionUser={sessionUser} accessToken={accessToken} onSignOut={sessionSignOut}>
               <>
                 {showResume && savedData && (
-                  savedData.handoverSender ? (
-                    <div className="handover-fullscreen">
-                      <video className="handover-fullscreen-video" autoPlay muted loop playsInline>
-                        <source src="/videos/hero-bg.mp4" type="video/mp4" />
-                      </video>
-                      <div className="handover-fullscreen-overlay" />
-                      <div className="handover-fullscreen-card">
-                        <div className="resume-toast-icon">
-                          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="1.8"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-                        </div>
-                        <h4 className="resume-toast-title"><strong>{savedData.handoverSender}</strong> has sent you a process flow to complete</h4>
-                        {savedData.processName && <p className="resume-toast-process">Process: <strong>{savedData.processName}</strong></p>}
-                        {savedData.handoverComments && <p className="resume-toast-comments">&ldquo;{savedData.handoverComments}&rdquo;</p>}
-                        <p className="resume-toast-cta">Click below to accept and complete your steps.</p>
-                        <div className="resume-toast-actions">
-                          <button type="button" className="resume-toast-btn resume-toast-btn-primary" onClick={handleResumeYes}>Accept &amp; continue</button>
-                          <button type="button" className="resume-toast-btn resume-toast-btn-secondary-light" onClick={handleResumeNo}>Decline</button>
-                        </div>
-                      </div>
+                  <div className="resume-toast">
+                    <p>
+                      You have saved progress{savedData.timestamp ? <> from <strong>{new Date(savedData.timestamp).toLocaleDateString('en-GB')}</strong></> : ''}.
+                    </p>
+                    <div className="resume-toast-actions">
+                      <button type="button" className="resume-toast-btn resume-toast-btn-primary" onClick={handleResumeYes}>Continue</button>
+                      <button type="button" className="resume-toast-btn resume-toast-btn-secondary" onClick={handleResumeNo}>Start fresh</button>
                     </div>
-                  ) : (
-                    <div className="resume-toast">
-                      <p>
-                        You have saved progress{savedData.timestamp ? <> from <strong>{new Date(savedData.timestamp).toLocaleDateString('en-GB')}</strong></> : ''}.
-                      </p>
-                      <div className="resume-toast-actions">
-                        <button type="button" className="resume-toast-btn resume-toast-btn-primary" onClick={handleResumeYes}>Continue</button>
-                        <button type="button" className="resume-toast-btn resume-toast-btn-secondary" onClick={handleResumeNo}>Start fresh</button>
-                      </div>
-                    </div>
-                  )
+                  </div>
                 )}
                 {renderScreen()}
               </>

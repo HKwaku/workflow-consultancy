@@ -33,8 +33,9 @@ export async function POST(request) {
     const payloadEmail = (email || userEmail).toString().toLowerCase();
     if (payloadEmail !== userEmail) return NextResponse.json({ error: 'You can only log instances for your own email.' }, { status: 403 });
 
+    // Living-workspace migration: process_instances.report_id renamed to process_id.
     const payload = {
-      id: crypto.randomUUID(), report_id: reportId || null, email: userEmail,
+      id: crypto.randomUUID(), process_id: reportId || null, email: userEmail,
       process_name: processName, instance_name: instanceName || null,
       status, notes: notes || null, logged_at: new Date().toISOString(),
       user_id: auth.userId || null,
@@ -87,13 +88,13 @@ export async function GET(request) {
     } else {
       if (!reportId || !isValidUUID(reportId)) return NextResponse.json({ error: 'Valid reportId required.' }, { status: 400 });
       // Verify report ownership
-      const reportResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportId}&select=contact_email`, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
+      const reportResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/processes?id=eq.${reportId}&select=contact_email`, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
       let reportRows;
-      try { reportRows = reportResp.ok ? await reportResp.json() : []; } catch (e) { logger.error('Get instances: Supabase report parse error', { requestId: getRequestId(request), error: e.message }); return NextResponse.json({ error: 'Failed to verify report.' }, { status: 502 }); }
+      try { reportRows = reportResp.ok ? await reportResp.json() : []; } catch (e) { logger.error('Get instances: Supabase process parse error', { requestId: getRequestId(request), error: e.message }); return NextResponse.json({ error: 'Failed to verify process.' }, { status: 502 }); }
       if (!reportRows?.length || (reportRows[0].contact_email || '').toString().toLowerCase() !== userEmail) {
-        return NextResponse.json({ error: 'You do not have permission to access this report.' }, { status: 403 });
+        return NextResponse.json({ error: 'You do not have permission to access this process.' }, { status: 403 });
       }
-      filter = `report_id=eq.${encodeURIComponent(reportId)}`;
+      filter = `process_id=eq.${encodeURIComponent(reportId)}`;
     }
     if (processName) filter += `&process_name=eq.${encodeURIComponent(processName)}`;
 

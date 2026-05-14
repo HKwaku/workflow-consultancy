@@ -2,76 +2,27 @@
 title: Exports
 group: Reference
 order: 4
-summary: Every way to get data out of Vesno — PowerPoint, JSON, build guides for n8n / Zapier / etc.
+summary: How to get your data out of Vesno.
 ---
 
-Vesno generates structured outputs you can take elsewhere. Every export below is one click from the relevant view.
+The living-workspace model treats the workspace itself as the deliverable, so Vesno no longer ships PowerPoint, n8n / Zapier build guides, or any other vendor-specific export. The process IS the artefact; share the canvas link.
 
-## Diagnostic report → PowerPoint
+## Your data -> JSON
 
-From any saved report (`/report?id=…`), there's an **Export to PowerPoint** action.
-
-Endpoint: `GET /api/export-pptx?id=<reportId>`
-
-The deck has 5 sections:
-- Cover (process name + company + date + savings opportunity)
-- Executive summary
-- Operational footprint (steps, handoffs, departments)
-- Key findings + recommendations (grouped by quick-win / medium / project)
-- Roadmap
-
-Anyone with the report ID can trigger this — same access model as the report itself.
-
-## Diligence memo → PowerPoint
-
-From a `mode='diligence'` analysis on a deal page, **Export to PowerPoint** activates once at least one finding is approved.
-
-Endpoint: `GET /api/deals/[id]/export-diligence-pptx?analysis_id=<uuid>`
-
-Editor-only. Approved findings only — pending and rejected ones are filtered server-side. Slide order mirrors the on-screen layout exactly.
-
-## Process redesign → workflow build guides
-
-Once a redesign is accepted, the **Build** page shows tiles for every supported platform:
-
-- n8n (importable workflow JSON)
-- Zapier
-- Make
-- Power Automate
-- Pipedream
-- Airtable
-- Camunda
-- Monday
-- Process Street
-- Retool
-- SmartSuite
-- Temporal
-- Tray.io
-- Unqork
-- Workato
-
-Endpoint: `POST /api/generate-workflow-export` with `{ reportId, platform }`
-
-Generation is **deterministic** — no LLM call at this stage. The AI's work happens in the redesign step; the exporters just translate the redesigned process into each platform's JSON shape.
-
-## Your data → JSON
-
-Any signed-in user can download every row they own from `/portal/settings → Download my data`.
+Any signed-in user can download every row they own from the Settings popover (gear icon on the chat rail in `/workspace/map`) -> Download my data.
 
 Endpoint: `GET /api/me/export-data`
 
-Returns a single JSON document with diagnostic_reports, chat_sessions, chat_messages, chat_artefacts, owned deals, document metadata, and token usage. Document bytes are not inlined (download from the deal page individually). Rate-limited per user.
+Returns a single JSON document with your processes, chat sessions, chat messages, chat artefacts, owned deals, document metadata, and token usage. Document bytes are not inlined (download from the deal page individually). Rate-limited per user.
 
 This is the GDPR Article 20 export. Auditors accept it as-is.
 
-## Reports → email
-
-Every diagnostic submission triggers an email with the report URL via the n8n webhook. There's no "re-send" button right now; ask support@vesno.io if you need one.
-
 ## Common questions
 
-**Can I export findings as JSON instead of PowerPoint?** Not yet — the data is there (it's all in `deal_analyses.result`), but no JSON export endpoint. Use the GDPR export route to get all your owned data including findings.
+**Where did the PowerPoint exports go?** Retired in the living-workspace migration. PPTX was a snapshot deliverable; the canvas + chat replaces it. If you need a screenshot for a deck, the canvas renders cleanly to PNG via the browser print dialog (`Cmd/Ctrl+P -> Save as PDF`).
 
-**Can I export to Google Slides instead of PowerPoint?** PPTX files import cleanly into Google Slides. We don't ship a native Slides exporter.
+**Where did the n8n / Zapier build guides go?** Same migration. Those exports translated an AI-generated redesign into platform JSON; AI suggestions now land as inline change proposals on the live canvas rather than as a separate "redesign" artefact.
 
-**The PowerPoint has placeholder text in some slides.** That happens when a section is empty (no findings of that type). The slide renders blank rather than being skipped — easier for reviewers to spot the gap.
+**Can I share the canvas externally?** Yes - any process URL (`/workspace/map?view=<id>`) is shareable. Access is RLS-gated by the row's owner email and the operating-model membership.
+
+**Can I export findings as JSON?** Use the GDPR export route - it includes `deal_findings` rows for every deal you own.

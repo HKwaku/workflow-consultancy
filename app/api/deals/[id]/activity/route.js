@@ -4,7 +4,6 @@
  * Per-deal activity timeline. Unions:
  *   • audit_logs entries scoped to deal_id (uploads, doc opens, deletes,
  *     access events, GDPR exports, etc.)
- *   • deal_analyses status transitions (created, completed, failed, auto-triggered)
  *   • deal_qa_items lifecycle (asked, answered, skipped)
  *   • deal_finding_comments posts
  *   • deal_documents inserts (covered by audit_logs but de-duped here)
@@ -41,14 +40,9 @@ export async function GET(request, { params }) {
   const sb = requireSupabase();
   if (!sb) return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
 
-  // Pull each source in parallel; merge in-memory.
-  const [auditR, analysesR, qaR, commentsR] = await Promise.all([
+  const [auditR, qaR, commentsR] = await Promise.all([
     fetchWithTimeout(
       `${sb.url}/rest/v1/audit_logs?deal_id=eq.${id}&select=id,actor_email,actor_kind,action,target_type,target_id,outcome,details,created_at&order=created_at.desc&limit=${limit}`,
-      { method: 'GET', headers: getSupabaseHeaders(sb.key) },
-    ),
-    fetchWithTimeout(
-      `${sb.url}/rest/v1/deal_analyses?deal_id=eq.${id}&select=id,mode,status,auto_triggered,created_by_email,created_at,completed_at,error&order=created_at.desc&limit=${limit}`,
       { method: 'GET', headers: getSupabaseHeaders(sb.key) },
     ),
     fetchWithTimeout(
@@ -62,7 +56,6 @@ export async function GET(request, { params }) {
   ]);
 
   const audit    = auditR.ok    ? await auditR.json()    : [];
-  const analyses = analysesR.ok ? await analysesR.json() : [];
   const qa       = qaR.ok       ? await qaR.json()       : [];
   const comments = commentsR.ok ? await commentsR.json() : [];
 
@@ -78,26 +71,6 @@ export async function GET(request, { params }) {
       summary: humaniseAudit(a),
       details: { target_type: a.target_type, target_id: a.target_id, outcome: a.outcome, ...(a.details || {}) },
     });
-  }
-  for (const an of analyses) {
-    items.push({
-      id: `analysis-created:${an.id}`,
-      kind: 'analysis_created',
-      at: an.created_at,
-      actor: an.created_by_email || (an.auto_triggered ? 'system (auto)' : 'system'),
-      summary: `${an.auto_triggered ? 'Auto-' : ''}Started ${an.mode} analysis`,
-      details: { mode: an.mode, auto_triggered: !!an.auto_triggered, analysis_id: an.id },
-    });
-    if (an.completed_at && (an.status === 'complete' || an.status === 'failed')) {
-      items.push({
-        id: `analysis-${an.status}:${an.id}`,
-        kind: an.status === 'complete' ? 'analysis_completed' : 'analysis_failed',
-        at: an.completed_at,
-        actor: an.created_by_email || 'system',
-        summary: an.status === 'complete' ? `${an.mode} analysis completed` : `${an.mode} analysis failed`,
-        details: { mode: an.mode, analysis_id: an.id, ...(an.error ? { error: an.error } : {}) },
-      });
-    }
   }
   for (const q of qa) {
     items.push({

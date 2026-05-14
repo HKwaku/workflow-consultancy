@@ -3,9 +3,9 @@ import { getSupabaseHeaders, getSupabaseWriteHeaders, fetchWithTimeout, requireS
 import { requireAuth } from '@/lib/auth';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { requireDealEditor } from '@/lib/dealAuth';
-import { maybeCompleteDeal } from '@/lib/dealStatus';
 import { triggerWebhook } from '@/lib/triggerWebhook';
 import { logger } from '@/lib/logger';
+import { recordTransition } from '@/lib/changes/repo';
 
 const VALID_ROLES = ['platform_company', 'portfolio_company', 'acquirer', 'target', 'self'];
 
@@ -81,7 +81,7 @@ export async function POST(request, { params }) {
 
   const proto = request.headers.get('x-forwarded-proto') || 'https';
   const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'localhost:3000';
-  const inviteUrl = `${proto}://${host}/process-audit?participant=${participant.invite_token}`;
+  const inviteUrl = `${proto}://${host}/workspace/map?participant=${participant.invite_token}`;
 
   if (sendInvite && participantEmail) {
     triggerWebhook({
@@ -96,6 +96,12 @@ export async function POST(request, { params }) {
         inviteUrl,
       }],
     }).catch(() => {});
+  }
+
+  // Chat-staged proposal? Flip the proposed change to applied.
+  if (typeof body?.change_id === 'string' && body.change_id) {
+    recordTransition({ id: body.change_id, state: 'applied', actor_email: auth.email })
+      .catch((e) => logger.warn('Change transition (invite participant) failed', { requestId: getRequestId(request), message: e.message }));
   }
 
   return NextResponse.json({ success: true, participant: { ...participant, inviteUrl } });
@@ -142,30 +148,39 @@ export async function PATCH(request, { params }) {
     const [participant] = partResp.ok ? await partResp.json() : [];
     if (!participant) return NextResponse.json({ error: 'Participant not found.' }, { status: 404 });
 
-    const now = new Date().toISOString();
-
-    // Update deal_participants
+    // Living-workspace contract: linking a process to a participant does
+    // NOT flip the participant to status='complete' or write a completed_at
+    // timestamp. There is no terminal "the participant is done" state — the
+    // owner is now actively mapping on the canvas. We attach process_id and
+    // leave the lifecycle status (invited / in_progress) untouched so the
+    // normal mapping-in-progress UX continues. send-diagnostic-report's
+    // linkParticipantToProcess uses the same contract; this admin path now
+    // matches.
     const patchPartResp = await fetchWithTimeout(
       `${supabaseUrl}/rest/v1/deal_participants?id=eq.${encodeURIComponent(participantId)}`,
       {
         method: 'PATCH',
         headers: getSupabaseWriteHeaders(supabaseKey),
-        body: JSON.stringify({ report_id: reportId, status: 'complete', completed_at: now }),
+        body: JSON.stringify({ process_id: reportId }),
       }
     );
     if (!patchPartResp.ok) return NextResponse.json({ error: 'Failed to link participant.' }, { status: 502 });
 
-    // Also tag the diagnostic report with this deal
+    // Also tag the process with this deal. Living-workspace migration:
+    // table renamed, deal_role column dropped.
     await fetchWithTimeout(
-      `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${encodeURIComponent(reportId)}`,
+      `${supabaseUrl}/rest/v1/processes?id=eq.${encodeURIComponent(reportId)}`,
       {
         method: 'PATCH',
         headers: getSupabaseWriteHeaders(supabaseKey),
-        body: JSON.stringify({ deal_id: id, deal_role: participant.role }),
+        body: JSON.stringify({ deal_id: id }),
       }
     ).catch(() => {}); // non-fatal
 
-    await maybeCompleteDeal({ dealId: id, supabaseUrl, supabaseKey, requestId: getRequestId(request) });
+    if (typeof body?.change_id === 'string' && body.change_id) {
+      recordTransition({ id: body.change_id, state: 'applied', actor_email: auth.email })
+        .catch((e) => logger.warn('Change transition (link participant) failed', { requestId: getRequestId(request), message: e.message }));
+    }
 
     return NextResponse.json({ success: true });
   } catch (err) {

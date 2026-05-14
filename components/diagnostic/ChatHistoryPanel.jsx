@@ -1,9 +1,17 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/useAuth';
 import { apiFetch } from '@/lib/api-fetch';
-import { IconEdit, IconRedesign, IconArchive, IconDelete, IconPin } from './actionIcons';
+import { IconEdit, IconArchive, IconDelete, IconPin } from './actionIcons';
+
+function dispatchOpenProcess(reportId, intent) {
+  if (typeof window === 'undefined' || !reportId) return;
+  window.dispatchEvent(new CustomEvent('vesno:open-process', {
+    detail: { reportId, intent: intent === 'edit' ? 'edit' : 'view' },
+  }));
+}
 
 /**
  * Chat history panel - lists every chat_sessions row the user can see,
@@ -96,8 +104,9 @@ function useDebounced(value, ms = 250) {
   return v;
 }
 
-export default function ChatHistoryPanel({ onClose, onLoadReport, onRedesignReport }) {
+export default function ChatHistoryPanel({ onClose, onLoadReport }) {
   const { accessToken } = useAuth();
+  const router = useRouter();
   const [sessions, setSessions] = useState([]);
   const [legacyReports, setLegacyReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -196,29 +205,26 @@ export default function ChatHistoryPanel({ onClose, onLoadReport, onRedesignRepo
 
   /* Actions */
   const handleSelect = useCallback((session) => {
-    // Default click = VIEW. The user explicitly asked that opening a
-    // report shouldn't drop them into edit mode — they want to view
-    // first and choose Edit if they want to change anything. The Edit
-    // pencil icon (handleEdit) still opens the workspace in edit mode.
-    //
-    // Routing rules:
-    //   - session has a report → /report?id=<reportId> (read-only)
-    //   - legacy report row    → /report?id=<reportId> (read-only)
-    //   - session with no report (chat-only) → resume the chat, since
-    //     there's no separate "view" surface for a chat-without-report.
+    // Default click = VIEW. Open on the canvas in place (no route change,
+    // chat thread stays). For chat-only sessions (no report) we soft-route
+    // to ?chatSession=<id> so the resume-session effect picks it up; the
+    // canvas surface stays mounted because the route doesn't change.
     const reportId = session.report_id || (session.legacy ? session.id : null);
     if (reportId) {
-      window.location.href = `/report?id=${encodeURIComponent(reportId)}`;
+      dispatchOpenProcess(reportId, 'view');
+      onClose?.();
       return;
     }
-    window.location.href = `/process-audit?chatSession=${encodeURIComponent(session.id)}`;
-  }, []);
+    router.replace(`/workspace/map?chatSession=${encodeURIComponent(session.id)}`, { scroll: false });
+    onClose?.();
+  }, [onClose, router]);
 
   const handleEdit = useCallback(async (e, session) => {
     e.stopPropagation();
     const reportId = session.report_id || session.id;
     if (!onLoadReport) {
-      window.location.href = `/process-audit?edit=${encodeURIComponent(reportId)}`;
+      dispatchOpenProcess(reportId, 'edit');
+      onClose?.();
       return;
     }
     setActionLoadingId(session.id + '_edit');
@@ -229,25 +235,16 @@ export default function ChatHistoryPanel({ onClose, onLoadReport, onRedesignRepo
         onLoadReport(data.report);
         onClose();
       } else {
-        window.location.href = `/process-audit?edit=${encodeURIComponent(reportId)}`;
+        dispatchOpenProcess(reportId, 'edit');
+        onClose?.();
       }
     } catch {
-      window.location.href = `/process-audit?edit=${encodeURIComponent(reportId)}`;
+      dispatchOpenProcess(reportId, 'edit');
+      onClose?.();
     } finally {
       setActionLoadingId(null);
     }
   }, [accessToken, onLoadReport, onClose]);
-
-  const handleRedesign = useCallback((e, session) => {
-    e.stopPropagation();
-    const reportId = session.report_id || session.id;
-    if (onRedesignReport) {
-      onRedesignReport(reportId);
-      onClose();
-    } else {
-      window.location.href = `/process-audit?edit=${encodeURIComponent(reportId)}`;
-    }
-  }, [onRedesignReport, onClose]);
 
   const patchSession = useCallback(async (session, patch) => {
     if (session.legacy) return;
@@ -335,7 +332,23 @@ export default function ChatHistoryPanel({ onClose, onLoadReport, onRedesignRepo
       )}
 
       <div className="chat-history-new-btn-row">
-        <a href="/process-audit?new=1" className="chat-history-new-btn">
+        <a
+          href="/workspace/map?new=1"
+          className="chat-history-new-btn"
+          onClick={(e) => {
+            // Plain click → soft-route on the same surface (no remount);
+            // dispatch a reset event so the canvas + chat clear without
+            // a hard reload. Modifier-click falls through to a real new
+            // tab via the href.
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+            e.preventDefault();
+            router.replace('/workspace/map?new=1', { scroll: false });
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('vesno:reset-chat'));
+            }
+            onClose?.();
+          }}
+        >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           New chat
         </a>
@@ -346,7 +359,7 @@ export default function ChatHistoryPanel({ onClose, onLoadReport, onRedesignRepo
           <div className="chat-history-empty">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
             <p>Sign in to view your history.</p>
-            <a href="/portal" className="chat-history-signin-link">Sign in</a>
+            <a href="/signin" className="chat-history-signin-link">Sign in</a>
           </div>
         )}
 
@@ -370,7 +383,7 @@ export default function ChatHistoryPanel({ onClose, onLoadReport, onRedesignRepo
                   ? 'No archived conversations.'
                   : status === 'pinned'
                     ? 'Nothing pinned yet.'
-                    : <>No sessions yet.<br />Complete a diagnostic to see it here.</>}
+                    : <>No sessions yet.<br />Map a process to see it here.</>}
             </p>
           </div>
         )}
@@ -436,14 +449,6 @@ export default function ChatHistoryPanel({ onClose, onLoadReport, onRedesignRepo
                     >
                       <IconEdit />
                     </button>
-                    <button
-                      type="button"
-                      className="chat-history-action-btn"
-                      onClick={(e) => handleRedesign(e, session)}
-                      title="Redesign with AI"
-                    >
-                      <IconRedesign />
-                    </button>
                     {!session.legacy && (
                       <button
                         type="button"
@@ -474,7 +479,7 @@ export default function ChatHistoryPanel({ onClose, onLoadReport, onRedesignRepo
 
       {accessToken && !loading && filtered.length > 0 && (
         <div className="chat-history-footer">
-          <a href="/portal?dashboard=1" className="chat-history-portal-link" target="_blank" rel="noopener noreferrer">View all in dashboard →</a>
+          <a href="/workspace/map" className="chat-history-portal-link" target="_blank" rel="noopener noreferrer">Open workspace →</a>
         </div>
       )}
     </div>

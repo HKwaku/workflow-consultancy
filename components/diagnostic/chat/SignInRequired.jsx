@@ -4,7 +4,7 @@
  * Splash shown when an anonymous visitor lands on the diagnostic surface.
  * Diagnostics now require a Vesno account so we can meter the trial
  * credit allowance against a known user. Two CTAs — "Sign in" / "Create
- * account" — both deep-link into /portal with `?returnTo=/process-audit`
+ * account" — both deep-link into /portal with `?returnTo=/workspace/map`
  * so the user lands right back on the chat after signing in.
  *
  * Participant-invite flows (deal magic links) bypass this gate entirely;
@@ -13,7 +13,7 @@
 
 import Link from 'next/link';
 
-export default function SignInRequired({ returnTo = '/process-audit' }) {
+export default function SignInRequired({ returnTo = '/workspace/map' }) {
   const ret = encodeURIComponent(returnTo);
   return (
     <div className="audit-gate-screen">

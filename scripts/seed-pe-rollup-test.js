@@ -118,7 +118,6 @@ function buildRawProcess({ processName, steps, companyLabel }) {
   return {
     processName,
     processDefinition: `${processName} as run by ${companyLabel}.`,
-    diagnosticMode: 'pe',
     segment: 'pe',
     moduleId: 'pe',
     company: companyLabel,
@@ -171,7 +170,6 @@ function buildDiagnosticData({ processName, steps, companyLabel }) {
     rawProcesses: [raw],
     processes: [summaryProcess],
     summary: { totalProcesses: 1 },
-    diagnosticMode: 'pe',
     segment: 'pe',
     moduleId: 'pe',
   };
@@ -265,7 +263,6 @@ function topLineMetrics({ steps }) {
       contact_email: ownerEmail,
       contact_name: 'Acme HQ (seed)',
       company: 'Acme HQ',
-      diagnostic_mode: 'pe',
       diagnostic_data: buildDiagnosticData({ processName, steps: PLATFORM_STEPS, companyLabel: 'Acme HQ' }),
       user_id: ownerUserId,
       ...topLineMetrics({ steps: PLATFORM_STEPS }),
@@ -275,7 +272,6 @@ function topLineMetrics({ steps }) {
       contact_email: ownerEmail,
       contact_name: 'Beta Subsidiary (seed)',
       company: 'Beta Subsidiary',
-      diagnostic_mode: 'pe',
       diagnostic_data: buildDiagnosticData({ processName, steps: PORTFOLIO_STEPS, companyLabel: 'Beta Subsidiary' }),
       user_id: ownerUserId,
       ...topLineMetrics({ steps: PORTFOLIO_STEPS }),

@@ -36,7 +36,7 @@ e. Assist the Controller with:
    - Breach notification (Section 6)
    - Demonstrating compliance with UK GDPR / EU GDPR Article 28
 
-f. At termination, delete or return Customer Data within 30 days, unless retention is required by law. The Controller may export their data via `/portal/settings` at any time.
+f. At termination, delete or return Customer Data within 30 days, unless retention is required by law. The Controller may export their data via the Settings popover (gear icon on the chat rail in `/workspace/map`) at any time.
 
 ## 4. Categories of data + data subjects
 

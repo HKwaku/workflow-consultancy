@@ -10,7 +10,7 @@ async function verifyOwnership(sessionId, auth) {
   const sb = getSupabaseAdmin();
   const { data } = await sb
     .from('chat_sessions')
-    .select('id,user_id,email,report_id')
+    .select('id,user_id,email,process_id')
     .eq('id', sessionId)
     .maybeSingle();
   if (!data) return false;
@@ -20,23 +20,23 @@ async function verifyOwnership(sessionId, auth) {
     (emailLower && (data.email || '').toLowerCase() === emailLower);
   if (!sessionOwned) return false;
 
-  // If the session's report is linked to a deal (via deal_flows or
+  // If the session's process is linked to a deal (via deal_flows or
   // deal_participants) the caller must still have deal access. A participant
   // removed from a deal should not be able to resume an old session against
-  // that deal's report.
-  if (data.report_id) {
+  // that deal's process.
+  if (data.process_id) {
     try {
       const { data: flowRows } = await sb
         .from('deal_flows')
         .select('deal_id')
-        .eq('report_id', data.report_id)
+        .eq('process_id', data.process_id)
         .limit(1);
       let dealId = flowRows?.[0]?.deal_id || null;
       if (!dealId) {
         const { data: partRows } = await sb
           .from('deal_participants')
           .select('deal_id')
-          .eq('report_id', data.report_id)
+          .eq('process_id', data.process_id)
           .limit(1);
         dealId = partRows?.[0]?.deal_id || null;
       }
@@ -45,7 +45,7 @@ async function verifyOwnership(sessionId, auth) {
         if (!access) return false;
       }
     } catch {
-      /* tables may be missing pre-migration - don't block base ownership */
+      /* swallow — base ownership already passed */
     }
   }
   return true;

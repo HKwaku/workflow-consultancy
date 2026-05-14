@@ -4,6 +4,9 @@ import { getSupabaseHeaders, getSupabaseWriteHeaders, requireSupabase, fetchWith
 import { requireAuth } from '@/lib/auth';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
+import { transitionChangesForRedesign, recordChanges } from '@/lib/changes/repo';
+import { diffStepsForChangelog } from '@/lib/changes/serverDiff';
+import { syncProcessSystemsForReport } from '@/lib/operatingModel/processSystems';
 
 /** Sanitize for JSON: remove undefined, avoid circular refs */
 function sanitizeForJson(obj) {
@@ -48,32 +51,102 @@ export async function PUT(request) {
       return NextResponse.json({ error: 'Storage not configured.' }, { status: 503 });
     const { url: supabaseUrl, key: supabaseKey } = sbConfig;
 
-    const readUrl = `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportIdTrimmed}&select=id,contact_email,diagnostic_data,implementation_status`;
+    // Living-workspace migration: target_data + state_kind are gone.
+    // A process is a single living thing; there's no separate "target"
+    // surface. Reject explicit target writes with a clear message.
+    if (body.surface === 'target') {
+      return NextResponse.json(
+        { error: 'Target-state writes have been removed. Edit the live process directly.' },
+        { status: 410 },
+      );
+    }
+
+    // implementation_status: the column still exists on the table from
+    // an earlier migration but nothing reads it. Skipped here so we don't
+    // accidentally read-modify-write a frozen "checklist of stuff you
+    // said you'd do" — that surface was deleted with the report-gen UI.
+    const readUrl = `${supabaseUrl}/rest/v1/processes?id=eq.${reportIdTrimmed}&select=id,contact_email,flow_data,operating_model_id,function_id`;
     const readResp = await fetchWithTimeout(readUrl, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
     if (!readResp.ok)
       return NextResponse.json({ error: 'Failed to read report.' }, { status: 502 });
 
     let rows;
     try { rows = await readResp.json(); } catch (e) { logger.error('Update diagnostic: Supabase parse error', { requestId: getRequestId(request), error: e.message }); return NextResponse.json({ error: 'Failed to read report.' }, { status: 502 }); }
-    if (!rows || rows.length === 0)
-      return NextResponse.json({ error: 'Report not found.' }, { status: 404 });
 
-    const existing = rows[0];
-    if (existing.contact_email?.toLowerCase() !== email.toLowerCase())
-      return NextResponse.json({ error: 'You do not have permission to edit this report.' }, { status: 403 });
+    // Living-workspace contract: this endpoint is an upsert. If the row
+    // doesn't exist, the caller is creating a new process and we mint
+    // the row with their email as owner. No special "first save" path;
+    // intake and edit are the same write.
+    const isCreate = !rows || rows.length === 0;
+    let existing;
+    if (isCreate) {
+      const nowIso = new Date().toISOString();
+      const seedPayload = {
+        id: reportIdTrimmed,
+        contact_email: email,
+        contact_name: updates?.contactName || updates?.contact?.name || '',
+        company: updates?.company || updates?.contact?.company || '',
+        flow_data: {},
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+      const seedResp = await fetchWithTimeout(
+        `${supabaseUrl}/rest/v1/processes`,
+        {
+          method: 'POST',
+          headers: { ...getSupabaseWriteHeaders(supabaseKey), Prefer: 'return=representation' },
+          body: JSON.stringify(seedPayload),
+        },
+      );
+      if (!seedResp.ok && seedResp.status !== 201 && seedResp.status !== 204) {
+        const txt = await seedResp.text().catch(() => '');
+        logger.warn('Upsert create failed', { requestId: getRequestId(request), status: seedResp.status, body: txt?.slice(0, 300) });
+        return NextResponse.json({ error: 'Failed to create process.' }, { status: 502 });
+      }
+      existing = {
+        id: reportIdTrimmed,
+        contact_email: email,
+        flow_data: {},
+        operating_model_id: null,
+        function_id: null,
+      };
+    } else {
+      existing = rows[0];
+      if (existing.contact_email?.toLowerCase() !== email.toLowerCase()) {
+        return NextResponse.json({ error: 'You do not have permission to edit this process.' }, { status: 403 });
+      }
+    }
 
-    const dd = existing.diagnostic_data || {};
+    const dd = existing.flow_data || {};
+    // Snapshot the OLD rawProcesses BEFORE the merge mutates dd, so
+    // we can diff for the relational changelog after the PATCH lands.
+    const oldRawForDiff = Array.isArray(dd.rawProcesses)
+      ? JSON.parse(JSON.stringify(dd.rawProcesses))
+      : [];
 
     const topLevelPatch = { updated_at: new Date().toISOString() };
     if (updates.contactName) topLevelPatch.contact_name = updates.contactName;
     if (updates.contactEmail) topLevelPatch.contact_email = updates.contactEmail;
     if (updates.company !== undefined) topLevelPatch.company = updates.company;
-    if (updates.leadScore !== undefined) topLevelPatch.lead_score = updates.leadScore;
-    if (updates.leadGrade !== undefined) topLevelPatch.lead_grade = updates.leadGrade;
+    // lead_score / lead_grade columns dropped (lead-gen artefacts).
+    // Silently swallow any client that still sends them.
 
     if (updates.contact) dd.contact = { ...(dd.contact || {}), ...updates.contact };
-    if (updates.summary) dd.summary = { ...(dd.summary || {}), ...updates.summary };
-    if (updates.automationScore) dd.automationScore = { ...(dd.automationScore || {}), ...updates.automationScore };
+    // Living-workspace contract: `summary` / `automationScore` /
+    // `recommendations` are NOT persisted. They were submission-time
+    // snapshots that went stale the moment the user edited a step. All
+    // three derive on read now (lib/processMetrics.js for cost/savings/
+    // automation; the chat agent computes recommendations live from
+    // step structure). We silently drop any incoming payload that
+    // tries to write them — back-compat for older clients, but the
+    // fields stay empty on the row going forward. Any pre-migration
+    // rows that still carry them are read-only history; nothing in the
+    // codebase should consume them. Also strip them from `dd` so a
+    // subsequent merge doesn't preserve stale values from before.
+    delete dd.summary;
+    delete dd.automationScore;
+    delete dd.recommendations;
+    delete dd.aiRecommendations;
     if (updates.processes && Array.isArray(updates.processes)) dd.processes = updates.processes;
     if (updates.rawProcesses && Array.isArray(updates.rawProcesses)) dd.rawProcesses = updates.rawProcesses;
     if (updates.flowLayouts && Array.isArray(updates.flowLayouts)) {
@@ -94,133 +167,24 @@ export async function PUT(request) {
       }
       dd.rawProcesses = rp;
     }
-    if (updates.recommendations && Array.isArray(updates.recommendations)) dd.recommendations = updates.recommendations;
-    if (updates.roadmap) dd.roadmap = updates.roadmap;
+    // `updates.recommendations` is no longer accepted — see the
+    // delete-dd.recommendations block above. `roadmap` was a
+    // companion snapshot; drop it the same way.
+    delete dd.roadmap;
     if (updates.customDepartments && Array.isArray(updates.customDepartments)) dd.customDepartments = updates.customDepartments;
-    if (updates.implementationStatus && typeof updates.implementationStatus === 'object') {
-      topLevelPatch.implementation_status = { ...(existing.implementation_status || {}), ...updates.implementationStatus };
-    }
+    // updates.implementationStatus is silently dropped — the ImplementationTracker
+    // surface was a snapshot-era "tick off your recommendations" widget that
+    // never gets rendered in the living workspace. The DB column still
+    // exists on processes but no read path surfaces it.
 
-    // Redesign updates go to the report_redesigns table
-    if (updates.redesign && typeof updates.redesign === 'object') {
-      try {
-        const redesignId = updates.redesign.redesignId;
-        const rejectAccepted = updates.redesign.rejectAccepted === true;
+    // Living-workspace migration: the report_redesigns table is dropped.
+    // Redesigns no longer exist as a separate snapshot artefact; AI
+    // suggestions become inline `changes` rows that the user accepts
+    // in-place. Any `redesign` / `redesignFlowLayouts` keys on the
+    // update body are swallowed here — silently for back-compat.
 
-        if (rejectAccepted) {
-          const accUrl = `${supabaseUrl}/rest/v1/report_redesigns?report_id=eq.${reportIdTrimmed}&status=eq.accepted&select=id`;
-          const accResp = await fetchWithTimeout(accUrl, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
-          let accRows;
-          try { accRows = accResp.ok ? await accResp.json() : []; } catch (e) { accRows = []; }
-          if (accRows.length > 0) {
-            const patchResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/report_redesigns?id=eq.${accRows[0].id}`, {
-              method: 'PATCH', headers: getSupabaseWriteHeaders(supabaseKey),
-              body: JSON.stringify({ status: 'pending', accepted_at: null, updated_at: new Date().toISOString() })
-            });
-            if (!patchResp.ok) throw new Error('Failed to reject accepted redesign.');
-          }
-        } else {
-          const rdReadUrl = redesignId
-            ? `${supabaseUrl}/rest/v1/report_redesigns?report_id=eq.${reportIdTrimmed}&id=eq.${redesignId}&select=id,redesign_data,decisions,status`
-            : `${supabaseUrl}/rest/v1/report_redesigns?report_id=eq.${reportIdTrimmed}&select=id,redesign_data,decisions,status&order=created_at.desc&limit=1`;
-          const rdResp = await fetchWithTimeout(rdReadUrl, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
-          let rdRows;
-          try { rdRows = rdResp.ok ? await rdResp.json() : []; } catch (e) { rdRows = []; }
-
-          if (updates.redesign.acceptedAt && rdRows.length > 0) {
-            const targetId = rdRows[0].id;
-            const accCheckUrl = `${supabaseUrl}/rest/v1/report_redesigns?report_id=eq.${reportIdTrimmed}&status=eq.accepted&select=id`;
-            const accCheckResp = await fetchWithTimeout(accCheckUrl, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
-            let accCheckRows;
-            try { accCheckRows = accCheckResp.ok ? await accCheckResp.json() : []; } catch (e) { accCheckRows = []; }
-            if (accCheckRows.length > 0 && accCheckRows[0].id !== targetId) {
-              return NextResponse.json({
-                error: 'Only one redesign can be accepted at a time. Refer to the accepted redesign in your portal, or reject it first to accept a different one.',
-                code: 'REDESIGN_ALREADY_ACCEPTED'
-              }, { status: 400 });
-            }
-          }
-
-          if (rdRows.length > 0) {
-            const rd = rdRows[0];
-            const rdPatch = { updated_at: new Date().toISOString() };
-            if (updates.redesign.decisions) rdPatch.decisions = { ...(rd.decisions || {}), ...updates.redesign.decisions };
-            if (updates.redesign.acceptedAt) {
-              rdPatch.status = 'accepted';
-              rdPatch.accepted_at = updates.redesign.acceptedAt;
-            }
-            if (updates.redesign.acceptedProcesses) {
-              const procs = sanitizeForJson(updates.redesign.acceptedProcesses);
-              rdPatch.redesign_data = { ...(rd.redesign_data || {}), acceptedProcesses: procs, optimisedProcesses: procs };
-            }
-            const rdPatchStr = JSON.stringify(rdPatch);
-            const rdPatchResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/report_redesigns?id=eq.${rd.id}`, {
-              method: 'PATCH', headers: getSupabaseWriteHeaders(supabaseKey), body: rdPatchStr
-            });
-            if (!rdPatchResp.ok) {
-              const rdErr = await rdPatchResp.text();
-              logger.error('Update diagnostic: report_redesigns PATCH failed', { requestId: getRequestId(request), status: rdPatchResp.status, body: rdErr?.slice(0, 500) });
-              throw new Error('Redesign update failed: ' + (rdErr || rdPatchResp.statusText));
-            }
-          } else {
-          const rdPayload = {
-            id: crypto.randomUUID(), report_id: reportIdTrimmed,
-            redesign_data: sanitizeForJson(updates.redesign), decisions: updates.redesign.decisions || {},
-            status: updates.redesign.acceptedAt ? 'accepted' : 'pending',
-            accepted_at: updates.redesign.acceptedAt || null,
-            created_at: new Date().toISOString(), updated_at: new Date().toISOString()
-          };
-          const rdPostResp = await fetchWithTimeout(`${supabaseUrl}/rest/v1/report_redesigns`, {
-            method: 'POST', headers: getSupabaseWriteHeaders(supabaseKey), body: JSON.stringify(rdPayload)
-          });
-          if (!rdPostResp.ok) {
-            const rdErr = await rdPostResp.text();
-            logger.error('Update diagnostic: report_redesigns POST failed', { requestId: getRequestId(request), status: rdPostResp.status, body: rdErr?.slice(0, 500) });
-            throw new Error('Redesign save failed: ' + (rdErr || rdPostResp.statusText));
-          }
-        }
-        }
-      } catch (rdErr) { logger.warn('Redesign table update error', { requestId: getRequestId(request), message: rdErr.message }); }
-
-      // Keep backward compatibility: also store in diagnostic_data
-      dd.redesign = { ...(dd.redesign || {}), ...sanitizeForJson(updates.redesign) };
-    }
-
-    // Redesign flow layout saves - patch only the flow fields on processes within report_redesigns
-    if (updates.redesignFlowLayouts && Array.isArray(updates.redesignFlowLayouts)) {
-      for (const fl of updates.redesignFlowLayouts) {
-        const { redesignId: flRedesignId, processIndex: flIdx, flowNodePositions, flowCustomEdges, flowDeletedEdges } = fl;
-        if (!flRedesignId || typeof flIdx !== 'number' || flIdx < 0) continue;
-        try {
-          const rdUrl = `${supabaseUrl}/rest/v1/report_redesigns?id=eq.${flRedesignId}&report_id=eq.${reportIdTrimmed}&select=id,redesign_data`;
-          const rdResp = await fetchWithTimeout(rdUrl, { method: 'GET', headers: getSupabaseHeaders(supabaseKey) });
-          if (!rdResp.ok) continue;
-          const rdRows = await rdResp.json().catch(() => []);
-          if (!rdRows?.length) continue;
-          const rdData = sanitizeForJson(rdRows[0].redesign_data || {});
-          const updateProcs = (arr) => {
-            if (!Array.isArray(arr) || !arr[flIdx]) return arr;
-            const updated = [...arr];
-            updated[flIdx] = {
-              ...updated[flIdx],
-              ...(flowNodePositions !== undefined && { flowNodePositions }),
-              ...(flowCustomEdges !== undefined && { flowCustomEdges }),
-              ...(flowDeletedEdges !== undefined && { flowDeletedEdges }),
-            };
-            return updated;
-          };
-          if (rdData.acceptedProcesses) rdData.acceptedProcesses = updateProcs(rdData.acceptedProcesses);
-          if (rdData.optimisedProcesses) rdData.optimisedProcesses = updateProcs(rdData.optimisedProcesses);
-          await fetchWithTimeout(`${supabaseUrl}/rest/v1/report_redesigns?id=eq.${flRedesignId}`, {
-            method: 'PATCH', headers: getSupabaseWriteHeaders(supabaseKey),
-            body: JSON.stringify({ redesign_data: rdData, updated_at: new Date().toISOString() }),
-          });
-        } catch (flErr) { logger.warn('Redesign flow layout update error', { requestId: getRequestId(request), message: flErr.message }); }
-      }
-    }
-
-    const patchBody = { ...topLevelPatch, diagnostic_data: sanitizeForJson(dd) };
-    const writeUrl = `${supabaseUrl}/rest/v1/diagnostic_reports?id=eq.${reportIdTrimmed}`;
+    const patchBody = { ...topLevelPatch, flow_data: sanitizeForJson(dd) };
+    const writeUrl = `${supabaseUrl}/rest/v1/processes?id=eq.${reportIdTrimmed}`;
     let patchStr;
     try {
       patchStr = JSON.stringify(patchBody);
@@ -238,11 +202,30 @@ export async function PUT(request) {
       return NextResponse.json({ error: 'Write failed: ' + (t || writeResp.statusText) }, { status: 502 });
     }
 
-    // If this report is linked to a deal_flow, bump its updated_at so the
-    // DealsPanel surfaces the edit as recent activity. Non-fatal.
+    // Living-workspace contract: capture inline edits in the relational
+    // changelog. The client records discrete events (addStep, removeStep,
+    // moveStep) at the moment of the click; this diff catches everything
+    // else — typed renames, department changes, work/wait minutes,
+    // boolean flips, workspace-anchor edits. Only 'modified' rows are
+    // emitted; 'added'/'removed'/'reordered' are exclusively client-
+    // side to avoid double-recording.
+    if (Array.isArray(updates.rawProcesses)) {
+      try {
+        const diffRows = diffStepsForChangelog(oldRawForDiff, dd.rawProcesses, {
+          processId: reportIdTrimmed,
+          actorEmail: email,
+        });
+        if (diffRows.length) await recordChanges(diffRows);
+      } catch (e) {
+        logger.warn('Server-side diff for changelog failed', { requestId: getRequestId(request), error: e.message });
+      }
+    }
+
+    // If this report is linked to a deal_flow, bump its updated_at so
+    // recent-activity surfaces show the edit. Non-fatal.
     try {
       await fetchWithTimeout(
-        `${supabaseUrl}/rest/v1/deal_flows?report_id=eq.${encodeURIComponent(reportIdTrimmed)}`,
+        `${supabaseUrl}/rest/v1/deal_flows?process_id=eq.${encodeURIComponent(reportIdTrimmed)}`,
         {
           method: 'PATCH',
           headers: getSupabaseWriteHeaders(supabaseKey),
@@ -252,6 +235,20 @@ export async function PUT(request) {
     } catch (touchErr) {
       logger.warn('deal_flows touch on edit failed', { requestId: getRequestId(request), message: touchErr.message });
     }
+
+    // Best-effort: keep the process_systems join in sync with the canvas.
+    // Cross-process system inventory queries depend on this being fresh.
+    // Failure here never blocks the save — workspace UI still works without
+    // the join (it just won't show this process in inventory views until
+    // the next save lands).
+    syncProcessSystemsForReport({
+      reportId: reportIdTrimmed,
+      diagnosticData: dd,
+      operatingModelId: existing.operating_model_id || null,
+      functionId: existing.function_id || null,
+    }).catch((e) => logger.warn('process_systems sync threw', {
+      requestId: getRequestId(request), message: e.message,
+    }));
 
     return NextResponse.json({ success: true, message: 'Report updated.' });
   } catch (err) {

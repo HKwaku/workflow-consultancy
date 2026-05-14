@@ -4,7 +4,7 @@
  * /signin?returnTo=...&mode=login|signup
  *
  * Lightweight sign-in surface used by the diagnostic SignInRequired gate.
- * Hosts the existing PortalAuth UI and redirects to `returnTo` once the
+ * Hosts the existing SignInForm UI and redirects to `returnTo` once the
  * user is authenticated. If they're already signed in on mount, redirects
  * immediately.
  */
@@ -14,13 +14,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ThemeToggle from '@/components/ThemeToggle';
 import { getSupabaseClient, getSessionSafe } from '@/lib/supabase';
-import PortalAuth from '../portal/PortalAuth';
-import '../portal/portal.css';
+import SignInForm from '@/components/auth/SignInForm';
+import '@/components/org-admin/org-admin.css';
 
 function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const returnTo = searchParams?.get('returnTo') || '/process-audit';
+  const returnTo = searchParams?.get('returnTo') || '/workspace/map';
   const mode = searchParams?.get('mode') === 'signup' ? 'signup' : 'login';
   // Set by the Sign-out flow. Skip *all* session-check logic and
   // render the form immediately — never await anything that could
@@ -39,7 +39,7 @@ function SignInContent() {
 
     if (justSignedOut) {
       // Render the form right now. Init the supabase client (so
-      // PortalAuth can call signInWithPassword), and fire a fully
+      // SignInForm can call signInWithPassword), and fire a fully
       // fire-and-forget local signOut to mop up any leftover state.
       // No await — if Supabase JS deadlocks, we don't care.
       try {
@@ -68,7 +68,7 @@ function SignInContent() {
     return () => { mounted = false; };
   }, [router, returnTo, justSignedOut]);
 
-  // Once PortalAuth fires onAuthenticated we redirect.
+  // Once SignInForm fires onAuthenticated we redirect.
   const onAuthed = (u) => {
     setUser(u);
     router.replace(returnTo);
@@ -95,7 +95,7 @@ function SignInContent() {
         <ThemeToggle className="header-theme-btn" />
       </header>
       <div className="portal-wrap" style={{ maxWidth: 520, margin: '0 auto', padding: '48px 24px' }}>
-        <PortalAuth supabase={supabase} onAuthenticated={onAuthed} mode={mode} />
+        <SignInForm supabase={supabase} onAuthenticated={onAuthed} mode={mode} />
       </div>
     </>
   );

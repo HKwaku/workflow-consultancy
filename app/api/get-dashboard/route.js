@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import { requireAuth } from '@/lib/auth';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
+import { deriveProcessMetrics } from '@/lib/processMetrics';
 export async function GET(request) {
   try {
     const originErr = checkOrigin(request);
@@ -26,135 +27,69 @@ export async function GET(request) {
     const limit = Math.min(100, Math.max(10, parseInt(request.nextUrl.searchParams.get('limit') || '50', 10)));
     const offset = Math.max(0, parseInt(request.nextUrl.searchParams.get('offset') || '0', 10));
 
+    // Living-workspace migration: dropped columns (display_code,
+    // lead_score, lead_grade, diagnostic_mode, cost_analysis_*,
+    // total_annual_cost, potential_savings, automation_percentage,
+    // automation_grade, contributor_emails) plus renamed table
+    // (diagnostic_reports → processes) and column (diagnostic_data →
+    // flow_data). Cost / savings / automation are derived live from the
+    // flow_data JSONB, so we read those out below.
     const { data: rows, error: sbError } = await supabase
-      .from('diagnostic_reports')
-      .select('id,display_code,contact_email,contact_name,company,lead_score,lead_grade,diagnostic_mode,cost_analysis_status,cost_analysis_token,total_annual_cost,potential_savings,automation_percentage,automation_grade,diagnostic_data,contributor_emails,created_at,updated_at')
-      .or(`contact_email.ilike.${emailLower},contributor_emails.cs.{${emailLower}}`)
+      .from('processes')
+      .select('id,contact_email,contact_name,company,flow_data,created_at,updated_at')
+      .ilike('contact_email', emailLower)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (sbError) {
       logger.error('Supabase error', { requestId: getRequestId(request), error: sbError.message, route: 'get-dashboard' });
-      return NextResponse.json({ error: 'Failed to fetch reports.' }, { status: 502 });
+      return NextResponse.json({ error: 'Failed to fetch processes.' }, { status: 502 });
     }
 
-    // Fetch team diagnostics where user is creator
-    const { data: teamRows } = await supabase
-      .from('team_diagnostics')
-      .select('id,team_code,process_name,company,status,created_at,closed_at')
-      .ilike('created_by_email', emailLower)
-      .order('created_at', { ascending: false })
-      .limit(50);
-
-    const teamSessions = (teamRows || []).map(t => ({
-      id: t.id,
-      teamCode: t.team_code,
-      processName: t.process_name,
-      company: t.company || '',
-      status: t.status,
-      createdAt: t.created_at,
-      closedAt: t.closed_at,
-    }));
+    // team_diagnostics table dropped in the migration. No surface
+    // surfaces this anymore.
+    const teamSessions = [];
 
     if (!rows || rows.length === 0) {
       return NextResponse.json({ success: true, email: emailLower, totalReports: 0, reports: [], teamSessions, deltas: null });
     }
 
-    // Batch-fetch redesigns for all report IDs
-    const reportIds = rows.map(r => r.id);
-    let redesignRows = null;
-    let rdError = null;
-    const res = await supabase
-      .from('report_redesigns')
-      .select('id,report_id,name,redesign_data,decisions,status,accepted_at,created_at')
-      .in('report_id', reportIds)
-      .order('created_at', { ascending: true });
-    redesignRows = res.data;
-    rdError = res.error;
-    if (rdError && (rdError.message?.includes('name') || rdError.message?.includes('column') || rdError.code === '42703')) {
-      const fallback = await supabase
-        .from('report_redesigns')
-        .select('id,report_id,redesign_data,decisions,status,accepted_at,created_at')
-        .in('report_id', reportIds)
-        .order('created_at', { ascending: true });
-      redesignRows = fallback.data;
-      rdError = fallback.error;
-    }
-    if (rdError) {
-      logger.error('Get dashboard: report_redesigns fetch failed', { requestId: getRequestId(request), error: rdError.message });
-    }
-
-    const rdWithName = (redesignRows || []).map((rd, i) => ({ ...rd, name: rd.name ?? `Redesign ${i + 1}` }));
-
-    const redesignsByReport = {};
-    (rdWithName || redesignRows || []).forEach(rd => {
-      if (!redesignsByReport[rd.report_id]) redesignsByReport[rd.report_id] = [];
-      redesignsByReport[rd.report_id].push(rd);
-    });
-
     const reports = rows.map(row => {
-      const d = row.diagnostic_data || {};
-      const summary = d.summary || {};
+      const d = row.flow_data || {};
       const procs = d.processes || [];
-      const rawProcs = d.rawProcesses || [];
-      // auto is only needed for grade fallback; percentage comes from promoted column
-      const auto = d.automationScore || {};
-      const costAuthorizedEmails = (d.costAuthorizedEmails || []).map(e => e.toLowerCase());
-      const hideCostFromOwner = !costAuthorizedEmails.includes(emailLower);
+      // Living-workspace contract: cost / savings / automation derive
+      // from rawProcesses[].steps[] every read. The previous snapshot
+      // fields (flow_data.summary.*, flow_data.automationScore.*) are
+      // no longer written, so reading them returns zero. deriveProcessMetrics
+      // walks the steps directly, matching what the chat agent does.
+      // The old costAuthorizedEmails gate that let a consultant see
+      // costs the owner couldn't is gone — owners always see their own
+      // cost data on the canvas.
+      const derived = deriveProcessMetrics(d);
+      const metricsTotalCost = derived.total_annual_cost;
+      const metricsSavings   = derived.potential_savings;
+      const metricsAutoPerc  = derived.automation_percentage ?? 0;
+      const metricsAutoGrade = derived.automation_grade;
 
-      const allRedesigns = redesignsByReport[row.id] || [];
-      const acceptedRd = allRedesigns.find(rd => rd.status === 'accepted');
-      const latestRd = allRedesigns[allRedesigns.length - 1];
-      const redesign = latestRd
-        ? { ...latestRd.redesign_data, decisions: latestRd.decisions, status: latestRd.status, acceptedAt: latestRd.accepted_at }
-        : (d.redesign || null);
-
-      const hasAcceptedRedesign = acceptedRd
-        ? (acceptedRd.redesign_data?.acceptedProcesses?.length > 0)
-        : !!(redesign?.acceptedAt && redesign?.acceptedProcesses?.length);
-
-      const toProcesses = (rd) => {
-        const src = rd?.redesign_data?.acceptedProcesses || rd?.redesign_data?.optimisedProcesses || [];
-        return src.map(op => ({
-          processName: op.processName || op.name,
-          steps: (op.steps || []).filter(s => s.status !== 'removed').map(s => ({
-            name: s.name, department: s.department, isDecision: s.isDecision || false, isMerge: s.isMerge || false, parallel: s.parallel || false, inclusive: s.inclusive || false, branches: s.branches || [],
-          })),
-          handoffs: (op.handoffs || []).map(h => ({ method: h.method, clarity: h.clarity })),
-          flowNodePositions: op.flowNodePositions || undefined,
-          flowCustomEdges: op.flowCustomEdges || undefined,
-          flowDeletedEdges: op.flowDeletedEdges || undefined,
-        }));
-      };
-
-      const activeSource = acceptedRd || latestRd;
-      const activeProcesses = toProcesses(activeSource);
-      const hasRedesignData = activeProcesses.length > 0;
-
-      const metricsTotalCost = hideCostFromOwner ? 0 : (row.total_annual_cost ?? summary.totalAnnualCost ?? 0);
-      const metricsSavings = hideCostFromOwner ? 0 : (row.potential_savings ?? summary.potentialSavings ?? 0);
-      const metricsAutoPerc = row.automation_percentage ?? auto.percentage ?? 0;
-      const metricsAutoGrade = row.automation_grade || auto.grade || 'N/A';
+      const totalProcesses = Array.isArray(d.rawProcesses) ? d.rawProcesses.length : procs.length;
 
       const isContributor = row.contact_email?.toLowerCase() !== emailLower;
       return {
-        id: row.id, displayCode: row.display_code || null, company: row.company || d.contact?.company || '',
+        id: row.id, displayCode: null,
+        company: row.company || d.contact?.company || '',
         contactName: row.contact_name || d.contact?.name || '',
-        leadScore: row.lead_score, leadGrade: row.lead_grade,
-        diagnosticMode: row.diagnostic_mode,
+        leadScore: null, leadGrade: null,
         segment: d.contact?.segment || null,
         isContributor,
         createdAt: row.created_at, updatedAt: row.updated_at,
         metrics: {
-          totalProcesses: summary.totalProcesses || procs.length || 0,
+          totalProcesses,
           totalAnnualCost: metricsTotalCost,
           potentialSavings: metricsSavings,
           automationPercentage: metricsAutoPerc,
           automationGrade: metricsAutoGrade,
-          qualityScore: summary.qualityScore || 0,
-          analysisType: summary.analysisType || 'rule-based'
         },
-        processes: procs.map(p => ({ name: p.name || '', type: p.type || '', annualCost: hideCostFromOwner ? 0 : (p.annualCost || 0), elapsedDays: p.elapsedDays || 0, stepsCount: p.stepsCount || 0 })),
+        processes: procs.map(p => ({ name: p.name || '', type: p.type || '', annualCost: p.annualCost || 0, elapsedDays: p.elapsedDays || 0, stepsCount: p.stepsCount || 0 })),
         rawProcesses: (d.rawProcesses || []).map(rp => ({
           processName: rp.processName,
           steps: (rp.steps || []).map(s => ({ name: s.name, department: s.department, isDecision: s.isDecision || false, isMerge: s.isMerge || false, parallel: s.parallel || false, inclusive: s.inclusive || false, branches: s.branches || [] })),
@@ -163,31 +98,22 @@ export async function GET(request) {
           flowCustomEdges: rp.flowCustomEdges || undefined,
           flowDeletedEdges: rp.flowDeletedEdges || undefined,
         })),
-        redesignStatus: hasAcceptedRedesign ? 'accepted' : redesign ? 'pending' : null,
-        redesignVersions: allRedesigns.map((rd, i) => ({
-          id: rd.id,
-          name: rd.name || `Redesign ${i + 1}`,
-          version: i + 1,
-          source: rd.redesign_data?.source || (i === 0 ? 'ai' : 'human'),
-          costSummary: hideCostFromOwner ? null : (rd.redesign_data?.costSummary || null),
-          processes: toProcesses(rd),
-          createdAt: rd.created_at,
-          status: rd.status,
-        })),
-        acceptedRedesign: hasAcceptedRedesign && activeSource ? {
-          acceptedAt: activeSource.accepted_at,
-          costSummary: hideCostFromOwner ? null : (activeSource.redesign_data?.costSummary || null),
-          processes: activeProcesses,
-        } : null,
-        pendingRedesign: (!hasAcceptedRedesign && hasRedesignData) ? {
-          costSummary: hideCostFromOwner ? null : (activeSource?.redesign_data?.costSummary || null),
-          processes: activeProcesses,
-        } : null,
-        recommendations: (d.recommendations || []).slice(0, 5).map(r => ({ type: r.type || 'general', text: r.text || '' })),
-        roadmap: d.roadmap ? { quickWins: d.roadmap.phases?.quick?.items?.length || 0, totalSavings: d.roadmap.totalSavings || 0 } : null,
+        // Redesign-as-snapshot is gone. AI suggestions are inline `changes`
+        // rows now; nothing writes `flow_data.redesign` anymore, so we don't
+        // surface a redesign shape from this endpoint.
+        redesignStatus: null,
+        redesignVersions: [],
+        acceptedRedesign: null,
+        pendingRedesign: null,
+        // recommendations + roadmap were submission-time snapshots. Clients
+        // that need live opportunities call the chat agent's
+        // get_recommendations, which derives from current step structure.
+        recommendations: [],
+        roadmap: null,
+        // auditTrail no longer persisted to flow_data — the `changes`
+        // relational table is the canonical audit log. Legacy rows that
+        // still carry one are read on a best-effort basis.
         auditTrail: (d.auditTrail || []).slice(-50),
-        costAnalysisStatus: row.cost_analysis_status || d.costAnalysisStatus || 'complete',
-        costAnalysisToken: hideCostFromOwner ? null : (row.cost_analysis_token || d.costAnalysisToken || null),
       };
     });
 
@@ -201,7 +127,6 @@ export async function GET(request) {
         potentialSavings: { change: latest.potentialSavings - previous.potentialSavings, percentChange: previous.potentialSavings > 0 ? ((latest.potentialSavings - previous.potentialSavings) / previous.potentialSavings * 100) : 0, improved: latest.potentialSavings > previous.potentialSavings },
         automationReadiness: { change: latest.automationPercentage - previous.automationPercentage, improved: latest.automationPercentage > previous.automationPercentage },
         processCount: { change: latest.totalProcesses - previous.totalProcesses },
-        qualityScore: { change: latest.qualityScore - previous.qualityScore, improved: latest.qualityScore > previous.qualityScore }
       };
     }
 
@@ -239,14 +164,13 @@ export async function DELETE(request) {
     const supabase = createClient(supabaseUrl, supabaseKey);
     const normalEmail = email.toLowerCase().trim();
 
-    const { data: checkRows, error: checkErr } = await supabase.from('diagnostic_reports').select('id,contact_email').eq('id', reportId).limit(1);
-    if (checkErr || !checkRows || checkRows.length === 0) return NextResponse.json({ error: 'Report not found or already deleted.' }, { status: 404 });
-    if (checkRows[0].contact_email?.toLowerCase() !== normalEmail) return NextResponse.json({ error: 'You can only delete your own reports.' }, { status: 403 });
+    const { data: checkRows, error: checkErr } = await supabase.from('processes').select('id,contact_email').eq('id', reportId).limit(1);
+    if (checkErr || !checkRows || checkRows.length === 0) return NextResponse.json({ error: 'Process not found or already deleted.' }, { status: 404 });
+    if (checkRows[0].contact_email?.toLowerCase() !== normalEmail) return NextResponse.json({ error: 'You can only delete your own processes.' }, { status: 403 });
 
-    // report_redesigns will cascade-delete via FK
-    const { error: delErr } = await supabase.from('diagnostic_reports').delete().eq('id', reportId);
-    if (delErr) return NextResponse.json({ error: 'Failed to delete report.' }, { status: 502 });
-    return NextResponse.json({ success: true, message: 'Report deleted.' });
+    const { error: delErr } = await supabase.from('processes').delete().eq('id', reportId);
+    if (delErr) return NextResponse.json({ error: 'Failed to delete process.' }, { status: 502 });
+    return NextResponse.json({ success: true, message: 'Process deleted.' });
   } catch (err) {
     logger.error('Delete report error', { requestId: getRequestId(request), error: err.message, stack: err.stack });
     return NextResponse.json({ error: 'Failed to delete report.' }, { status: 500 });

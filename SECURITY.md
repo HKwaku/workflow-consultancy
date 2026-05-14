@@ -40,11 +40,11 @@ We will not pursue legal action against researchers who:
 
 - The production Vesno application at `https://vesno.io` (and `*.vesno.io`)
 - The Vesno API surfaces under `/api/*`
-- The diagnostic chat / deal portal / data room (open-format uploads, OCR pipeline, chunk + embedding store)
+- The diagnostic chat / deal workspace / data room (open-format uploads, OCR pipeline, chunk + embedding store)
 - Authentication + session management (including the `requireAuth` 60-second verification cache and concurrent-request coalescing in `lib/auth.js`)
 - Multi-tenant isolation (a user shouldn't be able to read another org's deals, documents, chats, Q&A items, finding comments, or scorecards)
 - Per-document visibility enforcement (`canSeeDocument` + the editor/participant role split — applies to evidence drawer, signed URLs, and the chunk preview endpoint)
-- Customer-managed BYO API key encryption + leakage paths (Anthropic / Voyage / OpenAI / Mistral, set under `/portal/org-admin → API keys`)
+- Customer-managed BYO API key encryption + leakage paths (Anthropic / Voyage / OpenAI / Mistral, set under `/org-admin → API keys`)
 - The Mistral OCR fallback path — payload contents (document base64) flow to a third-party API only when the org or platform key is configured
 
 ## Out of scope

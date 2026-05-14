@@ -7,6 +7,7 @@ import { requireAuth } from '@/lib/auth';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { resolveDealAccess, requireDealEditor } from '@/lib/dealAuth';
 import { logger } from '@/lib/logger';
+import { deriveProcessMetrics } from '@/lib/processMetrics';
 
 /**
  * GET /api/deals/[id]/flows
@@ -40,42 +41,47 @@ export async function GET(request, { params }) {
     );
     const flows = flowResp.ok ? await flowResp.json() : [];
 
-    // Join with report summaries for flows that have a report_id
-    const reportIds = flows.map((f) => f.report_id).filter(Boolean);
-    let reportMap = {};
-    if (reportIds.length) {
+    const processIds = flows.map((f) => f.process_id).filter(Boolean);
+    let processMap = {};
+    if (processIds.length) {
       const rResp = await fetchWithTimeout(
-        `${sb.url}/rest/v1/diagnostic_reports?id=in.(${reportIds.map(encodeURIComponent).join(',')})&select=id,total_annual_cost,potential_savings,automation_percentage,automation_grade,created_at,updated_at`,
+        `${sb.url}/rest/v1/processes?id=in.(${processIds.map(encodeURIComponent).join(',')})&select=id,flow_data,created_at,updated_at`,
         { method: 'GET', headers: getSupabaseHeaders(sb.key) }
       );
       if (rResp.ok) {
-        for (const r of await rResp.json()) reportMap[r.id] = r;
+        for (const r of await rResp.json()) processMap[r.id] = r;
       }
     }
 
     return NextResponse.json({
-      flows: flows.map((f) => ({
-        id: f.id,
-        dealId: f.deal_id,
-        participantId: f.participant_id,
-        label: f.label,
-        flowKind: f.flow_kind,
-        reportId: f.report_id,
-        status: f.status,
-        createdByEmail: access.canManage ? f.created_by_email : undefined,
-        createdAt: f.created_at,
-        updatedAt: f.updated_at,
-        report: f.report_id && reportMap[f.report_id] ? {
-          id: reportMap[f.report_id].id,
-          totalAnnualCost: reportMap[f.report_id].total_annual_cost,
-          potentialSavings: reportMap[f.report_id].potential_savings,
-          automationPercentage: reportMap[f.report_id].automation_percentage,
-          automationGrade: reportMap[f.report_id].automation_grade,
-          reportUrl: `/report?id=${reportMap[f.report_id].id}`,
-        } : null,
-        startUrl: f.report_id ? null : `/process-audit?dealFlowId=${encodeURIComponent(f.id)}`,
-        openUrl: f.report_id ? `/process-audit?dealFlowId=${encodeURIComponent(f.id)}&resume=1` : null,
-      })),
+      flows: flows.map((f) => {
+        const p = f.process_id ? processMap[f.process_id] : null;
+        const metrics = p ? deriveProcessMetrics(p) : null;
+        return {
+          id: f.id,
+          dealId: f.deal_id,
+          participantId: f.participant_id,
+          label: f.label,
+          flowKind: f.flow_kind,
+          processId: f.process_id,
+          reportId: f.process_id, // back-compat alias for older clients
+          status: f.status,
+          createdByEmail: access.canManage ? f.created_by_email : undefined,
+          createdAt: f.created_at,
+          updatedAt: f.updated_at,
+          process: p ? {
+            id: p.id,
+            createdAt: p.created_at,
+            updatedAt: p.updated_at,
+            totalAnnualCost:     metrics.total_annual_cost,
+            potentialSavings:    metrics.potential_savings,
+            automationPercentage: metrics.automation_percentage,
+            automationGrade:     metrics.automation_grade,
+          } : null,
+          startUrl: f.process_id ? null : `/workspace/map?dealFlowId=${encodeURIComponent(f.id)}`,
+          openUrl: f.process_id ? `/workspace/map?dealFlowId=${encodeURIComponent(f.id)}&resume=1` : null,
+        };
+      }),
     });
   } catch (err) {
     logger.error('List deal flows error', { requestId: getRequestId(request), error: err.message });
@@ -87,7 +93,7 @@ export async function GET(request, { params }) {
  * POST /api/deals/[id]/flows
  * Owner or collaborator creates a new flow slot for a specific participant (company).
  * Body: { participantId: UUID, label: string, flowKind?: string }
- * Returns the flow row + a deep link to start mapping in /process-audit.
+ * Returns the flow row + a deep link to start mapping in /workspace/map.
  */
 export async function POST(request, { params }) {
   const originErr = checkOrigin(request);
@@ -160,12 +166,13 @@ export async function POST(request, { params }) {
         participantId: flow.participant_id,
         label: flow.label,
         flowKind: flow.flow_kind,
-        reportId: flow.report_id,
+        processId: flow.process_id,
+        reportId: flow.process_id,
         status: flow.status,
         createdAt: flow.created_at,
       },
-      startUrl: flow.report_id ? null : `/process-audit?dealFlowId=${encodeURIComponent(flow.id)}`,
-      openUrl: flow.report_id ? `/process-audit?dealFlowId=${encodeURIComponent(flow.id)}&resume=1` : null,
+      startUrl: flow.process_id ? null : `/workspace/map?dealFlowId=${encodeURIComponent(flow.id)}`,
+      openUrl: flow.process_id ? `/workspace/map?dealFlowId=${encodeURIComponent(flow.id)}&resume=1` : null,
     }, { status: 201 });
   } catch (err) {
     logger.error('Create deal flow error', { requestId: getRequestId(request), error: err.message });

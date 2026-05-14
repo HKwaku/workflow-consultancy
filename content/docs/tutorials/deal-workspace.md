@@ -9,13 +9,12 @@ The **deal workspace** is the chat-side surface that replaced the legacy `/deals
 
 It's organised top-to-bottom into:
 
-1. **Participants** — invite, edit roles, track completion
-2. **Data room** — uploads, expected-docs checklist (see [The data room](/docs/tutorials/data-room))
-3. **Q&A queue** — questions to seller + answers
-4. **Findings** — model output with reviewer controls, evidence drawer, comments, tags, staleness
-5. **Scorecard** (toggle) — one-page IC summary
+1. **Participants** - invite, edit roles, track completion
+2. **Data room** - uploads, expected-docs checklist (see [The data room](/docs/tutorials/data-room))
+3. **Q&A queue** - questions to seller + answers
+4. **Findings** - claims Reina has surfaced, with reviewer controls, evidence drawer, comments, tags, staleness
 
-The first paint shows deal + participants + documents + Q&A as soon as they arrive; findings stream in separately so the rest of the modal isn't blocked. Re-opening the same deal renders instantly from a small in-memory cache.
+The first paint shows deal + participants + documents + Q&A as soon as they arrive. Re-opening the same deal renders instantly from a small in-memory cache.
 
 ## Q&A queue
 
@@ -79,38 +78,14 @@ When a cited document is reprocessed (or replaced), every finding referencing it
 
 Editors clear stale via the in-row stale bar's **Mark verified** button. The finding itself is never deleted automatically — staleness is purely a hint to the reviewer.
 
-## Auto-rerun on new uploads
+## How findings get generated
 
-After your first completed analysis, subsequent uploads automatically queue a delta diligence run — throttled to once per hour and only when no analysis is currently in flight. The workspace badges findings new since the previous run with a small **NEW** pill, and the analysis header shows " · auto" to distinguish auto-queued runs from user-initiated ones.
+Findings land as Reina works. When you chat with her on a deal-bound session, she has retrieval tools that pull from the data room and from each participant's process maps. Each substantive claim she makes is staged as a finding row with citations attached. See [How findings work](/docs/tutorials/diligence-memo) for the full shape.
 
-This means: drop a fresh contract into the data room, walk away, come back in an hour, and the workspace already reflects what changed. No need to remember to hit Analyse.
-
-## Scorecard
-
-The header **Scorecard** button toggles the one-page IC summary view. It's auto-filled from the latest completed analysis:
-
-- **Risk score** — Σ(severity × confidence) across the latest analysis. Surfaced as the big number top-right.
-- **Severity counts** — `critical / high / medium / low` chip strip
-- **Recommended action** — rule-based: *Re-trade or walk · Negotiate price · Proceed with conditions · Proceed; address in 100-day plan · Proceed with confidence*
-- **Thesis + key takeaways** — pulled from the executive summary section
-- **Top 5 risks** — ranked by severity × confidence; click any to deep-link back to the finding row
-- **Mitigants** — recommendations across the top findings, each tagged with the parent finding
-- **Doc coverage** — total docs by category bucket
-
-The scorecard regenerates fresh on every open, so it always reflects current findings + reviewer overrides. It's read-only — edit the underlying findings (or their reviewer notes/edits) to change what shows up.
-
-## Severity-weighted deal sorting
-
-The briefcase rail panel (the list of all your deals) is sorted by `riskScore` descending. Each deal name carries a coloured pill — `critical`, `high`, `medium`, `low` — with the critical-finding count when > 0. Tie-breaks fall back to recency.
-
-So when you open Vesno, the deals that need attention float to the top of the panel. Click any to scope chat to that deal and open its workspace.
+There's no batch "Run analysis" button. The model surfaces findings continuously as you discuss the deal - ask her "what are the technology risks", "what should I worry about", "go through the data room" and findings flow in.
 
 ## Common questions
 
-**Who can see what?** Same access tiers as the rest of the deal: owner + collaborators write everything; participants see and answer their own assigned Q&A items, can read and comment on findings whose evidence they have access to. Per-document visibility cascades down — if you can't see a doc, you can't open its evidence drawer either.
+**Who can see what?** Same access tiers as the rest of the deal: owner + collaborators write everything; participants see and answer their own assigned Q&A items, can read and comment on findings whose evidence they have access to. Per-document visibility cascades down - if you can't see a doc, you can't open its evidence drawer either.
 
-**Can I export Q&A or comments?** Not yet. PPTX and CSV export of findings exists today; Q&A export is on the roadmap.
-
-**A finding's evidence shows a STALE pill but the doc looks fine.** That document was reprocessed (you, a colleague, or the worker via reprocess). The chunk IDs the finding cites are stale — re-verify against the current text and click **Mark verified**.
-
-**I want to disable auto-rerun.** Tell ops to comment out the `maybe-auto-trigger-analysis` step in `lib/inngest/functions/processDealDocument.js`, or tighten the `MIN_GAP_MS` throttle in `lib/deal-analysis/autoTrigger.js`.
+**A finding's evidence shows a STALE pill but the doc looks fine.** That document was reprocessed (you, a colleague, or the worker via reprocess). The chunk IDs the finding cites are stale - re-verify against the current text and click **Mark verified**.

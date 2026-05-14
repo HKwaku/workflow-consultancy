@@ -51,7 +51,7 @@ export default function CreditsWidget({ accessToken, refreshKey = 0 }) {
     return (
       <a
         className="credits-widget credits-widget--org"
-        href="/portal/org-admin"
+        href="/org-admin"
         title="Couldn't load your credit balance — open your account to check usage."
       >
         <span className="credits-widget-dot" aria-hidden />
@@ -64,7 +64,7 @@ export default function CreditsWidget({ accessToken, refreshKey = 0 }) {
     return (
       <a
         className="credits-widget credits-widget--org"
-        href="/portal/org-admin"
+        href="/org-admin"
         title="Your organisation has its own provider key — usage bills directly to your account."
       >
         <span className="credits-widget-dot" aria-hidden />
@@ -75,7 +75,7 @@ export default function CreditsWidget({ accessToken, refreshKey = 0 }) {
 
   if (data.mode === 'org_platform') {
     return (
-      <a className="credits-widget credits-widget--org" href="/portal/org-admin" title="Org plan — manage usage">
+      <a className="credits-widget credits-widget--org" href="/org-admin" title="Org plan — manage usage">
         <span className="credits-widget-dot" aria-hidden />
         <span className="credits-widget-label">Org plan</span>
       </a>
@@ -96,7 +96,7 @@ export default function CreditsWidget({ accessToken, refreshKey = 0 }) {
     return (
       <a
         className="credits-widget credits-widget--danger"
-        href="/portal/org-admin?firstRun=1"
+        href="/org-admin?firstRun=1"
         title="You've used your free credits — add your own API key to continue."
       >
         <span className="credits-widget-icon" aria-hidden>⚡</span>
@@ -109,7 +109,7 @@ export default function CreditsWidget({ accessToken, refreshKey = 0 }) {
   return (
     <a
       className={`credits-widget credits-widget--${tone}`}
-      href="/portal/org-admin?firstRun=1"
+      href="/org-admin?firstRun=1"
       title={`${credits.remaining} of ${credits.granted} credits remaining (1 credit ≈ ${data.credits?.tokensPerCredit || 1000} tokens). Add your own API key for unlimited use.`}
     >
       <span className="credits-widget-icon" aria-hidden>⚡</span>

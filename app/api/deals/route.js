@@ -135,7 +135,7 @@ export async function POST(request) {
     // 3. Attach invite links and trigger invite emails for participants with emails
     const participantsWithLinks = createdParticipants.map((p) => ({
       ...p,
-      inviteUrl: `${baseUrl}/process-audit?participant=${p.invite_token}`,
+      inviteUrl: `${baseUrl}/workspace/map?participant=${p.invite_token}`,
     }));
 
     const toInvite = participantsWithLinks.filter((p) => p.participant_email);

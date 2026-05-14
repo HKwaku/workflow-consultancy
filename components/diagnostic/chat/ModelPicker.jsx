@@ -21,13 +21,12 @@
  *   selected         current selected model id (parent state)
  *   onChange         (id) => void
  *   phase            current chat phase ('intake'|'map'|'details'|'cost'|'complete')
- *   editingRedesign  boolean — if true, suggest deep tier
  *   hasAttachments   boolean — if true, suggest fast tier
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/api-fetch';
-import '@/app/portal/portal-byo.css';
+import '@/components/org-admin/org-admin-byo.css';
 
 // Bump this version when the payload shape changes OR when the platform
 // allowlist expands — keeps stale browser caches from poisoning the first
@@ -68,10 +67,9 @@ function saveToSession(payload) {
 // don't pull the whole catalogue module down to the browser. The picker only
 // has the per-allowlist subset returned by /api/me/models, which already
 // carries `tier` per item.
-function suggestForPhase({ allowed, phase, editingRedesign, hasAttachments }) {
+function suggestForPhase({ allowed, phase, hasAttachments }) {
   if (!Array.isArray(allowed) || allowed.length === 0) return null;
-  const tier = editingRedesign ? 'deep'
-             : hasAttachments  ? 'fast'
+  const tier = hasAttachments  ? 'fast'
              : phase === 'intake' ? 'fast'
              : 'chat';
   return allowed.find((m) => m.tier === tier && !m.deprecated)?.id
@@ -82,7 +80,7 @@ function suggestForPhase({ allowed, phase, editingRedesign, hasAttachments }) {
 
 export default function ModelPicker({
   accessToken, selected, onChange,
-  phase, editingRedesign, hasAttachments,
+  phase, hasAttachments,
 }) {
   const [data, setData] = useState(() => loadFromSession());
   const [open, setOpen] = useState(false);
@@ -116,13 +114,13 @@ export default function ModelPicker({
     if (!data?.allowed?.length || typeof onChange !== 'function') return;
     const suggested = suggestForPhase({
       allowed: data.allowed,
-      phase, editingRedesign, hasAttachments,
+      phase, hasAttachments,
     });
     if (suggested && suggested !== selected) onChange(suggested);
     // We deliberately omit `selected` from deps — auto-defaulting on every
     // selection change would loop. The override flag is the gate.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, phase, editingRedesign, hasAttachments]);
+  }, [data, phase, hasAttachments]);
 
   // Close popover on outside click / Escape
   useEffect(() => {
@@ -146,8 +144,8 @@ export default function ModelPicker({
   // the popover so the user can see what auto-default would have chosen.
   const suggestedId = useMemo(() => suggestForPhase({
     allowed: data?.allowed || [],
-    phase, editingRedesign, hasAttachments,
-  }), [data, phase, editingRedesign, hasAttachments]);
+    phase, hasAttachments,
+  }), [data, phase, hasAttachments]);
 
   // OPTIMISTIC PLACEHOLDER: while we're waiting for /api/me/models on first
   // load, render a pill immediately so the chat input doesn't shift around

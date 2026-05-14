@@ -78,7 +78,7 @@ We will notify you within 72 hours of any actual or suspected unauthorised acces
 These Terms remain in effect until terminated. Either party may terminate for convenience on **30 days written notice**. Either party may terminate immediately for material breach not cured within 30 days of written notice.
 
 On termination:
-- We will retain your data for 30 days to allow export. Use [`/portal/settings`](../DIAGNOSTICS_CAPABILITIES.md#gdpr) to download your data.
+- We will retain your data for 30 days to allow export. Use the [Settings popover](../DIAGNOSTICS_CAPABILITIES.md#gdpr) (gear icon on the chat rail in `/workspace/map`) to download your data.
 - After 30 days, your data will be anonymised or deleted in line with our [Privacy Policy](./PRIVACY_POLICY.md).
 - Outstanding fees remain payable.
 

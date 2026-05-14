@@ -26,19 +26,65 @@ export default function DealContextChip() {
   const [summary, setSummary] = useState(null);
   const [paneOpen, setPaneOpen] = useState(true);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
-  const focusFindingKey = searchParams?.get('focusFinding') || null;
 
-  // The deal workspace modal opens only on explicit user action — the
-  // "Open workspace" button below or a deep-link from a chat finding
-  // card (?focusFinding=…). The previous auto-open-on-first-pick was
-  // removed because it surprised users dropping into a deal from the
-  // chat. The sessionStorage flag from the old implementation
-  // (AUTOSEEN_KEY_PREFIX) is now dead data; existing entries are
-  // harmless and will eventually be cleared by the browser.
+  // Focus targets can arrive two ways:
+  //   1. URL params (?focusFinding=… / ?focusChange=…) on first load or
+  //      a real navigation — read via useSearchParams.
+  //   2. Silent canvas-internal dispatch (vesno:focus-finding /
+  //      vesno:focus-change) when a click elsewhere in the canvas wants
+  //      to focus without forcing a route change. Those fire after
+  //      history.replaceState, which doesn't trigger useSearchParams,
+  //      so we shadow the search-params reading with local state that
+  //      the listeners can update.
+  const urlFindingKey = searchParams?.get('focusFinding') || null;
+  const urlChangeId = searchParams?.get('focusChange') || null;
+  const [liveFindingKey, setLiveFindingKey] = useState(urlFindingKey);
+  const [liveChangeId, setLiveChangeId] = useState(urlChangeId);
+
+  // Sync from URL when search params change (real navigation / first
+  // load). Effects below honour whichever was most recently set.
+  useEffect(() => { setLiveFindingKey(urlFindingKey); }, [urlFindingKey]);
+  useEffect(() => { setLiveChangeId(urlChangeId); }, [urlChangeId]);
+
+  // Window-event listeners for the silent dispatch path. Setting the
+  // live key + opening the modal mirrors the URL-driven path; the
+  // modal's own focus-watching effect re-runs when the prop changes.
+  useEffect(() => {
+    if (!dealId) return undefined;
+    const onFinding = (e) => {
+      const key = e?.detail?.findingKey;
+      if (!key) return;
+      setLiveFindingKey(key);
+      setWorkspaceOpen(true);
+    };
+    const onChange = (e) => {
+      const id = e?.detail?.changeId;
+      if (!id) return;
+      setLiveChangeId(id);
+      setWorkspaceOpen(true);
+    };
+    window.addEventListener('vesno:focus-finding', onFinding);
+    window.addEventListener('vesno:focus-change', onChange);
+    return () => {
+      window.removeEventListener('vesno:focus-finding', onFinding);
+      window.removeEventListener('vesno:focus-change', onChange);
+    };
+  }, [dealId]);
+
+  const focusFindingKey = liveFindingKey;
+  const focusChangeId = liveChangeId;
+
+  // Auto-open the modal when a focus target arrives via URL (silent
+  // dispatch opens it directly inside the listeners above).
   useEffect(() => {
     if (focusFindingKey && dealId && !workspaceOpen) setWorkspaceOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusFindingKey, dealId]);
+
+  useEffect(() => {
+    if (focusChangeId && dealId && !workspaceOpen) setWorkspaceOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusChangeId, dealId]);
 
   useEffect(() => {
     if (!dealId || !accessToken) { setSummary(null); return; }
@@ -107,12 +153,31 @@ export default function DealContextChip() {
             <> · mapping the <strong>{activeRoleLabel}</strong> flow for <strong>{activeCompany}</strong></>
           )}
         </span>
+        <a
+          href={`/deals/${encodeURIComponent(dealId)}/workspace`}
+          className="chat-deal-chip-toggle"
+          title="Same tabs as /workspace, scoped to this deal (Cmd/Ctrl+click for new tab)"
+          onClick={(e) => {
+            // Default click: open the deal workspace inline on the
+            // canvas (same vesno:open-workspace event the rail uses).
+            // The DiagnosticWorkspace overlay reads `dealId` from
+            // context and mounts DealWorkspaceClient. Cmd/Ctrl/Shift/
+            // middle-click bypasses this so the user can still open
+            // /deals/<id>/workspace in a new tab.
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+            e.preventDefault();
+            window.dispatchEvent(new CustomEvent('vesno:open-workspace'));
+          }}
+        >
+          Open workspace
+        </a>
         <button
           type="button"
           className="chat-deal-chip-toggle"
           onClick={() => setWorkspaceOpen(true)}
+          title="Quick context drawer with documents, findings, participants"
         >
-          Open workspace
+          Quick view
         </button>
         {summary && (
           <button
@@ -157,6 +222,7 @@ export default function DealContextChip() {
         dealId={dealId}
         accessToken={accessToken}
         focusFindingKey={focusFindingKey}
+        focusChangeId={focusChangeId}
       />
     </div>
   );

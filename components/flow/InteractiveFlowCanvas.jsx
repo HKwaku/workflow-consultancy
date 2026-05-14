@@ -160,13 +160,19 @@ function FlowCanvasInner({
   isWrapped = false,
   hideBuiltInToolbar = false,
   innerRef = null,
+  // Swimlane lane-grouping mode and the data needed to resolve sub-
+  // function / function names for steps that only carry roleId or
+  // functionId. Optional — falls back to role-label grouping.
+  swimlaneBy = 'role',
+  functionsFlat = null,
+  roles = null,
 }) {
   const [maxCols, setMaxCols] = useState(4); // updated from container width after mount
   const [outsideLaneWarning, setOutsideLaneWarning] = useState(false);
 
   const flowData = useMemo(
-    () => processToReactFlow(process, layout, darkTheme, { maxCols }),
-    [process, layout, darkTheme, maxCols]
+    () => processToReactFlow(process, layout, darkTheme, { maxCols, swimlaneBy, functionsFlat, roles }),
+    [process, layout, darkTheme, maxCols, swimlaneBy, functionsFlat, roles]
   );
 
   const { nodes: initialNodes, edges: initialEdges, lanes, layoutHeight, deptColorMap } = flowData;
@@ -231,10 +237,13 @@ function FlowCanvasInner({
   }, [isSwimlane, nodes, lanes, layoutHeight]);
 
   const typeSignature = (process?.steps || []).map((s) => s.isMerge ? 'M' : s.isDecision ? (s.parallel ? 'P' : s.inclusive ? 'I' : 'D') : 'S').join('');
-  // In swimlane mode, include department assignments in layoutKey so that changing
-  // a step's team triggers a full re-layout placing the node in the correct lane.
+  // In swimlane mode, include department + functionId + roleId AND the
+  // active grouping mode in layoutKey so that changing any of them
+  // triggers a full re-layout placing the node in the correct lane.
   const deptSignature = layout === 'swimlane'
-    ? (process?.steps || []).map((s) => s.department || '').join('\x01')
+    ? (process?.steps || [])
+        .map((s) => `${s.department || ''}|${s.functionId || s.capabilityId || ''}|${s.roleId || ''}`)
+        .join('\x01') + `:${swimlaneBy}`
     : '';
   const layoutKey = `${process?.steps?.length ?? 0}-${layout}-${maxCols}${deptSignature ? '-' + deptSignature : ''}`;
   const structureKey = `${layoutKey}-${typeSignature}`;

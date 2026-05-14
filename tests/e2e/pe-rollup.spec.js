@@ -460,7 +460,7 @@ test.describe('PE Roll-up - Screen 6 completion redirect', () => {
         body: JSON.stringify({
           success: true,
           reportId: 'report-sc6-001',
-          reportUrl: 'http://localhost:3000/report?id=report-sc6-001',
+          reportUrl: 'http://localhost:3000/workspace/map?view=report-sc6-001',
           storedInSupabase: true,
         }),
       });

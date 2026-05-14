@@ -54,73 +54,39 @@ A small **Expected documents (3 / 12 received)** panel inside the data-room sect
 
 **Upload deduplication**: if you upload the same file twice (or a colleague did already), Vesno detects the content hash and reuses the existing row. No double-billing.
 
-## Step 4 — Run an analysis
+## Step 4 - Surface findings via Reina
 
-Once both participants have submitted (and at least some documents are `ready`), tell Reina **"run a diligence analysis"** or use the in-chat scope picker. Modes:
+Open the chat on the deal and ask Reina to investigate: "what are the risks here", "go through the data room and flag anything important", "compare Acme's process to Beta's", "what would synergies look like". She has retrieval tools (semantic + keyword over the data room, plus access to each participant's process maps) and stages each substantive claim as a finding with citations.
 
-| Mode | What it does | When to use |
-|------|--------------|-------------|
-| **Comparison** | Side-by-side map differences + a proposed standard process | First pass — understand what's the same, what's different |
-| **Synergy** | Quantified consolidation savings, FTE overlap, systems rationalisation | Investment-committee numbers |
-| **Redesign** | One unified target operating model with per-step lineage | Post-merger integration planning |
-| **Diligence memo** | Document-primary memo with Day-1 / TSA / Separation framing — exportable to PowerPoint | The polished deliverable for your IC |
-
-Each finding the AI generates carries:
+There is no batch "Run analysis" button - findings flow in continuously as you chat. Each carries:
 - A **severity** (low / medium / high / critical)
-- A **confidence score** (0–1)
+- A **confidence score** (0-1)
 - An **impact list** (Day-1 / TSA / Separation / Long-term)
-- An **evidence list** — chunk citations into the documents OR step references into the maps
+- An **evidence list** - chunk citations into the documents OR step references into the maps
 
-After the first run completes, **subsequent uploads automatically queue a delta analysis** (throttled to once per hour). Findings new since the previous run get a small **NEW** pill in the workspace.
+See [How findings work](/docs/tutorials/diligence-memo) for the full shape.
 
-## Step 5 — Review findings
+## Step 5 - Review findings
 
 In the workspace modal's Findings section, every finding shows reviewer controls:
 
-- **Approve** ✓ — finding ships in the public report and the PowerPoint export
-- **Reject** ✕ — finding hidden from everyone
-- **Needs revision** ✎ — visible to editors, hidden from the public report
+- **Approve** - finding stays visible to all viewers of the deal
+- **Reject** - finding hidden from everyone except editors
+- **Needs revision** - visible to editors, hidden from public viewers
 
 You can edit the title and body in place. The AI's original wording is preserved in the audit log; what you see is your edit.
 
-**Don't skip evidence.** Expand a finding and click **Inspect** on any evidence row — the cited chunk plus one neighbour either side opens inline with the target highlighted. Click **Open** to fetch a signed URL for the source document. If a citation doesn't back the finding, drop it.
+**Don't skip evidence.** Expand a finding and click **Inspect** on any evidence row - the cited chunk plus one neighbour either side opens inline with the target highlighted. Click **Open** to fetch a signed URL for the source document. If a citation doesn't back the finding, drop it.
 
-**Discuss inline.** Each finding has a **Discussion** thread (use `@email` to mention someone) and a row of **Tags** for triage: *Deal-breaker · Re-trade · Disclose · Mitigate · Monitor*. Editors can clear a yellow **STALE** badge with **Mark verified** after re-checking a finding whose underlying document was reprocessed.
+**Discuss inline.** Each finding has a **Discussion** thread (use `@email` to mention someone) and a row of **Tags** for triage: *Deal-breaker, Re-trade, Disclose, Mitigate, Monitor*. Editors can clear a yellow **STALE** badge with **Mark verified** after re-checking a finding whose underlying document was reprocessed.
 
 **Use the Q&A queue.** A dedicated section between Documents and Findings lets you log questions for the seller, assign them to a participant, and track who answered.
 
-## Step 6 — Generate the scorecard
-
-Click **Scorecard** in the modal header bar. This produces a one-page IC summary auto-filled from the latest analysis:
-
-- Thesis (from executive summary)
-- Top-5 risks ranked by severity × confidence
-- Mitigants (recommendations across the top findings)
-- Severity counts + risk score
-- Doc coverage by category
-- A rule-based recommended action: *Re-trade or walk · Negotiate price · Proceed with conditions · Proceed; address in 100-day plan · Proceed with confidence*
-
-Top-risk rows deep-link back to their finding in the workspace.
-
-## Step 7 — Export to PowerPoint
-
-When at least one finding is approved, the **Export to PowerPoint** button activates from the chat (Reina can also propose it). The deck includes:
-
-- Cover slide
-- Executive summary
-- Per-section finding slides (Tech Landscape, Operational Footprint, Organisation, Red Flags)
-- Day-1 / TSA / Separation cross-cut
-- Key takeaways
-
-Approved findings only — pending and rejected ones never leave the platform.
-
 ## Common questions
 
-**A finding's evidence doesn't open.** The signed URL expired (5 min TTL). Click **Inspect** again — a fresh URL is requested per click.
+**A finding's evidence doesn't open.** The signed URL expired (5 min TTL). Click **Inspect** again - a fresh URL is requested per click.
 
-**The analysis says "Not all companies have completed their process map".** Each participant must submit their map first. Diligence mode is the exception — it can run from the data room alone.
-
-**A scanned PDF landed as `stored` instead of `ready`.** OCR isn't configured. Org admins can paste a Mistral key under **Org admin → API keys → Mistral (OCR)** to enable it for the whole org. Then click **Reprocess** on the document.
+**A scanned PDF landed as `stored` instead of `ready`.** OCR isn't configured. Org admins can paste a Mistral key under **Org admin -> API keys -> Mistral (OCR)** to enable it for the whole org. Then click **Reprocess** on the document.
 
 **I uploaded a new version of a document — are findings updated?** When you reprocess, every finding citing that document is flagged **STALE** in yellow so reviewers know to re-verify. Click **Mark verified** to clear once you've checked.
 

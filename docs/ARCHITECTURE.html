@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vesno - Architecture</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --panel-2: #273549;
+    --text: #e2e8f0;
+    --text-mid: #94a3b8;
+    --text-dim: #64748b;
+    --border: #334155;
+    --accent: #14b8a6;
+    --c-external: #64748b;
+    --c-page: #38bdf8;
+    --c-api: #14b8a6;
+    --c-service: #a78bfa;
+    --c-worker: #fb923c;
+    --c-data: #4ade80;
+    --c-external-svc: #f472b6;
+    --c-removed: #475569;
+    --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 24px 80px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+  h1 {
+    font-size: 28px;
+    margin: 0 0 4px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  h2 {
+    font-size: 18px;
+    margin: 40px 0 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 {
+    font-size: 13px;
+    margin: 0 0 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-mid);
+  }
+  .meta {
+    color: var(--text-dim);
+    font-size: 13px;
+    margin-bottom: 24px;
+  }
+  .meta code {
+    background: var(--panel);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  p { color: var(--text); margin: 8px 0; }
+  .contract {
+    background: linear-gradient(180deg, rgba(20,184,166,0.08), rgba(20,184,166,0.02));
+    border: 1px solid rgba(20,184,166,0.25);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin: 16px 0 32px;
+  }
+  .contract h2 {
+    margin-top: 0;
+    border: none;
+    padding: 0;
+    color: var(--accent);
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .contract ul { margin: 8px 0 0; padding-left: 22px; }
+  .contract li { margin: 4px 0; color: var(--text); }
+  .contract code {
+    background: rgba(20,184,166,0.12);
+    color: var(--accent);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+
+  /* ─── Layered diagram ─────────────────────────── */
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .layer {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px 16px;
+    box-shadow: var(--shadow);
+  }
+  .layer-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .layer-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+  }
+  .layer-hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+  .row {
+    display: grid;
+    gap: 10px;
+  }
+  .row.cols-1 { grid-template-columns: 1fr; }
+  .row.cols-2 { grid-template-columns: 1fr 1fr; }
+  .row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .row.cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+  .row.cols-5 { grid-template-columns: 1fr 1fr 1fr 1fr 1fr; }
+  .row.cols-6 { grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr; }
+
+  .group {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+  .group-head {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-mid);
+    margin-bottom: 8px;
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .chip {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .chip.bg-page    { background: rgba(56,189,248,0.10); border-color: rgba(56,189,248,0.35); color: #bae6fd; }
+  .chip.bg-api     { background: rgba(20,184,166,0.10); border-color: rgba(20,184,166,0.35); color: #99f6e4; }
+  .chip.bg-service { background: rgba(167,139,250,0.10); border-color: rgba(167,139,250,0.35); color: #ddd6fe; }
+  .chip.bg-worker  { background: rgba(251,146,60,0.10); border-color: rgba(251,146,60,0.35); color: #fed7aa; }
+  .chip.bg-data    { background: rgba(74,222,128,0.10); border-color: rgba(74,222,128,0.35); color: #bbf7d0; }
+  .chip.bg-ext     { background: rgba(244,114,182,0.10); border-color: rgba(244,114,182,0.35); color: #fbcfe8; }
+  .chip.bg-removed { background: rgba(71,85,105,0.18); border-color: rgba(71,85,105,0.55); color: var(--text-dim); text-decoration: line-through; }
+
+  .layer.external .layer-title { color: var(--c-external); }
+  .layer.pages    .layer-title { color: var(--c-page); }
+  .layer.api      .layer-title { color: var(--c-api); }
+  .layer.services .layer-title { color: var(--c-service); }
+  .layer.workers  .layer-title { color: var(--c-worker); }
+  .layer.data     .layer-title { color: var(--c-data); }
+  .layer.removed  .layer-title { color: var(--c-removed); }
+
+  .layer.external .group { background: rgba(100,116,139,0.08); }
+  .layer.pages    .group { background: rgba(56,189,248,0.04); }
+  .layer.api      .group { background: rgba(20,184,166,0.04); }
+  .layer.services .group { background: rgba(167,139,250,0.04); }
+  .layer.workers  .group { background: rgba(251,146,60,0.04); }
+  .layer.data     .group { background: rgba(74,222,128,0.04); }
+  .layer.removed  .group { background: rgba(71,85,105,0.06); }
+
+  .divider {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 18px;
+    line-height: 1;
+    margin: -2px 0;
+    user-select: none;
+  }
+
+  /* ─── Flow steps ──────────────────────────────── */
+  .flow {
+    margin: 24px 0;
+    counter-reset: step;
+  }
+  .flow ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .flow li {
+    counter-increment: step;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px 12px 48px;
+    position: relative;
+  }
+  .flow li::before {
+    content: counter(step);
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    background: var(--accent);
+    color: #042f2e;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .flow li code {
+    background: var(--panel-2);
+    color: var(--text);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+  .flow .flow-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 2px;
+  }
+  .flow .flow-detail {
+    color: var(--text-mid);
+    font-size: 13px;
+  }
+  .flow .flow-arrow {
+    color: var(--accent);
+    font-weight: 600;
+    margin: 0 4px;
+  }
+
+  /* ─── Table ──────────────────────────────────── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    font-size: 13px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    color: var(--text-mid);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  td code, td.path {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    color: #bae6fd;
+  }
+  td.removed { color: var(--text-dim); text-decoration: line-through; }
+
+  /* ─── Legend ─────────────────────────────────── */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 12px 0 0;
+  }
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-mid);
+  }
+  .legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .footer {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+  .footer a { color: var(--c-page); }
+
+  @media (max-width: 900px) {
+    .row.cols-3, .row.cols-4, .row.cols-5, .row.cols-6 { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 600px) {
+    .row { grid-template-columns: 1fr !important; }
+  }
+
+  /* ─── SVG diagram ─────────────────────────────── */
+  .diagram-wrap {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    overflow-x: auto;
+    box-shadow: var(--shadow);
+  }
+  .arch-diagram {
+    display: block;
+    width: 100%;
+    min-width: 1100px;
+    height: auto;
+    font-family: -apple-system, "Inter", "Segoe UI", Roboto, sans-serif;
+  }
+  .arch-diagram .layer-bg-pages    { fill: rgba(56,189,248,0.05); stroke: rgba(56,189,248,0.30); }
+  .arch-diagram .layer-bg-api      { fill: rgba(20,184,166,0.05); stroke: rgba(20,184,166,0.30); }
+  .arch-diagram .layer-bg-services { fill: rgba(167,139,250,0.05); stroke: rgba(167,139,250,0.30); }
+  .arch-diagram .layer-bg-workers  { fill: rgba(251,146,60,0.05); stroke: rgba(251,146,60,0.30); }
+  .arch-diagram .layer-bg-external { fill: rgba(244,114,182,0.05); stroke: rgba(244,114,182,0.30); }
+  .arch-diagram .layer-bg-data     { fill: rgba(74,222,128,0.05); stroke: rgba(74,222,128,0.30); }
+  .arch-diagram .node-pages    { fill: rgba(56,189,248,0.12); stroke: rgba(56,189,248,0.45); }
+  .arch-diagram .node-api      { fill: rgba(20,184,166,0.12); stroke: rgba(20,184,166,0.45); }
+  .arch-diagram .node-services { fill: rgba(167,139,250,0.12); stroke: rgba(167,139,250,0.45); }
+  .arch-diagram .node-workers  { fill: rgba(251,146,60,0.12); stroke: rgba(251,146,60,0.45); }
+  .arch-diagram .node-external { fill: rgba(244,114,182,0.12); stroke: rgba(244,114,182,0.45); }
+  .arch-diagram .node-data     { fill: rgba(74,222,128,0.12); stroke: rgba(74,222,128,0.45); }
+  .arch-diagram .node-browser  { fill: rgba(100,116,139,0.18); stroke: rgba(100,116,139,0.55); }
+  .arch-diagram rect[class^="node-"], .arch-diagram rect[class*=" node-"] { stroke-width: 1; }
+  .arch-diagram rect[class^="layer-bg-"] { stroke-width: 1; stroke-dasharray: 4 3; }
+  .arch-diagram text.layer-label   { fill: var(--text-mid); font-size: 11px; font-weight: 700; letter-spacing: 1.2px; }
+  .arch-diagram text.group-label   { fill: var(--text-mid); font-size: 10.5px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; }
+  .arch-diagram text.node-title    { font-size: 12.5px; font-weight: 600; }
+  .arch-diagram text.node-sub      { font-size: 11px; }
+  .arch-diagram text.t-pages       { fill: #bae6fd; }
+  .arch-diagram text.t-api         { fill: #99f6e4; }
+  .arch-diagram text.t-services    { fill: #ddd6fe; }
+  .arch-diagram text.t-workers     { fill: #fed7aa; }
+  .arch-diagram text.t-external    { fill: #fbcfe8; }
+  .arch-diagram text.t-data        { fill: #bbf7d0; }
+  .arch-diagram text.t-browser     { fill: #cbd5e1; }
+  .arch-diagram .conn              { stroke: #64748b; stroke-width: 1.5; fill: none; }
+  .arch-diagram .conn-strong       { stroke: #14b8a6; stroke-width: 1.8; fill: none; }
+  .arch-diagram .conn-dashed       { stroke-dasharray: 5 4; }
+  .arch-diagram text.edge-label    { fill: var(--text-dim); font-size: 10.5px; font-style: italic; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Vesno (Workflow Consultancy) - Architecture</h1>
+  <p class="meta">
+    AI-native operating-model + M&amp;A diligence platform &middot;
+    Living-workspace model &middot;
+    Last updated <code>2026-05-13</code>
+  </p>
+
+  <section class="contract">
+    <h2>Living-workspace contract</h2>
+    <ul>
+      <li>The <strong>process IS the deliverable</strong>. There are no separate "report", "redesign", "analysis", or "export" artefacts. The canvas + chat is what ships to the user.</li>
+      <li>Cost, savings, and automation metrics derive <strong>on read</strong> from <code>processes.flow_data.rawProcesses[].steps[]</code> via <code>lib/processMetrics.js</code>. No cached snapshot columns.</li>
+      <li>AI improvement suggestions land as inline rows in the <code>changes</code> table on the live process. Users <em>apply</em> them in place; there is no separate "save the redesign" step.</li>
+      <li>Deal findings live directly on <code>deal_findings (deal_id, finding_key)</code>. No per-analysis-run snapshot scope.</li>
+      <li>Every server mutation routes through the <code>changes</code> relational audit log.</li>
+    </ul>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch" style="background:#38bdf8"></span>UI / pages</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:#14b8a6"></span>API routes</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:#a78bfa"></span>Service modules</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:#fb923c"></span>Background workers</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:#4ade80"></span>Data layer</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:#f472b6"></span>External services</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:#475569"></span>Removed (migration history)</span>
+    </div>
+  </section>
+
+  <h2>Architecture diagram</h2>
+  <div class="diagram-wrap">
+    <svg class="arch-diagram" viewBox="0 0 1400 940" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vesno living-workspace architecture diagram">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#64748b"/>
+        </marker>
+        <marker id="ah-strong" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#14b8a6"/>
+        </marker>
+      </defs>
+
+      <!-- ───── 1. Browser ───── -->
+      <rect class="node-browser" x="600" y="20" width="200" height="50" rx="6"/>
+      <text class="node-title t-browser" x="700" y="50" text-anchor="middle">User browser</text>
+      <line class="conn" x1="700" y1="70" x2="700" y2="96" marker-end="url(#ah)"/>
+
+      <!-- ───── 2. PAGES layer ───── -->
+      <rect class="layer-bg-pages" x="20" y="100" width="1360" height="110" rx="8"/>
+      <text class="layer-label t-pages" x="36" y="122">PAGES (Next.js App Router)</text>
+
+      <rect class="node-pages" x="40" y="140" width="170" height="58" rx="5"/>
+      <text class="node-title t-pages"   x="125" y="166" text-anchor="middle">Workspace</text>
+      <text class="node-sub t-pages"     x="125" y="184" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10">/workspace/map</text>
+
+      <rect class="node-pages" x="225" y="140" width="170" height="58" rx="5"/>
+      <text class="node-title t-pages"   x="310" y="166" text-anchor="middle">Process audit</text>
+      <text class="node-sub t-pages"     x="310" y="184" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10">/process-audit</text>
+
+      <rect class="node-pages" x="410" y="140" width="200" height="58" rx="5"/>
+      <text class="node-title t-pages"   x="510" y="166" text-anchor="middle">Org admin</text>
+      <text class="node-sub t-pages"     x="510" y="184" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10">/org-admin</text>
+
+      <rect class="node-pages" x="625" y="140" width="240" height="58" rx="5"/>
+      <text class="node-title t-pages"   x="745" y="166" text-anchor="middle">Deal workspace</text>
+      <text class="node-sub t-pages"     x="745" y="184" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10">/deals/[id]/workspace</text>
+
+      <rect class="node-pages" x="880" y="140" width="305" height="58" rx="5"/>
+      <text class="node-title t-pages"   x="1032" y="166" text-anchor="middle">Auth + legal</text>
+      <text class="node-sub t-pages"     x="1032" y="184" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10">/signin, /signup, /(legal)/*</text>
+
+      <line class="conn" x1="700" y1="210" x2="700" y2="248" marker-end="url(#ah)"/>
+
+      <!-- ───── 3. API ROUTES layer ───── -->
+      <rect class="layer-bg-api" x="20" y="252" width="1360" height="172" rx="8"/>
+      <text class="layer-label t-api" x="36" y="274">API ROUTES (app/api/)</text>
+
+      <!-- Group A: Process + chat -->
+      <rect class="node-api" x="40" y="290" width="420" height="124" rx="5"/>
+      <text class="group-label t-api" x="50" y="308">Process + chat</text>
+      <text class="node-sub t-api" font-family="ui-monospace,monospace" x="50" y="328">POST /api/diagnostic-chat (SSE)</text>
+      <text class="node-sub t-api" font-family="ui-monospace,monospace" x="50" y="346">PUT  /api/update-diagnostic</text>
+      <text class="node-sub t-api" font-family="ui-monospace,monospace" x="50" y="364">POST /api/send-diagnostic-report</text>
+      <text class="node-sub t-api" font-family="ui-monospace,monospace" x="50" y="382">GET  /api/get-diagnostic, get-dashboard</text>
+      <text class="node-sub t-api" font-family="ui-monospace,monospace" x="50" y="400">/api/diagnostic-changes, chat-sessions</text>
+
+      <!-- Group B: Deal + data room -->
+      <rect class="node-api" x="480" y="290" width="420" height="124" rx="5"/>
+      <text class="group-label t-api" x="490" y="308">Deal + data room</text>
+      <text class="node-sub t-api" font-family="ui-monospace,monospace" x="490" y="328">GET  /api/deals/[id]</text>
+      <text class="node-sub t-api" font-family="ui-monospace,monospace" x="490" y="346">POST /api/deals/[id]/documents</text>
+      <text class="node-sub t-api" font-family="ui-monospace,monospace" x="490" y="364">POST /api/deals/[id]/documents/[id]/reprocess</text>
+      <text class="node-sub t-api" font-family="ui-monospace,monospace" x="490" y="382">GET  /api/deals/[id]/findings, /qa, /search</text>
+      <text class="node-sub t-api" font-family="ui-monospace,monospace" x="490" y="400">/api/deals/[id]/checklist, /activity, /flows</text>
+
+      <!-- Group C: Operating model + infra -->
+      <rect class="node-api" x="920" y="290" width="440" height="124" rx="5"/>
+      <text class="group-label t-api" x="930" y="308">Operating model + org + infra</text>
+      <text class="node-sub t-api" font-family="ui-monospace,monospace" x="930" y="328">/api/operating-models/[id]/...</text>
+      <text class="node-sub t-api" font-family="ui-monospace,monospace" x="930" y="346">/api/organizations, /me/*</text>
+      <text class="node-sub t-api" font-family="ui-monospace,monospace" x="930" y="364">POST /api/inngest (worker handler)</text>
+      <text class="node-sub t-api" font-family="ui-monospace,monospace" x="930" y="382">/api/cron/*, /api/health</text>
+      <text class="node-sub t-api" font-family="ui-monospace,monospace" x="930" y="400">/api/auth/*, /api/public-config</text>
+
+      <!-- API → Services arrow -->
+      <line class="conn" x1="370" y1="424" x2="370" y2="458" marker-end="url(#ah)"/>
+      <!-- API → Workers arrow (curved from Group B/C to Workers) -->
+      <path class="conn" d="M 1130 424 C 1130 440, 1130 446, 1130 458" marker-end="url(#ah)"/>
+      <text class="edge-label" x="1140" y="446">enqueue event</text>
+
+      <!-- ───── 4. SERVICES + WORKERS + EXTERNAL row ───── -->
+      <rect class="layer-bg-services" x="20" y="462" width="720" height="200" rx="8"/>
+      <text class="layer-label t-services" x="36" y="484">SERVICE MODULES (lib/)</text>
+
+      <!-- Services col 1: Chat agent -->
+      <rect class="node-services" x="40" y="498" width="160" height="150" rx="5"/>
+      <text class="group-label t-services" x="120" y="516" text-anchor="middle">Chat agent (Reina)</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="120" y="536" text-anchor="middle" font-size="10">agents/chat/graph</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="120" y="552" text-anchor="middle" font-size="10">agents/chat/tools</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="120" y="568" text-anchor="middle" font-size="10">agents/chat/router</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="120" y="584" text-anchor="middle" font-size="10">prompts.js</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="120" y="600" text-anchor="middle" font-size="10">agents/models.js</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="120" y="616" text-anchor="middle" font-size="10">modelCatalogue</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="120" y="632" text-anchor="middle" font-size="10">chatPersistence</text>
+
+      <!-- Services col 2: Process + workspace -->
+      <rect class="node-services" x="215" y="498" width="160" height="150" rx="5"/>
+      <text class="group-label t-services" x="295" y="516" text-anchor="middle">Process + workspace</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="295" y="536" text-anchor="middle" font-size="10">processMetrics.js</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="295" y="552" text-anchor="middle" font-size="10">changes/repo</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="295" y="568" text-anchor="middle" font-size="10">changes/dealProposals</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="295" y="584" text-anchor="middle" font-size="10">changes/serverDiff</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="295" y="600" text-anchor="middle" font-size="10">operatingModel/repo</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="295" y="616" text-anchor="middle" font-size="10">operatingModel/crossProcess</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="295" y="632" text-anchor="middle" font-size="10">flows/reconcileEdges</text>
+
+      <!-- Services col 3: Auth + guards -->
+      <rect class="node-services" x="390" y="498" width="160" height="150" rx="5"/>
+      <text class="group-label t-services" x="470" y="516" text-anchor="middle">Auth + guards</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="470" y="536" text-anchor="middle" font-size="10">auth.js (JWT cache)</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="470" y="552" text-anchor="middle" font-size="10">customerKey</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="470" y="568" text-anchor="middle" font-size="10">dealAuth</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="470" y="584" text-anchor="middle" font-size="10">entitlements</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="470" y="600" text-anchor="middle" font-size="10">rate-limit</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="470" y="616" text-anchor="middle" font-size="10">costGuard</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="470" y="632" text-anchor="middle" font-size="10">trialBudget</text>
+
+      <!-- Services col 4: Deal + AI helpers -->
+      <rect class="node-services" x="565" y="498" width="160" height="150" rx="5"/>
+      <text class="group-label t-services" x="645" y="516" text-anchor="middle">Retrieval + AI</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="645" y="536" text-anchor="middle" font-size="10">deal-analysis/</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="645" y="552" text-anchor="middle" font-size="10">chunkSearch</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="645" y="568" text-anchor="middle" font-size="10">ai/embeddings</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="645" y="584" text-anchor="middle" font-size="10">ai/ocr</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="645" y="600" text-anchor="middle" font-size="10">ai/categorizeDoc</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="645" y="616" text-anchor="middle" font-size="10">dealDocumentChecklist</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="645" y="632" text-anchor="middle" font-size="10">dealDocumentVisibility</text>
+
+      <!-- Workers -->
+      <rect class="layer-bg-workers" x="760" y="462" width="280" height="200" rx="8"/>
+      <text class="layer-label t-workers" x="776" y="484">INNGEST WORKERS</text>
+
+      <rect class="node-workers" x="775" y="500" width="250" height="80" rx="5"/>
+      <text class="node-title t-workers" x="900" y="522" text-anchor="middle">processDealDocument</text>
+      <text class="node-sub t-workers" x="900" y="542" text-anchor="middle" font-size="10.5">download → extract</text>
+      <text class="node-sub t-workers" x="900" y="558" text-anchor="middle" font-size="10.5">→ chunk → embed</text>
+      <text class="node-sub t-workers" x="900" y="574" text-anchor="middle" font-size="10.5">→ mark ready</text>
+
+      <rect class="node-workers" x="775" y="590" width="250" height="60" rx="5"/>
+      <text class="node-title t-workers" x="900" y="612" text-anchor="middle">syncConnectorBinding</text>
+      <text class="node-sub t-workers" x="900" y="630" text-anchor="middle" font-size="10.5">SharePoint + GDrive sync</text>
+
+      <!-- External AI -->
+      <rect class="layer-bg-external" x="1060" y="462" width="320" height="200" rx="8"/>
+      <text class="layer-label t-external" x="1076" y="484">EXTERNAL AI SERVICES</text>
+
+      <rect class="node-external" x="1075" y="500" width="290" height="50" rx="5"/>
+      <text class="node-title t-external" x="1220" y="522" text-anchor="middle">Anthropic Claude</text>
+      <text class="node-sub t-external" x="1220" y="540" text-anchor="middle" font-size="10.5">Sonnet 4.6 · Haiku 4.5 · Opus 4.7</text>
+
+      <rect class="node-external" x="1075" y="560" width="290" height="42" rx="5"/>
+      <text class="node-title t-external" x="1220" y="582" text-anchor="middle">Voyage AI</text>
+      <text class="node-sub t-external" x="1220" y="597" text-anchor="middle" font-size="10.5">voyage-3-large embeddings</text>
+
+      <rect class="node-external" x="1075" y="612" width="290" height="42" rx="5"/>
+      <text class="node-title t-external" x="1220" y="634" text-anchor="middle">Mistral</text>
+      <text class="node-sub t-external" x="1220" y="649" text-anchor="middle" font-size="10.5">Document OCR fallback</text>
+
+      <!-- Services → External arrows -->
+      <path class="conn" d="M 730 540 C 900 540, 980 525, 1058 525" marker-end="url(#ah)"/>
+      <text class="edge-label" x="900" y="525" text-anchor="middle">chat / categorise</text>
+      <!-- Workers → External arrows -->
+      <path class="conn" d="M 1030 575 C 1042 575, 1048 580, 1058 580" marker-end="url(#ah)"/>
+      <path class="conn" d="M 1030 540 C 1042 540, 1048 525, 1058 525" marker-end="url(#ah)"/>
+      <text class="edge-label" x="1040" y="600" text-anchor="middle" font-size="9.5">embed / OCR</text>
+
+      <!-- Down arrows to Data -->
+      <line class="conn-strong" x1="370" y1="662" x2="370" y2="708" marker-end="url(#ah-strong)"/>
+      <text class="edge-label" x="382" y="690" font-style="italic">read / write</text>
+      <line class="conn-strong" x1="900" y1="662" x2="900" y2="708" marker-end="url(#ah-strong)"/>
+      <text class="edge-label" x="912" y="690" font-style="italic">persist</text>
+
+      <!-- ───── 5. DATA layer ───── -->
+      <rect class="layer-bg-data" x="20" y="710" width="1360" height="210" rx="8"/>
+      <text class="layer-label t-data" x="36" y="732">DATA LAYER · Supabase (Postgres + RLS + pgvector + Storage + Vault + Auth)</text>
+
+      <!-- Process + workspace tables -->
+      <rect class="node-data" x="40" y="748" width="420" height="158" rx="5"/>
+      <text class="group-label t-data" x="50" y="766">Process + workspace</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="50" y="786" font-size="11">processes (flow_data JSONB)</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="50" y="802" font-size="11">changes (audit log)</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="50" y="818" font-size="11">operating_models</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="50" y="834" font-size="11">model_functions</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="50" y="850" font-size="11">model_roles</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="50" y="866" font-size="11">model_systems</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="50" y="882" font-size="11">process_systems</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="50" y="898" font-size="11">discovery_sessions</text>
+
+      <!-- Deals + diligence -->
+      <rect class="node-data" x="480" y="748" width="420" height="158" rx="5"/>
+      <text class="group-label t-data" x="490" y="766">Deals + diligence</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="490" y="786" font-size="11">deals</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="490" y="802" font-size="11">deal_participants</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="490" y="818" font-size="11">deal_flows</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="490" y="834" font-size="11">deal_findings</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="490" y="850" font-size="11">deal_finding_reviews</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="490" y="866" font-size="11">deal_documents</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="490" y="882" font-size="11">deal_document_chunks (vector)</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="490" y="898" font-size="11">deal_qa_items, deal_connector_bindings</text>
+
+      <!-- Org + chat + ledger -->
+      <rect class="node-data" x="920" y="748" width="440" height="158" rx="5"/>
+      <text class="group-label t-data" x="930" y="766">Org + chat + ledger</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="930" y="786" font-size="11">organizations</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="930" y="802" font-size="11">organization_members (RBAC + entitlements)</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="930" y="818" font-size="11">customer_api_keys (pgcrypto)</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="930" y="834" font-size="11">chat_sessions</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="930" y="850" font-size="11">chat_messages</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="930" y="866" font-size="11">chat_artefacts</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="930" y="882" font-size="11">token_ledger, user_trial_allowance</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="930" y="898" font-size="11">audit_logs</text>
+    </svg>
+  </div>
+
+  <h2>Layered architecture</h2>
+  <div class="stack">
+
+    <div class="layer external">
+      <div class="layer-head">
+        <span class="layer-title">External</span>
+        <span class="layer-hint">browser, cron, host</span>
+      </div>
+      <div class="row cols-3">
+        <div class="group">
+          <div class="group-head">Users</div>
+          <div class="chips">
+            <span class="chip">Operator / SME</span>
+            <span class="chip">PE / M&amp;A analyst</span>
+            <span class="chip">Org admin</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-head">Outbound automation</div>
+          <div class="chips">
+            <span class="chip">n8n cron + webhooks</span>
+            <span class="chip">Vercel cron</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-head">Host</div>
+          <div class="chips">
+            <span class="chip">Vercel (Next.js)</span>
+            <span class="chip">Vercel Edge / Functions</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider">&darr;</div>
+
+    <div class="layer pages">
+      <div class="layer-head">
+        <span class="layer-title">Pages (Next.js App Router)</span>
+        <span class="layer-hint">app/</span>
+      </div>
+      <div class="row cols-3">
+        <div class="group">
+          <div class="group-head">Workspace (canvas + chat)</div>
+          <div class="chips">
+            <span class="chip bg-page">/workspace</span>
+            <span class="chip bg-page">/workspace/map</span>
+            <span class="chip bg-page">/process-audit</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-head">Deals + admin</div>
+          <div class="chips">
+            <span class="chip bg-page">/deals/[id]/workspace</span>
+            <span class="chip bg-page">/org-admin</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-head">Auth + onboarding</div>
+          <div class="chips">
+            <span class="chip bg-page">/signin</span>
+            <span class="chip bg-page">/signup</span>
+            <span class="chip bg-page">/(legal)/*</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider">&darr;</div>
+
+    <div class="layer api">
+      <div class="layer-head">
+        <span class="layer-title">API routes</span>
+        <span class="layer-hint">app/api/</span>
+      </div>
+      <div class="row cols-3">
+        <div class="group">
+          <div class="group-head">Process + canvas</div>
+          <div class="chips">
+            <span class="chip bg-api">PUT /api/update-diagnostic</span>
+            <span class="chip bg-api">POST /api/send-diagnostic-report</span>
+            <span class="chip bg-api">GET /api/get-diagnostic</span>
+            <span class="chip bg-api">GET/DELETE /api/get-dashboard</span>
+            <span class="chip bg-api">GET /api/diagnostic-changes/...</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-head">Chat (Reina)</div>
+          <div class="chips">
+            <span class="chip bg-api">POST /api/diagnostic-chat (SSE)</span>
+            <span class="chip bg-api">GET/POST /api/chat-sessions</span>
+            <span class="chip bg-api">POST /api/chat-messages</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-head">Operating model</div>
+          <div class="chips">
+            <span class="chip bg-api">/api/operating-models/[id]/...</span>
+            <span class="chip bg-api">/api/operating-models/[id]/functions</span>
+            <span class="chip bg-api">/api/operating-models/[id]/roles</span>
+            <span class="chip bg-api">/api/operating-models/[id]/systems</span>
+            <span class="chip bg-api">/api/operating-models/[id]/processes/...</span>
+          </div>
+        </div>
+      </div>
+      <div class="row cols-3" style="margin-top: 10px;">
+        <div class="group">
+          <div class="group-head">Deal + data room</div>
+          <div class="chips">
+            <span class="chip bg-api">/api/deals/[id]</span>
+            <span class="chip bg-api">/api/deals/[id]/flows</span>
+            <span class="chip bg-api">/api/deals/[id]/participants</span>
+            <span class="chip bg-api">/api/deals/[id]/findings</span>
+            <span class="chip bg-api">/api/deals/[id]/documents</span>
+            <span class="chip bg-api">/api/deals/[id]/documents/[id]/reprocess</span>
+            <span class="chip bg-api">/api/deals/[id]/qa</span>
+            <span class="chip bg-api">/api/deals/[id]/search</span>
+            <span class="chip bg-api">/api/deals/[id]/checklist</span>
+            <span class="chip bg-api">/api/deals/[id]/activity</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-head">Org / auth / billing</div>
+          <div class="chips">
+            <span class="chip bg-api">/api/me</span>
+            <span class="chip bg-api">/api/organizations</span>
+            <span class="chip bg-api">/api/organizations/[id]/keys</span>
+            <span class="chip bg-api">/api/cron/*</span>
+            <span class="chip bg-api">/api/inngest</span>
+            <span class="chip bg-api">/api/health</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-head">Infra</div>
+          <div class="chips">
+            <span class="chip bg-api">/api/public-config</span>
+            <span class="chip bg-api">/api/auth/*</span>
+            <span class="chip bg-api">/api/csp-report</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider">&darr;</div>
+
+    <div class="layer services">
+      <div class="layer-head">
+        <span class="layer-title">Service modules</span>
+        <span class="layer-hint">lib/</span>
+      </div>
+      <div class="row cols-3">
+        <div class="group">
+          <div class="group-head">Chat agent (Reina)</div>
+          <div class="chips">
+            <span class="chip bg-service">lib/agents/chat/graph.js</span>
+            <span class="chip bg-service">lib/agents/chat/tools.js</span>
+            <span class="chip bg-service">lib/agents/chat/router.js</span>
+            <span class="chip bg-service">lib/agents/chat/intros.js</span>
+            <span class="chip bg-service">lib/prompts.js</span>
+            <span class="chip bg-service">lib/agents/models.js</span>
+            <span class="chip bg-service">lib/agents/modelCatalogue.js</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-head">Process + workspace</div>
+          <div class="chips">
+            <span class="chip bg-service">lib/processMetrics.js</span>
+            <span class="chip bg-service">lib/changes/repo.js</span>
+            <span class="chip bg-service">lib/changes/dealProposals.js</span>
+            <span class="chip bg-service">lib/changes/canvasMutations.js</span>
+            <span class="chip bg-service">lib/changes/serverDiff.js</span>
+            <span class="chip bg-service">lib/operatingModel/repo.js</span>
+            <span class="chip bg-service">lib/operatingModel/crossProcess.js</span>
+            <span class="chip bg-service">lib/operatingModel/processSystems.js</span>
+            <span class="chip bg-service">lib/flows/reconcileEdges.js</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-head">Deal + retrieval</div>
+          <div class="chips">
+            <span class="chip bg-service">lib/deal-analysis/chunkSearch.js</span>
+            <span class="chip bg-service">lib/dealAuth.js</span>
+            <span class="chip bg-service">lib/dealDocumentChecklist.js</span>
+            <span class="chip bg-service">lib/dealDocumentVisibility.js</span>
+            <span class="chip bg-service">lib/ai/embeddings.js</span>
+            <span class="chip bg-service">lib/ai/ocr.js</span>
+            <span class="chip bg-service">lib/ai/categorizeDoc.js</span>
+          </div>
+        </div>
+      </div>
+      <div class="row cols-3" style="margin-top: 10px;">
+        <div class="group">
+          <div class="group-head">Auth + entitlements</div>
+          <div class="chips">
+            <span class="chip bg-service">lib/auth.js (cached)</span>
+            <span class="chip bg-service">lib/customerKey.js</span>
+            <span class="chip bg-service">lib/entitlements.js</span>
+            <span class="chip bg-service">lib/mfaCheck.js</span>
+            <span class="chip bg-service">lib/rate-limit.js</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-head">Cost / token guard</div>
+          <div class="chips">
+            <span class="chip bg-service">lib/costGuard.js</span>
+            <span class="chip bg-service">lib/trialBudget.js</span>
+            <span class="chip bg-service">lib/costSavingsCalculator.js</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-head">Supabase + helpers</div>
+          <div class="chips">
+            <span class="chip bg-service">lib/api-helpers.js</span>
+            <span class="chip bg-service">lib/api-fetch.js</span>
+            <span class="chip bg-service">lib/supabase.js</span>
+            <span class="chip bg-service">lib/logger.js</span>
+            <span class="chip bg-service">lib/chatPersistence.js</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider">&darr;</div>
+
+    <div class="layer workers">
+      <div class="layer-head">
+        <span class="layer-title">Background workers (Inngest)</span>
+        <span class="layer-hint">lib/inngest/functions/</span>
+      </div>
+      <div class="row cols-3">
+        <div class="group">
+          <div class="group-head">Deal document pipeline</div>
+          <div class="chips">
+            <span class="chip bg-worker">processDealDocument</span>
+            <span class="chip bg-worker">extractText (mammoth, officeparser, xlsx)</span>
+            <span class="chip bg-worker">chunker</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-head">Connectors</div>
+          <div class="chips">
+            <span class="chip bg-worker">syncConnectorBinding</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-head">Cron jobs</div>
+          <div class="chips">
+            <span class="chip bg-worker">/api/cron/expunge-deleted-accounts</span>
+            <span class="chip bg-worker">/api/cron/rotate-keys</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider">&darr;</div>
+
+    <div class="layer data">
+      <div class="layer-head">
+        <span class="layer-title">Data layer (Supabase: Postgres + RLS + pgvector + Storage + Vault)</span>
+        <span class="layer-hint">supabase/</span>
+      </div>
+      <div class="row cols-3">
+        <div class="group">
+          <div class="group-head">Process + workspace</div>
+          <div class="chips">
+            <span class="chip bg-data">processes (flow_data JSONB)</span>
+            <span class="chip bg-data">changes (audit log)</span>
+            <span class="chip bg-data">operating_models</span>
+            <span class="chip bg-data">model_functions</span>
+            <span class="chip bg-data">model_roles</span>
+            <span class="chip bg-data">model_systems</span>
+            <span class="chip bg-data">process_systems</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-head">Deals + diligence</div>
+          <div class="chips">
+            <span class="chip bg-data">deals</span>
+            <span class="chip bg-data">deal_participants</span>
+            <span class="chip bg-data">deal_flows</span>
+            <span class="chip bg-data">deal_findings</span>
+            <span class="chip bg-data">deal_finding_reviews</span>
+            <span class="chip bg-data">deal_documents</span>
+            <span class="chip bg-data">deal_document_chunks (vector)</span>
+            <span class="chip bg-data">deal_qa_items</span>
+            <span class="chip bg-data">deal_connector_bindings</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-head">Org + chat + ledger</div>
+          <div class="chips">
+            <span class="chip bg-data">organizations</span>
+            <span class="chip bg-data">organization_members (RBAC)</span>
+            <span class="chip bg-data">customer_api_keys (pgcrypto)</span>
+            <span class="chip bg-data">chat_sessions</span>
+            <span class="chip bg-data">chat_messages</span>
+            <span class="chip bg-data">chat_artefacts</span>
+            <span class="chip bg-data">token_ledger</span>
+            <span class="chip bg-data">user_trial_allowance</span>
+            <span class="chip bg-data">audit_logs</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider">&darr;</div>
+
+    <div class="layer api">
+      <div class="layer-head">
+        <span class="layer-title">External services</span>
+        <span class="layer-hint">vendor APIs</span>
+      </div>
+      <div class="row cols-4">
+        <div class="group">
+          <div class="group-head">Anthropic Claude</div>
+          <div class="chips">
+            <span class="chip bg-ext">Sonnet 4.6 (chat)</span>
+            <span class="chip bg-ext">Haiku 4.5 (intake, categorise)</span>
+            <span class="chip bg-ext">Opus 4.7 (deep)</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-head">Voyage AI</div>
+          <div class="chips">
+            <span class="chip bg-ext">voyage-3-large (embed)</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-head">Mistral</div>
+          <div class="chips">
+            <span class="chip bg-ext">Document OCR</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-head">Infra</div>
+          <div class="chips">
+            <span class="chip bg-ext">Inngest (queue + scheduler)</span>
+            <span class="chip bg-ext">n8n (webhooks)</span>
+            <span class="chip bg-ext">Vercel (host)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider">&darr;</div>
+
+    <div class="layer removed">
+      <div class="layer-head">
+        <span class="layer-title">Removed in living-workspace migration (2026-05)</span>
+        <span class="layer-hint">historical, do not re-introduce</span>
+      </div>
+      <div class="row cols-3">
+        <div class="group">
+          <div class="group-head">Dead pages</div>
+          <div class="chips">
+            <span class="chip bg-removed">/report</span>
+            <span class="chip bg-removed">/cost-analysis</span>
+            <span class="chip bg-removed">/deal-analysis</span>
+            <span class="chip bg-removed">/build</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-head">Dead routes</div>
+          <div class="chips">
+            <span class="chip bg-removed">/api/team</span>
+            <span class="chip bg-removed">/api/get-followups</span>
+            <span class="chip bg-removed">/api/cost-analysis</span>
+            <span class="chip bg-removed">/api/process-diagnostic</span>
+            <span class="chip bg-removed">/api/progress</span>
+            <span class="chip bg-removed">/api/portfolio</span>
+            <span class="chip bg-removed">/api/diagnostic-recommendations</span>
+            <span class="chip bg-removed">/api/export-pptx</span>
+            <span class="chip bg-removed">/api/generate-workflow-export</span>
+            <span class="chip bg-removed">/api/recommend-workflow-platform</span>
+            <span class="chip bg-removed">/api/deals/[id]/analyse</span>
+            <span class="chip bg-removed">/api/deals/[id]/analyses/...</span>
+            <span class="chip bg-removed">/api/deals/[id]/scorecard</span>
+            <span class="chip bg-removed">/api/deals/[id]/export-diligence-pptx</span>
+            <span class="chip bg-removed">/api/operating-models/.../promote</span>
+            <span class="chip bg-removed">/api/operating-models/.../target</span>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group-head">Dead tables + columns</div>
+          <div class="chips">
+            <span class="chip bg-removed">deal_analyses</span>
+            <span class="chip bg-removed">report_redesigns</span>
+            <span class="chip bg-removed">chat_artefacts.report_id</span>
+            <span class="chip bg-removed">team_diagnostics + responses</span>
+            <span class="chip bg-removed">diagnostic_progress</span>
+            <span class="chip bg-removed">followup_events</span>
+            <span class="chip bg-removed">processes.cost_analysis_*</span>
+            <span class="chip bg-removed">processes.target_data</span>
+            <span class="chip bg-removed">processes.state_kind</span>
+            <span class="chip bg-removed">processes.diagnostic_mode</span>
+            <span class="chip bg-removed">processes.lead_score / lead_grade</span>
+            <span class="chip bg-removed">processes.total_annual_cost (cache)</span>
+            <span class="chip bg-removed">processes.automation_percentage (cache)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Key data flows</h2>
+  <div class="flow">
+    <ol>
+      <li>
+        <div class="flow-title">User edits a step on the canvas</div>
+        <div class="flow-detail">
+          <code>DiagnosticWorkspace</code>
+          <span class="flow-arrow">&rarr;</span>
+          <code>PUT /api/update-diagnostic</code>
+          <span class="flow-arrow">&rarr;</span>
+          <code>processes.flow_data</code> upsert
+          <span class="flow-arrow">&rarr;</span>
+          <code>diffStepsForChangelog()</code> emits <code>modified</code> rows into the <code>changes</code> table.
+          The metrics (<code>total_annual_cost</code>, etc.) are recomputed on the next read via <code>deriveProcessMetrics</code>.
+        </div>
+      </li>
+      <li>
+        <div class="flow-title">User chats with Reina</div>
+        <div class="flow-detail">
+          Browser opens an SSE stream to <code>POST /api/diagnostic-chat</code>.
+          The graph in <code>lib/agents/chat/graph.js</code> drives an Anthropic tool-use loop.
+          Mutation tools (canvas edits, workspace adds) stage a <code>change</code> row at <code>state=proposed</code> and emit a <code>deal_proposal</code>/<code>workspace_proposal</code> SSE event;
+          the client renders an <strong>Apply</strong> button. On click, the route handler transitions the change to <code>applied</code>.
+        </div>
+      </li>
+      <li>
+        <div class="flow-title">A deal document is uploaded</div>
+        <div class="flow-detail">
+          <code>POST /api/deals/[id]/documents</code>
+          <span class="flow-arrow">&rarr;</span>
+          Supabase Storage + <code>deal_documents</code> insert (<code>status=pending</code>)
+          <span class="flow-arrow">&rarr;</span>
+          Inngest event <code>deal-document.uploaded</code>
+          <span class="flow-arrow">&rarr;</span>
+          <code>processDealDocument</code> worker: extract text &rarr; chunk &rarr; embed via Voyage &rarr; flip to <code>ready</code>.
+          OCR fallback via Mistral when text extraction yields nothing for image-based PDFs.
+        </div>
+      </li>
+      <li>
+        <div class="flow-title">A user asks Reina to search the data room</div>
+        <div class="flow-detail">
+          Agent calls <code>search_deal_documents</code> tool
+          <span class="flow-arrow">&rarr;</span>
+          <code>lib/deal-analysis/chunkSearch.js</code> embeds the query and runs the <code>search_deal_chunks</code> Postgres RPC (hybrid vector + keyword + ACL).
+          Results render in chat with citations.
+        </div>
+      </li>
+      <li>
+        <div class="flow-title">An auditor reviews the deal page</div>
+        <div class="flow-detail">
+          <code>DealWorkspaceModal</code> fetches <code>/api/deals/[id]</code>, <code>/documents</code>, <code>/qa</code>, <code>/checklist</code> in parallel.
+          Findings hang directly on the deal (<code>deal_findings (deal_id, finding_key)</code>) - no per-analysis-run snapshots.
+        </div>
+      </li>
+      <li>
+        <div class="flow-title">Auth on every request</div>
+        <div class="flow-detail">
+          <code>requireAuth</code> peeks the JWT, validates locally on cache hit, and only round-trips to Supabase Auth on cache miss.
+          Coalesces concurrent same-token validations into a single network call.
+        </div>
+      </li>
+    </ol>
+  </div>
+
+  <h2>Top-level directory map</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 32%;">Path</th>
+        <th>Purpose</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="path">app/workspace/</td><td>Operating-model home (canvas + chat shell).</td></tr>
+      <tr><td class="path">app/workspace/map/</td><td>Process-mapping canvas with Reina chat in the left pane.</td></tr>
+      <tr><td class="path">app/deals/[id]/workspace/</td><td>Per-deal workspace - canvas + dataroom + findings.</td></tr>
+      <tr><td class="path">app/org-admin/</td><td>Org admin dashboard (members, entitlements, API keys, usage).</td></tr>
+      <tr><td class="path">app/api/</td><td>Route handlers - process CRUD, chat SSE, deal CRUD, doc upload, ops admin.</td></tr>
+      <tr><td class="path">components/diagnostic/</td><td>Chat shell + canvas (DiagnosticWorkspace, DiagnosticContext, message stream).</td></tr>
+      <tr><td class="path">components/diagnostic/chat/</td><td>Deal workspace modal, rail buttons, context chip.</td></tr>
+      <tr><td class="path">components/workspace/</td><td>Operating-model panels (Graph, List, Insights, Analytics, Deals) - includes AnalyticsCanvasPanel.</td></tr>
+      <tr><td class="path">components/org-admin/</td><td>OrgAdminClient + sub-panels (BYO key, usage, model allowlist, integrations, first-run onboarding) and admin stylesheets.</td></tr>
+      <tr><td class="path">components/auth/</td><td>SignInForm (Supabase login/signup) - mounted by /signin, /org-admin, analytics auth gate, and TeamAuthGate.</td></tr>
+      <tr><td class="path">components/flow/</td><td>InteractiveFlowCanvas (xyflow renderer).</td></tr>
+      <tr><td class="path">lib/agents/chat/</td><td>Reina: tool registry, executor graph, prompt builder.</td></tr>
+      <tr><td class="path">lib/changes/</td><td>Inline change-proposal repo (replaces redesigns).</td></tr>
+      <tr><td class="path">lib/operatingModel/</td><td>Functions / roles / systems repo + rollups + cross-process inventory.</td></tr>
+      <tr><td class="path">lib/processMetrics.js</td><td>Live derivation of cost / savings / automation from flow_data.</td></tr>
+      <tr><td class="path">lib/deal-analysis/</td><td>Now just <code>chunkSearch.js</code> - hybrid vector + keyword RPC wrapper.</td></tr>
+      <tr><td class="path">lib/inngest/functions/</td><td>processDealDocument (parse + chunk + embed) and syncConnectorBinding.</td></tr>
+      <tr><td class="path">lib/auth.js</td><td>Cached + coalesced Supabase auth checks.</td></tr>
+      <tr><td class="path">supabase/migration-*.sql</td><td>Schema history. The three <code>migration-living-workspace-*</code> files are the most recent contract migration.</td></tr>
+      <tr><td class="path">tests/</td><td>Node <code>node:test</code> unit suite + Playwright E2E.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>External dependencies</h2>
+  <table>
+    <thead>
+      <tr><th style="width: 22%;">Service</th><th style="width: 18%;">Used for</th><th>Configuration</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Supabase</td>
+        <td>Postgres + Auth + Storage + Vault + pgvector + RLS</td>
+        <td><code>SUPABASE_URL</code>, <code>SUPABASE_SERVICE_KEY</code>, <code>NEXT_PUBLIC_SUPABASE_*</code></td>
+      </tr>
+      <tr>
+        <td>Anthropic</td>
+        <td>Chat agent, doc categorisation, diligence findings. Platform key + per-org BYO.</td>
+        <td><code>ANTHROPIC_API_KEY</code> (platform fallback). BYO via <code>customer_api_keys</code>.</td>
+      </tr>
+      <tr>
+        <td>Voyage AI</td>
+        <td>Embeddings for dataroom search (voyage-3-large, 1024-dim).</td>
+        <td><code>VOYAGE_API_KEY</code> (platform). Without it: keyword-only search.</td>
+      </tr>
+      <tr>
+        <td>Mistral</td>
+        <td>Document OCR fallback for scanned PDFs / images.</td>
+        <td><code>MISTRAL_API_KEY</code> platform or per-org BYO.</td>
+      </tr>
+      <tr>
+        <td>Inngest</td>
+        <td>Background workers (document pipeline, connector sync).</td>
+        <td><code>INNGEST_EVENT_KEY</code>, <code>INNGEST_SIGNING_KEY</code>. Local dev: <code>npx inngest-cli@latest dev</code>.</td>
+      </tr>
+      <tr>
+        <td>n8n</td>
+        <td>Outbound transactional webhooks (signed HMAC). Optional.</td>
+        <td><code>N8N_*</code> URLs.</td>
+      </tr>
+      <tr>
+        <td>Vercel</td>
+        <td>Hosting. Edge runtime for the static shell, Node functions for routes.</td>
+        <td>Vercel project env vars.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Production checklist</h2>
+  <ol>
+    <li>All required env vars set in Vercel; <code>NEXT_PUBLIC_APP_URL</code> set for CORS / Origin checks.</li>
+    <li>The three living-workspace migrations applied in order: <code>migration-living-workspace-1-schema.sql</code>, <code>-2-rls.sql</code>, <code>-3-drop-compat.sql</code>.</li>
+    <li>Inngest project synced (<code>/api/inngest</code> reachable, <code>INNGEST_EVENT_KEY</code> set).</li>
+    <li>RLS policies pass smoke tests (a non-member cannot read a deal or process they don't own).</li>
+    <li>Rate limit defaults reviewed (<code>lib/rate-limit.js</code>); upgrade to Redis if you need shared limits across instances.</li>
+    <li><code>.env.local</code> never committed; secrets only in Vercel.</li>
+  </ol>
+
+  <div class="footer">
+    See <a href="../README.md">README.md</a> for setup, <a href="../DIAGNOSTICS_CAPABILITIES.md">DIAGNOSTICS_CAPABILITIES.md</a> for deeper subsystem detail, and <a href="../RUNBOOK.md">RUNBOOK.md</a> for ops playbooks.
+  </div>
+</div>
+</body>
+</html>

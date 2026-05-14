@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { stripEmDashes, checkOrigin, getRequestId } from '@/lib/api-helpers';
 import { DiagnosticChatInputSchema } from '@/lib/ai-schemas';
 import { runChatAgent } from '@/lib/agents/chat/graph';
-import { runRedesignChatAgent } from '@/lib/agents/redesign-chat/graph';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { buildSessionContext } from '@/lib/chatPersistence';
 import { verifySupabaseSession } from '@/lib/auth';
@@ -36,7 +35,7 @@ export async function POST(request) {
 
   const parsed = DiagnosticChatInputSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Message or attachments required.' }, { status: 400 });
-  const { message, currentSteps, currentHandoffs, processName, history, incompleteInfo, phaseState, attachments, editingReportId, editingRedesign, redesignContext, segment, dealId, model: requestedModel } = parsed.data;
+  const { message, currentSteps, currentHandoffs, processName, history, incompleteInfo, phaseState, attachments, editingReportId, viewOnlyProcessId, segment, dealId, model: requestedModel, capabilityPath, operatingModelName, operatingModelId, chatScope } = parsed.data;
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured.' }, { status: 500 });
 
   // Authenticated users get cross-session memory injected into the system
@@ -157,7 +156,7 @@ export async function POST(request) {
             const [dealRow, participantsRows] = await Promise.all([
               sb.from('deals').select('name').eq('id', dealId).maybeSingle(),
               sb.from('deal_participants')
-                .select('id,role,company_name,participant_email,status,report_id')
+                .select('id,role,company_name,participant_email,status,process_id')
                 .eq('deal_id', dealId),
             ]);
             if (dealRow?.data?.name) dealName = dealRow.data.name;
@@ -168,7 +167,7 @@ export async function POST(request) {
               companyName: p.company_name,
               email: p.participant_email,
               status: p.status,
-              reportId: p.report_id,
+              reportId: p.process_id,
             }));
             availableParticipants = participantList;
             // Active participant = the one the signed-in user owns.
@@ -201,25 +200,18 @@ export async function POST(request) {
         controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
       };
       try {
-        let reply, actions;
-        if (editingRedesign) {
-          ({ reply, actions } = await runRedesignChatAgent({
-            message, currentSteps, currentHandoffs, processName, history, redesignContext, segment,
-            sessionContext,
-            onEmit: (event, data) => send(event, data),
-          }));
-        } else {
-          ({ reply, actions } = await runChatAgent({
-            message, currentSteps, currentHandoffs, processName, history, incompleteInfo, phaseState, attachments,
-            editingReportId, editingRedesign, redesignContext,
-            dealId: verifiedDealId, dealAccessVerified,
-            dealName, activeParticipant, availableParticipants,
-            sessionContext, session: sessionInfo,
-            apiKey: resolvedApiKey,
-            modelOverride: resolvedModel,
-            onEmit: (event, data) => send(event, data),
-          }));
-        }
+        const { reply, actions } = await runChatAgent({
+          message, currentSteps, currentHandoffs, processName, history, incompleteInfo, phaseState, attachments,
+          editingReportId, viewOnlyProcessId,
+          dealId: verifiedDealId, dealAccessVerified,
+          dealName, activeParticipant, availableParticipants,
+          sessionContext, session: sessionInfo,
+          apiKey: resolvedApiKey,
+          modelOverride: resolvedModel,
+          capabilityPath, operatingModelName, operatingModelId,
+          chatScope: chatScope || null,
+          onEmit: (event, data) => send(event, data),
+        });
         send('done', { reply: stripEmDashes(reply), actions: actions || undefined });
       } catch (err) {
         logger.error('Diagnostic chat error', { requestId: getRequestId(request), error: err.message, stack: err.stack });

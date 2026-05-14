@@ -11,7 +11,7 @@
  *
  * Provider availability is gated on what's connected at the org level —
  * if no integrations are active, we show a help line pointing the user
- * to /portal/org-admin → Integrations.
+ * to /org-admin → Integrations.
  *
  * The folder picker is a small breadcrumb-driven tree (sites → drives →
  * folders for SharePoint; folders for Drive). Picking a leaf submits the

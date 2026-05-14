@@ -68,19 +68,9 @@ describe('suggestedModelIdForPhase', () => {
       assert.equal(suggestedModelIdForPhase({ allowed, phase }), ANTHROPIC_SON);
     }
   });
-  test('editingRedesign overrides → deep tier (Opus)', () => {
-    const id = suggestedModelIdForPhase({ allowed, phase: 'map', editingRedesign: true });
-    assert.equal(id, ANTHROPIC_OPUS);
-  });
   test('hasAttachments overrides → fast tier', () => {
     const id = suggestedModelIdForPhase({ allowed, phase: 'map', hasAttachments: true });
     assert.equal(id, ANTHROPIC_HAIKU);
-  });
-  test('editingRedesign wins over hasAttachments', () => {
-    const id = suggestedModelIdForPhase({
-      allowed, phase: 'map', editingRedesign: true, hasAttachments: true,
-    });
-    assert.equal(id, ANTHROPIC_OPUS);
   });
 
   test('falls back when desired tier is missing from allowed', () => {

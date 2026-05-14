@@ -18,7 +18,6 @@ const initialState = {
   completedProcesses: [],
   customDepartments: [],
   moduleId: null,
-  diagnosticMode: 'comprehensive',
   authUser: null,
   contact: null,
   dealId: null,
@@ -220,41 +219,6 @@ describe('needsPEDealSetup gate logic', () => {
   });
 });
 
-// ── Deal redirect logic in Screen6Complete ─────────────────────────────────
-
-describe('Screen6 PE redirect logic', () => {
-  function getPendingUrl({ effectiveModuleId, dealId, processDealId, reportUrl, storedInSupabase }) {
-    const effectiveDealId = dealId || processDealId;
-    if (effectiveModuleId === 'pe' && effectiveDealId) {
-      return `/deals/${effectiveDealId}`;
-    }
-    if (reportUrl) return reportUrl;
-    if (!storedInSupabase) throw new Error('Report not saved');
-    return null;
-  }
-
-  test('PE deal redirects to /deals/[id]', () => {
-    const url = getPendingUrl({ effectiveModuleId: 'pe', dealId: 'deal-abc', reportUrl: '/report?id=r1', storedInSupabase: true });
-    assert.equal(url, '/deals/deal-abc');
-  });
-
-  test('PE deal uses processData.dealId as fallback', () => {
-    const url = getPendingUrl({ effectiveModuleId: 'pe', dealId: null, processDealId: 'deal-from-process', reportUrl: '/report?id=r1', storedInSupabase: true });
-    assert.equal(url, '/deals/deal-from-process');
-  });
-
-  test('non-PE goes to report URL', () => {
-    const url = getPendingUrl({ effectiveModuleId: 'scaling', dealId: null, reportUrl: '/report?id=r1', storedInSupabase: true });
-    assert.equal(url, '/report?id=r1');
-  });
-
-  test('PE with no dealId falls back to report URL', () => {
-    const url = getPendingUrl({ effectiveModuleId: 'pe', dealId: null, processDealId: null, reportUrl: '/report?id=r1', storedInSupabase: true });
-    assert.equal(url, '/report?id=r1');
-  });
-
-  test('M&A module goes to report URL (not deal redirect)', () => {
-    const url = getPendingUrl({ effectiveModuleId: 'ma', dealId: 'deal-ma-001', reportUrl: '/report?id=r2', storedInSupabase: true });
-    assert.equal(url, '/report?id=r2');
-  });
-});
+// Screen6 PE redirect logic — removed with Screen6Complete in the
+// living-workspace migration. The screen + redirect no longer exist;
+// every save flow lands inline on the canvas via the upsert path.

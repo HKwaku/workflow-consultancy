@@ -1,70 +1,60 @@
 ---
-title: Your first process audit
+title: Your first process
 group: Tutorials
 order: 1
-summary: From "what process should I map?" to a shareable diagnostic report — about 20 minutes.
+summary: From "what process should I map?" to a process living in your workspace - about 15 minutes.
 ---
 
-This is the canonical first thing to try. You'll describe a process to Reina, watch her build the map, and end with a report you can share.
+This is the canonical first thing to try. You'll describe a process to Reina, watch her build the map, and end with a live process in your workspace that you can come back to and keep editing.
 
 ## Before you start
 
-You don't need an account to do an audit. You'll need one to save the result and re-open it later. Sign in at any point and your in-progress work follows you.
+You don't need an account to start mapping. You'll need one to save the result and re-open it later. Sign in at any point and your in-progress work follows you.
 
-## Step 1 — Open the audit
+## Step 1 - Open the workspace
 
-Go to **/process-audit**. You'll see a brief gate asking for:
+Go to **/workspace/map**. You'll see a brief gate asking for:
 
-- Which audience pillar fits you (Scaling, M&A, PE, or High-Risk Ops). Pick the closest. It tunes Reina's questions; nothing is locked in.
+- Which operating-model pillar fits you (Scaling, M&A, PE, or High-Risk Ops). Pick the closest. It tunes Reina's questions; nothing is locked in.
 - Your name, work email, company, job title.
 
-Click **Start audit**.
+Click **Start**.
 
-## Step 2 — Pick what to map
+## Step 2 - Pick what to map
 
-You'll see a small list of common processes (customer onboarding, invoice approval, hire-to-fire, etc.) plus an option to describe your own. Pick whichever you live with daily — first-time audits work best on something concrete you've actually run, not something hypothetical.
+Reina suggests a few common processes (customer onboarding, invoice approval, hire-to-fire, etc.) or you can describe your own. Pick whichever you live with daily - first-time mapping works best on something concrete you've actually run, not something hypothetical.
 
-## Step 3 — Talk to Reina
+## Step 3 - Talk to Reina
 
-The main screen has three panes:
+The screen has two panes:
 
-- **Chat** (left) — Reina asks questions, you answer in plain English.
-- **Step editor** (centre) — every step she extracts appears here. You can edit any field directly.
-- **Flow preview** (right) — a live SVG of your process. Click a node to jump to that step.
+- **Chat** (left) - Reina asks questions, you answer in plain English.
+- **Canvas** (right) - a live flow diagram of your process. Click any step to drill into it.
 
-Reina works in **phases**: intake (what process), map (what steps), details (departments, systems, owners), cost (frequency, time, rates), and complete. She'll move between them as you fill in detail. The "Diagnostic Depth" bar at the top shows how much detail you've given.
+Reina works in **phases**: intake (what process), map (what steps), details (departments, systems, owners), cost (frequency, time, rates), and complete. She'll move between them as you fill in detail.
 
 A few practical tips:
 
-- **Drag files in.** PDFs, Excel sheets, screenshots, Word docs — Reina extracts steps from them.
-- **Edit the step list directly.** Easier than describing a 10-step rearrangement.
-- **Save & get link** on any step gives you a resumable URL — useful for "I'll continue this tomorrow".
+- **Drag files in.** PDFs, Excel sheets, screenshots, Word docs - Reina extracts steps from them.
+- **Edit the canvas directly.** Drag to reorder, click + between steps to insert, click a step to open its detail panel.
+- **Every change is saved live.** No "save" button - the canvas is the live process.
 
-## Step 4 — Generate the report
+## Step 4 - Land the process in your model
 
-When Reina says she has enough, click **Generate report** in the chat (or just ask her). She'll switch to Screen 6, which auto-submits and redirects to **/report?id=…** — your shareable diagnostic.
+When Reina says she has enough, click **Add to model** in the chat (or just ask her). The process lands in your operating model under the function you picked at intake. It will appear in the Reports popover (chat rail) and inside `/workspace`.
 
-The report includes:
+That's it. There's no separate "report" or "deliverable" - the canvas IS the process. Come back any time to re-open it, ask Reina to suggest improvements, or invite a colleague to look at it.
 
-- **At-a-glance metrics**: cycle time, annual cost, automation readiness, biggest bottleneck.
-- **Executive summary** for sharing upwards.
-- **Key findings** — top 5 bottlenecks ranked by severity.
-- **Value opportunity** — ROI, payback, savings.
-- **Roadmap** — phased quick wins → projects.
-- **Implementation tracker** — checklist of next actions.
+## Step 5 - What next?
 
-The report URL is **public-by-id**: anyone with the link can view, but the ID is unguessable (12 random characters). Treat it like a Google Drive "anyone with the link" share.
-
-## Step 5 — What next?
-
-- **Refine** — re-open the report, talk to Reina again, regenerate.
-- **Redesign** — click "Redesign this" to get an AI-generated optimisation. Accept it and you can export build guides for n8n / Zapier / etc.
-- **Email it** — the report email lands automatically when you submit.
+- **Ask Reina for suggestions.** "What's the biggest bottleneck here?" or "How could we automate step 4?" - she'll propose changes you can apply with one click.
+- **Invite a colleague** to collaborate. They land on the same canvas.
+- **Open it from `/workspace/map`** any time to keep editing. The canvas is permanent, not a snapshot.
 
 ## Common questions
 
-**Reina got a step wrong.** Edit it directly in the step editor or tell her in chat ("Step 3 should be Operations, not Finance" — she'll fix it).
+**Reina got a step wrong.** Edit it directly on the canvas, or tell her in chat ("Step 3 should be Operations, not Finance" - she'll fix it).
 
-**I want to start over.** Click the menu (top right) → **New audit**. Your previous work stays saved if you were signed in.
+**I want to start over.** Click **Reset** in the chat menu. Your previous work stays saved if you were signed in.
 
-**It says "Diagnostic depth 40%".** That means Reina has enough to generate a basic report but you'll get a richer one if you fill in more detail (departments, owners, systems, cost). Quality of report scales linearly with depth.
+**Why are the metrics on the canvas changing as I edit?** Cost, savings, and automation readiness are derived live from the steps. No cached snapshot - whatever you see is computed from the current canvas state.

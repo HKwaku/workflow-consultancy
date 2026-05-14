@@ -57,7 +57,7 @@ export async function GET(request, { params }) {
   if (gate.error) return NextResponse.json({ error: gate.error }, { status: gate.status });
 
   const nonce = crypto.randomBytes(16).toString('hex');
-  const returnTo = request.nextUrl.searchParams.get('returnTo') || '/portal/org-admin';
+  const returnTo = request.nextUrl.searchParams.get('returnTo') || '/org-admin';
   const statePayload = JSON.stringify({ orgId, nonce, returnTo, actorEmail: auth.email });
   const stateB64 = Buffer.from(statePayload).toString('base64url');
 

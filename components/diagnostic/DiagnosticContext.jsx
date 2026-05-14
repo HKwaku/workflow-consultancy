@@ -85,22 +85,25 @@ function diagnosticReducer(state, action) {
         ...state,
         processData: { ...state.processData, ...action.payload },
       };
+    // Living-workspace rename: completedProcesses → additionalProcesses.
+    // "Completed" implied a one-shot pipeline ("you finished mapping
+    // process 1, now do process 2, then we'll bundle for the report").
+    // In a workspace every process is live and editable; the array
+    // just holds the other processes mapped in the same canvas.
     case 'SET_COMPLETED_PROCESSES':
-      return { ...state, completedProcesses: action.payload };
+      return { ...state, additionalProcesses: action.payload };
     case 'ADD_COMPLETED_PROCESS':
       return {
         ...state,
-        completedProcesses: [...(state.completedProcesses || []), action.payload],
+        additionalProcesses: [...(state.additionalProcesses || []), action.payload],
       };
     case 'REPLACE_COMPLETED_PROCESS':
       const idx = action.payload.index;
-      const arr = [...(state.completedProcesses || [])];
+      const arr = [...(state.additionalProcesses || [])];
       if (idx >= 0 && idx < arr.length) arr[idx] = action.payload.process;
-      return { ...state, completedProcesses: arr };
+      return { ...state, additionalProcesses: arr };
     case 'SET_MODULE_ID':
       return { ...state, moduleId: action.payload };
-    case 'SET_DIAGNOSTIC_MODE':
-      return { ...state, diagnosticMode: action.payload };
     case 'SET_CUSTOM_DEPARTMENTS':
       return { ...state, customDepartments: action.payload };
     case 'ADD_CUSTOM_DEPARTMENT':
@@ -118,18 +121,31 @@ function diagnosticReducer(state, action) {
       };
     case 'SET_STEP_COUNT':
       return { ...state, stepCount: action.payload };
+    case 'SET_FOCUSED_PROCESS_ID':
+      // Living-workspace contract: there is one focused process id.
+      // editingReportId / viewOnlyProcessId / editingAnalysisId /
+      // editingSurface are all gone as separate modes. The canvas
+      // always renders the focused process; edits attempt against it;
+      // RBAC is server-side. Old setters route here for back-compat.
+      return { ...state, focusedProcessId: action.payload || null };
     case 'SET_EDITING_REPORT_ID':
-      return { ...state, editingReportId: action.payload };
-    case 'SET_EDITING_REDESIGN':
-      return { ...state, editingRedesign: action.payload };
-    case 'SET_EDITING_ANALYSIS':
-      // payload = { analysisId, dealId } | null. Used by the deal-analysis
-      // edit path so the workspace knows to PATCH deal_analyses instead of
-      // diagnostic_reports on save.
+      // Legacy alias — folded into focusedProcessId.
+      return { ...state, focusedProcessId: action.payload || null };
+    case 'SET_VIEW_ONLY_PROCESS_ID':
+      // Legacy alias — folded into focusedProcessId. No "view-only"
+      // mode in the workspace; opening a process is just focusing it.
+      return { ...state, focusedProcessId: action.payload || null };
+    case 'SET_EDITING_SURFACE':
+      // No-op since target_data is gone post-migration.
+      return state;
+    case 'SET_WORKSPACE_ANCHORS':
+      // payload: { operatingModelId?, functionId?, functionPath?, operatingModelName? }
       return {
         ...state,
-        editingAnalysisId: action.payload?.analysisId || null,
-        editingAnalysisDealId: action.payload?.dealId || null,
+        ...(Object.prototype.hasOwnProperty.call(action.payload || {}, 'operatingModelId')   && { selectedOperatingModelId:   action.payload.operatingModelId   || null }),
+        ...(Object.prototype.hasOwnProperty.call(action.payload || {}, 'functionId')       && { selectedFunctionId:       action.payload.functionId       || null }),
+        ...(Object.prototype.hasOwnProperty.call(action.payload || {}, 'functionPath')     && { selectedFunctionPath:     action.payload.functionPath     || null }),
+        ...(Object.prototype.hasOwnProperty.call(action.payload || {}, 'operatingModelName') && { selectedOperatingModelName: action.payload.operatingModelName || null }),
       };
     case 'SET_PENDING_PATH':
       return { ...state, pendingPath: action.payload };
@@ -179,19 +195,29 @@ const initialState = {
   currentScreen: 0,
   maxVisitedScreen: 0,
   processData: createEmptyProcess(),
-  completedProcesses: [],
+  additionalProcesses: [],
   customDepartments: [],
   stepCount: 0,
-  editingReportId: null,
-  editingRedesign: false,
-  aiRedesignMode: false,
-  // Set when the workspace was opened to edit a deal_analyses row's
-  // redesignedProcess (via /process-audit?editAnalysis=…&deal=…).
-  editingAnalysisId: null,
-  editingAnalysisDealId: null,
+  // Living-workspace contract: one canonical id for the focused process.
+  // Anywhere that used to read editingReportId / viewOnlyProcessId can
+  // read focusedProcessId; the back-compat getters in the value object
+  // alias them so existing readers don't break.
+  focusedProcessId: null,
+  // Workspace anchors picked at the intake gate (Phase 5). Threaded into
+  // /api/send-diagnostic-report so newly-mapped processes file under the
+  // chosen capability instead of landing in the Unfiled bucket. The path
+  // + model name are also threaded into the chat system prompt so Reina
+  // knows the framing ("you're mapping a Finance / AR / Cash collection
+  // process within Acme operating model").
+  selectedOperatingModelId: null,
+  selectedFunctionId: null,
+  selectedFunctionPath: null,
+  selectedOperatingModelName: null,
+  // Legacy mode flags — kept as constants for back-compat readers but
+  // never flip. Redesigns / deal_analyses / aiRedesign / target_data
+  // are gone post-migration; there are no separate modes anymore.
   editingProcessIndex: null,
   moduleId: null,
-  diagnosticMode: 'comprehensive',
   pendingPath: 'individual',
   teamMode: false,
   authUser: null,
@@ -232,12 +258,11 @@ export function DiagnosticProvider({ children }) {
       const payload = {
         currentScreen: state.currentScreen,
         processData: state.processData,
-        completedProcesses: state.completedProcesses,
+        additionalProcesses: state.additionalProcesses,
         customDepartments: state.customDepartments || [],
         stepCount: state.stepCount ?? 0,
-        editingReportId: state.editingReportId || null,
+        focusedProcessId: state.focusedProcessId || null,
         moduleId: state.moduleId || null,
-        diagnosticMode: state.diagnosticMode || 'comprehensive',
         teamMode: state.teamMode && state.teamMode.code ? { code: state.teamMode.code } : null,
         authUser: state.authUser || null,
         contact: state.contact || null,
@@ -260,12 +285,11 @@ export function DiagnosticProvider({ children }) {
   }, [
     state.currentScreen,
     state.processData,
-    state.completedProcesses,
+    state.additionalProcesses,
     state.customDepartments,
     state.stepCount,
-    state.editingReportId,
+    state.focusedProcessId,
     state.moduleId,
-    state.diagnosticMode,
     state.teamMode,
     state.authUser,
     state.contact,
@@ -289,7 +313,7 @@ export function DiagnosticProvider({ children }) {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [saveProgress, state.currentScreen, state.processData, state.completedProcesses]);
+  }, [saveProgress, state.currentScreen, state.processData, state.additionalProcesses]);
 
   // Auto-save every 30s
   useEffect(() => {
@@ -312,24 +336,25 @@ export function DiagnosticProvider({ children }) {
     dispatch({ type: 'SET_PROCESS_DATA', payload: ensureProcessDataShape(data) || createEmptyProcess() });
   }, []);
 
-  const addCompletedProcess = useCallback((process) => {
+  // Canonical setters use the new "additionalProcesses" naming. The
+  // old "completedProcesses" aliases below route to the same dispatch
+  // so existing call sites compile without changes.
+  const addAdditionalProcess = useCallback((process) => {
     dispatch({ type: 'ADD_COMPLETED_PROCESS', payload: process });
   }, []);
-
-  const replaceCompletedProcess = useCallback((index, process) => {
+  const replaceAdditionalProcess = useCallback((index, process) => {
     dispatch({ type: 'REPLACE_COMPLETED_PROCESS', payload: { index, process } });
   }, []);
-
-  const setCompletedProcesses = useCallback((arr) => {
+  const setAdditionalProcesses = useCallback((arr) => {
     dispatch({ type: 'SET_COMPLETED_PROCESSES', payload: arr || [] });
   }, []);
+  // Legacy aliases — alias to the new setters so old consumers compile.
+  const addCompletedProcess = addAdditionalProcess;
+  const replaceCompletedProcess = replaceAdditionalProcess;
+  const setCompletedProcesses = setAdditionalProcesses;
 
   const setModuleId = useCallback((id) => {
     dispatch({ type: 'SET_MODULE_ID', payload: id });
-  }, []);
-
-  const setDiagnosticMode = useCallback((mode) => {
-    dispatch({ type: 'SET_DIAGNOSTIC_MODE', payload: mode });
   }, []);
 
   const addCustomDepartment = useCallback((name) => {
@@ -352,16 +377,21 @@ export function DiagnosticProvider({ children }) {
     dispatch({ type: 'SET_STEP_COUNT', payload: n });
   }, []);
 
-  const setEditingReportId = useCallback((id) => {
-    dispatch({ type: 'SET_EDITING_REPORT_ID', payload: id });
+  const setFocusedProcessId = useCallback((id) => {
+    dispatch({ type: 'SET_FOCUSED_PROCESS_ID', payload: id || null });
   }, []);
 
-  const setEditingRedesign = useCallback((v) => {
-    dispatch({ type: 'SET_EDITING_REDESIGN', payload: !!v });
-  }, []);
+  // Legacy setters — kept so the many existing call sites compile.
+  // Both route to setFocusedProcessId; there is no distinction between
+  // "editing" and "view-only" anymore.
+  const setEditingReportId = setFocusedProcessId;
+  const setViewOnlyProcessId = setFocusedProcessId;
 
-  const setEditingAnalysis = useCallback((p) => {
-    dispatch({ type: 'SET_EDITING_ANALYSIS', payload: p });
+  // No-op setter for fully-removed mode flag. Calls compile, do nothing.
+  const setEditingSurface = useCallback(() => { /* no-op */ }, []);
+
+  const setWorkspaceAnchors = useCallback((p) => {
+    dispatch({ type: 'SET_WORKSPACE_ANCHORS', payload: p || {} });
   }, []);
 
   const setEditingProcessIndex = useCallback((idx) => {
@@ -440,15 +470,15 @@ export function DiagnosticProvider({ children }) {
       payload: {
         currentScreen: data.currentScreen ?? 0,
         processData: ensureProcessDataShape(data.processData) || createEmptyProcess(),
-        completedProcesses: data.completedProcesses || [],
+        // Accept either the new key or the legacy completedProcesses on
+        // restore — old persisted payloads still carry the old key.
+        additionalProcesses: data.additionalProcesses || data.completedProcesses || [],
         customDepartments: data.customDepartments || [],
         stepCount: data.stepCount ?? 0,
-        editingReportId: data.editingReportId || null,
-        editingRedesign: !!data.editingRedesign,
-        editingAnalysisId: data.editingAnalysisId || null,
-        editingAnalysisDealId: data.editingAnalysisDealId || null,
+        // Accept either the new key or the legacy editingReportId on restore
+        // — old persisted payloads still carry editingReportId.
+        focusedProcessId: data.focusedProcessId || data.editingReportId || null,
         moduleId: data.moduleId || null,
-        diagnosticMode: data.diagnosticMode || 'comprehensive',
         teamMode: data.teamMode || false,
         authUser: data.authUser || null,
         contact: data.contact || null,
@@ -475,16 +505,14 @@ export function DiagnosticProvider({ children }) {
     return {
       currentScreen: state.currentScreen,
       processData: pd,
-      completedProcesses: state.completedProcesses,
+      additionalProcesses: state.additionalProcesses,
       customDepartments: state.customDepartments || [],
       stepCount: state.stepCount ?? 0,
       moduleId: state.moduleId || null,
-      diagnosticMode: state.diagnosticMode || 'comprehensive',
       teamMode: state.teamMode && state.teamMode.code ? { code: state.teamMode.code } : undefined,
       contact: state.contact || null,
       authUser: state.authUser || null,
-      editingReportId: state.editingReportId || null,
-      editingRedesign: !!state.editingRedesign,
+      focusedProcessId: state.focusedProcessId || null,
       dealId: state.dealId || null,
       dealCode: state.dealCode || null,
       dealRole: state.dealRole || null,
@@ -495,80 +523,53 @@ export function DiagnosticProvider({ children }) {
       dealCanonicalEnd: state.dealCanonicalEnd || null,
       auditTrail: (state.auditTrail || []).slice(-50),
     };
-  }, [state.currentScreen, state.processData, state.completedProcesses, state.customDepartments, state.stepCount, state.moduleId, state.diagnosticMode, state.teamMode, state.contact, state.authUser, state.editingReportId, state.editingRedesign, state.dealId, state.dealCode, state.dealRole, state.dealName, state.dealParticipants, state.dealCanonicalProcessName, state.dealCanonicalStart, state.dealCanonicalEnd, state.auditTrail]);
+  }, [state.currentScreen, state.processData, state.additionalProcesses, state.customDepartments, state.stepCount, state.moduleId, state.teamMode, state.contact, state.authUser, state.focusedProcessId, state.dealId, state.dealCode, state.dealRole, state.dealName, state.dealParticipants, state.dealCanonicalProcessName, state.dealCanonicalStart, state.dealCanonicalEnd, state.auditTrail]);
 
-  /** POST to /api/progress - save progress to cloud, get resume link. Options: step, processDataOverride, isHandover, senderName, comments. */
-  const saveProgressToCloud = useCallback(async (email = null, { step, processDataOverride, isHandover, senderName, comments } = {}) => {
-    const pd = processDataOverride || state.processData;
-    const chatPersist = sanitizeChatMessagesForPersist(state.chatMessages);
-    const progressData = {
-      ...buildFullSnapshot(pd),
-      ...(chatPersist?.length ? { chatMessages: chatPersist } : {}),
-    };
-    const emailTrimmed = typeof email === 'string' ? email.trim() : '';
-    // Resolve the SENDER's active participant on this deal so the
-    // server can attach the recipient as a collaborator on the right
-    // flow (acquirer vs target). Match the signed-in user's email
-    // against deal_participants.participant_email.
-    const myEmail = (state.authUser?.email || state.contact?.email || '').toLowerCase().trim();
-    const activeParticipant = (state.dealParticipants || []).find(
-      (p) => (p.participant_email || p.participantEmail || '').toLowerCase() === myEmail,
-    ) || null;
-    const body = {
-      progressData,
-      currentScreen: state.currentScreen,
-      processName: pd?.processName || '',
-      ...(emailTrimmed ? { email: emailTrimmed } : {}),
-      ...(state.dealId ? { dealId: state.dealId } : {}),
-      ...(activeParticipant?.id ? { participantId: activeParticipant.id } : {}),
-    };
-    if (step != null) body.step = step;
-    if (isHandover != null) body.isHandover = isHandover;
-    if (senderName) body.senderName = senderName;
-    if (comments) body.comments = comments;
-    const resp = await fetch('/api/progress', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    let data;
-    try { data = await resp.json(); } catch (e) { throw new Error('Invalid response from server'); }
-    if (!resp.ok || !data.success) throw new Error(data.error || 'Save failed');
-    if (state.authUser || state.contact?.email) {
-      const evtType = senderName ? 'handover' : 'save';
-      dispatch({ type: 'ADD_AUDIT_EVENT', payload: { id: Math.random().toString(36).slice(2, 10), type: evtType, timestamp: new Date().toISOString(), detail: evtType === 'handover' ? `Handed over by ${senderName}` : `Progress saved (screen ${state.currentScreen})` } });
-    }
-    return {
-      resumeUrl: data.resumeUrl,
-      progressId: data.progressId,
-      emailSent: !!data.emailSent,
-      message: data.message || '',
-    };
-  }, [state.currentScreen, state.processData, state.completedProcesses, state.customDepartments, state.stepCount, state.diagnosticMode, state.teamMode, state.chatMessages, state.authUser, state.contact, state.auditTrail, state.dealId, state.dealParticipants]);
+  // saveProgressToCloud removed: it posted to /api/progress (now 410).
+  // The living-workspace save path is autosave via PUT /api/processes/[id]
+  // through sendDiagnosticReport below. No separate "save partial progress"
+  // surface exists any more.
 
   /** POST to /api/send-diagnostic-report. Payload: { contact, summary, recommendations, automationScore, roadmap, processes, rawProcesses, customDepartments, editingReportId, timestamp } */
+  // Living-workspace contract: every save is an upsert to the same
+  // RESTful endpoint at `PUT /api/processes/[id]`. The first save mints
+  // a UUID client-side so the row id is known immediately; subsequent
+  // saves PATCH the same row. The legacy `sendDiagnosticReport` name
+  // is kept for back-compat with existing callers.
   const sendDiagnosticReport = useCallback(async (payload, options = {}) => {
     const headers = { 'Content-Type': 'application/json' };
     if (options.accessToken) headers['Authorization'] = `Bearer ${options.accessToken}`;
-    const resp = await fetch('/api/send-diagnostic-report', {
-      method: 'POST',
+
+    const incomingId = payload.focusedProcessId ?? payload.editingReportId ?? state.focusedProcessId;
+    const processId = incomingId || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
+
+    const body = {
+      ...payload,
+      customDepartments: payload.customDepartments ?? state.customDepartments ?? [],
+      focusedProcessId: processId,
+      timestamp: payload.timestamp ?? new Date().toISOString(),
+      ...(payload.operatingModelId ?? state.selectedOperatingModelId ? {
+        operatingModelId: payload.operatingModelId ?? state.selectedOperatingModelId,
+      } : {}),
+      ...(payload.functionId ?? state.selectedFunctionId ? {
+        functionId: payload.functionId ?? state.selectedFunctionId,
+      } : {}),
+    };
+
+    const resp = await fetch(`/api/processes/${encodeURIComponent(processId)}`, {
+      method: 'PUT',
       headers,
-      body: JSON.stringify({
-        ...payload,
-        customDepartments: payload.customDepartments ?? state.customDepartments ?? [],
-        editingReportId: payload.editingReportId ?? state.editingReportId,
-        timestamp: payload.timestamp ?? new Date().toISOString(),
-      }),
+      body: JSON.stringify(body),
       credentials: 'include',
     });
     let data;
     try { data = await resp.json(); } catch (e) { throw new Error('Invalid response from server'); }
-    if (!resp.ok) throw new Error(data.error || 'Failed to send report');
+    if (!resp.ok) throw new Error(data.error || 'Failed to save process');
     if (state.authUser || state.contact?.email) {
-      dispatch({ type: 'ADD_AUDIT_EVENT', payload: { id: Math.random().toString(36).slice(2, 10), type: 'submit', timestamp: new Date().toISOString(), detail: state.editingReportId ? 'Report updated' : 'Process audit submitted' } });
+      dispatch({ type: 'ADD_AUDIT_EVENT', payload: { id: Math.random().toString(36).slice(2, 10), type: 'save', timestamp: new Date().toISOString(), detail: 'Process saved' } });
     }
     return data;
-  }, [state.customDepartments, state.editingReportId]);
+  }, [state.customDepartments, state.focusedProcessId, state.selectedOperatingModelId, state.selectedFunctionId]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -577,8 +578,23 @@ export function DiagnosticProvider({ children }) {
     };
   }, []);
 
+  // Back-compat getters for the legacy mode flags. Every code path that
+  // used to read editingReportId / viewOnlyProcessId now gets the
+  // canonical focusedProcessId; the view-only / edit-mode distinction
+  // doesn't exist anymore. The redesign / analysis / surface flags are
+  // permanent-false so the old UI conditionals fold to the live edit
+  // branch. completedProcesses is aliased onto additionalProcesses so
+  // existing consumers compile while new code uses the canonical name.
   const value = {
     ...state,
+    completedProcesses: state.additionalProcesses,
+    editingReportId: state.focusedProcessId,
+    viewOnlyProcessId: null,
+    editingSurface: 'current',
+    setFocusedProcessId,
+    addAdditionalProcess,
+    replaceAdditionalProcess,
+    setAdditionalProcesses,
     // Actions
     setModuleId,
     goToScreen,
@@ -587,7 +603,6 @@ export function DiagnosticProvider({ children }) {
     addCompletedProcess,
     replaceCompletedProcess,
     setCompletedProcesses,
-    setDiagnosticMode,
     addCustomDepartment,
     removeCustomDepartment,
     setCustomDepartments,
@@ -595,13 +610,13 @@ export function DiagnosticProvider({ children }) {
     saveProgress,
     loadProgress,
     restoreProgress,
-    saveProgressToCloud,
     buildFullSnapshot,
     sendDiagnosticReport,
     setStepCount,
     setEditingReportId,
-    setEditingRedesign,
-    setEditingAnalysis,
+    setViewOnlyProcessId,
+    setEditingSurface,
+    setWorkspaceAnchors,
     setEditingProcessIndex,
     setPendingPath,
     setTeamMode,

@@ -21,8 +21,8 @@ import {
 import { requireAuth } from '@/lib/auth';
 import { requireDealEditor } from '@/lib/dealAuth';
 import { sendEvent } from '@/lib/inngest/client';
-import { markFindingsStaleForDocument } from '@/lib/deal-analysis/staleness';
 import { logger } from '@/lib/logger';
+import { recordTransition } from '@/lib/changes/repo';
 
 export async function POST(request, { params }) {
   const originErr = checkOrigin(request);
@@ -33,6 +33,15 @@ export async function POST(request, { params }) {
 
   const { id, docId } = await params;
   if (!isValidUUID(docId)) return NextResponse.json({ error: 'docId required.' }, { status: 400 });
+
+  // Optional body — chat-staged proposals pass `change_id` so we can flip
+  // the staged change to `applied` after a successful reprocess. Body is
+  // optional because the workspace's manual Retry button posts no body.
+  let bodyChangeId = null;
+  try {
+    const txt = await request.text();
+    if (txt) bodyChangeId = JSON.parse(txt)?.change_id || null;
+  } catch { /* body is optional */ }
 
   const editor = await requireDealEditor({ dealId: id, email: auth.email, userId: auth.userId });
   if (editor.error) return NextResponse.json(editor.error, { status: editor.status });
@@ -65,14 +74,6 @@ export async function POST(request, { params }) {
     }
   }
 
-  // Stale any findings citing this doc — eager flag so the workspace
-  // badge appears the moment the user clicks reprocess, not only after
-  // the worker completes.
-  await markFindingsStaleForDocument({
-    sb, dealId: id, documentId: docId,
-    reason: 'Document was reprocessed — re-verify citations.',
-  });
-
   // Reset status + clear error.
   const patchResp = await fetchWithTimeout(
     `${sb.url}/rest/v1/deal_documents?id=eq.${docId}`,
@@ -102,6 +103,15 @@ export async function POST(request, { params }) {
   } catch (e) {
     logger.error('Failed to re-enqueue deal-document.uploaded', { requestId: reqId, error: e.message });
     return NextResponse.json({ error: 'Failed to enqueue worker. Check INNGEST_EVENT_KEY.' }, { status: 502 });
+  }
+
+  // Doc state has already mutated; flip the staged change to applied. The
+  // proposal has landed in user-visible terms even if the worker won't pick
+  // it up (Inngest unconfigured).
+  const changeId = bodyChangeId || request.nextUrl.searchParams.get('change_id');
+  if (typeof changeId === 'string' && changeId) {
+    recordTransition({ id: changeId, state: 'applied', actor_email: auth.email })
+      .catch((e) => logger.warn('Change transition (reprocess) failed', { requestId: reqId, message: e.message }));
   }
 
   if (queueResult?.skipped) {

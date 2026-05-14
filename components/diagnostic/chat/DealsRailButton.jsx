@@ -193,31 +193,11 @@ export default function DealsRailButton({ accessToken }) {
     return 'low';
   };
 
-  // Cross-deal portfolio search — overlays the deal list when active.
-  // Lazy-loaded; no work until the user types.
-  const [portfolioQuery, setPortfolioQuery] = useState('');
-  const [portfolioTag, setPortfolioTag] = useState('');
-  const [portfolioResults, setPortfolioResults] = useState(null);
-  const [portfolioLoading, setPortfolioLoading] = useState(false);
-  useEffect(() => {
-    const term = portfolioQuery.trim();
-    if (!term && !portfolioTag) { setPortfolioResults(null); return undefined; }
-    const t = setTimeout(async () => {
-      setPortfolioLoading(true);
-      try {
-        const sp = new URLSearchParams();
-        if (term) sp.set('q', term);
-        if (portfolioTag) sp.set('tag', portfolioTag);
-        sp.set('limit', '60');
-        const r = await apiFetch(`/api/portfolio/findings?${sp.toString()}`, {}, accessToken);
-        const j = r.ok ? await r.json() : null;
-        if (j) setPortfolioResults(j);
-      } finally { setPortfolioLoading(false); }
-    }, 350);
-    return () => clearTimeout(t);
-  }, [portfolioQuery, portfolioTag, accessToken]);
-
-  const PORTFOLIO_TAGS = ['deal_breaker', 're_trade', 'disclose', 'mitigate', 'monitor'];
+  // Cross-deal portfolio findings search has been removed: it called
+  // /api/portfolio/findings which is 410'd post-living-workspace migration
+  // (the cross-deal rollup depended on deal_finding_reviews keyed on
+  // analysis_id, which is gone). When a portfolio-scoped surface is
+  // rebuilt we can wire it back in here.
 
   return (
     <div className="s7-split-rail-deals">
@@ -257,75 +237,12 @@ export default function DealsRailButton({ accessToken }) {
           />
         </div>
 
-        {/* Cross-deal portfolio search — overlays the deal list. */}
-        <div className="s7-rail-pane-portfolio">
-          <input
-            type="search"
-            value={portfolioQuery}
-            onChange={(e) => setPortfolioQuery(e.target.value)}
-            placeholder="Search findings across all your deals…"
-            className="s7-rail-pane-search-input"
-          />
-          <div className="s7-rail-pane-portfolio-tags">
-            {PORTFOLIO_TAGS.map((t) => (
-              <button
-                key={t}
-                type="button"
-                className={`s7-rail-pane-portfolio-tag${portfolioTag === t ? ' is-on' : ''}`}
-                onClick={() => setPortfolioTag(portfolioTag === t ? '' : t)}
-              >{t.replace('_', '-')}</button>
-            ))}
-          </div>
-        </div>
-
-        {portfolioResults && (
-          <div className="s7-rail-pane-body">
-            {portfolioLoading && <div className="s7-rail-pane-empty">Searching…</div>}
-            {!portfolioLoading && portfolioResults.findings.length === 0 && (
-              <div className="s7-rail-pane-empty">No findings match.</div>
-            )}
-            {!portfolioLoading && portfolioResults.findings.length > 0 && (
-              <ul className="s7-rail-pane-list">
-                {portfolioResults.findings.map((f) => (
-                  <li key={f.id}>
-                    <button
-                      type="button"
-                      className="s7-rail-pane-item s7-rail-pane-item--row"
-                      onClick={() => {
-                        // Scope chat to that deal + focus the finding via the existing
-                        // workspace deep-link path.
-                        const params = new URLSearchParams(Array.from(searchParams.entries()));
-                        params.set('deal', f.deal_id);
-                        params.set('focusFinding', f.finding_key);
-                        router.replace(`?${params.toString()}`, { scroll: false });
-                        setOpen(false);
-                      }}
-                    >
-                      <span className="s7-rail-pane-item-body">
-                        <span className="s7-rail-pane-item-name">
-                          {f.title}
-                          {f.stale && <span className="deal-workspace-finding-stale" style={{ marginLeft: 6 }}>STALE</span>}
-                        </span>
-                        <span className="s7-rail-pane-item-meta">
-                          {f.deal?.name || 'Deal'} · {f.severity} · weight {f.weight}
-                          {f.tags?.length > 0 && ` · ${f.tags.join(', ')}`}
-                        </span>
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-
-        {!portfolioResults && (
         <div className="s7-rail-pane-body">
           {loading && <div className="s7-rail-pane-empty">Loading…</div>}
           {error && <div className="s7-rail-pane-empty">{error}</div>}
           {!loading && !error && deals.length === 0 && (
             <div className="s7-rail-pane-empty">
-              No deals yet. <a href="/portal/deals">Create one →</a>
+              No deals yet. <a href="/workspace/map?openDeals=1">Create one →</a>
             </div>
           )}
           {!loading && !error && deals.length > 0 && filteredDeals.length === 0 && (
@@ -386,7 +303,6 @@ export default function DealsRailButton({ accessToken }) {
             </ul>
           )}
         </div>
-        )}
       </RailSlidePanel>
     </div>
   );

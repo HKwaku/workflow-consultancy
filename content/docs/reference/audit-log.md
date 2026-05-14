@@ -20,7 +20,7 @@ Every set / rotate / revoke / first-use / rotation-reminder event for a BYO key:
 
 **Append-only**: nothing updates or deletes an existing row. Org admins can read; nobody can mutate.
 
-View it in `/portal/org-admin → API keys → Show audit log`.
+View it in `/org-admin → API keys → Show audit log`.
 
 ### Finding reviews (`deal_finding_reviews`)
 
@@ -81,7 +81,7 @@ After GDPR account deletion + 30-day grace, the actor's email is redacted from t
 
 ## Common questions
 
-**Can I export the audit log?** Yes, for your own org. `/portal/org-admin → API keys → Show audit log` paginates the customer-key audit. The other tables are queryable via the GDPR data export (`/portal/settings → Download my data`) for rows you own.
+**Can I export the audit log?** Yes, for your own org. `/org-admin → API keys → Show audit log` paginates the customer-key audit. The other tables are queryable via the GDPR data export (Settings popover on the chat rail → Download my data) for rows you own.
 
 **Can I get notified when an admin event fires?** Not yet (no notifications pipeline). On the deferred register — pair with the SOC 2 baseline work.
 

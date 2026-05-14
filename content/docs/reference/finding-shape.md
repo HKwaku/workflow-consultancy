@@ -5,7 +5,7 @@ order: 3
 summary: The fields every analysis finding carries, and what they mean.
 ---
 
-Every finding produced by `/api/deals/[id]/analyse` (in any mode) follows the same canonical shape. This is what you're looking at in the diligence memo, the synergy view, and what gets exported to PowerPoint.
+Every finding stored in `deal_findings` follows the same canonical shape. This is what you see rendered on the deal page and in the finding evidence drawer. Findings hang directly on `(deal_id, finding_key)` - no per-analysis-run snapshot scope.
 
 ## The fields
 

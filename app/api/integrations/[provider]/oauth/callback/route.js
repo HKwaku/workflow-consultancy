@@ -24,7 +24,7 @@ export async function GET(request, { params }) {
   const stateParam = request.nextUrl.searchParams.get('state');
   const errorParam = request.nextUrl.searchParams.get('error');
   if (errorParam) {
-    return NextResponse.redirect(new URL(`/portal/org-admin?integration_error=${encodeURIComponent(errorParam)}`, request.url));
+    return NextResponse.redirect(new URL(`/org-admin?integration_error=${encodeURIComponent(errorParam)}`, request.url));
   }
   if (!code || !stateParam) {
     return NextResponse.json({ error: 'Missing code/state.' }, { status: 400 });
@@ -49,7 +49,7 @@ export async function GET(request, { params }) {
     tokens = await def.exchangeCode({ code });
   } catch (e) {
     logger.error('OAuth exchange failed', { provider, error: e.message });
-    return NextResponse.redirect(new URL(`/portal/org-admin?integration_error=${encodeURIComponent(e.message)}`, request.url));
+    return NextResponse.redirect(new URL(`/org-admin?integration_error=${encodeURIComponent(e.message)}`, request.url));
   }
 
   const expiresAt = tokens.expires_in
@@ -69,10 +69,10 @@ export async function GET(request, { params }) {
     actorEmail: actorEmail || null,
   });
   if (!persist.ok) {
-    return NextResponse.redirect(new URL(`/portal/org-admin?integration_error=${encodeURIComponent(persist.error)}`, request.url));
+    return NextResponse.redirect(new URL(`/org-admin?integration_error=${encodeURIComponent(persist.error)}`, request.url));
   }
 
-  const dest = new URL(returnTo || '/portal/org-admin', request.url);
+  const dest = new URL(returnTo || '/org-admin', request.url);
   dest.searchParams.set('integration_connected', provider);
   const res = NextResponse.redirect(dest);
   res.cookies.delete(STATE_COOKIE);

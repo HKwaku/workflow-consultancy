@@ -912,14 +912,14 @@ async function insertReport(tc) {
     console.log(`  ${url}\n`);
   });
 
-  console.log('── Report URLs ────────────────────────────────────────────────────────\n');
+  console.log('── Process URLs ───────────────────────────────────────────────────────\n');
   results.forEach(r => {
     console.log(`${r.industry}`);
-    console.log(`  ${BASE_URL}/report?id=${r.reportId}\n`);
+    console.log(`  ${BASE_URL}/workspace/map?view=${r.reportId}\n`);
   });
 
   console.log(`Done. ${results.length}/${TEST_CASES.length} reports created.\n`);
   console.log('── Access ─────────────────────────────────────────────────────────────\n');
-  console.log('Owner login: hope.tettey@gmail.com → /portal (view all reports)');
+  console.log('Owner login: hope.tettey@gmail.com → /workspace/map (view all reports)');
   console.log('Manager: use cost-analysis URLs above with token for cost editing\n');
 })();

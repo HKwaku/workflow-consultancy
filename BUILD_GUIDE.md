@@ -1,10 +1,11 @@
 # Build Guide — Workflow Consultancy / Vesno
 
-> **Purpose.** This document is a rebuild spec. A senior full-stack engineer should be able to construct a working MVP of the platform from this guide alone.
+> [!IMPORTANT]
+> **Historical document - written before the 2026-05 living-workspace migration.** Many sections (the report system, the redesign export pipeline, the deal-analysis Inngest function, the PPTX build path, the workflow-export targets, the snapshot scorecard) describe surfaces that no longer exist. Use [`docs/ARCHITECTURE.html`](./docs/ARCHITECTURE.html) as the authoritative map of what's live, and [`README.md`](./README.md) for the list of removed routes / pages / tables. This file is preserved as a build-from-scratch reference for the original shape; rebuilding to the current shape requires substantially less.
+
+> **Purpose.** A rebuild spec showing the original MVP construction. A senior full-stack engineer should be able to construct the pre-migration shape of the platform from this guide alone. The post-migration shape is a thinner subset - drop the report system, drop redesigns, drop the deal-analysis Inngest worker, drop the exporters, drop the scorecard, drop progress / followups / team-survey.
 >
-> **Scope.** MVP — the working core: diagnostic chat, reports, one deal type (M&A), diligence pipeline (data room → RAG → findings → reviews → PPTX), background workers, multi-tenant auth. Items deferred for later are explicitly marked **DEFER**.
->
-> **Companion.** [`DIAGNOSTICS_CAPABILITIES.md`](./DIAGNOSTICS_CAPABILITIES.md) is the engineer-in-the-codebase reference; this is the build-from-scratch spec. They will diverge over time — when in doubt, the running code wins.
+> **Companion.** [`DIAGNOSTICS_CAPABILITIES.md`](./DIAGNOSTICS_CAPABILITIES.md) is the engineer-in-the-codebase reference; this is the build-from-scratch spec. They will diverge over time - when in doubt, the running code wins.
 >
 > **Going live?** [`GO_LIVE_CHECKLIST.md`](./GO_LIVE_CHECKLIST.md) is the single source of truth for every action between "engineering done" and "real customer paying us." Tick boxes as you go.
 >
@@ -110,7 +111,7 @@ Optional (degrade gracefully when missing):
 
 ```
 VOYAGE_API_KEY=pa-...                # without this, semantic search disabled, keyword-only
-MISTRAL_API_KEY=...                  # platform fallback for dataroom OCR (preferred path: per-org under /portal/org-admin → API keys → Mistral). Without any Mistral key, scanned PDFs / images land as `stored` (downloadable but not text-indexed).
+MISTRAL_API_KEY=...                  # platform fallback for dataroom OCR (preferred path: per-org under /org-admin → API keys → Mistral). Without any Mistral key, scanned PDFs / images land as `stored` (downloadable but not text-indexed).
 MODEL_KEY_ENCRYPTION_SECRET=<...>    # required for any per-org BYO API key (Anthropic / Voyage / OpenAI / Mistral) — pgcrypto secret
 INNGEST_EVENT_KEY=...                # without this, doc uploads stuck at 'pending'
 INNGEST_SIGNING_KEY=signkey-...      # without this, /api/inngest rejects cloud calls
@@ -782,7 +783,7 @@ export async function requireAuth(request) {
 
 ### 4.3 Customer-managed API keys (BYO)
 
-Org admins can paste their own Anthropic key in `/portal/org-admin → API keys`. When set, all LLM calls billable to that org's chat / analysis surfaces use the customer's key — Anthropic charges them directly, your platform-key bill drops, and your org token-budget enforcement is bypassed for that org (you keep recording usage in the ledger as observability for the customer).
+Org admins can paste their own Anthropic key in `/org-admin → API keys`. When set, all LLM calls billable to that org's chat / analysis surfaces use the customer's key — Anthropic charges them directly, your platform-key bill drops, and your org token-budget enforcement is bypassed for that org (you keep recording usage in the ledger as observability for the customer).
 
 #### Storage rules
 
@@ -858,7 +859,7 @@ No CHECK constraint — catalogue lives in code; API validates before write.
 
 - **User picker** (`components/diagnostic/chat/ModelPicker.jsx`): pill above chat input. Click → popover with allowed models + tier badges. Hides itself when allowlist size ≤ 1 (no choice to make).
 - **Sticks for the session.** Selection lives in `useState` in the workspace; resets on reload. We don't persist as a user preference — keeps the mental model simple ("each new chat starts at the org default unless I change it").
-- **Admin panel** (`app/portal/ModelAllowlistPanel.jsx`): checkbox list + radio for default. Save → PATCH. Reset → set both columns to NULL (returns the org to the resolution-rules default).
+- **Admin panel** (`components/org-admin/ModelAllowlistPanel.jsx`): checkbox list + radio for default. Save → PATCH. Reset → set both columns to NULL (returns the org to the resolution-rules default).
 
 ### 4.5 Entitlements
 
@@ -1774,7 +1775,7 @@ Each `step.run()` returns its result and Inngest persists it. If the function cr
 
 `lib/inngest/functions/extractText.js` carries an explicit mime → handler dispatch with a `text/*` catch-all and a NON_EXTRACTABLE allow-list (image / audio / video / archive / executable / CAD extensions) that short-circuits to `{ segments: [] }`. The worker then marks the row `stored` instead of attempting to coerce binary noise into chunks.
 
-`lib/ai/ocr.js` calls Mistral Document OCR (`mistral-ocr-latest`) with a base64 data URL when (a) native extraction returned no text AND (b) the file is image-based or a `pdf_no_text_layer`. Per-page text becomes locator-aware segments and feeds the same chunker/embedder pipeline. Key resolution: `resolveActiveKey({ orgId, vendor: 'mistral' })` so an org-level BYO key (set under `/portal/org-admin → API keys → Mistral (OCR)`) wins over the platform `MISTRAL_API_KEY` env. Without any key, OCR is silently skipped and the file lands as `stored`.
+`lib/ai/ocr.js` calls Mistral Document OCR (`mistral-ocr-latest`) with a base64 data URL when (a) native extraction returned no text AND (b) the file is image-based or a `pdf_no_text_layer`. Per-page text becomes locator-aware segments and feeds the same chunker/embedder pipeline. Key resolution: `resolveActiveKey({ orgId, vendor: 'mistral' })` so an org-level BYO key (set under `/org-admin → API keys → Mistral (OCR)`) wins over the platform `MISTRAL_API_KEY` env. Without any key, OCR is silently skipped and the file lands as `stored`.
 
 #### Auto-trigger throttling
 
@@ -1828,7 +1829,7 @@ A daily cron (`/api/cron/expunge-deleted-accounts`, 03:00) processes pending req
 5. Rename `auth.users.email` to `deleted-{uuid}@deleted.invalid`.
 6. Mark `user_deletion_requests.status = 'completed'`.
 
-UI lives at `/portal/settings`. Both controls visible to any signed-in user.
+UI lives in the Settings popover on the chat rail (gear icon in `/workspace/map`; auto-opens via `?openSettings=1`). Both controls visible to any signed-in user.
 
 ### Required env
 - `PLATFORM_ADMIN_TRANSFER_EMAIL` — the platform-admin account that becomes new owner of expunged users' deals. Without it, the cron skips ownership transfer; deals stay accessible via `collaborator_emails` only.
@@ -2048,7 +2049,7 @@ Landing /                                 [ "Audit your process" CTA ]
 ### 11.2 Deal owner — diligence flow
 
 ```
-/portal                                  [ "Deals" tile — gated by `deals` entitlement ]
+/workspace/map                           [ Deals briefcase popover (chat rail) — gated by `deals` entitlement ]
    ↓
 /deals                                   [ List of deals; "+ New deal" ]
    ↓
@@ -2172,7 +2173,7 @@ AuditGate (deal-bound mode)
 ### Phase 1 — Skeleton (1 week)
 
 - [ ] Next.js project + Supabase project
-- [ ] Auth helpers + a basic `/portal` login
+- [ ] Auth helpers + a basic `/signin` page (mounts `components/auth/SignInForm`)
 - [ ] `diagnostic_reports` + `chat_sessions` + `chat_messages` migrations
 - [ ] `/process-audit` page with AuditGate + a stub Workspace
 - [ ] `/api/diagnostic-chat` with the streaming agent loop, ZERO tools
@@ -2197,7 +2198,7 @@ AuditGate (deal-bound mode)
 
 - [ ] `organizations` + `organization_members` migrations
 - [ ] Entitlements helper + gates on portal routes
-- [ ] `/portal/org-admin` UI
+- [ ] `/org-admin` UI
 
 ### Phase 5 — Deal portal MVP (1 week)
 
@@ -2269,7 +2270,7 @@ AuditGate (deal-bound mode)
 - Process redesign + workflow exports (n8n/Zapier/etc.) — different value path
 - Cost copilot (a separate streaming chat surface)
 - Team alignment (legacy multi-perspective survey) — separate flow
-- Cross-report analytics (`/portal/analytics`)
+- Cross-report analytics (the `AnalyticsCanvasPanel` mounted natively in the canvas / chat rail / workspace tab)
 - Marketing site (`MarketingClient.jsx`)
 
 ---
@@ -2357,9 +2358,10 @@ workflow-consultancy/
 ├── app/
 │   ├── layout.jsx
 │   ├── page.jsx                                 # Landing
-│   ├── portal/
-│   │   ├── page.jsx + PortalAuth.jsx + PortalDashboard.jsx
-│   │   └── org-admin/
+│   ├── org-admin/
+│   │   └── page.jsx                             # Org admin shell (mounts components/org-admin/OrgAdminClient)
+│   ├── signin/
+│   │   └── page.jsx                             # Mounts components/auth/SignInForm
 │   ├── process-audit/page.jsx
 │   ├── report/page.jsx
 │   ├── deals/
