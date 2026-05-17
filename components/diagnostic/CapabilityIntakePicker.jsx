@@ -104,8 +104,10 @@ export default function CapabilityIntakePicker({ accessToken, onChange }) {
             ))}
           </select>
           <p className="function-intake-hint">
-            The audit will land in your workspace already filed under the picked function.
-            Pick &quot;Don&apos;t file yet&quot; to triage it later.
+            Every process you map lives inside this operating model, organised
+            under a <strong>function</strong> (Finance, Sales, Operations…). Pick
+            one and it lands there; pick &quot;Don&apos;t file yet&quot; and it
+            sits in <strong>Unfiled</strong> until you file it from the workspace.
           </p>
         </>
       ) : (

@@ -412,14 +412,14 @@
       <li>
         <div class="flow-title">2 · Map the first process (onboarding)</div>
         <div class="flow-detail">
-          The chat-driven canvas (<code>/process-audit</code> / <code>/workspace/map</code>, <code>DiagnosticWorkspace.jsx</code>). Reina (process agent, <code>ALL_CHAT_TOOLS</code>) walks the user through capturing real steps, owners, systems, volumes, and costs.
+          The chat-driven canvas (<code>/process-mapping</code> &rarr; <code>/workspace/map</code>; old <code>/process-audit</code> still redirects in; <code>DiagnosticWorkspace.jsx</code>). Reina (process agent, <code>ALL_CHAT_TOOLS</code>) walks the user through capturing real steps, owners, systems, volumes, and costs.
           Each turn upserts <code>processes.flow_data</code> via <code>PUT /api/update-diagnostic</code>; cost / savings / automation derive on read. No "generate report" step - the canvas IS the deliverable.
         </div>
       </li>
       <li>
         <div class="flow-title">3 · Build out the operating model</div>
         <div class="flow-detail">
-          Processes are filed under <strong>functions</strong>; <strong>roles</strong> and <strong>systems</strong> form the inventory. The model agent (<code>MODEL_AGENT_TOOLS</code>) answers model-level questions and proposes function / role / system and process-lifecycle changes as <strong>Confirm</strong> cards (nothing writes until the user clicks). Analytics + Insights tabs roll the model up. An org can hold <strong>multiple operating models</strong>; the Standard-scope <code>WorkspaceModelsTab</code> creates / switches them and persists the member's <strong>active model</strong> (<code>organization_members.preferred_operating_model_id</code>, migration 41) so Home / New chat follow it.
+          Processes are filed under <strong>functions</strong>; <strong>roles</strong> and <strong>systems</strong> form the inventory. The model agent (<code>MODEL_AGENT_TOOLS</code>) answers model-level questions and proposes function / role / system and process-lifecycle changes as <strong>Confirm</strong> cards (nothing writes until the user clicks). Analytics + Insights tabs roll the model up. An org can hold <strong>multiple operating models</strong> (one org per user by design; models live within it). The active model + a switcher / <strong>"+ New model"</strong> is surfaced right where Home lands — the chat-shell "Working in &lt;Model&gt; ▾" banner (<code>WorkspaceContextStrip</code>), plus the Standard-scope <code>WorkspaceModelsTab</code>. Switching/creating persists the member's active model (<code>organization_members.preferred_operating_model_id</code>, migration 41) so Home / New chat follow it.
         </div>
       </li>
       <li>
@@ -437,7 +437,7 @@
       <li>
         <div class="flow-title">6 · Live, ongoing</div>
         <div class="flow-detail">
-          The workspace stays current. User and agent edits land as rows in the <code>changes</code> audit log and apply in place; metrics re-derive on every read, so the model never goes stale. GDPR data export and account erasure are available from rail settings (<code>/api/me/*</code> + the expunge cron).
+          The workspace stays current. User and agent edits land as rows in the <code>changes</code> audit log and apply in place; metrics re-derive on every read, so the model never goes stale. A process can be shared with a colleague via a copyable read-only link (<code>ShareProcessLink</code>, in the canvas back-bar and the workspace process list): <code>/process-mapping?view=&lt;id&gt;</code> is public by design: the <code>get-diagnostic</code> GET read-only branch serves any process without auth, the UUID is the unguessable bearer, and the editable path still gates on owner / RLS so the link never grants edit. Deal collaboration stays on deal collaborators, so the share link is scoped to non-deal flows. (This replaces the old emailed resume link, which depended on the removed <code>/api/progress</code>.) GDPR data export and account erasure are available from rail settings (<code>/api/me/*</code> + the expunge cron).
         </div>
       </li>
     </ol>
@@ -469,8 +469,8 @@
       <text class="node-sub t-pages"     x="125" y="184" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10">/workspace/map</text>
 
       <rect class="node-pages" x="225" y="140" width="170" height="58" rx="5"/>
-      <text class="node-title t-pages"   x="310" y="166" text-anchor="middle">Process audit</text>
-      <text class="node-sub t-pages"     x="310" y="184" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10">/process-audit</text>
+      <text class="node-title t-pages"   x="310" y="166" text-anchor="middle">Process mapping</text>
+      <text class="node-sub t-pages"     x="310" y="184" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10">/process-mapping</text>
 
       <rect class="node-pages" x="410" y="140" width="200" height="58" rx="5"/>
       <text class="node-title t-pages"   x="510" y="166" text-anchor="middle">Org admin</text>
@@ -703,7 +703,7 @@
           <div class="chips">
             <span class="chip bg-page">/workspace</span>
             <span class="chip bg-page">/workspace/map</span>
-            <span class="chip bg-page">/process-audit</span>
+            <span class="chip bg-page">/process-mapping</span>
           </div>
         </div>
         <div class="group">

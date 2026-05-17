@@ -9,7 +9,7 @@ A **deal** is Vesno's container for multi-party diligence work. PE, M&A, and sca
 
 This guide walks the M&A flow because it's the most complex. PE roll-ups and scaling deals are simpler subsets.
 
-> **The chat is the surface.** The legacy `/deals/[id]` page has been retired. Everything below happens inside the diagnostic chat at `/process-audit` — the rail icons on the left scope you in and out of deals, and the workspace modal does the heavy lifting.
+> **The chat is the surface.** The legacy `/deals/[id]` page has been retired. Everything below happens inside the chat at `/process-mapping` — the rail icons on the left scope you in and out of deals, and the workspace modal does the heavy lifting.
 
 ## Step 1 — Create the deal
 

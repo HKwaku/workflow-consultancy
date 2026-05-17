@@ -10547,6 +10547,21 @@ body { line-height: 1.65; }
 [data-theme="dark"] .s7-canvas-back-link:hover { color: var(--accent, #34d399); }
 [data-theme="dark"] .s7-canvas-back-bar-sep { color: var(--text-mid, #6b7280); }
 [data-theme="dark"] .s7-canvas-back-bar-title { color: var(--text, #e8e8e8); }
+
+/* Share-a-process affordance: replaces the old emailed resume link.
+   Pushed to the right of the canvas back-bar. */
+.s7-canvas-back-bar-share { margin-left: auto; }
+.s7-share-link-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  border: none; background: transparent; cursor: pointer;
+  font: inherit; font-weight: 500; padding: 2px 4px;
+  color: #64748b;
+}
+.s7-share-link-btn:hover { color: #0f766e; }
+.s7-share-link-btn svg { flex: 0 0 auto; }
+[data-theme="dark"] .s7-share-link-btn { color: var(--text-mid, #a0a0a0); }
+[data-theme="dark"] .s7-share-link-btn:hover { color: var(--accent, #34d399); }
+.ws-proc-share { margin-right: 6px; }
 [data-theme="dark"] .s7-view-toggle { background: var(--bg, #141414); border-color: var(--border, #2e2e2e); }
 [data-theme="dark"] .s7-view-btn.active { background: var(--bg-alt, #1e1e1e); border-color: var(--border, #2e2e2e); }
 [data-theme="dark"] .s7-canvas-float-btn { background: var(--bg, #141414); border-color: var(--border, #2e2e2e); }
@@ -19474,7 +19489,7 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   .deal-workspace-frame {
     width: 100%;
     height: 100%;
-    max-height: 100vh;
+    max-height: 100dvh;
     border-radius: 0;
     border: 0;
   }
@@ -19546,7 +19561,7 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
     max-width: 100vw;
     left: 0 !important;       /* override the inline anchor coords */
     top: 0 !important;
-    height: 100vh !important;
+    height: 100dvh !important;
     border-right: 0;
     border-radius: 0;
   }
@@ -19605,7 +19620,7 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
     transform: translate(-50%, -50%) !important;
     width: calc(100vw - 24px);
     max-width: 360px;
-    max-height: calc(100vh - 48px);
+    max-height: calc(100dvh - 48px);
     overflow-y: auto;
     padding: 18px;
   }
@@ -19614,7 +19629,7 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
   .s7-guide-card-dots { flex-wrap: wrap; }
   .s7-guide-card-actions { flex-wrap: wrap; gap: 6px; }
   .s7-guide-back-btn,
-  .s7-guide-next-btn { flex: 1 1 auto; min-height: 40px; }
+  .s7-guide-next-btn { flex: 1 1 auto; min-height: 44px; }
 
   /* ── Settings popover: full-width drawer rather than 280px floating ── */
   .s7-split-rail-deals-pop {
@@ -19626,14 +19641,14 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
     max-height: 70vh;
   }
   .s7-settings-row { padding: 10px 12px; font-size: 13px; }
-  .s7-settings-btn { min-height: 40px; padding: 8px 12px; }
+  .s7-settings-btn { min-height: 44px; padding: 10px 12px; }
 
   /* ── Inline doc viewer: full-bleed ── */
   .deal-doc-viewer-overlay { padding: 0; }
   .deal-doc-viewer-frame {
     width: 100%;
     height: 100%;
-    max-height: 100vh;
+    max-height: 100dvh;
     border-radius: 0;
     border: 0;
   }
@@ -19723,7 +19738,10 @@ details[open] .report-auto-group-chevron { transform: rotate(90deg); }
     min-height: 56px !important;
     border-right: none !important;
     border-top: 1px solid var(--border, #e2e8f0);
-    padding: 6px 8px !important;
+    /* env() resolves to 0 on non-notch devices, so this is a no-op
+       there; on iPhones it lifts the bottom-nav buttons clear of the
+       home indicator. */
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px)) !important;
     overflow-x: auto;
     overflow-y: hidden;
     order: 99;

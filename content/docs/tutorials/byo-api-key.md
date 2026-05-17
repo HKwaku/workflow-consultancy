@@ -36,7 +36,7 @@ The card now shows:
 
 ## Step 3 — Verify it's actually being used
 
-Send a chat message in `/process-audit`. Then:
+Send a chat message in `/process-mapping`. Then:
 
 - Check the **Usage** tab in `/org-admin` — your call should appear.
 - Check your Anthropic console (console.anthropic.com → Settings → Usage) — the same call should appear within ~1 minute.

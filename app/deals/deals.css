@@ -107,7 +107,7 @@
 .deal-page-status--complete   { background: rgba(13,148,136,0.12); color: #0d9488; }
 .deal-page-status--draft      { background: var(--bg-alt); color: var(--text-light); }
 
-/* Chat-first CTA banner — encourages users into /process-audit?deal=… */
+/* Chat-first CTA banner — encourages users into /process-mapping?deal=… */
 .deal-page-chat-cta {
   display: flex;
   align-items: center;

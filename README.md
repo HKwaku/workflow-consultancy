@@ -10,6 +10,7 @@ AI-native operating-model + M&A diligence platform. Chat-first UI ("Reina" copil
 > - All cost / savings / automation metrics derive on read from `flow_data.rawProcesses[].steps[]` via `lib/processMetrics.js`. The columns that used to cache them (`total_annual_cost`, `potential_savings`, `automation_percentage`, `automation_grade`) were dropped.
 > - AI improvement suggestions land as inline rows in the `changes` table on the live process, not as a separate redesign artefact.
 > - `/workspace` embeds the canvas + chat shell so clicking a process loads it in place (silent `vesno:open-process` event, `history.replaceState`, no remount).
+> - **Share a process** with a colleague: `ShareProcessLink` (canvas back-bar + workspace process list) copies `/process-mapping?view=<id>`. That read-only view is public by design (the `get-diagnostic` GET read-only branch; the process UUID is the unguessable bearer); the editable path still gates on owner / RLS, so the link never grants edit. Non-deal flows only. Replaces the old `/api/progress` resume link.
 >
 > **Deal workspace + dataroom**
 > - **Open-format dataroom** — any file uploads; text-extractable formats are searchable, others land as `stored` (downloadable + previewable). OCR fallback via Mistral Document OCR for scanned PDFs / images. Org-admin BYO key path.
@@ -40,7 +41,7 @@ AI-native operating-model + M&A diligence platform. Chat-first UI ("Reina" copil
 >
 > **Multiple operating models per org**
 > - An org is no longer one model. `organization_members.preferred_operating_model_id` (migration **41**) gives each member an **active model**; `resolveDefaultModelForUser` returns it (else the org default), so Home / New chat / the chat agent all follow the chosen model instead of snapping back.
-> - `/api/me/operating-models` (`GET` list, `POST {name}` create+activate, `PUT {modelId}` switch); switcher UI in `WorkspaceModelsTab` (Standard scope) with "+ New model" + Active badge. Requires migration 41 applied; degrades safely (stays on org default) until then.
+> - `/api/me/operating-models` (`GET` list, `POST {name}` create+activate, `PUT {modelId}` switch). Switcher is surfaced **from Home**: the chat-shell "Working in **&lt;Model&gt; ▾**" banner (`WorkspaceContextStrip`) drops down org models + "+ New model"; also in the Standard-scope `WorkspaceModelsTab`. One org per user by design — these are models within it. Requires migration 41 applied; degrades safely (stays on org default) until then.
 
 ## Tech Stack
 
@@ -59,7 +60,8 @@ workflow-consultancy/
 │   ├── api/                        # API routes
 │   ├── deals/[id]/workspace/       # Per-deal workspace (canvas + dataroom + findings)
 │   ├── portal/                     # User portal (auth required)
-│   ├── process-audit/              # Canvas + chat for an individual process
+│   ├── process-mapping/            # Canonical alias → /workspace/map (chat + canvas)
+│   ├── process-audit/              # Back-compat redirect for old /process-audit links
 │   ├── workspace/                  # Operating-model home — embeds the canvas + chat
 │   └── ...
 ├── components/

@@ -1,9 +1,8 @@
 /**
- * Back-compat alias. The route was renamed to /process-mapping; this
- * old path is kept so existing n8n webhooks, deep-link emails, Calendly
- * intro URLs, and external bookmarks don't 404. Forwards straight to
- * /workspace/map (same destination /process-mapping uses) — no double
- * redirect for legacy traffic.
+ * /process-mapping → forwards to /workspace/map (the chat surface lives
+ * there). This is the canonical named entry; `/process-audit` is kept
+ * as a back-compat redirect for old links / n8n webhooks / Calendly /
+ * bookmarks.
  *
  * Query params (deal, edit, view, view=cost, reaudit, openSettings, etc.)
  * are preserved through the redirect so every entry path still lands in
@@ -14,7 +13,7 @@ import { redirect } from 'next/navigation';
 
 export const metadata = { title: 'Map a process · Vesno' };
 
-export default async function ProcessAuditLegacyAlias({ searchParams }) {
+export default async function ProcessMappingAlias({ searchParams }) {
   const sp = await searchParams;
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(sp || {})) {

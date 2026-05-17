@@ -37,6 +37,7 @@ import WorkspaceScopeNav from '@/components/workspace/WorkspaceScopeNav';
 import WorkspaceDealsTab from '@/components/workspace/WorkspaceDealsTab';
 import WorkspaceOutputsTab from '@/components/workspace/WorkspaceOutputsTab';
 import WorkspaceModelsTab from '@/components/workspace/WorkspaceModelsTab';
+import ShareProcessLink from '@/components/workspace/ShareProcessLink';
 import RecentProcessesRow from '@/components/diagnostic/chat/RecentProcessesRow';
 import SettingsRailButton from '@/components/diagnostic/chat/SettingsRailButton';
 import DocsRailButton from '@/components/diagnostic/chat/DocsRailButton';
@@ -2646,7 +2647,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
   /* ── In-chat deal setup submission (PE roll-up + M&A) ── */
   const handleDealSetupSubmit = useCallback(async ({ dealName: name, targetCompany, platformCompany, ownerEmail, targetEmail, dealKind = 'pe' }) => {
     if (!accessToken) {
-      addChatMessage({ role: 'assistant', content: 'You need to be signed in to create a deal. [Sign in](/signin?returnTo=%2Fprocess-audit)' });
+      addChatMessage({ role: 'assistant', content: 'You need to be signed in to create a deal. [Sign in](/signin?returnTo=%2Fprocess-mapping)' });
       return { error: 'not signed in' };
     }
     // Map the kind onto the deal API's `type` and the right pair of
@@ -3271,14 +3272,20 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     try { persistMessageToCloud({ role: 'user', content: `Pinned current flow as artefact.`, snapshot: snap, artefact }); } catch { /* best-effort */ }
   }, [snapshotCurrentFlow, processData, steps, addChatMessage, persistMessageToCloud]);
 
-  /* ═══════ Handover / Save-Progress flows removed ═══════
+  /* ═══════ Handover / Save-Progress flows ═══════
    *
-   * The old "handover to a colleague" modal and per-step "Save & get link"
-   * affordances posted to /api/progress, which is gone with the living-
-   * workspace migration (the diagnostic_progress table was a snapshot-era
-   * resume-link store). The workspace now autosaves every edit via PUT
-   * /api/processes/[id]; sharing a deal/process is done by adding the
-   * collaborator on the deal, not by sending a one-shot resume URL.
+   * The old "handover to a colleague" modal and per-step "Save & get
+   * link" affordances posted to /api/progress, which is gone with the
+   * living-workspace migration (the diagnostic_progress table was a
+   * snapshot-era resume-link store). The workspace now autosaves every
+   * edit via PUT /api/processes/[id].
+   *
+   * Sharing a standalone process is now a copyable read-only link
+   * (ShareProcessLink, in the canvas back-bar + the workspace process
+   * list): /process-mapping?view=<id> is public by design. The GET
+   * read-only branch serves any process without auth, the UUID is the
+   * unguessable bearer. Deal/process collaboration still goes through
+   * deal collaborators, so the share link is gated to non-deal flows.
    */
 
   /* ═══════ Flow model - predicted wait times ═══════ */
@@ -5981,9 +5988,9 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                   recipient + comments + sender name and emails them a
                   resume link. Defined in this component (~line 2986)
                   but the rail JSX wasn't mounting it. */}
-              {/* Handover-to-colleague button removed: relied on
-                  /api/progress (410). Sharing happens via deal
-                  collaborators now. */}
+              {/* Share-a-process is the canvas back-bar "Share" link
+                  (ShareProcessLink) — a copyable read-only link, not a
+                  rail button. Deal sharing stays on deal collaborators. */}
               {/* Analytics moved into the workspace's Analytics tab. */}
               {/* Bottom group — Docs · Replay walkthrough · Activity log.
                   margin-top: auto pushes them to the end of the rail body
@@ -6063,6 +6070,11 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
               <span className="s7-canvas-back-bar-title">
                 {processData?.processName || 'Process'}
               </span>
+              {!dealId && (viewOnlyProcessId || editingReportId) && (
+                <span className="s7-canvas-back-bar-share">
+                  <ShareProcessLink processId={viewOnlyProcessId || editingReportId} variant="bar" />
+                </span>
+              )}
             </div>
           )}
           {workspaceCanvasOpen && (
@@ -6361,9 +6373,9 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
               <button ref={stepsBtnRef} type="button" className={`s7-split-rail-btn${floatingPanel === 'steps' ? ' active' : ''}`} onClick={() => setFloatingPanel((p) => (p === 'steps' ? null : 'steps'))} title="Steps list">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg>
               </button>
-              {/* Handover-to-colleague button removed: relied on
-                  /api/progress (410). Sharing happens via deal
-                  collaborators now. */}
+              {/* Share-a-process is the canvas back-bar "Share" link
+                  (ShareProcessLink) — a copyable read-only link, not a
+                  rail button. Deal sharing stays on deal collaborators. */}
               {/* Analytics moved into the workspace's Analytics tab. */}
               <div className="s7-split-rail-bottom-group" style={{ marginTop: 'auto' }}>
                 <DocsRailButton />

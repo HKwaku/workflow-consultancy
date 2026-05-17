@@ -594,7 +594,7 @@
 }
 
 /* Top-of-page title block - darker header band that carries the process
-   name and a "Process audit | Company" subtitle. Sits at the very top of
+   name and a "Process mapping | Company" subtitle. Sits at the very top of
    the report body, above the cost-restricted notice and hero. */
 .report-page .report-page-title-block {
   margin: 0 0 1rem;

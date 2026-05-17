@@ -16,7 +16,7 @@ Vesno helps you do three things, in one place:
 
 | You are… | Start with |
 |----------|------------|
-| Someone wanting to map a single process | [Your first process audit](/docs/tutorials/your-first-audit) |
+| Someone wanting to map a single process | [Your first process map](/docs/tutorials/your-first-audit) |
 | A PE firm or M&A team | [Running a deal](/docs/tutorials/running-a-deal) |
 | An organisation admin | [Setting your AI provider key](/docs/tutorials/byo-api-key) |
 

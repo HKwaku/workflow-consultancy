@@ -1,4 +1,4 @@
-# Process audit tool - demo walkthrough video (production guide)
+# Process mapping tool - demo walkthrough video (production guide)
 
 Use this document to **record or brief** a screen-capture demo of the client journey in the diagnostic (`/diagnostic`). It matches the current product flow described in `DIAGNOSTICS_CAPABILITIES.md`.
 
@@ -37,7 +37,7 @@ Best for a first demo: **no account**, **~15 minutes** flow in product, **~3 min
 
 1. **Hook (0:00–0:15)**  
    Open `https://<your-domain>/diagnostic` (or localhost for internal).  
-   *Say:* “This is Vesno’s free process audit - you walk through your real process, and we turn it into a map and analysis.”
+   *Say:* “This is Vesno’s free process mapping - you walk through your real process, and we turn it into a map and analysis.”
 
 2. **Sharp intro (0:15–0:45)**  
    Show **Process Map** vs **Team Alignment** cards (mention team is for alignment sessions).  

@@ -12,6 +12,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api-fetch';
+import ShareProcessLink from '@/components/workspace/ShareProcessLink';
 
 function Money(n) {
   if (n == null) return '—';
@@ -122,8 +123,15 @@ export default function ProcessesPanel({
       {(processes?.length || 0) === 0 && (
         <p className="ws-empty-inline">
           {selectedFuncId == null
-            ? 'No processes yet. Run an audit from the chat to add one.'
-            : 'No processes filed under this function yet.'}
+            ? 'No processes yet. In the chat, describe a process (its name + what triggers it) and Reina maps it live — it appears here, inside this operating model.'
+            : selectedFuncId === '__unfiled__'
+              ? 'Nothing unfiled. "Unfiled" holds processes not yet placed under a function.'
+              : 'No processes filed under this function yet. Use "File under…" on a process to place it here.'}
+        </p>
+      )}
+      {selectedFuncId === '__unfiled__' && (processes?.length || 0) > 0 && (
+        <p className="ws-empty-inline" style={{ marginTop: 0 }}>
+          These processes aren&apos;t under any function yet. Use the &quot;File under…&quot; picker on each to organise them within the model.
         </p>
       )}
 
@@ -234,6 +242,7 @@ function ProcessRow({ p, capOptions, busy, onFile, funcsById, processUrlFor, onP
       </div>
       {!hideRefile && (
         <div className="ws-proc-actions">
+          <ShareProcessLink processId={p.id} variant="row" />
           {pickerOpen ? (
             <select
               autoFocus

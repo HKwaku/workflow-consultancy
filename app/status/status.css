@@ -150,3 +150,24 @@
   color: var(--text-light);
   font-style: italic;
 }
+
+/* ── Mobile: tighten the standalone page so it reads cleanly on a
+   phone. max() keeps the gutters clear of notch insets in landscape;
+   env() is 0 on non-notch devices so this stays a no-op there. ── */
+@media (max-width: 600px) {
+  .status-page {
+    padding: 56px max(16px, env(safe-area-inset-left))
+             32px max(16px, env(safe-area-inset-right));
+  }
+  .status-hero { margin-bottom: 28px; }
+  .status-hero h1 { font-size: 26px; }
+  .status-overall {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px 18px;
+  }
+  .status-table-card { padding: 18px 16px; }
+  .status-table th,
+  .status-table td { padding: 11px 4px; }
+  .status-vendor-card { padding: 24px 18px; }
+}

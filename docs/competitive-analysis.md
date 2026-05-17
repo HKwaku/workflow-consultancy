@@ -84,7 +84,7 @@ Things none of the above do in combination:
 |---|---|
 | **"Celonis for companies that don't have system logs"** | Broadest claim |
 | **"ClearWork + cost modelling + workflow export"** | Most accurate technical comparison |
-| **"The process audit tool built for PE/M&A consultants"** | Sharpest niche |
+| **"The process mapping tool built for PE/M&A consultants"** | Sharpest niche |
 
 The third is the most defensible and hardest for enterprise vendors to replicate quickly - they are not structurally set up to sell to deal-context consultants at the speed Vesno works.
 
