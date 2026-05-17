@@ -4,10 +4,15 @@
  * WorkspaceScopeNav - top-level nav that sits above the per-workspace
  * tab row. Three options:
  *
- *   - Standard:  the org's default operating model workspace (/workspace)
+ *   - Standard:  the org's default operating model workspace (/workspace).
+ *                Analytics lives here as the "Analysis" tab — there is no
+ *                separate Analytics scope.
  *   - Deals:     the deals list (/workspace?view=deals); picking a deal
  *                navigates to /deals/<id>/workspace
- *   - Analytics: embedded analytics (/workspace?view=analytics)
+ *   - Outputs:   schema-free generated content the agent produces
+ *                during interaction (/workspace?view=outputs). Named
+ *                "Outputs" so it doesn't collide with the chat rail's
+ *                separate, session-scoped "Artefacts" panel.
  *
  * Mounted by both WorkspaceClient (standard surface) and
  * DealWorkspaceClient (deal surface) so the user can switch scopes
@@ -18,7 +23,7 @@ import Link from 'next/link';
 
 /**
  * Props:
- *   active:    'deals' | 'standard' | 'analytics' (highlighted pill)
+ *   active:    'deals' | 'standard' | 'outputs' (highlighted pill)
  *   onSelect:  optional (scope) => void. When supplied, plain clicks
  *              call this instead of navigating - lets the canvas
  *              overlay swap content without a route change. Cmd/Ctrl/
@@ -44,7 +49,7 @@ export default function WorkspaceScopeNav({ active, onSelect }) {
     <nav className="ws-scope-nav" aria-label="Workspace scope">
       {item('deals',     'Deals',     '/workspace?view=deals')}
       {item('standard',  'Standard',  '/workspace')}
-      {item('analytics', 'Analytics', '/workspace?view=analytics')}
+      {item('outputs',   'Outputs',   '/workspace?view=outputs')}
     </nav>
   );
 }

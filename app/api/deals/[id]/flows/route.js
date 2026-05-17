@@ -8,6 +8,8 @@ import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { resolveDealAccess, requireDealEditor } from '@/lib/dealAuth';
 import { logger } from '@/lib/logger';
 import { deriveProcessMetrics } from '@/lib/processMetrics';
+import { loadDecidedChangesByProcess } from '@/lib/changes/repo';
+import { decidedSavingsFromChanges } from '@/lib/changes/savings';
 
 /**
  * GET /api/deals/[id]/flows
@@ -53,10 +55,17 @@ export async function GET(request, { params }) {
       }
     }
 
+    // Potential savings = accepted/decided changes per process (£0 when
+    // nothing is decided). One batched query for every flow's process.
+    const decidedByProcess = await loadDecidedChangesByProcess(Object.keys(processMap));
+
     return NextResponse.json({
       flows: flows.map((f) => {
         const p = f.process_id ? processMap[f.process_id] : null;
         const metrics = p ? deriveProcessMetrics(p) : null;
+        const decidedSavings = p
+          ? decidedSavingsFromChanges(decidedByProcess.get(p.id), metrics.total_annual_cost)
+          : 0;
         return {
           id: f.id,
           dealId: f.deal_id,
@@ -74,7 +83,7 @@ export async function GET(request, { params }) {
             createdAt: p.created_at,
             updatedAt: p.updated_at,
             totalAnnualCost:     metrics.total_annual_cost,
-            potentialSavings:    metrics.potential_savings,
+            potentialSavings:    decidedSavings,
             automationPercentage: metrics.automation_percentage,
             automationGrade:     metrics.automation_grade,
           } : null,

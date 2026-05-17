@@ -8,8 +8,9 @@ summary: A 2-minute tour of what Vesno does and where to start.
 Vesno helps you do three things, in one place:
 
 - **Audit a process.** Describe an operational process to Reina (our AI assistant); she maps it visually, scores its automation readiness, and produces a diagnostic report.
-- **Redesign it.** Accept an AI-generated redesign and export build guides for n8n, Zapier, Make, and a dozen other workflow platforms.
-- **Run M&A diligence.** Upload a data room. Vesno extracts and embeds every document, then generates evidence-cited findings — exportable to PowerPoint.
+- **Redesign it.** Reina proposes AI-generated improvements that you apply directly to the live process - the workspace itself is the deliverable, no separate export step.
+- **Run M&A diligence.** Upload a data room. Vesno extracts and embeds every document, then generates evidence-cited findings you review inside the workspace.
+- **Keep the deliverables.** Ask Reina for a table, doc, plan, or diagram and it lands in the **Outputs** tab - a persistent home for generated content alongside your model.
 
 ## Three audiences
 

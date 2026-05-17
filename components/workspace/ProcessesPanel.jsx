@@ -20,6 +20,34 @@ function Money(n) {
   return `£${Math.round(n)}`;
 }
 
+/**
+ * Owner-mismatch detection — identical rule to the Graph view
+ * (WorkspaceGraph): a process is flagged when its biggest cost-driver
+ * function (by attributed cost_by_function) is not its declared owner,
+ * and there's more than one driver (so the single-function fallback
+ * doesn't false-positive). Keeps List and Graph telling the same story.
+ */
+function ownerMismatch(p) {
+  const cbf = p.cost_by_function || {};
+  const annualCost = Number(p.total_annual_cost) || 0;
+  let topId = null;
+  let topCost = 0;
+  let distinct = 0;
+  for (const [fid, cost] of Object.entries(cbf)) {
+    const c = Number(cost) || 0;
+    if (c <= 0) continue;
+    distinct += 1;
+    if (c > topCost) { topCost = c; topId = fid; }
+  }
+  const declared = p.function_id || null;
+  const mismatch = !!(declared && topId && topId !== declared && distinct > 1);
+  return {
+    mismatch,
+    topId,
+    topShare: annualCost > 0 ? topCost / annualCost : 0,
+  };
+}
+
 export default function ProcessesPanel({
   modelId, processes, allCapabilities,
   selectedFuncId, accessToken, onChanged,
@@ -153,6 +181,12 @@ function ProcessRow({ p, capOptions, busy, onFile, funcsById, processUrlFor, onP
     .filter((fid) => fid && fid !== p.function_id)
     .map((fid) => funcsById?.[fid]?.name)
     .filter(Boolean);
+  const mm = ownerMismatch(p);
+  const declaredName = p.function_id ? (funcsById?.[p.function_id]?.name || null) : null;
+  const topDriverName = mm.topId ? (funcsById?.[mm.topId]?.name || null) : null;
+  const mismatchTitle = mm.mismatch && topDriverName
+    ? `Declared owner: ${declaredName || 'Unfiled'} · Top cost driver: ${topDriverName} (${Math.round(mm.topShare * 100)}%)`
+    : '';
   const handleTitleClick = (e) => {
     if (!onProcessClick) return;
     // Let Cmd/Ctrl/Shift/middle-click open in a new tab via the href.
@@ -170,6 +204,11 @@ function ProcessRow({ p, capOptions, busy, onFile, funcsById, processUrlFor, onP
         >
           {p.process_name || p.processName || 'Untitled process'}
         </Link>
+        {mm.mismatch && (
+          <span className="ws-proc-mismatch" title={mismatchTitle} aria-label="Owner mismatch">
+            ⚠ {topDriverName}
+          </span>
+        )}
         {(p.company || p.contact_name) && (
           <span className="ws-proc-company" title="Company / contact">
             {p.company || p.contact_name}
@@ -185,12 +224,12 @@ function ProcessRow({ p, capOptions, busy, onFile, funcsById, processUrlFor, onP
         )}
       </div>
       <div className="ws-proc-meta">
-        <span title="Annual cost">{Money(p.total_annual_cost)}</span>
-        {p.potential_savings != null && (
-          <span title="Potential savings" className="ws-proc-savings">↓ {Money(p.potential_savings)}</span>
+        <span className="ws-proc-cost" title="Annual cost">{Money(p.total_annual_cost)}</span>
+        {Number(p.potential_savings) > 0 && (
+          <span title="Decided savings" className="ws-proc-savings">↓ {Money(p.potential_savings)}</span>
         )}
-        {p.automation_percentage != null && (
-          <span title="Automation %">{Math.round(p.automation_percentage)}% auto</span>
+        {Number(p.automation_percentage) > 0 && (
+          <span title="Automation %" className="ws-proc-auto">{Math.round(p.automation_percentage)}% auto</span>
         )}
       </div>
       {!hideRefile && (

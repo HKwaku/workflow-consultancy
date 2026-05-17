@@ -26,9 +26,11 @@ const STATUS_LABEL = { live: 'Live', draft: 'Draft', archived: 'Archived' };
 
 export default function WorkspaceModelsTab({ accessToken, onModelOpen }) {
   const [models, setModels] = useState(null);
+  const [activeId, setActiveId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState(null);
   const [filter, setFilter]   = useState('');
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -36,11 +38,46 @@ export default function WorkspaceModelsTab({ accessToken, onModelOpen }) {
     setLoading(true);
     apiFetch('/api/me/operating-models', {}, accessToken)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`/api/me/operating-models -> ${r.status}`))))
-      .then((data) => { if (!cancelled) setModels(data?.models || []); })
+      .then((data) => {
+        if (cancelled) return;
+        setModels(data?.models || []);
+        setActiveId(data?.activeModelId || null);
+      })
       .catch((e) => { if (!cancelled) setError(e.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [accessToken]);
+
+  // Persist the chosen model as this member's active model so Home /
+  // New chat / the chat agent all follow it (server-resolved), not
+  // just this tab's in-canvas navigation.
+  const persistActive = (modelId) => apiFetch('/api/me/operating-models', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ modelId }),
+  }, accessToken).catch(() => {});
+
+  const createModel = async () => {
+    if (creating) return;
+    const name = (typeof window !== 'undefined' && window.prompt('Name the new operating model:'))?.trim();
+    if (!name) return;
+    setCreating(true);
+    setError(null);
+    try {
+      const r = await apiFetch('/api/me/operating-models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      }, accessToken);
+      const d = await r.json();
+      if (!r.ok || d?.error) throw new Error(d?.error || `create -> ${r.status}`);
+      // POST already made it the active model; land on it fresh.
+      if (typeof window !== 'undefined') window.location.assign('/workspace');
+    } catch (e) {
+      setError(e.message);
+      setCreating(false);
+    }
+  };
 
   const rows = useMemo(() => {
     const q = filter.trim().toLowerCase();
@@ -70,6 +107,14 @@ export default function WorkspaceModelsTab({ accessToken, onModelOpen }) {
               background: 'var(--bg, #fff)', color: 'var(--text, #1e293b)',
             }}
           />
+          <button
+            type="button"
+            onClick={createModel}
+            disabled={creating}
+            className="ws-cta"
+            style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+            title="Create a new, empty operating model in your org and switch to it"
+          >{creating ? 'Creating…' : '+ New model'}</button>
         </div>
 
         {loading && <div className="ws-empty-inline">Loading models...</div>}
@@ -103,8 +148,12 @@ export default function WorkspaceModelsTab({ accessToken, onModelOpen }) {
                       style={{ color: 'var(--accent, #0f766e)', textDecoration: 'none', fontWeight: 500 }}
                       title="Open this operating model (Cmd/Ctrl+click for new tab)"
                       onClick={(e) => {
-                        if (!onModelOpen) return;
                         if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+                        // Persist as the active model so it survives
+                        // Home / New chat (server-resolved everywhere).
+                        persistActive(m.id);
+                        setActiveId(m.id);
+                        if (!onModelOpen) return; // fall through to href navigation
                         e.preventDefault();
                         onModelOpen(m.id, m);
                       }}
@@ -121,7 +170,8 @@ export default function WorkspaceModelsTab({ accessToken, onModelOpen }) {
                   <td style={{ padding: '8px', color: 'var(--text-mid, #64748b)' }}>
                     {STATUS_LABEL[m.status] || m.status || '—'}
                   </td>
-                  <td style={{ padding: '8px', color: 'var(--text-mid, #64748b)' }}>
+                  <td style={{ padding: '8px', color: 'var(--text-mid, #64748b)', display: 'flex', gap: 6, alignItems: 'center' }}>
+                    {m.id === activeId && <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 10, background: '#0d9488', color: '#fff', fontWeight: 600 }}>Active</span>}
                     {m.isDefault && <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 10, background: 'rgba(13,148,136,0.10)', color: '#0f766e', fontWeight: 600 }}>Default</span>}
                   </td>
                 </tr>

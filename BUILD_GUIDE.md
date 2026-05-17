@@ -365,6 +365,29 @@ ALTER TABLE chat_artefacts ADD CONSTRAINT chat_artefacts_message_fk
 
 RLS: a user can read/write a chat session only if `user_id = auth.uid()` OR `lower(email) = lower(auth.jwt() ->> 'email')`. Apply the same predicate to messages and artefacts via session membership (use `EXISTS` subqueries — or denormalise `user_id` onto messages if you want simpler policies).
 
+### 3.4b Outputs / artefact store
+
+`supabase/migration-workspace-artefacts.sql` creates `public.workspace_artefacts`, the store behind the Outputs panel and the `emit_artefact` sub-agent.
+
+```sql
+CREATE TABLE workspace_artefacts (
+  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  operating_model_id UUID NOT NULL REFERENCES operating_models(id),
+  session_id         UUID REFERENCES chat_sessions(id) ON DELETE SET NULL,
+  type               TEXT,                  -- free text, no CHECK (schema-light)
+  title              TEXT,
+  content            TEXT,
+  language           TEXT,
+  source             TEXT,                  -- 'agent' | 'user'
+  meta               JSONB,                 -- meta.supersedes = id of the artefact a revision replaces
+  created_by_email   TEXT,
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+Model-scoped (one row binds to one operating model). RLS: any member of the model's org may READ and WRITE - not admin-gated, because emitting an artefact never mutates the canonical model. Version lineage is tracked entirely via `meta.supersedes` (no extra schema). Repo helper: `lib/operatingModel/artefacts.js`.
+
 ### 3.5 Deals tables
 
 For MVP, ship M&A only. PE roll-up + scaling can copy the same shape later.

@@ -9,6 +9,16 @@ export const metadata = {
   },
 };
 
+// Without this, mobile browsers assume a ~980px layout viewport and
+// scale the whole app down — every CSS breakpoint below is dead on a
+// real phone. device-width makes the media queries actually apply.
+// No maximum-scale / user-scalable=no: pinch-zoom must stay (a11y).
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>

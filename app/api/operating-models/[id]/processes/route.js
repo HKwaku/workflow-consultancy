@@ -10,10 +10,13 @@
  */
 
 import { NextResponse } from 'next/server';
-import { isValidUUID, getSupabaseHeaders, fetchWithTimeout, requireSupabase } from '@/lib/api-helpers';
+import { checkOrigin, isValidUUID, getSupabaseHeaders, fetchWithTimeout, requireSupabase } from '@/lib/api-helpers';
 import { requireAuth } from '@/lib/auth';
 import { resolveModelAccess } from '@/lib/operatingModel/auth';
+import { createModelProcess, duplicateModelProcess } from '@/lib/operatingModel/repo';
 import { deriveProcessMetrics, deriveCostByFunction } from '@/lib/processMetrics';
+import { loadDecidedChangesByProcess } from '@/lib/changes/repo';
+import { decidedSavingsFromChanges } from '@/lib/changes/savings';
 
 export const maxDuration = 10;
 
@@ -91,15 +94,70 @@ export async function GET(request, { params }) {
         function_ids: [...ids],
         process_name: processName,
         total_annual_cost: annualCost,
-        potential_savings: m.potential_savings,
+        // Decided-changes only; enriched from the changes table below.
+        potential_savings: 0,
         automation_percentage: m.automation_percentage,
         automation_grade: m.automation_grade,
         cost_by_function,
       };
     });
 
+    // Potential savings = sum of accepted/decided changes per process.
+    // One batched query; absent = £0 (nothing decided yet).
+    const decidedByProcess = await loadDecidedChangesByProcess(processes.map((p) => p.id));
+    for (const p of processes) {
+      const changes = decidedByProcess.get(p.id);
+      if (changes) p.potential_savings = decidedSavingsFromChanges(changes, p.total_annual_cost);
+    }
+
     return NextResponse.json({ processes });
   } catch (e) {
     return NextResponse.json({ error: 'Failed to load processes.' }, { status: 502 });
   }
+}
+
+/**
+ * POST /api/operating-models/[id]/processes
+ *
+ * Create a new process in this model, or duplicate an existing one.
+ *   Body: { name, function_id?: uuid|null }                  → blank process
+ *   Body: { source_process_id: uuid, name? }                 → deep copy
+ *
+ * The chat agent's create_process / duplicate_process tools land here
+ * via the workspace-proposal Confirm card. Auth: any org member of the
+ * model's org (consistent with the file-under-capability PATCH).
+ */
+export async function POST(request, { params }) {
+  const originErr = checkOrigin(request);
+  if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
+
+  const auth = await requireAuth(request);
+  if (auth.error) return NextResponse.json(auth.error.body, { status: auth.error.status });
+
+  const { id } = await params;
+  if (!isValidUUID(id)) return NextResponse.json({ error: 'Valid model id required.' }, { status: 400 });
+
+  const access = await resolveModelAccess({ modelId: id, email: auth.email, userId: auth.userId });
+  if (access.error) return NextResponse.json({ error: access.error }, { status: access.status });
+
+  let body;
+  try { body = await request.json(); } catch { return NextResponse.json({ error: 'Invalid JSON.' }, { status: 400 }); }
+
+  const sourceId = body?.source_process_id ? String(body.source_process_id) : null;
+  const name = body?.name ? String(body.name).trim().slice(0, 200) : '';
+  const functionId = body?.function_id && isValidUUID(body.function_id) ? body.function_id : null;
+
+  let result;
+  if (sourceId) {
+    if (!isValidUUID(sourceId)) return NextResponse.json({ error: 'source_process_id must be a uuid.' }, { status: 400 });
+    result = await duplicateModelProcess({ modelId: id, sourceId, newName: name || null, ownerEmail: auth.email });
+  } else {
+    if (!name) return NextResponse.json({ error: 'name is required.' }, { status: 400 });
+    result = await createModelProcess({ modelId: id, name, functionId, ownerEmail: auth.email });
+  }
+
+  if (!result.ok) {
+    return NextResponse.json({ error: sourceId ? 'Failed to duplicate process.' : 'Failed to create process.' }, { status: 502 });
+  }
+  return NextResponse.json({ ok: true, id: result.id });
 }

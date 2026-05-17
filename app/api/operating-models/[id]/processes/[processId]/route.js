@@ -16,7 +16,7 @@ import { NextResponse } from 'next/server';
 import { checkOrigin, isValidUUID, getRequestId, getSupabaseHeaders, fetchWithTimeout, requireSupabase } from '@/lib/api-helpers';
 import { requireAuth } from '@/lib/auth';
 import { resolveModelAccess } from '@/lib/operatingModel/auth';
-import { attachProcessToModel } from '@/lib/operatingModel/repo';
+import { attachProcessToModel, deleteModelProcess } from '@/lib/operatingModel/repo';
 import { logger } from '@/lib/logger';
 
 export const maxDuration = 10;
@@ -72,6 +72,38 @@ export async function PATCH(request, { params }) {
   if (!result.ok) {
     logger.warn('Process anchor PATCH failed', { requestId: getRequestId(request), processId, modelId: id });
     return NextResponse.json({ error: 'Failed to update process.' }, { status: 502 });
+  }
+  return NextResponse.json({ ok: true });
+}
+
+/**
+ * DELETE /api/operating-models/[id]/processes/[processId]
+ *
+ * Remove a process from the model. Scoped to operating_model_id so a
+ * caller can never delete a process outside the model they were
+ * authorised against. Backs the chat agent's delete_process tool,
+ * which routes through an explicit Confirm card before this fires.
+ */
+export async function DELETE(request, { params }) {
+  const originErr = checkOrigin(request);
+  if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
+
+  const auth = await requireAuth(request);
+  if (auth.error) return NextResponse.json(auth.error.body, { status: auth.error.status });
+
+  const { id, processId } = await params;
+  if (!isValidUUID(id)) return NextResponse.json({ error: 'Valid model id required.' }, { status: 400 });
+  if (!processId || typeof processId !== 'string' || processId.length > 64) {
+    return NextResponse.json({ error: 'Valid report id required.' }, { status: 400 });
+  }
+
+  const access = await resolveModelAccess({ modelId: id, email: auth.email, userId: auth.userId });
+  if (access.error) return NextResponse.json({ error: access.error }, { status: access.status });
+
+  const result = await deleteModelProcess({ modelId: id, processId });
+  if (!result.ok) {
+    logger.warn('Process DELETE failed', { requestId: getRequestId(request), processId, modelId: id });
+    return NextResponse.json({ error: 'Failed to delete process.' }, { status: 502 });
   }
   return NextResponse.json({ ok: true });
 }

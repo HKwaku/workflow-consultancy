@@ -23,15 +23,20 @@ const LAYERS = [
 export default function CapabilityTree({
   modelId, functions, rollup, isAdmin, accessToken,
   selectedFuncId, onSelect, onChanged,
+  // Optional scope-aware counts (subtree + touches, "Other"-aware) so
+  // the sidebar number matches what the List shows and the Graph
+  // attributes. Falls back to the owner-only rollup when not supplied.
+  countsById: countsByIdProp,
 }) {
   // Process counts keyed by function_id (and "__unfiled__" for null bucket).
   const countsById = useMemo(() => {
+    if (countsByIdProp) return countsByIdProp;
     const m = {};
     for (const b of rollup?.byFunction || []) {
       m[b.functionId || '__unfiled__'] = b.processCount;
     }
     return m;
-  }, [rollup]);
+  }, [countsByIdProp, rollup]);
 
   const [adding, setAdding] = useState(false);
 
@@ -234,7 +239,7 @@ function CapNode({
           </button>
         )}
 
-        {isAdmin && !editing && !addingChild && !confirmDel && (
+        {isAdmin && !cap.__other && !editing && !addingChild && !confirmDel && (
           <span className="ws-tree-actions">
             <button type="button" title="Add sub-function" onClick={() => setAddingChild(true)} disabled={busy}>＋</button>
             <button type="button" title="Rename" onClick={() => setEditing(true)} disabled={busy}>✎</button>

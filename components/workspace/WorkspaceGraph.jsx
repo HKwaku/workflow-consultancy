@@ -20,6 +20,8 @@
  */
 
 import { useMemo, useState, useCallback } from 'react';
+import { formatCurrency } from '@/lib/diagnostic/utils';
+import { augmentFunctionsWithOther, otherIdFor } from '@/lib/operatingModel/functionTree';
 
 const COL_WIDTH      = 200; // pixels per leaf column
 const FUNC_HEADER_H  = 60;  // top-level function header height
@@ -58,7 +60,11 @@ export default function WorkspaceGraph({ functions, processes, onSelect, onProce
     );
   }
 
-  const { topFuncs, totalCols, processNodes, edges, headerHeight, totalHeight, hasCostData } = layout;
+  const { topFuncs, totalCols, processNodes, edges, headerHeight, totalHeight, hasCostData, funcCostRolled } = layout;
+  const funcCostTitle = (id) => {
+    const c = funcCostRolled?.get(id) || 0;
+    return c > 0 ? `${formatCurrency(c)}/yr · ` : '';
+  };
   const totalWidth = totalCols * COL_WIDTH + SIDE_PAD * 2;
 
   // Compute which ids are "in focus" (the focused node + its neighbours).
@@ -135,7 +141,7 @@ export default function WorkspaceGraph({ functions, processes, onSelect, onProce
                     className="ws-orgchart-func-label"
                     onClick={(e) => { e.stopPropagation(); onNodeClick('function', f.id); }}
                     onDoubleClick={(e) => { e.stopPropagation(); onSelect?.(f.id); }}
-                    title="Click to highlight · double-click to filter list view"
+                    title={`${f.name} · ${funcCostTitle(f.id)}Click to highlight · double-click to filter list view`}
                   >
                     {f.name}
                   </button>
@@ -154,7 +160,7 @@ export default function WorkspaceGraph({ functions, processes, onSelect, onProce
                             onMouseLeave={(ev) => { ev.stopPropagation(); onNodeLeave(); }}
                             onClick={(ev) => { ev.stopPropagation(); onNodeClick('function', sub.id); }}
                             onDoubleClick={(ev) => { ev.stopPropagation(); onSelect?.(sub.id); }}
-                            title="Click to highlight · double-click to filter list view"
+                            title={`${sub.name} · ${funcCostTitle(sub.id)}Click to highlight · double-click to filter list view`}
                           >
                             {sub.name}
                           </button>
@@ -171,7 +177,7 @@ export default function WorkspaceGraph({ functions, processes, onSelect, onProce
           {processNodes.map((p) => {
             const dim = isDimmed(p.id);
             const hl  = focus?.id === p.id;
-            const procHeatColor = heatBg(p.heatIntensity);
+            const procHeat = heatColor(p.heatIntensity);
             const cls = [
               'ws-orgchart-proc',
               dim ? 'ws-orgchart-proc--dim' : '',
@@ -187,7 +193,7 @@ export default function WorkspaceGraph({ functions, processes, onSelect, onProce
                   top: p.y,
                   width: p.width,
                   height: PROC_ROW_H,
-                  ...(procHeatColor ? { backgroundColor: procHeatColor } : {}),
+                  ...(procHeat ? { backgroundColor: procHeat.bg, color: procHeat.fg } : {}),
                 }}
                 title={`${p.tooltip} · double-click to open the flow artefact`}
                 onMouseEnter={() => onNodeEnter('process', p.id)}
@@ -223,6 +229,10 @@ export default function WorkspaceGraph({ functions, processes, onSelect, onProce
 /* ── Layout ────────────────────────────────────────────────────── */
 
 function buildLayout({ functions, processes }) {
+  // "Other" sub-function injection — shared with the List filter +
+  // sidebar so all three surfaces show the identical augmented tree.
+  const { tree: fnTree, parentsWithDirect } = augmentFunctionsWithOther(functions, processes);
+
   // Pass 1: column-span per function (parents = sum of children).
   const flat = [];
   let cursor = 0;
@@ -241,7 +251,7 @@ function buildLayout({ functions, processes }) {
     flat.push(out);
     return out;
   };
-  const topFuncs = (functions || []).map((f) => annotate(f, 0));
+  const topFuncs = fnTree.map((f) => annotate(f, 0));
   const totalCols = cursor;
   const byId = new Map(flat.map((f) => [f.id, f]));
 
@@ -284,6 +294,7 @@ function buildLayout({ functions, processes }) {
   // For each process: find the top cost-driver function and flag the
   // bar when that driver is not the declared owner.
   const procCost = new Map();   // p.id -> { annualCost, topId, topShare, mismatch }
+  const funcCost = new Map();   // fid -> attributed cost (direct; rolled up below)
   for (const p of processes || []) {
     const cbf = p.cost_by_function || {};
     const annualCost = Number(p.total_annual_cost) || 0;
@@ -294,6 +305,12 @@ function buildLayout({ functions, processes }) {
       const c = Number(cost) || 0;
       if (c <= 0) continue;
       distinct += 1;
+      // Cost tagged directly to a parent lands on its "Other" leaf so
+      // the parent stays a pure rollup. topId / mismatch still reason
+      // about the function the user actually tagged (the parent), not
+      // the synthetic bucket.
+      const costId = parentsWithDirect.has(fid) ? otherIdFor(fid) : fid;
+      funcCost.set(costId, (funcCost.get(costId) || 0) + c);
       if (c > topCost) { topCost = c; topId = fid; }
     }
     const declared = p.function_id || null;
@@ -314,15 +331,59 @@ function buildLayout({ functions, processes }) {
   // Tied costs share the same intensity; lowest distinct cost = 0 (amber),
   // highest = 1 (red). Function headers stay neutral — the heatmap is
   // a per-process signal.
+  //
+  // A heatmap of "cost distribution" only means something when costs
+  // actually vary. With sparse seed/test data every process can resolve
+  // to the SAME default annual cost (deriveProcessMetrics falls back to
+  // 4h × £62.5 × 12 × 1 ≈ £3,000 when a process has no cost inputs), so
+  // a single distinct value would otherwise paint every bar the same
+  // colour and imply a distribution that isn't there. Require ≥2 distinct
+  // costs before tinting anything; otherwise stay neutral and hide the
+  // legend chip.
   const procCostsSorted = [...new Set([...procCost.values()].map((d) => d.annualCost).filter((c) => c > 0))].sort((a, b) => a - b);
+  const hasCostData = procCostsSorted.length >= 2;
   const procIntensityByCost = new Map();
-  if (procCostsSorted.length === 1) {
-    procIntensityByCost.set(procCostsSorted[0], 1);
-  } else if (procCostsSorted.length > 1) {
+  if (hasCostData) {
     procCostsSorted.forEach((cost, i) => procIntensityByCost.set(cost, i / (procCostsSorted.length - 1)));
   }
-  const heatProcIntensity = (cost) => (cost > 0 ? (procIntensityByCost.get(cost) ?? null) : null);
-  const hasCostData = procCostsSorted.length > 0;
+
+  // Parent-direct cost was already remapped onto each parent's injected
+  // "Other" leaf during attribution, so no non-leaf carries direct cost.
+  // Roll up: a parent's cost = the sum of its (leaf-only) subtree.
+  // Tooltip-only — does not feed the per-process heatmap.
+  const funcCostRolled = new Map(funcCost);
+  for (const f of topFuncs) {
+    let total = funcCostRolled.get(f.id) || 0;
+    const stack = [...(f.children || [])];
+    while (stack.length) {
+      const c = stack.pop();
+      total += funcCost.get(c.id) || 0;
+      if (c.children?.length) stack.push(...c.children);
+    }
+    funcCostRolled.set(f.id, total);
+  }
+
+  // Conservation invariant: Σ process cost == Σ sub-function (leaf)
+  // cost == Σ top-level function (rolled) cost. deriveCostByFunction
+  // already normalises each process's split to its total, so the only
+  // way these diverge is an attributed function id that isn't anywhere
+  // in the tree (orphan tag). Warn in dev so that regresses loudly
+  // instead of silently dropping cost from the rollup.
+  if (typeof window !== 'undefined') {
+    const sumProc = [...procCost.values()].reduce((s, d) => s + (d.annualCost || 0), 0);
+    const sumLeaf = [...funcCost.values()].reduce((s, c) => s + (c || 0), 0);
+    const topIds = new Set(topFuncs.map((f) => f.id));
+    const sumTop = [...funcCostRolled.entries()]
+      .filter(([id]) => topIds.has(id))
+      .reduce((s, [, c]) => s + (c || 0), 0);
+    const eps = Math.max(1, sumProc * 1e-6);
+    if (Math.abs(sumProc - sumLeaf) > eps || Math.abs(sumLeaf - sumTop) > eps) {
+      // eslint-disable-next-line no-console
+      console.warn('[rollup] cost conservation broken — some attributed function id is not in the tree:',
+        { sumProc, sumSubFunction: sumLeaf, sumFunction: sumTop });
+    }
+  }
+  const heatProcIntensity = (cost) => (hasCostData && cost > 0 ? (procIntensityByCost.get(cost) ?? null) : null);
 
   const processNodes = [];
   // Sort owners so wider (parent) bars place after narrower (child) bars in
@@ -364,9 +425,10 @@ function buildLayout({ functions, processes }) {
       const cd = procCost.get(p.id) || { annualCost: 0, topId: null, topShare: 0, mismatch: false };
       const topDriverName = cd.topId ? (byId.get(cd.topId)?.name || null) : null;
       const declaredName = ownerFunc?.name || (ownerId === '__unfiled__' ? 'Unfiled' : '');
+      const costStr = cd.annualCost > 0 ? ` · ${formatCurrency(cd.annualCost)}/yr` : '';
       const baseTooltip = touchesNames.length
-        ? `${procDisplayName(p)} (owned by ${declaredName}, touches ${touchesNames.join(', ')})`
-        : `${procDisplayName(p)} (${declaredName})`;
+        ? `${procDisplayName(p)} (owned by ${declaredName}, touches ${touchesNames.join(', ')})${costStr}`
+        : `${procDisplayName(p)} (${declaredName})${costStr}`;
       // Append the cost-driver line when we have meaningful attribution.
       // For mismatched processes we surface "declared vs. top driver";
       // for matches we still show the share so the user can see where
@@ -429,13 +491,20 @@ function buildLayout({ functions, processes }) {
   }
 
   // Build edges: owner (solid) + touches (dashed) per process.
+  // When a process is filed on / touches a parent that has an injected
+  // "Other" sub-function, the connector lands on Other (the bucket that
+  // actually holds the cost), not on the parent header.
+  const anchorIdFor = (id) => (parentsWithDirect.has(id) ? otherIdFor(id) : id);
   const edges = [];
   for (const node of processNodes) {
-    const owner = funcAnchor.get(node.ownerId);
+    const ownerAnchorId = node.ownerId === '__unfiled__'
+      ? '__unfiled__'
+      : anchorIdFor(node.ownerId);
+    const owner = funcAnchor.get(ownerAnchorId);
     if (owner) {
       edges.push({
         id: `e_owns_${node.id}`,
-        fromId: node.ownerId,
+        fromId: ownerAnchorId,
         toId: node.id,
         from: owner,
         to: { x: node.topX, y: node.topY },
@@ -452,11 +521,12 @@ function buildLayout({ functions, processes }) {
       }
     }
     for (const fid of touchedIds) {
-      const a = funcAnchor.get(fid);
+      const anchorId = anchorIdFor(fid);
+      const a = funcAnchor.get(anchorId);
       if (!a) continue;
       edges.push({
-        id: `e_touch_${node.id}_${fid}`,
-        fromId: fid,
+        id: `e_touch_${node.id}_${anchorId}`,
+        fromId: anchorId,
         toId: node.id,
         from: a,
         to: { x: node.topX, y: node.topY },
@@ -473,6 +543,7 @@ function buildLayout({ functions, processes }) {
     headerHeight,
     totalHeight,
     hasCostData,
+    funcCostRolled,
   };
 }
 
@@ -480,29 +551,31 @@ function buildLayout({ functions, processes }) {
  * Amber → red heatmap colour for a normalised intensity (0..1).
  *   intensity = 0  → amber  rgb(251, 191,  36)
  *   intensity = 1  → red    rgb(220,  38,  38)
- * Alpha also ramps so the lightest cells stay subtle and the hottest
- * cells read clearly. Returns undefined for zero/null so the underlying
- * CSS background shows through on empty / no-cost rows.
+ *
+ * The fill is OPAQUE on purpose: a translucent tint blended over the
+ * theme background (white in light mode, near-black navy in dark mode)
+ * muddied amber into brown and killed the gradient. Opaque keeps the
+ * palette true in both themes. Returns null for null/negative intensity
+ * so no-cost rows keep their default CSS background.
  *
  * @param {number} intensity 0..1
- * @param {number} maxAlpha  ceiling for the alpha ramp (default 0.65;
- *                           pass 0.50 for function headers so they read
- *                           a notch lighter than process bars).
+ * @returns {{ bg: string, fg: string } | null} bg fill + a contrasting
+ *   text colour (dark on the amber end, white on the red end).
  */
-function heatBg(intensity, maxAlpha = 0.65) {
+function heatColor(intensity) {
   // intensity == null  → no cost data on this row → leave it unstyled
-  // intensity == 0     → lowest in the rank → pure amber (still tinted!)
+  // intensity == 0     → lowest in the rank → pure amber
   // intensity == 1     → highest in the rank → pure red
-  if (intensity == null || intensity < 0) return undefined;
+  if (intensity == null || intensity < 0) return null;
   const i = Math.max(0, Math.min(1, intensity));
   const r = Math.round(251 + (220 - 251) * i);
   const g = Math.round(191 + ( 38 - 191) * i);
   const b = Math.round( 36 + ( 38 -  36) * i);
-  // Alpha ramps gently with intensity (0.65 at low end, 1.0 at high end
-  // of maxAlpha). Most of the visual signal comes from the hue shift;
-  // alpha just nudges the hottest cells to feel a touch more vivid.
-  const alpha = maxAlpha * (0.65 + 0.35 * i);
-  return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(3)})`;
+  // Perceived luminance → flip text to stay readable across the ramp
+  // (dark text on the bright amber low end, white on the dark red end).
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+  const fg = lum > 140 ? '#1e293b' : '#ffffff';
+  return { bg: `rgb(${r}, ${g}, ${b})`, fg };
 }
 
 /* ── SVG path helpers ──────────────────────────────────────────── */

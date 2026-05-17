@@ -19,6 +19,9 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/useAuth';
 import { apiFetch } from '@/lib/api-fetch';
 import CapabilityTree from '@/components/workspace/CapabilityTree';
+import {
+  augmentFunctionsWithOther, scopeForFunction, processInScope, countsByFunction,
+} from '@/lib/operatingModel/functionTree';
 import ProcessesPanel from '@/components/workspace/ProcessesPanel';
 import InsightsPanel from '@/components/workspace/InsightsPanel';
 import AnalysisPanel from '@/components/workspace/AnalysisPanel';
@@ -26,7 +29,7 @@ import WorkspaceInventory from '@/components/workspace/WorkspaceInventory';
 import WorkspaceMap from '@/components/workspace/WorkspaceMap';
 import WorkspaceGraph from '@/components/workspace/WorkspaceGraph';
 import WorkspaceDealsTab from '@/components/workspace/WorkspaceDealsTab';
-import WorkspaceAnalyticsTab from '@/components/workspace/WorkspaceAnalyticsTab';
+import WorkspaceOutputsTab from '@/components/workspace/WorkspaceOutputsTab';
 import WorkspaceScopeNav from '@/components/workspace/WorkspaceScopeNav';
 import { useSearchParams } from 'next/navigation';
 
@@ -65,17 +68,19 @@ export default function WorkspaceClient({ embedded = false, modelId: modelIdOver
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState(null);
   const [selectedFuncId, setSelectedFuncId] = useState(null);
-  // ?view=deals or ?view=analytics promote the top-level scopes;
-  // otherwise this is the per-context tab id (list/map/graph/...).
+  // ?view=deals / ?view=outputs promote the top-level scopes; analytics
+  // is no longer a scope (consolidated into the 'analysis' tab).
+  // Otherwise this is the per-context tab id (list/map/graph/...).
   const searchParams = useSearchParams();
   const initialView = (() => {
     const v = searchParams.get('view');
-    if (v === 'deals' || v === 'analytics') return v;
+    if (v === 'deals' || v === 'outputs') return v;
+    if (v === 'analytics') return 'analysis'; // legacy links → Analysis tab
     if (['list', 'map', 'graph', 'fte', 'inventory', 'insights', 'analysis'].includes(v)) return v;
     return 'graph';
   })();
   const [view, setView] = useState(initialView);
-  const isScopeView = view === 'deals' || view === 'analytics';
+  const isScopeView = view === 'deals' || view === 'outputs';
 
   // Step 1: resolve user → default model. When `modelId` is passed
   // explicitly (canvas overlay drilling into a non-default model), use
@@ -169,12 +174,28 @@ export default function WorkspaceClient({ embedded = false, modelId: modelIdOver
     if (p) setProcesses(p.processes || []);
   }, [resolution, accessToken]);
 
+  // Augmented function tree (+ "Other" sub-functions) shared by the
+  // sidebar, the List filter, and (via the same helper) the Graph — so
+  // all three show the identical hierarchy and counts.
+  const aug = useMemo(
+    () => augmentFunctionsWithOther(model?.functions || [], processes || []),
+    [model, processes],
+  );
+  const funcCounts = useMemo(
+    () => countsByFunction(aug.flat, processes || [], aug.parentsWithDirect),
+    [aug, processes],
+  );
+
   const filteredProcesses = useMemo(() => {
     if (!processes) return [];
     if (selectedFuncId == null) return processes;
     if (selectedFuncId === '__unfiled__') return processes.filter((p) => !p.function_id);
-    return processes.filter((p) => p.function_id === selectedFuncId);
-  }, [processes, selectedFuncId]);
+    // Subtree (incl. "Other") + touches scope, so picking a parent
+    // collects every process beneath it and spanning processes surface
+    // under each function they touch.
+    const scope = scopeForFunction(aug.flat, selectedFuncId);
+    return processes.filter((p) => processInScope(p, scope, aug.parentsWithDirect));
+  }, [processes, selectedFuncId, aug]);
 
   /* ── Render gates ─────────────────────────────────────────── */
 
@@ -236,7 +257,9 @@ export default function WorkspaceClient({ embedded = false, modelId: modelIdOver
       <div className="ws-shell">
         {!embedded && <WorkspaceScopeNav active={view} onSelect={onScopeSelect} />}
         {view === 'deals' && <WorkspaceDealsTab accessToken={accessToken} />}
-        {view === 'analytics' && <WorkspaceAnalyticsTab />}
+        {view === 'outputs' && (
+          <WorkspaceOutputsTab modelId={resolution?.modelId || null} accessToken={accessToken} />
+        )}
       </div>
     );
   }
@@ -267,6 +290,13 @@ export default function WorkspaceClient({ embedded = false, modelId: modelIdOver
           <button
             type="button"
             role="tab"
+            aria-selected={view === 'graph'}
+            className={`ws-tab${view === 'graph' ? ' ws-tab--active' : ''}`}
+            onClick={() => setView('graph')}
+          >Graph</button>
+          <button
+            type="button"
+            role="tab"
             aria-selected={view === 'list'}
             className={`ws-tab${view === 'list' ? ' ws-tab--active' : ''}`}
             onClick={() => setView('list')}
@@ -278,13 +308,6 @@ export default function WorkspaceClient({ embedded = false, modelId: modelIdOver
             className={`ws-tab${view === 'map' ? ' ws-tab--active' : ''}`}
             onClick={() => setView('map')}
           >Map</button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={view === 'graph'}
-            className={`ws-tab${view === 'graph' ? ' ws-tab--active' : ''}`}
-            onClick={() => setView('graph')}
-          >Graph</button>
           <button
             type="button"
             role="tab"
@@ -409,7 +432,8 @@ export default function WorkspaceClient({ embedded = false, modelId: modelIdOver
           <aside className="ws-pane ws-pane--functions">
             <CapabilityTree
               modelId={resolution.modelId}
-              functions={model.functions}
+              functions={aug.tree}
+              countsById={funcCounts}
               rollup={rollup}
               isAdmin={isAdmin}
               accessToken={accessToken}

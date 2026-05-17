@@ -37,6 +37,9 @@ import ProcessesPanel from '@/components/workspace/ProcessesPanel';
 import CapabilityTree from '@/components/workspace/CapabilityTree';
 import WorkspaceScopeNav from '@/components/workspace/WorkspaceScopeNav';
 import { deriveCostByFunction } from '@/lib/processMetrics';
+import {
+  augmentFunctionsWithOther, scopeForFunction, processInScope, countsByFunction,
+} from '@/lib/operatingModel/functionTree';
 
 function Money(n) {
   if (n == null) return '—';
@@ -126,12 +129,24 @@ export default function DealWorkspaceClient({ dealId, embedded = false, onScopeS
   // the user can always switch between any participant.
   const allParticipants = deal?.participants || [];
   const hasAnalysis = Array.isArray(deal?.summary?.analyses) && deal.summary.analyses.length > 0;
+  // Augmented value-chain tree (+ "Other") shared by the sidebar, the
+  // List filter, and the Graph so all three agree.
+  const aug = useMemo(
+    () => augmentFunctionsWithOther(synth?.functions || [], synth?.processes || []),
+    [synth],
+  );
+  const funcCounts = useMemo(
+    () => countsByFunction(aug.flat, synth?.processes || [], aug.parentsWithDirect),
+    [aug, synth],
+  );
+
   const filteredProcesses = useMemo(() => {
     if (!synth) return [];
     if (selectedFuncId == null) return synth.processes;
     if (selectedFuncId === '__unfiled__') return synth.processes.filter((p) => !p.function_id);
-    return synth.processes.filter((p) => p.function_id === selectedFuncId);
-  }, [synth, selectedFuncId]);
+    const scope = scopeForFunction(aug.flat, selectedFuncId);
+    return synth.processes.filter((p) => processInScope(p, scope, aug.parentsWithDirect));
+  }, [synth, selectedFuncId, aug]);
 
   /* ── Render gates ────────────────────────────────────────────── */
   if (authLoading || (loading && !deal)) {
@@ -214,9 +229,9 @@ export default function DealWorkspaceClient({ dealId, embedded = false, onScopeS
 
         <div className="ws-tabs" role="tablist" aria-label="Deal workspace view">
           {[
+            { id: 'graph',      label: 'Graph' },
             { id: 'list',       label: 'List' },
             { id: 'map',        label: 'Map' },
-            { id: 'graph',      label: 'Graph' },
             { id: 'fte',        label: 'FTE' },
             { id: 'inventory',  label: 'Canonical inventory' },
             { id: 'insights',   label: 'Insights' },
@@ -296,7 +311,8 @@ export default function DealWorkspaceClient({ dealId, embedded = false, onScopeS
           <aside className="ws-pane ws-pane--functions">
             <CapabilityTree
               modelId={null}
-              functions={synth.functions}
+              functions={aug.tree}
+              countsById={funcCounts}
               rollup={synth.rollup}
               isAdmin={false}
               accessToken={accessToken}
@@ -367,21 +383,67 @@ function synthesiseFromDeal(deal, scopeParticipantId = null) {
   // the Combined view (e.g. Apex's "Compliance" + Lumen's "Compliance"
   // become one Compliance function with both companies' processes).
   const participantById = new Map(participants.map((p) => [p.id, p]));
-  const fnByKey = new Map(); // key -> { id, name, parent_function_id, ... }
-  const ensureFn = (dept) => {
-    if (!dept) return null;
-    const key = dept.toLowerCase().trim();
-    if (!key) return null;
-    if (!fnByKey.has(key)) {
-      fnByKey.set(key, {
-        id: `fn::${key}`,
-        name: dept,
+
+  // Demo value-chain grouping: department (sub-function) → parent
+  // function. Keyed lower-case to match the fn key below. Any department
+  // not in this map stays top-level (its own function), so non-demo
+  // deals still render and the Σ process == Σ sub-function == Σ function
+  // rollup holds regardless — a standalone leaf is simply its own parent.
+  const VALUE_CHAIN = {
+    'branch ops': 'Customer Operations',
+    'customer service': 'Customer Operations',
+    'support': 'Customer Operations',
+    'front desk': 'Customer Operations',
+    'compliance': 'Risk & Control',
+    'risk': 'Risk & Control',
+    'underwriting': 'Risk & Control',
+    'cards': 'Products',
+    'mortgage': 'Products',
+    'product': 'Products',
+    'treasury': 'Finance & Treasury',
+    'billing': 'Finance & Treasury',
+    'it': 'Technology',
+    'engineering': 'Technology',
+    'operations': 'Service Delivery',
+    'clinical': 'Service Delivery',
+    'records': 'Service Delivery',
+  };
+  const parentByKey = new Map(); // parentKey -> value-chain parent node
+  const ensureParent = (name) => {
+    const key = name.toLowerCase().trim();
+    if (!parentByKey.has(key)) {
+      parentByKey.set(key, {
+        id: `fn::vc::${key}`,
+        name,
         parent_function_id: null,
         layer: 'value_chain',
         status: 'live',
         children: [],
         description: '',
       });
+    }
+    return parentByKey.get(key);
+  };
+
+  const fnByKey = new Map(); // deptKey -> leaf (sub-function) node
+  const ensureFn = (dept) => {
+    if (!dept) return null;
+    const key = dept.toLowerCase().trim();
+    if (!key) return null;
+    if (!fnByKey.has(key)) {
+      const parentName = VALUE_CHAIN[key] || null;
+      const parent = parentName ? ensureParent(parentName) : null;
+      const leaf = {
+        id: `fn::${key}`,
+        name: dept,
+        parent_function_id: parent ? parent.id : null,
+        layer: 'capability',
+        status: 'live',
+        children: [],
+        description: '',
+      };
+      fnByKey.set(key, leaf);
+      if (parent) parent.children.push(leaf);
     }
     return fnByKey.get(key).id;
   };
@@ -440,13 +502,17 @@ function synthesiseFromDeal(deal, scopeParticipantId = null) {
     });
   }
 
-  // Functions: a flat list of departments. No sub-functions for now -
-  // the deal data shape is one level deep. The list goes in alphabetical
-  // order for predictable rendering.
-  const functionsFlat = [...fnByKey.values()].sort((a, b) =>
-    (a.name || '').localeCompare(b.name || ''),
-  );
-  const functions = functionsFlat;
+  // Two-level tree: value-chain parents (with their department
+  // sub-functions as children) plus any unmapped department promoted to
+  // top-level. Children and the top level are alphabetised for stable
+  // rendering. `functions` is the hierarchy the graph / map / capability
+  // tree consume; `functionsFlat` is every node (parents + leaves) for
+  // capability pickers and id→name lookups.
+  const cmpFn = (a, b) => (a.name || '').localeCompare(b.name || '');
+  for (const parent of parentByKey.values()) parent.children.sort(cmpFn);
+  const orphanLeaves = [...fnByKey.values()].filter((f) => !f.parent_function_id);
+  const functions = [...parentByKey.values(), ...orphanLeaves].sort(cmpFn);
+  const functionsFlat = [...parentByKey.values(), ...fnByKey.values()].sort(cmpFn);
 
   // Compute a rollup that mirrors lib/operatingModel/repo.js
   // computeModelRollup: per-function processCount + cost + savings.

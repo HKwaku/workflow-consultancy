@@ -17,7 +17,7 @@
 -- across ~25 processes and ~180 steps.
 --
 -- WIPE_FIRST = true (default) DELETEs the two demo deals + their
--- linked diagnostic_reports before rebuilding so re-running gives a
+-- linked process rows before rebuilding so re-running gives a
 -- fresh dataset. Set to false to keep existing rows.
 --
 -- OWNER: change OWNER_EMAIL below if you want a different owner.
@@ -44,24 +44,24 @@ BEGIN
   -- 0. Optional wipe so re-runs produce a clean dataset.
   -- ---------------------------------------------------------------
   IF WIPE_FIRST THEN
-    -- Delete reports linked through flows or directly via participants
-    -- BEFORE deleting the deals (cascade handles deal_participants and
-    -- deal_flows; diagnostic_reports has no FK back to deals).
-    DELETE FROM public.diagnostic_reports
+    -- Delete process rows linked through flows or directly via
+    -- participants BEFORE deleting the deals (cascade handles
+    -- deal_participants and deal_flows; processes has no FK back to deals).
+    DELETE FROM public.processes
      WHERE id IN (
-       SELECT df.report_id
+       SELECT df.process_id
          FROM public.deal_flows df
          JOIN public.deals d ON d.id = df.deal_id
         WHERE d.name IN ('Apex Bank acquires Lumen Digital',
                          'Helix Health platform consolidation')
-          AND df.report_id IS NOT NULL
+          AND df.process_id IS NOT NULL
        UNION
-       SELECT dp.report_id
+       SELECT dp.process_id
          FROM public.deal_participants dp
          JOIN public.deals d ON d.id = dp.deal_id
         WHERE d.name IN ('Apex Bank acquires Lumen Digital',
                          'Helix Health platform consolidation')
-          AND dp.report_id IS NOT NULL
+          AND dp.process_id IS NOT NULL
      );
     DELETE FROM public.deals
      WHERE name IN ('Apex Bank acquires Lumen Digital',
@@ -102,15 +102,13 @@ BEGIN
 
   -- A1. Retail customer onboarding (Branch ops -> Compliance -> Cards)
   v_report_id := gen_random_uuid()::text;
-  INSERT INTO public.diagnostic_reports
-    (id, contact_email, contact_name, company, diagnostic_mode,
-     total_annual_cost, potential_savings, automation_percentage,
-     diagnostic_data, created_at, updated_at)
+  INSERT INTO public.processes
+    (id, contact_email, contact_name, company,
+     flow_data, created_at, updated_at)
   VALUES
-    (v_report_id, OWNER_EMAIL, 'Apex Integration Team', 'Apex Bank', 'comprehensive',
-     720000, 180000, 28,
+    (v_report_id, OWNER_EMAIL, 'Apex Integration Team', 'Apex Bank',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Retail customer onboarding', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Retail customer onboarding', 'costs', jsonb_build_object('hoursPerInstance', 3, 'teamSize', 4, 'annual', 960), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Branch greeter intake',     'department', 'Branch ops',  'workMinutes', 25, 'waitMinutes',    0, 'systems', jsonb_build_array('Branch portal')),
          jsonb_build_object('name', 'Form completion assistance','department', 'Branch ops',  'workMinutes', 15, 'waitMinutes',    0, 'systems', jsonb_build_array('Branch portal','Forms repository')),
          jsonb_build_object('name', 'KYC document collection',   'department', 'Compliance',  'workMinutes', 40, 'waitMinutes',    0, 'systems', jsonb_build_array('KYC portal','Document scanner')),
@@ -123,21 +121,19 @@ BEGIN
        ))
      )), now(), now());
   INSERT INTO public.deal_flows
-    (deal_id, participant_id, label, flow_kind, report_id, status, created_by_email)
+    (deal_id, participant_id, label, flow_kind, process_id, status, created_by_email)
   VALUES
     (v_deal_ma, v_part_apex, 'Retail customer onboarding (current)', 'current', v_report_id, 'complete', OWNER_EMAIL);
 
   -- A2. Mortgage underwriting (Mortgage -> Underwriting -> Risk -> Treasury)
   v_report_id := gen_random_uuid()::text;
-  INSERT INTO public.diagnostic_reports
-    (id, contact_email, contact_name, company, diagnostic_mode,
-     total_annual_cost, potential_savings, automation_percentage,
-     diagnostic_data, created_at, updated_at)
+  INSERT INTO public.processes
+    (id, contact_email, contact_name, company,
+     flow_data, created_at, updated_at)
   VALUES
-    (v_report_id, OWNER_EMAIL, 'Apex Integration Team', 'Apex Bank', 'comprehensive',
-     540000, 120000, 35,
+    (v_report_id, OWNER_EMAIL, 'Apex Integration Team', 'Apex Bank',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Mortgage underwriting', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Mortgage underwriting', 'costs', jsonb_build_object('hoursPerInstance', 5, 'teamSize', 3, 'annual', 576), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Application receipt',       'department', 'Mortgage',     'workMinutes', 10, 'waitMinutes',    0, 'systems', jsonb_build_array('LOS')),
          jsonb_build_object('name', 'Document checklist build',  'department', 'Mortgage',     'workMinutes', 20, 'waitMinutes',    0, 'systems', jsonb_build_array('LOS','Forms repository')),
          jsonb_build_object('name', 'Credit pull',               'department', 'Underwriting', 'workMinutes', 15, 'waitMinutes',    0, 'systems', jsonb_build_array('Bureau API')),
@@ -151,21 +147,19 @@ BEGIN
        ))
      )), now(), now());
   INSERT INTO public.deal_flows
-    (deal_id, participant_id, label, flow_kind, report_id, status, created_by_email)
+    (deal_id, participant_id, label, flow_kind, process_id, status, created_by_email)
   VALUES
     (v_deal_ma, v_part_apex, 'Mortgage underwriting (current)', 'current', v_report_id, 'complete', OWNER_EMAIL);
 
   -- A3. Customer dispute resolution (Customer service -> Branch ops -> Compliance)
   v_report_id := gen_random_uuid()::text;
-  INSERT INTO public.diagnostic_reports
-    (id, contact_email, contact_name, company, diagnostic_mode,
-     total_annual_cost, potential_savings, automation_percentage,
-     diagnostic_data, created_at, updated_at)
+  INSERT INTO public.processes
+    (id, contact_email, contact_name, company,
+     flow_data, created_at, updated_at)
   VALUES
-    (v_report_id, OWNER_EMAIL, 'Apex Integration Team', 'Apex Bank', 'comprehensive',
-     310000, 95000, 22,
+    (v_report_id, OWNER_EMAIL, 'Apex Integration Team', 'Apex Bank',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Customer dispute resolution', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Customer dispute resolution', 'costs', jsonb_build_object('hoursPerInstance', 2.5, 'teamSize', 2, 'annual', 992), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Inbound complaint logged',      'department', 'Customer service', 'workMinutes', 15, 'waitMinutes',    0, 'systems', jsonb_build_array('CRM','Phone IVR')),
          jsonb_build_object('name', 'Initial triage + categorise',   'department', 'Customer service', 'workMinutes', 20, 'waitMinutes',    0, 'systems', jsonb_build_array('CRM')),
          jsonb_build_object('name', 'Branch case assignment',        'department', 'Branch ops',       'workMinutes', 10, 'waitMinutes',  480, 'systems', jsonb_build_array('CRM','Branch portal')),
@@ -176,21 +170,19 @@ BEGIN
        ))
      )), now(), now());
   INSERT INTO public.deal_flows
-    (deal_id, participant_id, label, flow_kind, report_id, status, created_by_email)
+    (deal_id, participant_id, label, flow_kind, process_id, status, created_by_email)
   VALUES
     (v_deal_ma, v_part_apex, 'Customer dispute resolution (current)', 'current', v_report_id, 'complete', OWNER_EMAIL);
 
   -- A4. Branch cash management (Branch ops -> Treasury -> IT)
   v_report_id := gen_random_uuid()::text;
-  INSERT INTO public.diagnostic_reports
-    (id, contact_email, contact_name, company, diagnostic_mode,
-     total_annual_cost, potential_savings, automation_percentage,
-     diagnostic_data, created_at, updated_at)
+  INSERT INTO public.processes
+    (id, contact_email, contact_name, company,
+     flow_data, created_at, updated_at)
   VALUES
-    (v_report_id, OWNER_EMAIL, 'Apex Integration Team', 'Apex Bank', 'comprehensive',
-     180000, 55000, 40,
+    (v_report_id, OWNER_EMAIL, 'Apex Integration Team', 'Apex Bank',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Branch cash management', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Branch cash management', 'costs', jsonb_build_object('hoursPerInstance', 1.5, 'teamSize', 2, 'annual', 960), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Daily cash count',          'department', 'Branch ops', 'workMinutes', 30, 'waitMinutes',    0, 'systems', jsonb_build_array('Cash mgmt')),
          jsonb_build_object('name', 'Reconciliation to core',    'department', 'Branch ops', 'workMinutes', 25, 'waitMinutes',    0, 'systems', jsonb_build_array('Cash mgmt','Core banking')),
          jsonb_build_object('name', 'Treasury sweep request',    'department', 'Treasury',   'workMinutes', 15, 'waitMinutes',  240, 'systems', jsonb_build_array('Treasury portal')),
@@ -200,21 +192,19 @@ BEGIN
        ))
      )), now(), now());
   INSERT INTO public.deal_flows
-    (deal_id, participant_id, label, flow_kind, report_id, status, created_by_email)
+    (deal_id, participant_id, label, flow_kind, process_id, status, created_by_email)
   VALUES
     (v_deal_ma, v_part_apex, 'Branch cash management (current)', 'current', v_report_id, 'complete', OWNER_EMAIL);
 
   -- A5. Card issuance + delivery (Cards -> Compliance -> IT)
   v_report_id := gen_random_uuid()::text;
-  INSERT INTO public.diagnostic_reports
-    (id, contact_email, contact_name, company, diagnostic_mode,
-     total_annual_cost, potential_savings, automation_percentage,
-     diagnostic_data, created_at, updated_at)
+  INSERT INTO public.processes
+    (id, contact_email, contact_name, company,
+     flow_data, created_at, updated_at)
   VALUES
-    (v_report_id, OWNER_EMAIL, 'Apex Integration Team', 'Apex Bank', 'comprehensive',
-     265000, 88000, 38,
+    (v_report_id, OWNER_EMAIL, 'Apex Integration Team', 'Apex Bank',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Card issuance + delivery', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Card issuance + delivery', 'costs', jsonb_build_object('hoursPerInstance', 2, 'teamSize', 2, 'annual', 1060), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Card request received',     'department', 'Cards',      'workMinutes', 10, 'waitMinutes',    0, 'systems', jsonb_build_array('Card mgmt')),
          jsonb_build_object('name', 'Risk eligibility check',    'department', 'Compliance', 'workMinutes', 20, 'waitMinutes',    0, 'systems', jsonb_build_array('Risk engine')),
          jsonb_build_object('name', 'Card design + personalise', 'department', 'Cards',      'workMinutes', 15, 'waitMinutes',    0, 'systems', jsonb_build_array('Card mgmt','Embossing vendor')),
@@ -225,7 +215,7 @@ BEGIN
        ))
      )), now(), now());
   INSERT INTO public.deal_flows
-    (deal_id, participant_id, label, flow_kind, report_id, status, created_by_email)
+    (deal_id, participant_id, label, flow_kind, process_id, status, created_by_email)
   VALUES
     (v_deal_ma, v_part_apex, 'Card issuance + delivery (current)', 'current', v_report_id, 'complete', OWNER_EMAIL);
 
@@ -233,15 +223,13 @@ BEGIN
 
   -- L1. App-based account opening (Product -> Risk -> Engineering -> Treasury)
   v_report_id := gen_random_uuid()::text;
-  INSERT INTO public.diagnostic_reports
-    (id, contact_email, contact_name, company, diagnostic_mode,
-     total_annual_cost, potential_savings, automation_percentage,
-     diagnostic_data, created_at, updated_at)
+  INSERT INTO public.processes
+    (id, contact_email, contact_name, company,
+     flow_data, created_at, updated_at)
   VALUES
-    (v_report_id, OWNER_EMAIL, 'Lumen CTO', 'Lumen Digital', 'comprehensive',
-     180000, 40000, 78,
+    (v_report_id, OWNER_EMAIL, 'Lumen CTO', 'Lumen Digital',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'App-based account opening', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'App-based account opening', 'costs', jsonb_build_object('hoursPerInstance', 0.5, 'teamSize', 2, 'annual', 2880), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'App download + signup',      'department', 'Product',     'workMinutes',  3, 'waitMinutes', 0, 'systems', jsonb_build_array('Mobile app','Auth0')),
          jsonb_build_object('name', 'Email + phone verify',       'department', 'Product',     'workMinutes',  2, 'waitMinutes', 0, 'systems', jsonb_build_array('Twilio','SendGrid')),
          jsonb_build_object('name', 'Selfie + ID auto-verify',    'department', 'Risk',        'workMinutes',  5, 'waitMinutes', 0, 'systems', jsonb_build_array('Onfido')),
@@ -253,21 +241,19 @@ BEGIN
        ))
      )), now(), now());
   INSERT INTO public.deal_flows
-    (deal_id, participant_id, label, flow_kind, report_id, status, created_by_email)
+    (deal_id, participant_id, label, flow_kind, process_id, status, created_by_email)
   VALUES
     (v_deal_ma, v_part_lumen, 'App-based account opening (current)', 'current', v_report_id, 'complete', OWNER_EMAIL);
 
   -- L2. In-app support resolution (Support -> Engineering -> Product)
   v_report_id := gen_random_uuid()::text;
-  INSERT INTO public.diagnostic_reports
-    (id, contact_email, contact_name, company, diagnostic_mode,
-     total_annual_cost, potential_savings, automation_percentage,
-     diagnostic_data, created_at, updated_at)
+  INSERT INTO public.processes
+    (id, contact_email, contact_name, company,
+     flow_data, created_at, updated_at)
   VALUES
-    (v_report_id, OWNER_EMAIL, 'Lumen CTO', 'Lumen Digital', 'comprehensive',
-     95000, 25000, 65,
+    (v_report_id, OWNER_EMAIL, 'Lumen CTO', 'Lumen Digital',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'In-app support resolution', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'In-app support resolution', 'costs', jsonb_build_object('hoursPerInstance', 0.5, 'teamSize', 2, 'annual', 1520), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'AI chat triage',           'department', 'Support',     'workMinutes',  5, 'waitMinutes',  0, 'systems', jsonb_build_array('Intercom','OpenAI')),
          jsonb_build_object('name', 'Knowledge base lookup',    'department', 'Support',     'workMinutes',  3, 'waitMinutes',  0, 'systems', jsonb_build_array('Notion','Algolia')),
          jsonb_build_object('name', 'Bug ticket auto-create',   'department', 'Engineering', 'workMinutes',  2, 'waitMinutes',  0, 'systems', jsonb_build_array('Linear','Sentry')),
@@ -277,21 +263,19 @@ BEGIN
        ))
      )), now(), now());
   INSERT INTO public.deal_flows
-    (deal_id, participant_id, label, flow_kind, report_id, status, created_by_email)
+    (deal_id, participant_id, label, flow_kind, process_id, status, created_by_email)
   VALUES
     (v_deal_ma, v_part_lumen, 'In-app support resolution (current)', 'current', v_report_id, 'complete', OWNER_EMAIL);
 
   -- L3. FX wallet top-up (Treasury -> Engineering -> Support)
   v_report_id := gen_random_uuid()::text;
-  INSERT INTO public.diagnostic_reports
-    (id, contact_email, contact_name, company, diagnostic_mode,
-     total_annual_cost, potential_savings, automation_percentage,
-     diagnostic_data, created_at, updated_at)
+  INSERT INTO public.processes
+    (id, contact_email, contact_name, company,
+     flow_data, created_at, updated_at)
   VALUES
-    (v_report_id, OWNER_EMAIL, 'Lumen CTO', 'Lumen Digital', 'comprehensive',
-     65000, 18000, 82,
+    (v_report_id, OWNER_EMAIL, 'Lumen CTO', 'Lumen Digital',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'FX wallet top-up', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'FX wallet top-up', 'costs', jsonb_build_object('hoursPerInstance', 0.2, 'teamSize', 2, 'annual', 2600), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'User picks currency',        'department', 'Product',     'workMinutes',  1, 'waitMinutes', 0, 'systems', jsonb_build_array('Mobile app')),
          jsonb_build_object('name', 'Quote streamed to client',   'department', 'Treasury',    'workMinutes',  1, 'waitMinutes', 0, 'systems', jsonb_build_array('Wise FX API')),
          jsonb_build_object('name', 'User confirms quote',        'department', 'Product',     'workMinutes',  1, 'waitMinutes', 0, 'systems', jsonb_build_array('Mobile app')),
@@ -301,21 +285,19 @@ BEGIN
        ))
      )), now(), now());
   INSERT INTO public.deal_flows
-    (deal_id, participant_id, label, flow_kind, report_id, status, created_by_email)
+    (deal_id, participant_id, label, flow_kind, process_id, status, created_by_email)
   VALUES
     (v_deal_ma, v_part_lumen, 'FX wallet top-up (current)', 'current', v_report_id, 'complete', OWNER_EMAIL);
 
   -- L4. Card dispute auto-handle (Risk -> Compliance -> Support)
   v_report_id := gen_random_uuid()::text;
-  INSERT INTO public.diagnostic_reports
-    (id, contact_email, contact_name, company, diagnostic_mode,
-     total_annual_cost, potential_savings, automation_percentage,
-     diagnostic_data, created_at, updated_at)
+  INSERT INTO public.processes
+    (id, contact_email, contact_name, company,
+     flow_data, created_at, updated_at)
   VALUES
-    (v_report_id, OWNER_EMAIL, 'Lumen CTO', 'Lumen Digital', 'comprehensive',
-     78000, 22000, 70,
+    (v_report_id, OWNER_EMAIL, 'Lumen CTO', 'Lumen Digital',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Card dispute auto-handle', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Card dispute auto-handle', 'costs', jsonb_build_object('hoursPerInstance', 0.3, 'teamSize', 2, 'annual', 2080), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'In-app dispute raised',       'department', 'Product',    'workMinutes',  2, 'waitMinutes',   0, 'systems', jsonb_build_array('Mobile app')),
          jsonb_build_object('name', 'Auto-classify reason code',   'department', 'Risk',       'workMinutes',  1, 'waitMinutes',   0, 'systems', jsonb_build_array('OpenAI','Risk engine')),
          jsonb_build_object('name', 'Provisional credit posted',   'department', 'Compliance', 'workMinutes',  3, 'waitMinutes',   0, 'systems', jsonb_build_array('Core ledger','Marqeta')),
@@ -326,7 +308,7 @@ BEGIN
        ))
      )), now(), now());
   INSERT INTO public.deal_flows
-    (deal_id, participant_id, label, flow_kind, report_id, status, created_by_email)
+    (deal_id, participant_id, label, flow_kind, process_id, status, created_by_email)
   VALUES
     (v_deal_ma, v_part_lumen, 'Card dispute auto-handle (current)', 'current', v_report_id, 'complete', OWNER_EMAIL);
 
@@ -375,15 +357,13 @@ BEGIN
 
   -- H1. Patient intake (canonical) - Front desk -> Billing -> Clinical
   v_report_id := gen_random_uuid()::text;
-  INSERT INTO public.diagnostic_reports
-    (id, contact_email, contact_name, company, diagnostic_mode,
-     total_annual_cost, potential_savings, automation_percentage,
-     diagnostic_data, created_at, updated_at)
+  INSERT INTO public.processes
+    (id, contact_email, contact_name, company,
+     flow_data, created_at, updated_at)
   VALUES
-    (v_report_id, OWNER_EMAIL, 'Helix Operating Partner', 'Helix Health Group', 'comprehensive',
-     320000, 80000, 55,
+    (v_report_id, OWNER_EMAIL, 'Helix Operating Partner', 'Helix Health Group',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Patient intake (canonical)', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Patient intake (canonical)', 'costs', jsonb_build_object('hoursPerInstance', 2, 'teamSize', 2, 'annual', 1280), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Online booking',           'department', 'Front desk', 'workMinutes',  4, 'waitMinutes',    0, 'systems', jsonb_build_array('Helix portal')),
          jsonb_build_object('name', 'Insurance auto-verify',    'department', 'Billing',    'workMinutes',  3, 'waitMinutes',    0, 'systems', jsonb_build_array('Eligibility API')),
          jsonb_build_object('name', 'Reminder + check-in link', 'department', 'Front desk', 'workMinutes',  2, 'waitMinutes', 1440, 'systems', jsonb_build_array('SMS gateway','Helix portal')),
@@ -395,21 +375,19 @@ BEGIN
        ))
      )), now(), now());
   INSERT INTO public.deal_flows
-    (deal_id, participant_id, label, flow_kind, report_id, status, created_by_email)
+    (deal_id, participant_id, label, flow_kind, process_id, status, created_by_email)
   VALUES
     (v_deal_pe, v_part_helix, 'Patient intake (canonical platform standard)', 'current', v_report_id, 'complete', OWNER_EMAIL);
 
   -- H2. Insurance pre-authorization - Billing -> Clinical -> Compliance
   v_report_id := gen_random_uuid()::text;
-  INSERT INTO public.diagnostic_reports
-    (id, contact_email, contact_name, company, diagnostic_mode,
-     total_annual_cost, potential_savings, automation_percentage,
-     diagnostic_data, created_at, updated_at)
+  INSERT INTO public.processes
+    (id, contact_email, contact_name, company,
+     flow_data, created_at, updated_at)
   VALUES
-    (v_report_id, OWNER_EMAIL, 'Helix Operating Partner', 'Helix Health Group', 'comprehensive',
-     210000, 65000, 48,
+    (v_report_id, OWNER_EMAIL, 'Helix Operating Partner', 'Helix Health Group',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Insurance pre-authorization', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Insurance pre-authorization', 'costs', jsonb_build_object('hoursPerInstance', 2, 'teamSize', 2, 'annual', 840), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Procedure code captured',   'department', 'Clinical',   'workMinutes',  5, 'waitMinutes',    0, 'systems', jsonb_build_array('Epic')),
          jsonb_build_object('name', 'Eligibility check',         'department', 'Billing',    'workMinutes',  3, 'waitMinutes',    0, 'systems', jsonb_build_array('Eligibility API')),
          jsonb_build_object('name', 'Pre-auth packet built',     'department', 'Billing',    'workMinutes', 20, 'waitMinutes',    0, 'systems', jsonb_build_array('Claims clearinghouse','Document store')),
@@ -420,21 +398,19 @@ BEGIN
        ))
      )), now(), now());
   INSERT INTO public.deal_flows
-    (deal_id, participant_id, label, flow_kind, report_id, status, created_by_email)
+    (deal_id, participant_id, label, flow_kind, process_id, status, created_by_email)
   VALUES
     (v_deal_pe, v_part_helix, 'Insurance pre-authorization (current)', 'current', v_report_id, 'complete', OWNER_EMAIL);
 
   -- H3. Lab results review - Clinical -> IT -> Front desk
   v_report_id := gen_random_uuid()::text;
-  INSERT INTO public.diagnostic_reports
-    (id, contact_email, contact_name, company, diagnostic_mode,
-     total_annual_cost, potential_savings, automation_percentage,
-     diagnostic_data, created_at, updated_at)
+  INSERT INTO public.processes
+    (id, contact_email, contact_name, company,
+     flow_data, created_at, updated_at)
   VALUES
-    (v_report_id, OWNER_EMAIL, 'Helix Operating Partner', 'Helix Health Group', 'comprehensive',
-     145000, 40000, 60,
+    (v_report_id, OWNER_EMAIL, 'Helix Operating Partner', 'Helix Health Group',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Lab results review', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Lab results review', 'costs', jsonb_build_object('hoursPerInstance', 1, 'teamSize', 2, 'annual', 1160), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Lab result ingested',       'department', 'IT',         'workMinutes',  2, 'waitMinutes',    0, 'systems', jsonb_build_array('LIS','HL7 gateway')),
          jsonb_build_object('name', 'Auto-flag abnormal values', 'department', 'IT',         'workMinutes',  1, 'waitMinutes',    0, 'systems', jsonb_build_array('LIS','Rules engine')),
          jsonb_build_object('name', 'Clinician review',          'department', 'Clinical',   'workMinutes', 15, 'waitMinutes',  240, 'systems', jsonb_build_array('Epic')),
@@ -444,21 +420,19 @@ BEGIN
        ))
      )), now(), now());
   INSERT INTO public.deal_flows
-    (deal_id, participant_id, label, flow_kind, report_id, status, created_by_email)
+    (deal_id, participant_id, label, flow_kind, process_id, status, created_by_email)
   VALUES
     (v_deal_pe, v_part_helix, 'Lab results review (current)', 'current', v_report_id, 'complete', OWNER_EMAIL);
 
   -- H4. Patient discharge + follow-up - Clinical -> Billing -> Operations
   v_report_id := gen_random_uuid()::text;
-  INSERT INTO public.diagnostic_reports
-    (id, contact_email, contact_name, company, diagnostic_mode,
-     total_annual_cost, potential_savings, automation_percentage,
-     diagnostic_data, created_at, updated_at)
+  INSERT INTO public.processes
+    (id, contact_email, contact_name, company,
+     flow_data, created_at, updated_at)
   VALUES
-    (v_report_id, OWNER_EMAIL, 'Helix Operating Partner', 'Helix Health Group', 'comprehensive',
-     180000, 50000, 50,
+    (v_report_id, OWNER_EMAIL, 'Helix Operating Partner', 'Helix Health Group',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Patient discharge + follow-up', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Patient discharge + follow-up', 'costs', jsonb_build_object('hoursPerInstance', 1.5, 'teamSize', 2, 'annual', 960), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Discharge plan drafted',     'department', 'Clinical',   'workMinutes', 12, 'waitMinutes',    0, 'systems', jsonb_build_array('Epic')),
          jsonb_build_object('name', 'Medication reconciliation',  'department', 'Clinical',   'workMinutes', 15, 'waitMinutes',    0, 'systems', jsonb_build_array('Epic','Pharmacy system')),
          jsonb_build_object('name', 'Final billing reconciled',   'department', 'Billing',    'workMinutes', 10, 'waitMinutes',    0, 'systems', jsonb_build_array('Claims clearinghouse')),
@@ -469,7 +443,7 @@ BEGIN
        ))
      )), now(), now());
   INSERT INTO public.deal_flows
-    (deal_id, participant_id, label, flow_kind, report_id, status, created_by_email)
+    (deal_id, participant_id, label, flow_kind, process_id, status, created_by_email)
   VALUES
     (v_deal_pe, v_part_helix, 'Patient discharge + follow-up (current)', 'current', v_report_id, 'complete', OWNER_EMAIL);
 
@@ -477,15 +451,13 @@ BEGIN
 
   -- B1. Patient intake (current)
   v_report_id := gen_random_uuid()::text;
-  INSERT INTO public.diagnostic_reports
-    (id, contact_email, contact_name, company, diagnostic_mode,
-     total_annual_cost, potential_savings, automation_percentage,
-     diagnostic_data, created_at, updated_at)
+  INSERT INTO public.processes
+    (id, contact_email, contact_name, company,
+     flow_data, created_at, updated_at)
   VALUES
-    (v_report_id, OWNER_EMAIL, 'BrightPath COO', 'BrightPath Clinics', 'comprehensive',
-     210000, 45000, 48,
+    (v_report_id, OWNER_EMAIL, 'BrightPath COO', 'BrightPath Clinics',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Patient intake (BrightPath)', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Patient intake (BrightPath)', 'costs', jsonb_build_object('hoursPerInstance', 1.6, 'teamSize', 2, 'annual', 1050), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Online booking',           'department', 'Front desk', 'workMinutes',  6, 'waitMinutes',    0, 'systems', jsonb_build_array('Acuity')),
          jsonb_build_object('name', 'Insurance manual verify',  'department', 'Billing',    'workMinutes', 18, 'waitMinutes',  240, 'systems', jsonb_build_array('Phone','Eligibility portal')),
          jsonb_build_object('name', 'Reminder call',            'department', 'Front desk', 'workMinutes',  5, 'waitMinutes', 1440, 'systems', jsonb_build_array('Phone')),
@@ -496,21 +468,19 @@ BEGIN
        ))
      )), now(), now());
   INSERT INTO public.deal_flows
-    (deal_id, participant_id, label, flow_kind, report_id, status, created_by_email)
+    (deal_id, participant_id, label, flow_kind, process_id, status, created_by_email)
   VALUES
     (v_deal_pe, v_part_brightpath, 'Patient intake (current)', 'current', v_report_id, 'complete', OWNER_EMAIL);
 
   -- B2. Appointment scheduling
   v_report_id := gen_random_uuid()::text;
-  INSERT INTO public.diagnostic_reports
-    (id, contact_email, contact_name, company, diagnostic_mode,
-     total_annual_cost, potential_savings, automation_percentage,
-     diagnostic_data, created_at, updated_at)
+  INSERT INTO public.processes
+    (id, contact_email, contact_name, company,
+     flow_data, created_at, updated_at)
   VALUES
-    (v_report_id, OWNER_EMAIL, 'BrightPath COO', 'BrightPath Clinics', 'comprehensive',
-     85000, 22000, 55,
+    (v_report_id, OWNER_EMAIL, 'BrightPath COO', 'BrightPath Clinics',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Appointment scheduling', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Appointment scheduling', 'costs', jsonb_build_object('hoursPerInstance', 0.5, 'teamSize', 2, 'annual', 1360), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Patient request received',  'department', 'Front desk', 'workMinutes',  3, 'waitMinutes',  0, 'systems', jsonb_build_array('Acuity','Phone')),
          jsonb_build_object('name', 'Slot availability lookup',  'department', 'Front desk', 'workMinutes',  4, 'waitMinutes',  0, 'systems', jsonb_build_array('Acuity')),
          jsonb_build_object('name', 'Confirmation sent',         'department', 'IT',         'workMinutes',  2, 'waitMinutes',  0, 'systems', jsonb_build_array('SMS gateway','Email gateway')),
@@ -519,21 +489,19 @@ BEGIN
        ))
      )), now(), now());
   INSERT INTO public.deal_flows
-    (deal_id, participant_id, label, flow_kind, report_id, status, created_by_email)
+    (deal_id, participant_id, label, flow_kind, process_id, status, created_by_email)
   VALUES
     (v_deal_pe, v_part_brightpath, 'Appointment scheduling (current)', 'current', v_report_id, 'complete', OWNER_EMAIL);
 
   -- B3. Insurance verification
   v_report_id := gen_random_uuid()::text;
-  INSERT INTO public.diagnostic_reports
-    (id, contact_email, contact_name, company, diagnostic_mode,
-     total_annual_cost, potential_savings, automation_percentage,
-     diagnostic_data, created_at, updated_at)
+  INSERT INTO public.processes
+    (id, contact_email, contact_name, company,
+     flow_data, created_at, updated_at)
   VALUES
-    (v_report_id, OWNER_EMAIL, 'BrightPath COO', 'BrightPath Clinics', 'comprehensive',
-     95000, 28000, 35,
+    (v_report_id, OWNER_EMAIL, 'BrightPath COO', 'BrightPath Clinics',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Insurance verification (BrightPath)', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Insurance verification (BrightPath)', 'costs', jsonb_build_object('hoursPerInstance', 0.8, 'teamSize', 2, 'annual', 950), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Card photo collected',      'department', 'Front desk', 'workMinutes',  3, 'waitMinutes',   0, 'systems', jsonb_build_array('Acuity')),
          jsonb_build_object('name', 'Eligibility lookup',        'department', 'Billing',    'workMinutes', 12, 'waitMinutes',   0, 'systems', jsonb_build_array('Eligibility portal')),
          jsonb_build_object('name', 'Coverage gaps flagged',     'department', 'Billing',    'workMinutes',  8, 'waitMinutes',   0, 'systems', jsonb_build_array('Eligibility portal','Athena')),
@@ -543,7 +511,7 @@ BEGIN
        ))
      )), now(), now());
   INSERT INTO public.deal_flows
-    (deal_id, participant_id, label, flow_kind, report_id, status, created_by_email)
+    (deal_id, participant_id, label, flow_kind, process_id, status, created_by_email)
   VALUES
     (v_deal_pe, v_part_brightpath, 'Insurance verification (current)', 'current', v_report_id, 'complete', OWNER_EMAIL);
 
@@ -551,15 +519,13 @@ BEGIN
 
   -- M1. Patient intake (current) - heavy paper trail
   v_report_id := gen_random_uuid()::text;
-  INSERT INTO public.diagnostic_reports
-    (id, contact_email, contact_name, company, diagnostic_mode,
-     total_annual_cost, potential_savings, automation_percentage,
-     diagnostic_data, created_at, updated_at)
+  INSERT INTO public.processes
+    (id, contact_email, contact_name, company,
+     flow_data, created_at, updated_at)
   VALUES
-    (v_report_id, OWNER_EMAIL, 'MedSouth Director', 'MedSouth Group', 'comprehensive',
-     380000, 140000, 18,
+    (v_report_id, OWNER_EMAIL, 'MedSouth Director', 'MedSouth Group',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Patient intake (MedSouth)', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Patient intake (MedSouth)', 'costs', jsonb_build_object('hoursPerInstance', 2.5, 'teamSize', 2, 'annual', 1216), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Phone booking',            'department', 'Front desk', 'workMinutes', 12, 'waitMinutes',    0, 'systems', jsonb_build_array('Phone')),
          jsonb_build_object('name', 'Paper form mailed',        'department', 'Records',    'workMinutes',  8, 'waitMinutes', 4320, 'systems', jsonb_build_array('Mailroom')),
          jsonb_build_object('name', 'Fax insurance forms',      'department', 'Billing',    'workMinutes', 25, 'waitMinutes', 1440, 'systems', jsonb_build_array('Fax')),
@@ -571,21 +537,19 @@ BEGIN
        ))
      )), now(), now());
   INSERT INTO public.deal_flows
-    (deal_id, participant_id, label, flow_kind, report_id, status, created_by_email)
+    (deal_id, participant_id, label, flow_kind, process_id, status, created_by_email)
   VALUES
     (v_deal_pe, v_part_medsouth, 'Patient intake (current)', 'current', v_report_id, 'complete', OWNER_EMAIL);
 
   -- M2. Manual records pull
   v_report_id := gen_random_uuid()::text;
-  INSERT INTO public.diagnostic_reports
-    (id, contact_email, contact_name, company, diagnostic_mode,
-     total_annual_cost, potential_savings, automation_percentage,
-     diagnostic_data, created_at, updated_at)
+  INSERT INTO public.processes
+    (id, contact_email, contact_name, company,
+     flow_data, created_at, updated_at)
   VALUES
-    (v_report_id, OWNER_EMAIL, 'MedSouth Director', 'MedSouth Group', 'comprehensive',
-     120000, 80000, 8,
+    (v_report_id, OWNER_EMAIL, 'MedSouth Director', 'MedSouth Group',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Manual records pull', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Manual records pull', 'costs', jsonb_build_object('hoursPerInstance', 1, 'teamSize', 2, 'annual', 960), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Records request received', 'department', 'Front desk', 'workMinutes',  8, 'waitMinutes',    0, 'systems', jsonb_build_array('Phone','Paper forms')),
          jsonb_build_object('name', 'Filing room search',       'department', 'Records',    'workMinutes', 35, 'waitMinutes',    0, 'systems', jsonb_build_array('Filing cabinet')),
          jsonb_build_object('name', 'Photocopy + redact',       'department', 'Records',    'workMinutes', 25, 'waitMinutes',    0, 'systems', jsonb_build_array('Photocopier')),
@@ -595,21 +559,19 @@ BEGIN
        ))
      )), now(), now());
   INSERT INTO public.deal_flows
-    (deal_id, participant_id, label, flow_kind, report_id, status, created_by_email)
+    (deal_id, participant_id, label, flow_kind, process_id, status, created_by_email)
   VALUES
     (v_deal_pe, v_part_medsouth, 'Manual records pull (current)', 'current', v_report_id, 'complete', OWNER_EMAIL);
 
   -- M3. Phone-based scheduling
   v_report_id := gen_random_uuid()::text;
-  INSERT INTO public.diagnostic_reports
-    (id, contact_email, contact_name, company, diagnostic_mode,
-     total_annual_cost, potential_savings, automation_percentage,
-     diagnostic_data, created_at, updated_at)
+  INSERT INTO public.processes
+    (id, contact_email, contact_name, company,
+     flow_data, created_at, updated_at)
   VALUES
-    (v_report_id, OWNER_EMAIL, 'MedSouth Director', 'MedSouth Group', 'comprehensive',
-     95000, 55000, 12,
+    (v_report_id, OWNER_EMAIL, 'MedSouth Director', 'MedSouth Group',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Phone-based scheduling', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Phone-based scheduling', 'costs', jsonb_build_object('hoursPerInstance', 0.5, 'teamSize', 2, 'annual', 1520), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Patient calls in',          'department', 'Front desk', 'workMinutes',  5, 'waitMinutes',  0, 'systems', jsonb_build_array('Phone')),
          jsonb_build_object('name', 'Manual diary lookup',       'department', 'Front desk', 'workMinutes',  8, 'waitMinutes',  0, 'systems', jsonb_build_array('Paper diary')),
          jsonb_build_object('name', 'Slot pencil-booked',        'department', 'Records',    'workMinutes',  5, 'waitMinutes',  0, 'systems', jsonb_build_array('Paper diary')),
@@ -618,7 +580,7 @@ BEGIN
        ))
      )), now(), now());
   INSERT INTO public.deal_flows
-    (deal_id, participant_id, label, flow_kind, report_id, status, created_by_email)
+    (deal_id, participant_id, label, flow_kind, process_id, status, created_by_email)
   VALUES
     (v_deal_pe, v_part_medsouth, 'Phone-based scheduling (current)', 'current', v_report_id, 'complete', OWNER_EMAIL);
 
@@ -626,15 +588,13 @@ BEGIN
 
   -- C1. Caregiver visit scheduling (Operations -> Front desk)
   v_report_id := gen_random_uuid()::text;
-  INSERT INTO public.diagnostic_reports
-    (id, contact_email, contact_name, company, diagnostic_mode,
-     total_annual_cost, potential_savings, automation_percentage,
-     diagnostic_data, created_at, updated_at)
+  INSERT INTO public.processes
+    (id, contact_email, contact_name, company,
+     flow_data, created_at, updated_at)
   VALUES
-    (v_report_id, OWNER_EMAIL, 'Caregiver Plus Lead', 'Caregiver Plus', 'comprehensive',
-     145000, 45000, 30,
+    (v_report_id, OWNER_EMAIL, 'Caregiver Plus Lead', 'Caregiver Plus',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Caregiver visit scheduling', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Caregiver visit scheduling', 'costs', jsonb_build_object('hoursPerInstance', 1, 'teamSize', 2, 'annual', 1160), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Care request intake',     'department', 'Front desk', 'workMinutes',  8, 'waitMinutes',   0, 'systems', jsonb_build_array('Phone','CRM')),
          jsonb_build_object('name', 'Caregiver availability',  'department', 'Operations', 'workMinutes', 12, 'waitMinutes', 240, 'systems', jsonb_build_array('Roster app')),
          jsonb_build_object('name', 'Visit slot confirmed',    'department', 'Operations', 'workMinutes',  5, 'waitMinutes',   0, 'systems', jsonb_build_array('Roster app','SMS gateway')),
@@ -643,7 +603,7 @@ BEGIN
        ))
      )), now(), now());
   INSERT INTO public.deal_flows
-    (deal_id, participant_id, label, flow_kind, report_id, status, created_by_email)
+    (deal_id, participant_id, label, flow_kind, process_id, status, created_by_email)
   VALUES
     (v_deal_pe, v_part_caregiver, 'Caregiver visit scheduling (current)', 'current', v_report_id, 'complete', OWNER_EMAIL);
 

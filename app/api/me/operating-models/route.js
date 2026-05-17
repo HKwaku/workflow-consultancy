@@ -12,7 +12,9 @@
 
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import { getSupabaseHeaders, fetchWithTimeout, requireSupabase } from '@/lib/api-helpers';
+import { getSupabaseHeaders, fetchWithTimeout, requireSupabase, checkOrigin } from '@/lib/api-helpers';
+import { resolveDefaultModelForUser } from '@/lib/operatingModel/auth';
+import { createOperatingModel, setMemberPreferredModel, listOrgModels } from '@/lib/operatingModel/repo';
 import { logger } from '@/lib/logger';
 
 export const maxDuration = 10;
@@ -67,9 +69,72 @@ export async function GET(request) {
       createdAt: m.created_at,
       updatedAt: m.updated_at,
     }));
-    return NextResponse.json({ models });
+    // Which model is *active* for this member (preferred → else org
+    // default). Resolved separately so the switcher can mark it.
+    const r = await resolveDefaultModelForUser({ email: auth.email, userId: auth.userId });
+    return NextResponse.json({
+      models,
+      activeModelId: r.modelId || null,
+      defaultModelId: r.defaultModelId || null,
+      organizationId: r.organizationId || null,
+      isAdmin: !!r.isAdmin,
+    });
   } catch (e) {
     logger.error('GET /api/me/operating-models failed', { error: e.message });
     return NextResponse.json({ models: [] });
   }
+}
+
+export async function POST(request) {
+  const originErr = checkOrigin(request);
+  if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
+  const auth = await requireAuth(request);
+  if (auth.error) return NextResponse.json(auth.error.body, { status: auth.error.status });
+
+  let body;
+  try { body = await request.json(); } catch { return NextResponse.json({ error: 'Invalid JSON.' }, { status: 400 }); }
+  const name = String(body?.name || '').trim();
+  if (!name) return NextResponse.json({ error: 'name is required.' }, { status: 400 });
+  if (name.length > 200) return NextResponse.json({ error: 'name must be 200 characters or fewer.' }, { status: 400 });
+
+  const r = await resolveDefaultModelForUser({ email: auth.email, userId: auth.userId });
+  if (!r.organizationId) return NextResponse.json({ error: 'You are not a member of an organisation.' }, { status: 403 });
+
+  const modelId = await createOperatingModel({
+    organization_id: r.organizationId, name, created_by_email: auth.email || null,
+  });
+  if (!modelId) return NextResponse.json({ error: 'Failed to create the model.' }, { status: 502 });
+
+  // The new model becomes the creator's active model immediately.
+  await setMemberPreferredModel({
+    organizationId: r.organizationId, email: auth.email, userId: auth.userId, modelId,
+  });
+  return NextResponse.json({ model: { id: modelId, name }, activeModelId: modelId });
+}
+
+export async function PUT(request) {
+  const originErr = checkOrigin(request);
+  if (originErr) return NextResponse.json({ error: originErr.error }, { status: originErr.status });
+  const auth = await requireAuth(request);
+  if (auth.error) return NextResponse.json(auth.error.body, { status: auth.error.status });
+
+  let body;
+  try { body = await request.json(); } catch { return NextResponse.json({ error: 'Invalid JSON.' }, { status: 400 }); }
+  const modelId = body?.modelId ? String(body.modelId) : null; // null = reset to org default
+
+  const r = await resolveDefaultModelForUser({ email: auth.email, userId: auth.userId });
+  if (!r.organizationId) return NextResponse.json({ error: 'You are not a member of an organisation.' }, { status: 403 });
+
+  if (modelId) {
+    // Never let a member point resolution at another org's model.
+    const models = await listOrgModels(r.organizationId);
+    if (!models.some((m) => m.id === modelId)) {
+      return NextResponse.json({ error: 'That model is not in your organisation.' }, { status: 400 });
+    }
+  }
+  const res = await setMemberPreferredModel({
+    organizationId: r.organizationId, email: auth.email, userId: auth.userId, modelId,
+  });
+  if (!res.ok) return NextResponse.json({ error: 'Failed to switch model.' }, { status: 502 });
+  return NextResponse.json({ ok: true, activeModelId: modelId || r.defaultModelId || null });
 }

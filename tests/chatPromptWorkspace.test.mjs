@@ -154,10 +154,23 @@ describe('formatWorkspaceTree', () => {
       model: { id: 'm1', name: 'Acme' },
       functions: [],
       functionsFlat: [{ id: 'f2', name: 'AR' }],
-      roles: [{ name: 'AR Manager', headcount: 2, owner_email: 'sarah@acme.com', function_ids: ['f2'] }],
+      roles: [{ id: 'r1', name: 'AR Manager', headcount: 2, owner_email: 'sarah@acme.com', function_ids: ['f2'] }],
       systems: [],
     });
-    assert.match(out, /- AR Manager \(2 FTE · sarah@acme.com · under: AR\)/);
+    // id is surfaced so the chat agent can target propose_update_role / propose_delete_role
+    assert.match(out, /- AR Manager \[r1\] \(2 FTE · sarah@acme.com · under: AR\)/);
+  });
+
+  test('omits the [id] segment when a role/system has no id (no "[undefined]")', () => {
+    const out = formatWorkspaceTree({
+      model: { id: 'm1', name: 'Acme' },
+      functions: [], functionsFlat: [],
+      roles: [{ name: 'Legacy role' }],
+      systems: [{ name: 'Legacy system' }],
+    });
+    assert.doesNotMatch(out, /\[undefined\]/);
+    assert.match(out, /- Legacy role/);
+    assert.match(out, /- Legacy system/);
   });
 
   test('renders systems with vendor / category / layer', () => {
@@ -166,9 +179,9 @@ describe('formatWorkspaceTree', () => {
       functions: [],
       functionsFlat: [],
       roles: [],
-      systems: [{ name: 'NetSuite', vendor: 'Oracle', category: 'ERP', layer: 'system_of_record' }],
+      systems: [{ id: 's1', name: 'NetSuite', vendor: 'Oracle', category: 'ERP', layer: 'system_of_record' }],
     });
-    assert.match(out, /- NetSuite \(Oracle · ERP · system_of_record\)/);
+    assert.match(out, /- NetSuite \[s1\] \(Oracle · ERP · system_of_record\)/);
   });
 
   test('says "(none yet)" when the workspace is empty', () => {

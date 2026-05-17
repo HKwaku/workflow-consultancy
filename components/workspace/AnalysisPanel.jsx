@@ -184,6 +184,58 @@ function Empty({ children }) {
   return <div style={{ padding: '24px 12px', textAlign: 'center', color: 'var(--text-mid, #64748b)', fontSize: 13 }}>{children}</div>;
 }
 
+/* The product journey, made obvious in a surface the user actually
+   looks at. "Where you are / what's next" is derived from the analysis
+   payload so it's contextual guidance, not a separate onboarding flow. */
+const JOURNEY = [
+  { key: 'map',     label: 'Map processes' },
+  { key: 'improve', label: 'Improve' },
+  { key: 'measure', label: 'Measure' },
+  { key: 'iterate', label: 'Keep it live' },
+];
+function deriveStage(data) {
+  const recs = (data?.topRecommendations || []).length;
+  const hasCost = (data?.automationPipeline || []).some((r) => (r?.annualCost || 0) > 0);
+  const t = data?.roadmap?.totals || {};
+  const inFlight = (t.proposed || 0) + (t.accepted || 0) + (t.applied || 0);
+  const measured = t.measured || 0;
+  if (!recs && !hasCost) {
+    return { key: 'map', next: 'Map a process with the assistant — capture real steps, owners, systems and volumes. Cost, bottlenecks and recommendations then populate here automatically.' };
+  }
+  if (inFlight === 0 && !(t.changes > 0)) {
+    return { key: 'improve', next: 'Review the recommendations below and accept the highest-impact changes on the canvas — accepted changes become a measurable pipeline.' };
+  }
+  if (measured === 0) {
+    return { key: 'measure', next: 'Changes are in flight. Record their outcomes (before / after) so realised savings show against the prediction.' };
+  }
+  return { key: 'iterate', next: 'Outcomes are landing. Keep the model live — revisit as the business changes, and ask the assistant for any deliverable (it appears in the rail Artefacts slider).' };
+}
+function JourneyStrip({ data }) {
+  const stage = deriveStage(data);
+  const idx = JOURNEY.findIndex((s) => s.key === stage.key);
+  return (
+    <div style={{
+      border: '1px solid var(--border, #e2e8f0)', borderRadius: 8,
+      padding: '10px 14px', background: 'var(--bg-alt, #f8fafc)',
+      display: 'flex', flexDirection: 'column', gap: 6,
+    }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', fontSize: 11, fontWeight: 600, letterSpacing: '0.03em', textTransform: 'uppercase', color: 'var(--text-mid, #64748b)' }}>
+        {JOURNEY.map((s, i) => (
+          <span key={s.key} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ color: i === idx ? '#0d9488' : (i < idx ? 'var(--text, #1e293b)' : 'var(--text-mid, #94a3b8)') }}>
+              {i < idx ? '✓ ' : ''}{s.label}
+            </span>
+            {i < JOURNEY.length - 1 && <span aria-hidden style={{ opacity: 0.4 }}>{'›'}</span>}
+          </span>
+        ))}
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--text, #1e293b)' }}>
+        <strong>Next:</strong> {stage.next}
+      </div>
+    </div>
+  );
+}
+
 function ProcessLink({ reportId, label }) {
   if (!reportId) return <span>{label || '—'}</span>;
   return (
@@ -665,6 +717,7 @@ export default function AnalysisPanel({ modelId, accessToken, functions }) {
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0, maxWidth: '100%' }}>
+      <JourneyStrip data={data} />
       <HeroStrip data={data} />
       <RecommendationsCard rows={data.topRecommendations} functions={functions} />
       <AutomationPipelineCard rows={data.automationPipeline} functions={functions} />

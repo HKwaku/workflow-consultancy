@@ -16,6 +16,8 @@ import {
 import { requireAuth } from '@/lib/auth';
 import { resolveModelAccess } from '@/lib/operatingModel/auth';
 import { deriveProcessMetrics } from '@/lib/processMetrics';
+import { loadChanges } from '@/lib/changes/repo';
+import { decidedSavingsFromChanges } from '@/lib/changes/savings';
 
 export const maxDuration = 10;
 
@@ -57,6 +59,9 @@ export async function GET(request, { params }) {
   // reading the response. diagnostic_data mirrors flow_data; target_data
   // is permanently null. Cost / savings / automation derived from JSONB.
   const m = deriveProcessMetrics(report);
+  // Potential savings = accepted/decided changes only (£0 until decided).
+  const decidedChanges = await loadChanges({ reportId: processId, limit: 500 });
+  const potentialSavings = decidedSavingsFromChanges(decidedChanges, m.total_annual_cost);
   return NextResponse.json({
     report: {
       ...report,
@@ -64,7 +69,7 @@ export async function GET(request, { params }) {
       target_data: null,
       state_kind: null,
       total_annual_cost:     m.total_annual_cost,
-      potential_savings:     m.potential_savings,
+      potential_savings:     potentialSavings,
       automation_percentage: m.automation_percentage,
       automation_grade:      m.automation_grade,
     },

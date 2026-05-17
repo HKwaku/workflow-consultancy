@@ -29,6 +29,14 @@
 
 DO $$
 DECLARE
+  -- Re-running is idempotent (INSERT ... WHERE NOT EXISTS on process
+  -- name) — which means it never *updates* an already-seeded process.
+  -- When true (default), delete the seeded processes for this model
+  -- first so a re-run picks up flow_data changes (e.g. the per-process
+  -- `costs` block that drives the cost heatmap). Scoped by model id +
+  -- the known seeded name set, so user-created processes are untouched.
+  REFRESH_PROCESSES  boolean := true;
+
   -- Schema detection
   v_caps_table       text;  -- 'functions' or 'capabilities'
   v_parent_col       text;  -- 'parent_function_id' or 'parent_capability_id'
@@ -365,22 +373,51 @@ BEGIN
     (v_model_id, 'Slack',      'Slack',      'Comms',    'comms',            'it.lead@vesno.test',      'Internal comms + handoffs.')
   ON CONFLICT (operating_model_id, match_key) DO NOTHING;
 
-  -- ---------- 6. Processes (diagnostic_reports) ----------
-  -- Schema-defensive insert: only base columns. Spanning processes carry
-  -- per-step capabilityId tags so the heatmap / map credit work to the
-  -- function it actually happens in. The per-step field key is
-  -- `capabilityId` regardless of DB column name (it lives inside JSONB).
+  -- ---------- 5b. Refresh seeded processes ----------
+  -- Without this, the idempotent INSERT below skips processes that
+  -- already exist (matched by name), so flow_data edits in this file
+  -- never reach a previously-seeded database. Delete only the seeded
+  -- set for THIS operating model — never user-created processes.
+  IF REFRESH_PROCESSES THEN
+    DELETE FROM public.processes
+     WHERE operating_model_id = v_model_id
+       AND COALESCE(
+             flow_data->'rawProcesses'->0->>'name',
+             flow_data->'processes'->0->>'name'
+           ) IN (
+             'Cash collection',
+             'Supplier invoice processing',
+             'Weekly pipeline review',
+             'Lead-to-opportunity handoff',
+             'Order fulfilment',
+             'Returns processing',
+             'New customer onboarding',
+             'New starter laptop provisioning',
+             'Quote-to-cash',
+             'Hire-to-onboard',
+             'Customer escalation'
+           );
+    RAISE NOTICE 'Refreshed seeded Vesno processes (REFRESH_PROCESSES = true).';
+  END IF;
+
+  -- ---------- 6. Processes (public.processes) ----------
+  -- Post living-workspace schema: insert into public.processes with
+  -- flow_data (not the diagnostic_reports compat view; the dropped
+  -- diagnostic_mode / total_annual_cost / potential_savings /
+  -- automation_percentage columns are gone — cost now derives from the
+  -- per-process `costs` block in flow_data). Spanning processes carry
+  -- per-step `functionId` tags so the heatmap / map credit work to the
+  -- function it actually happens in (the JSONB key is read by
+  -- deriveCostByFunction alongside capabilityId for older data).
   EXECUTE format($SQL$
-  INSERT INTO public.diagnostic_reports
-    (id, contact_email, contact_name, company, diagnostic_mode,
-     total_annual_cost, potential_savings, automation_percentage,
-     diagnostic_data, operating_model_id, %I, created_at, updated_at)
+  INSERT INTO public.processes
+    (id, contact_email, contact_name, company,
+     flow_data, operating_model_id, %I, created_at, updated_at)
   SELECT * FROM (VALUES
     (gen_random_uuid(),
-     'finance.lead@vesno.test', 'Finance Lead', 'Vesno', 'comprehensive',
-     48000, 12000, 35,
+     'finance.lead@vesno.test', 'Finance Lead', 'Vesno',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Cash collection', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Cash collection', 'costs', jsonb_build_object('hoursPerInstance', 1, 'teamSize', 1, 'annual', 768), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Generate invoice',         'workMinutes', 15, 'systems', jsonb_build_array('NetSuite'),                                       'roleId', $12::text, 'department', 'AR Manager'),
          jsonb_build_object('name', 'Send invoice to customer', 'workMinutes',  5, 'systems', jsonb_build_array('NetSuite'),                                       'roleId', $12::text, 'department', 'AR Manager'),
          jsonb_build_object('name', 'Chase overdue',            'workMinutes', 30, 'waitMinutes', 1440, 'systems', jsonb_build_array('Salesforce'),                'roleId', $12::text, 'department', 'AR Manager')
@@ -390,10 +427,9 @@ BEGIN
 
     -- SPANS Operations (receiving + match) -> Finance/AP (approval + payment)
     (gen_random_uuid(),
-     'finance.lead@vesno.test', 'Finance Lead', 'Vesno', 'comprehensive',
-     62000, 18000, 25,
+     'finance.lead@vesno.test', 'Finance Lead', 'Vesno',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Supplier invoice processing', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Supplier invoice processing', 'costs', jsonb_build_object('hoursPerInstance', 1, 'teamSize', 1, 'annual', 992), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Receive invoice', 'workMinutes',  5, 'systems', jsonb_build_array('NetSuite'),                                                'functionId', $4, 'roleId', $14::text, 'department', 'Operations Lead'),
          jsonb_build_object('name', 'Three-way match', 'workMinutes', 25, 'systems', jsonb_build_array('NetSuite'),                                                'functionId', $4, 'roleId', $14::text, 'department', 'Operations Lead'),
          jsonb_build_object('name', 'Approve + pay',   'workMinutes', 10, 'waitMinutes', 720, 'systems', jsonb_build_array('NetSuite', 'Stripe'),                  'functionId', $3, 'roleId', $16::text, 'department', 'AP Specialist')
@@ -402,10 +438,9 @@ BEGIN
      $1, $3, now(), now()),
 
     (gen_random_uuid(),
-     'rev.ops@vesno.test', 'Rev Ops', 'Vesno', 'comprehensive',
-     55000, 15000, 40,
+     'rev.ops@vesno.test', 'Rev Ops', 'Vesno',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Weekly pipeline review', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Weekly pipeline review', 'costs', jsonb_build_object('hoursPerInstance', 1, 'teamSize', 1, 'annual', 880), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Pull pipeline report', 'workMinutes',  20, 'systems', jsonb_build_array('Salesforce'),                                        'roleId', $13::text, 'department', 'Account Executive'),
          jsonb_build_object('name', 'Manager 1:1s',         'workMinutes', 240,                                                                                   'roleId', $13::text, 'department', 'Account Executive'),
          jsonb_build_object('name', 'Forecast roll-up',     'workMinutes',  60, 'systems', jsonb_build_array('Salesforce'),                                        'roleId', $13::text, 'department', 'Account Executive')
@@ -414,10 +449,9 @@ BEGIN
      $1, $5, now(), now()),
 
     (gen_random_uuid(),
-     'rev.ops@vesno.test', 'Rev Ops', 'Vesno', 'comprehensive',
-     72000, 24000, 30,
+     'rev.ops@vesno.test', 'Rev Ops', 'Vesno',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Lead-to-opportunity handoff', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Lead-to-opportunity handoff', 'costs', jsonb_build_object('hoursPerInstance', 1, 'teamSize', 1, 'annual', 1152), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Inbound qualification', 'workMinutes', 15, 'systems', jsonb_build_array('Salesforce'),                                        'roleId', $13::text, 'department', 'Account Executive'),
          jsonb_build_object('name', 'AE assignment',         'workMinutes',  5, 'systems', jsonb_build_array('Salesforce', 'Slack'),                              'roleId', $13::text, 'department', 'Account Executive'),
          jsonb_build_object('name', 'Discovery call',        'workMinutes', 60, 'waitMinutes', 2880,                                                              'roleId', $13::text, 'department', 'Account Executive')
@@ -427,10 +461,9 @@ BEGIN
 
     -- SPANS Sales (order intake) -> Ops/Fulfil -> Finance/AR (invoice)
     (gen_random_uuid(),
-     'ops.lead@vesno.test', 'Operations Lead', 'Vesno', 'comprehensive',
-     120000, 35000, 20,
+     'ops.lead@vesno.test', 'Operations Lead', 'Vesno',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Order fulfilment', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Order fulfilment', 'costs', jsonb_build_object('hoursPerInstance', 1.5, 'teamSize', 1, 'annual', 1280), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Order received',   'workMinutes',  5,                                                                                         'functionId', $6,  'roleId', $13::text, 'department', 'Account Executive'),
          jsonb_build_object('name', 'Pick + pack',      'workMinutes', 45,                                                                                         'functionId', $7,  'roleId', $14::text, 'department', 'Operations Lead'),
          jsonb_build_object('name', 'Ship',             'workMinutes', 10, 'waitMinutes', 1440,                                                                   'functionId', $7,  'roleId', $14::text, 'department', 'Operations Lead'),
@@ -441,10 +474,9 @@ BEGIN
      $1, $7, now(), now()),
 
     (gen_random_uuid(),
-     'ops.lead@vesno.test', 'Operations Lead', 'Vesno', 'comprehensive',
-     45000, 8000, 50,
+     'ops.lead@vesno.test', 'Operations Lead', 'Vesno',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Returns processing', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Returns processing', 'costs', jsonb_build_object('hoursPerInstance', 0.75, 'teamSize', 1, 'annual', 960), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Return request received', 'workMinutes', 10, 'systems', jsonb_build_array('Zendesk'),                                          'roleId', $14::text, 'department', 'Operations Lead'),
          jsonb_build_object('name', 'Inspect returned item',   'workMinutes', 20,                                                                                  'roleId', $14::text, 'department', 'Operations Lead'),
          jsonb_build_object('name', 'Issue refund',            'workMinutes', 10, 'systems', jsonb_build_array('Stripe'),                                          'roleId', $14::text, 'department', 'Operations Lead')
@@ -454,10 +486,9 @@ BEGIN
 
     -- SPANS Sales handoff -> CS welcome -> Tech provisioning -> Finance/AR billing
     (gen_random_uuid(),
-     'cs.lead@vesno.test', 'CS Lead', 'Vesno', 'comprehensive',
-     36000, 10000, 45,
+     'cs.lead@vesno.test', 'CS Lead', 'Vesno',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'New customer onboarding', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'New customer onboarding', 'costs', jsonb_build_object('hoursPerInstance', 1, 'teamSize', 1, 'annual', 576), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Sales handover',      'workMinutes', 30,                                                                                      'functionId', $6,  'roleId', $13::text, 'department', 'Account Executive'),
          jsonb_build_object('name', 'Welcome call',        'workMinutes', 60,                                                                                      'functionId', $9,  'roleId', $15::text, 'department', 'Customer Success Manager'),
          jsonb_build_object('name', 'Provision workspace', 'workMinutes', 90, 'systems', jsonb_build_array('Slack'),                                              'functionId', $10, 'roleId', $17::text, 'department', 'IT Engineer'),
@@ -469,10 +500,9 @@ BEGIN
 
     -- SPANS People (HR trigger) -> Tech (procurement + imaging + handover)
     (gen_random_uuid(),
-     'it.lead@vesno.test', 'IT Lead', 'Vesno', 'comprehensive',
-     28000, 6000, 60,
+     'it.lead@vesno.test', 'IT Lead', 'Vesno',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'New starter laptop provisioning', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'New starter laptop provisioning', 'costs', jsonb_build_object('hoursPerInstance', 1, 'teamSize', 1, 'annual', 448), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'New hire confirmed',       'workMinutes',  5,                                                                                  'functionId', $11, 'roleId', $18::text, 'department', 'People Operations'),
          jsonb_build_object('name', 'Order hardware',           'workMinutes', 10,                                                                                  'functionId', $10, 'roleId', $17::text, 'department', 'IT Engineer'),
          jsonb_build_object('name', 'Image laptop',             'workMinutes', 45,                                                                                  'functionId', $10, 'roleId', $17::text, 'department', 'IT Engineer'),
@@ -483,10 +513,9 @@ BEGIN
 
     -- SPANS Sales/Pipeline -> Finance/AR (quote -> invoice -> cash)
     (gen_random_uuid(),
-     'rev.ops@vesno.test', 'Rev Ops', 'Vesno', 'comprehensive',
-     90000, 28000, 35,
+     'rev.ops@vesno.test', 'Rev Ops', 'Vesno',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Quote-to-cash', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Quote-to-cash', 'costs', jsonb_build_object('hoursPerInstance', 1, 'teamSize', 2, 'annual', 720), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Build quote',           'workMinutes', 30, 'systems', jsonb_build_array('Salesforce'),                                        'functionId', $5, 'roleId', $13::text, 'department', 'Account Executive'),
          jsonb_build_object('name', 'Customer signs',        'workMinutes',  5, 'waitMinutes', 2880,                                                              'functionId', $5, 'roleId', $13::text, 'department', 'Account Executive'),
          jsonb_build_object('name', 'Generate invoice',      'workMinutes', 15, 'systems', jsonb_build_array('NetSuite'),                                          'functionId', $2, 'roleId', $12::text, 'department', 'AR Manager'),
@@ -497,10 +526,9 @@ BEGIN
 
     -- SPANS People (offer + ID) -> Tech (hardware + accounts) -> Finance/AR (payroll setup)
     (gen_random_uuid(),
-     'people.lead@vesno.test', 'People Lead', 'Vesno', 'comprehensive',
-     34000, 7000, 40,
+     'people.lead@vesno.test', 'People Lead', 'Vesno',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Hire-to-onboard', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Hire-to-onboard', 'costs', jsonb_build_object('hoursPerInstance', 1, 'teamSize', 1, 'annual', 544), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Offer accepted',        'workMinutes', 10,                                                                                    'functionId', $11, 'roleId', $18::text, 'department', 'People Operations'),
          jsonb_build_object('name', 'Right-to-work check',   'workMinutes', 25, 'waitMinutes', 1440,                                                              'functionId', $11, 'roleId', $18::text, 'department', 'People Operations'),
          jsonb_build_object('name', 'Provision laptop',      'workMinutes', 45,                                                                                    'functionId', $10, 'roleId', $17::text, 'department', 'IT Engineer'),
@@ -513,10 +541,9 @@ BEGIN
 
     -- SPANS Customer Success (triage + reply) -> Tech (bug fix) escalation loop
     (gen_random_uuid(),
-     'cs.lead@vesno.test', 'CS Lead', 'Vesno', 'comprehensive',
-     22000, 5000, 55,
+     'cs.lead@vesno.test', 'CS Lead', 'Vesno',
      jsonb_build_object('rawProcesses', jsonb_build_array(
-       jsonb_build_object('name', 'Customer escalation', 'steps', jsonb_build_array(
+       jsonb_build_object('name', 'Customer escalation', 'costs', jsonb_build_object('hoursPerInstance', 1, 'teamSize', 1, 'annual', 352), 'steps', jsonb_build_array(
          jsonb_build_object('name', 'Triage ticket',         'workMinutes', 15, 'systems', jsonb_build_array('Zendesk'),                                            'functionId', $9,  'roleId', $15::text, 'department', 'Customer Success Manager'),
          jsonb_build_object('name', 'Reproduce + log bug',   'workMinutes', 45,                                                                                    'functionId', $10, 'roleId', $17::text, 'department', 'IT Engineer'),
          jsonb_build_object('name', 'Patch + release',       'workMinutes', 90, 'waitMinutes', 4320,                                                              'functionId', $10, 'roleId', $17::text, 'department', 'IT Engineer'),
@@ -524,18 +551,17 @@ BEGIN
        ))
      )),
      $1, $9, now(), now())
-  ) AS seed(id, contact_email, contact_name, company, diagnostic_mode,
-            total_annual_cost, potential_savings, automation_percentage,
-            diagnostic_data, operating_model_id, %I, created_at, updated_at)
+  ) AS seed(id, contact_email, contact_name, company,
+            flow_data, operating_model_id, %I, created_at, updated_at)
   -- Idempotency: match on the process name across BOTH JSONB shapes
   -- ("rawProcesses" current, "processes" legacy from earlier seeds).
   WHERE NOT EXISTS (
-    SELECT 1 FROM public.diagnostic_reports dr
+    SELECT 1 FROM public.processes dr
      WHERE dr.operating_model_id = seed.operating_model_id
        AND COALESCE(
-             dr.diagnostic_data->'rawProcesses'->0->>'name',
-             dr.diagnostic_data->'processes'->0->>'name'
-           ) = seed.diagnostic_data->'rawProcesses'->0->>'name'
+             dr.flow_data->'rawProcesses'->0->>'name',
+             dr.flow_data->'processes'->0->>'name'
+           ) = seed.flow_data->'rawProcesses'->0->>'name'
   )
   $SQL$,
     v_dr_fk_col, v_dr_fk_col

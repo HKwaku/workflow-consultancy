@@ -35,7 +35,7 @@ The migration was applied in two waves: first as 410 stubs (back-compat), then a
 - Snapshot-era surfaces are **physically deleted** (not 410-stubbed any more): redesign, cost-analysis, deal-analysis runs + analyses sub-routes, exports (PPTX / build guides / CSV), scorecard, target-state promote, team-survey, progress-save, follow-up nurture, /report, /cost-analysis, /deal-analysis, /build. See `README.md` for the full list and `docs/ARCHITECTURE.html` for the resulting shape.
 
 **Workspace UX**
-- `/workspace` hosts `DiagnosticClient` (the same shell `/process-audit` uses) and auto-opens the workspace overlay scoped to the user's default operating model. The graph view is the default tab.
+- `/workspace` hosts `DiagnosticClient` (the same shell `/process-audit` uses) and auto-opens the workspace overlay scoped to the user's **active operating model** (per-member preferred → org default; see [Operating models — multiple per org](#operating-models--multiple-per-org)). The graph view is the default tab.
 - Clicking a process anywhere dispatches **`vesno:open-process`** — `DiagnosticWorkspace` listens and runs the same silent-swap path the chat agent's `open_process` tool uses (no route change, no remount, chat thread intact, URL updated via `history.replaceState`).
 - The "Continue mapping" row above the chat input is **context-aware**: filtered by `dealId` > `operatingModelId` > user email via `/api/me/recent-processes?...`.
 - The view-only banner pill and the canned read-only chat greeting are gone — the agent silently switches between view and edit intent.
@@ -49,7 +49,7 @@ The migration was applied in two waves: first as 410 stubs (back-compat), then a
 3. [Top-level routes](#top-level-routes)
 4. [Module system (4 audience pillars)](#module-system-4-audience-pillars)
 5. [Diagnostic flow](#diagnostic-flow)
-6. [Chat agent (62 tools)](#chat-agent-62-tools)
+6. [Chat agent (router-selected toolsets)](#chat-agent-router-selected-toolsets)
 7. [Other AI agents](#other-ai-agents)
 8. [Model tiers](#model-tiers)
 9. [Report system](#report-system)
@@ -57,6 +57,7 @@ The migration was applied in two waves: first as 410 stubs (back-compat), then a
 11. [Portal & org admin](#portal--org-admin)
 12. [Entitlements & RBAC](#entitlements--rbac)
 13. [Chat persistence (sessions, messages, artefacts)](#chat-persistence-sessions-messages-artefacts)
+13b. [Outputs panel & artefact generation](#outputs-panel--artefact-generation)
 14. [Workflow exports](#workflow-exports)
 15. [Database schema](#database-schema)
 16. [API routes](#api-routes)
@@ -206,49 +207,61 @@ These pre-fill Screen 4 so users adjust rather than guess. Labels read "Reina es
 
 ---
 
-## Chat agent (62 tools)
+## Chat agent (router-selected toolsets)
 
-The diagnostic chat (`/api/diagnostic-chat`) is a LangGraph `StateGraph` with an agent + `ToolNode` loop. The agent uses Claude **Sonnet 4.6** (primary chat tier). Reina is the assistant persona; Vesno is the product brand surfaced in the audit gate.
+The diagnostic chat (`/api/diagnostic-chat`, SSE) runs an Anthropic tool-use loop in `lib/agents/chat/graph.js` (`runStreamingLoop`). The chat tier is Claude **Sonnet 4.6** unless an org model override is in scope. Reina is the assistant persona; Vesno is the product brand surfaced in the audit gate.
 
-Tool schemas live in `lib/agents/chat/tools.js`; an empty `lib/agents/chat/prompts/` directory is reserved for future per-tool prompt extraction (currently all prompt copy is in `lib/prompts.js`).
+`pickAgent` (`lib/agents/chat/router.js`) selects one of three toolsets per turn — there is no single "all tools" list:
 
-The deal-scoped tools (`search_deal_documents`, the `get_deal_*` / `list_deal_*` reads, and the `propose_*` mutations) only resolve when the chat session is bound to a `dealId` and `ctx.dealAccessVerified` is true — see [Deal data room](#deal-data-room--diligence-rag) below.
+| Agent | When | Toolset (`lib/agents/chat/tools.js`) | Count |
+|-------|------|--------------------------------------|------:|
+| **process** | a process is open, or onboarding (default) | `ALL_CHAT_TOOLS` | 70 |
+| **model** | an operating model anchored, no deal/process | `MODEL_AGENT_TOOLS` | 26 |
+| **deal** | a deal anchored, no process | `DEAL_AGENT_TOOLS` | 16 |
 
-```
-__start__ ──► agent ──tool_calls──► tools ──results──► agent ──no_calls──► __end__
-```
+Tools return result strings; the **client** applies canvas mutations via `processActions()`. The server is stateless w.r.t. canvas state — it only reads what the client passes in `processData`. Deal-scoped tools resolve only when the session is bound to a `dealId` and `ctx.dealAccessVerified` is true — see [Deal data room](#deal-data-room--diligence-rag).
 
-State: `messages[]` (append reducer) + `systemPrompt` (replace reducer). Tools return result strings; **client** applies state mutations via `processActions()`. The server is stateless w.r.t. canvas state — it only reads what the client passes in `processData`.
+> Counts are derived from the exported arrays in `tools.js`; keep this section in sync when adding/removing a tool (or regenerate from `ALL_CHAT_TOOLS.map(t => t.name)`).
 
-### All 62 tools (`lib/agents/chat/tools.js`)
-
-The first 48 are pillar-agnostic; the remaining 14 are deal-scoped (5 reads + 9 proposals).
+### `ALL_CHAT_TOOLS` — process / onboarding agent (70)
 
 **Step CRUD (6):** `add_step`, `update_step`, `remove_step`, `set_handoff`, `add_custom_department`, `replace_all_steps`
-
 **Connectors (4):** `add_connector`, `remove_connector`, `redirect_connector`, `insert_step_between`
-
 **Branches (5):** `set_branch_target`, `set_branch_probability`, `set_branch_label`, `remove_branch`, `add_branch`
-
 **Step ordering & metadata (8):** `reorder_step`, `set_process_name`, `set_process_definition`, `set_step_details`, `set_cost_input`, `set_bottleneck`, `set_frequency_details`, `set_pe_context`
-
 **Step systems (2):** `add_step_system`, `remove_step_system`
-
 **Checklist & departments (4):** `add_checklist_item`, `toggle_checklist_item`, `remove_checklist_item`, `remove_custom_department`
-
-**Triggers & snapshots (2):** `trigger_redesign`, `pin_flow_snapshot`
-
 **Read-only queries (5):** `get_bottlenecks`, `get_critical_path`, `get_step_metrics`, `get_cost_summary`, `get_recommendations`
-
-**Cross-report (2):** `list_reports`, `load_report_summary`
-
+**Cross-report (1):** `load_report_summary`
 **Cost editing (3):** `set_labour_rate`, `set_non_labour_cost`, `set_investment`
+**UI / navigation (2):** `highlight_step`, `open_process`
+**Discovery / proposal (3):** `undo_last_action`, `propose_change`, `ask_discovery`
+**Deal reads (6):** `search_deal_documents`, `get_deal_summary`, `list_deal_participants`, `list_deal_documents`, `list_deal_findings`, `list_deal_changes`
+**Deal proposers (5):** `propose_invite_participant`, `propose_reprocess_document`, `propose_link_participant_report`, `propose_upload_document`, `propose_undo_last_action`
+**Workspace proposers (4):** `propose_add_function`, `propose_add_role`, `propose_add_system`, `propose_workspace_bulk_setup`
+**Process lifecycle — Tier 1 (4):** `create_process`, `duplicate_process`, `file_process`, `delete_process`
+**Operating-model edit/delete — Tier 2 (7):** `propose_update_function`, `propose_move_function`, `propose_delete_function`, `propose_update_role`, `propose_delete_role`, `propose_update_system`, `propose_delete_system`
+**Artefact (1):** `emit_artefact` — see [Outputs panel & artefact generation](#outputs-panel--artefact-generation)
 
-**UI (2):** `highlight_step`, `open_panel`
+Tier 1/2 mirror the `propose_*` governance: the executor validates and emits a `workspace_proposal` SSE; the user clicks **Confirm** on a card in `DiagnosticWorkspace.jsx`, which fires the matching `POST`/`PATCH`/`DELETE` on `/api/operating-models/[id]/…`. Nothing is written server-side until that confirm. Target ids come from `list_model_processes` / the `<workspace_tree>` block (functions, roles, and systems are rendered with `[id]` so the agent can reference them).
 
-**Generation (2):** `generate_report`, `generate_cost`
+### `MODEL_AGENT_TOOLS` — model agent (26)
 
-**Misc (3):** `undo_last_action`, `propose_change`, `ask_discovery`
+`get_model_summary`, `get_function_heatmap`, `get_top_recommendations`, `get_top_bottlenecks`, `list_model_processes`, `load_report_summary`, `open_workspace_view`, `focus_function`, `open_process`, `propose_add_function`, `propose_add_role`, `propose_add_system`, `propose_workspace_bulk_setup`, `create_process`, `duplicate_process`, `file_process`, `delete_process`, `propose_update_function`, `propose_move_function`, `propose_delete_function`, `propose_update_role`, `propose_delete_role`, `propose_update_system`, `propose_delete_system`, `emit_artefact`, `ask_discovery`
+
+### `DEAL_AGENT_TOOLS` — deal agent (16)
+
+`get_deal_summary`, `list_deal_participants`, `list_deal_documents`, `list_deal_findings`, `list_deal_changes`, `search_deal_documents`, `load_report_summary`, `open_deal_view`, `focus_participant`, `open_process`, `propose_invite_participant`, `propose_reprocess_document`, `propose_link_participant_report`, `propose_upload_document`, `emit_artefact`, `ask_discovery`
+
+> **Removed in the living-workspace migration** (no longer in `tools.js`): `trigger_redesign`, `pin_flow_snapshot`, `generate_report`, `generate_cost`, `list_reports`, `open_panel`. AI improvements now land as inline `propose_change` rows; cost/recommendations derive live; there is no terminal "generate" step.
+
+### Deliberately NOT agent-accessible (governance boundary)
+
+The chat agent has **no** tools for org/account governance: model allowlist + default model, BYO API keys, token budget, org membership, or GDPR account-deletion. These are security/billing controls and stay manual in org settings — an LLM agent must not be able to rotate keys, change budgets, or delete accounts. This is an intentional exclusion, not a coverage gap. Connector-binding credentials (data-room sources) are likewise manual-only.
+
+### New backing endpoints (Tier 1)
+
+`POST /api/operating-models/[id]/processes` (create, or duplicate when `source_process_id` is supplied) and `DELETE /api/operating-models/[id]/processes/[processId]` were added for the process-lifecycle tools; both `requireAuth` + `resolveModelAccess` like their siblings. Repo helpers: `createModelProcess` / `duplicateModelProcess` / `deleteModelProcess` in `lib/operatingModel/repo.js`. The same change fixed a latent bug: the capability routes imported `createFunction`/`updateFunction`/`deleteFunction`, which `repo.js` never exported (manual add/edit/delete of a function 500'd at runtime) — now exported as aliases of the `*Capability` functions.
 
 ### Mutation tracking
 
@@ -527,6 +540,12 @@ Route: `/org-admin` (`app/org-admin/page.jsx`). The route shell mounts `OrgAdmin
 
 Analytics moved to `components/workspace/AnalyticsCanvasPanel.jsx` and renders natively in the canvas. Deals and settings live in chat-rail popovers reachable via `/workspace/map?openDeals=1` / `?openSettings=1`.
 
+### Responsive / mobile
+
+The app ships a deliberate responsive layer (~30 `@media` blocks in `public/styles/diagnostic.css`; primary breakpoint `@media (max-width: 768px)` ~line 19466): rail slide panels go full-bleed (`.s7-rail-pane` → 100vw/100vh, overriding the JS inline anchor), rail buttons enlarge, scorecards/checklists stack, modals are viewport-bounded, and secondary zoom/close controls hit a 40px touch target. `env(safe-area-inset-*)` handles notches. JS side: a `useIsMobile()` hook (768px) drives a `mobileView` chat/canvas toggle, and `MobileViewGate` fronts the flow/report surfaces with a "best viewed on desktop" opt-in.
+
+This layer was previously inert: `app/layout.jsx` had no viewport meta, so phones used a ~980px layout viewport and no breakpoint matched. Fixed via `export const viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' }` in `app/layout.jsx` (`viewport-fit=cover` is required for the existing safe-area-inset rules to take effect; no `maximum-scale`/`user-scalable=no`, so pinch-zoom stays). **Apply mobile fixes by extending the existing 768px block, not by inventing new breakpoints.**
+
 ---
 
 ## Entitlements & RBAC
@@ -568,6 +587,154 @@ Artefacts pin durable moments. Created on:
 - User pin via `pin_flow_snapshot` tool
 
 Rendered as pills in the chat history rail. Hydrate on report edit and on cold-load via localStorage fallback (for pre-report state where there's no `report_id` yet).
+
+---
+
+## Outputs panel & artefact generation
+
+A persistent, model-scoped home for generated content that does not fit the canonical model schema (tables, docs, code, datasets, diagrams, project plans) - the equivalent of the artefacts panel in a Claude chat. Emitting an artefact never mutates the canonical model.
+
+### One list (rail slider) + a render-only canvas
+
+There is a single list of artefacts and a single place they render. The chat rail's **Artefacts** slider is the one list: an **Outputs** group of persistent `workspace_artefacts` (latest of each `meta.supersedes` lineage) sits alongside the session-computed snapshots/reports, so every artefact, however produced, is in one place. The rail icon's badge/count is the combined total.
+
+Selecting a generated output sets `window.__vesnoPendingOutputArtefact`, dispatches `vesno:open-workspace` (`scope:'outputs'`) + `vesno:open-output-artefact`, and the **Outputs** canvas renders just that artefact. The Outputs scope tab still exists at `/workspace?view=outputs` (scope id `outputs`, `components/workspace/WorkspaceScopeNav.jsx`) and is rendered by `components/workspace/WorkspaceOutputsTab.jsx` inside the embedded chat canvas when `effectiveCanvasScope === 'outputs'`, but it is now **render-only**: its old left-hand artefact list/sidebar was removed (the rail slider owns the list). `WorkspaceOutputsTab` keeps a pending-selection ref (seeded from `window.__vesnoPendingOutputArtefact`) so the requested artefact wins over select-newest even when the tab mounts from the same click, plus a `vesno:open-output-artefact` listener for the already-mounted case. The canvas is a single flex column with one scroll region (`.ws-out-body` via the `ws-out-tab--full` modifier) — the earlier nested 72vh/70vh boxes that each grew their own scrollbar are gone. Emitting an artefact never mutates the canonical model.
+
+### `emit_artefact` tool + executor
+
+Chat tool `emit_artefact` lives in `lib/agents/chat/tools.js` and is added to `ALL_CHAT_TOOLS`, `MODEL_AGENT_TOOLS`, and `DEAL_AGENT_TOOLS`. Spec-based input: `{ skill, title, spec, context, content? (only for skill="raw"), language?, supersedes? }`. The agent does NOT write the artefact body itself (except `raw`); it picks a skill and hands a brief to a specialist sub-agent. The executor is the `emit_artefact` case in `lib/agents/chat/graph.js`. The model the artefact binds to is resolved centrally by `resolveActiveModelId` (graph.js): session `operatingModelId` → the open process's `operating_model_id` (process chats, ownership-checked) → the signed-in user's **active operating model** (`resolveDefaultModelForUser`: per-member preferred → org default).
+
+**Text/structured skills** generate synchronously in the chat turn, then the executor emits an SSE `artefact` event and `DiagnosticWorkspace` dispatches `vesno:artefact-created` so a mounted Outputs panel refreshes live.
+
+**Office skills (`.pptx`/`.docx`/`.xlsx`) are async** (a synchronous sandbox build took minutes and blocked the chat). The executor: creates a placeholder `workspace_artefacts` row with `meta.build.status = 'building'`, emits the `artefact` SSE immediately (it shows in Outputs as "Building…"), enqueues an `artefact/office.requested` Inngest event, and returns to the chat in ~1s. The **`buildOfficeArtefact`** Inngest worker (`lib/inngest/functions/`) runs the slow model+sandbox build off the request path via the shared `runOfficeArtefactBuild` helper (`lib/operatingModel/officeArtefactBuild.js`): generate → upload bytes → set `meta.file` + `build.status='ready'` (or `'failed'` with an error) → meter tokens. `WorkspaceOutputsTab` polls every 9s while any row is `building` and stops when none are, so the finished file appears on its own. If Inngest is **not** configured, `emit_artefact` falls back to running `runOfficeArtefactBuild` inline (that path waits, but the file still completes). A download is only ever offered when a real `meta.file.path` exists — a failed/incomplete build shows an honest "didn't finish — regenerate" state, never a JSON body saved as `.pptx`.
+
+### Artefact sub-agent (`lib/agents/artefacts/generate.js`)
+
+A focused, non-conversational one-shot generator. **Per-skill model tier** (`modelTierForSkill` in `generate.js`), not Opus-for-everything (that was the dominant emission-latency cause): the common text/table/csv/diagram/code skills run on **Haiku 4.5** (`FAST_MODEL_ID`) — ~3–5× faster, and the one repair pass is also Haiku-fast; a small `DEEP_SKILLS` set (`business_case`, `board_pack`, `qofe_summary`, `decision_memo`, `target_operating_model`, `project_charter`, `scenario_model`, and the structured Gantts) stays on **Opus 4.7** (`DEEP_MODEL_ID`); **office** skills run on **Sonnet 4.6** (`CHAT_MODEL_ID`, no adaptive thinking — building `python-pptx`/`docx`/`openpyxl` is mechanical codegen, not deep reasoning). `emit_artefact` no longer forces the chat-session model onto the specialist — the skill tier decides; BYO key still passes through. `max_tokens` 8000; no `temperature`. Static per-skill system prompt is prompt-cached (`cache_control: ephemeral`). `jsonSchema` skills use structured outputs (schema-valid first-shot); others validate→repair-once; refusals fail fast. Token usage **is** metered into the org ledger (`meterArtefact` for the text path; the office worker meters after build) — no longer a follow-up.
+
+### Skill registry (`lib/agents/artefacts/skills.js`)
+
+A skill is the unit of specialisation: it tells the sub-agent what to produce and how to validate it. `ARTEFACT_SKILLS` is the registry; `skillIds()` (registry keys + `raw`) is the enum the `emit_artefact` tool exposes; `skillCatalogue()` is the one-line "id - whenToUse" digest injected into the tool description so the model can pick.
+
+**Skill object shape:**
+
+| Field | Required | Purpose |
+|-------|----------|---------|
+| `id` | yes | Stable key; also the `skill` enum value on `emit_artefact` |
+| `label` | yes | Human label shown in the Outputs list |
+| `type` | yes | Artefact `type` written to `workspace_artefacts.type` - drives which renderer `WorkspaceOutputsTab` uses |
+| `language` | no | Syntax hint for `type: code` (e.g. `sql`) |
+| `whenToUse` | yes | One line; aggregated into the tool description so the agent routes correctly |
+| `instructions` | yes | The format contract handed to the sub-agent as its system prompt body |
+| `validate(content)` | yes | `{ ok, content?, error? }` - structural check + cheap auto-repair (fence-strip etc.); a fail triggers the one repair pass with `error` fed back |
+| `jsonSchema` | no | When present, the sub-agent uses structured outputs (`output_config.format`) so the output is schema-valid first-shot |
+
+**Registered skills — 47, plus the special `raw` (48 `emit_artefact` enum values).** `mode`: `structured` = ships a `jsonSchema` (schema-valid first-shot); `validate→repair` = one-shot text + validate-once; `office` = built **async** by the `buildOfficeArtefact` Inngest worker (code-execution sandbox → binary in Storage; placeholder row flips building→ready/failed); `raw` = no sub-agent (the agent supplies `content`).
+
+_Plans & diagrams_
+
+| `id` | output | mode | When to use |
+|------|--------|------|-------------|
+| `gantt` | `gantt` | structured | timeline / project plan with phases, dependencies, milestones |
+| `hundred_day_plan` | `gantt` | structured | post-deal Day-1 / 100-day integration plan |
+| `automation_roadmap` | `gantt` | structured | initiatives sequenced by ROI / dependency |
+| `flow_diagram` | `mermaid` | validate→repair | process flow / decision tree / system diagram |
+| `kpi_tree` | `mermaid` | validate→repair | KPI / driver tree decomposing a top metric |
+| `capability_map` | `mermaid` | validate→repair | value-chain / business-capability map |
+| `swimlane` | `mermaid` | validate→repair | cross-functional process as swimlanes |
+| `sequence_diagram` | `mermaid` | validate→repair | interaction/sequence between actors or systems |
+| `er_diagram` | `mermaid` | validate→repair | data model / entity-relationship diagram |
+| `roadmap_timeline` | `mermaid` | validate→repair | high-level themed roadmap (not a task Gantt) |
+| `quadrant_2x2` | `mermaid` | validate→repair | 2x2 prioritisation (effort vs impact, …) |
+
+_Docs & memos (markdown)_
+
+| `id` | mode | When to use |
+|------|------|-------------|
+| `one_pager` | validate→repair | concise exec summary / one-pager |
+| `policy` | validate→repair | policy / SOP / controlled-process doc |
+| `decision_memo` | validate→repair | memo framing a decision with options + recommendation |
+| `raci` | validate→repair | RACI matrix across activities and roles |
+| `project_charter` | validate→repair | initiative charter: goal/scope/stakeholders/milestones |
+| `business_case` | validate→repair | investment justification: costs, benefits, options |
+| `swot` | validate→repair | strengths / weaknesses / opportunities / threats |
+| `board_pack` | validate→repair | board / steering-committee update |
+| `test_plan` | validate→repair | test / validation plan for a change |
+| `qofe_summary` | validate→repair | quality-of-earnings adjustments summary |
+| `target_operating_model` | validate→repair | TOM blueprint |
+| `cutover_runbook` | validate→repair | go-live / cutover runbook with rollback |
+| `status_report` | validate→repair | periodic project status / RAG |
+| `custom` | validate→repair | fallback for anything not matching a specific skill |
+
+_Structured data (`table` JSON, or `csv`)_
+
+| `id` | output | When to use |
+|------|--------|-------------|
+| `comparison_table` | table | side-by-side comparison on criteria |
+| `risk_register` | table | risks: likelihood / impact / owner / mitigation |
+| `scenario_model` | table | what-if / financial model: scenarios x metrics |
+| `raid_log` | table | risks, assumptions, issues, dependencies |
+| `stakeholder_map` | table | interest vs influence, stance, engagement |
+| `okrs` | table | objectives and key results |
+| `comms_plan` | table | stakeholder communications plan |
+| `data_dictionary` | table | fields/columns of a dataset or table |
+| `red_flag_register` | table | diligence findings: severity / evidence / recommendation |
+| `dd_checklist` | table | diligence request list with received/missing status |
+| `benefits_realisation` | table | benefit / metric / baseline / target / owner / timing |
+| `change_impact` | table | change-impact across processes/systems/people |
+| `decision_log` | table | decision / rationale / owner / date / status |
+| `dataset` | csv | tabular dataset for spreadsheet export |
+
+_Analytical / code_
+
+| `id` | output | When to use |
+|------|--------|-------------|
+| `sql` | `code` (`sql`) | a SQL query (cohort, metric, extract) |
+
+_Office files (async `buildOfficeArtefact` Inngest worker → code-execution sandbox → binary in Storage; Sonnet 4.6)_
+
+| `id` | output | When to use |
+|------|--------|-------------|
+| `deck` | `.pptx` | PowerPoint — exec readout, steering pack, diligence summary |
+| `document` | `.docx` | formatted Word report / SOP / board memo |
+| `workbook` | `.xlsx` | Excel model, register, or multi-sheet dataset |
+| `ic_memo` | `.docx` | investment-committee / deal memo |
+| `process_sop` | `.docx` | controlled SOP document |
+| `synergy_model` | `.xlsx` | deal synergy model (cost + revenue, phasing) |
+| `cost_baseline` | `.xlsx` | per-function cost baseline with rollups |
+
+_Special_
+
+| `id` | When to use |
+|------|-------------|
+| `raw` | the agent supplies `content` directly; the sub-agent is skipped entirely |
+
+The three `gantt`-type skills share one structured-output schema (`GANTT_SCHEMA` in `skills.js`, reused via `jsonSchema: GANTT_SCHEMA`); their `okGanttData` validator also enforces the *semantic* bar (dependency density, milestones, a date anchor) a JSON Schema can't. Office skills bypass `jsonSchema`/`validate` entirely — they route through the async `buildOfficeArtefact` worker → `generateOfficeArtefact` (code execution), validated by PK-zip magic bytes. Everything else rides the validate→repair-once loop; `csv`/`table`/`json` are intentionally schema-free.
+
+**Adding a skill** - one file, no plumbing elsewhere:
+
+1. Add an entry to `ARTEFACT_SKILLS` with the shape above. `type` must be one the renderer handles (`markdown`/`code`/`table`/`csv`/`json`/`html`/`svg`/`mermaid`/`gantt`); reuse an existing renderer or add a `type` branch in `WorkspaceOutputsTab.jsx`.
+2. Write a `validate()` (reuse `okText`/`okJson`/`okTable`/`okCsv`/`okMermaid`/`okCode`, or a bespoke one like `okGanttData`).
+3. Optionally add a `jsonSchema` (kept within the structured-outputs subset: no recursion, no min/max/length, `additionalProperties:false` on every object) to remove the repair round-trip.
+
+It is then automatically in the `emit_artefact` enum + catalogue and usable by every agent that has the tool - no `tools.js`/`graph.js` edit needed.
+
+### Storage (`workspace_artefacts`)
+
+`supabase/migration-workspace-artefacts.sql` (migration #39) creates `public.workspace_artefacts`: columns `id`, `operating_model_id` (FK → operating_models, NOT NULL), `session_id` (nullable FK → chat_sessions ON DELETE SET NULL), `type` (free text, no CHECK - schema-light by design), `title`, `content` (string), `language`, `source` (`agent`|`user`), `meta` jsonb, `created_by_email`, `created_at`, `updated_at`. RLS: any member of the model's org may READ and WRITE (NOT admin-gated, because emitting an artefact never mutates the canonical model). Version lineage is tracked via `meta.supersedes` (the id of the artefact a revision replaces) - no migration needed. Repo helper: `lib/operatingModel/artefacts.js` (`listArtefacts`, `createArtefact`, `updateArtefact`, `deleteArtefact`).
+
+### API routes
+
+Auth + `resolveModelAccess`, member access (not admin-gated):
+
+- `GET /api/operating-models/[id]/artefacts` - list (newest first)
+- `POST /api/operating-models/[id]/artefacts` - manual create
+- `PATCH /api/operating-models/[id]/artefacts/[artefactId]` - rename
+- `DELETE /api/operating-models/[id]/artefacts/[artefactId]` - delete
+
+### Rendering
+
+`WorkspaceOutputsTab.jsx` renders by `type`: markdown/code via `react-markdown` + `rehype-highlight`; `table`/`csv` parsed to HTML tables; `json` pretty-printed; `html`/`svg` in a sandboxed iframe; `mermaid` via a dynamically-imported `mermaid` renderer with pan/zoom; `gantt` via an interactive `components/workspace/GanttChart.jsx`. GanttChart is a real interactive chart (not an image) modeled on `WorkspaceGraph`'s interaction grammar: hover/click a task highlights its full dependency lineage and dims the rest, SVG arrowed dependency connectors, a Critical-Path-Method-computed critical path, a "today" marker, month bands, and timeline zoom. Legacy `mermaid`-type Gantt artefacts are auto-parsed into the interactive chart via `parseMermaidGantt`. Version lineage UI: the list shows the latest of each chain with a `vN` badge plus a version switcher, derived from `meta.supersedes`.
 
 ---
 
@@ -632,6 +799,16 @@ API: `POST /api/generate-workflow-export` with `{ reportId, platform }`. Cost-re
 **Older migrations** (`scripts/`): `migration-v2.sql`, `migration-add-segment.sql`, `migration-add-high-risk-ops-segment.sql`, `migration-add-contributor-emails.sql`, `migration-create-diagrams-bucket.sql`, `migration-deals.sql`, `migration-deal-flows.sql`, `migration-schema-fixes*.sql` (1, 2, 3). Apply in order if bootstrapping a new database.
 
 ---
+
+## Operating models — multiple per org
+
+Originally one model per org (`organizations.default_operating_model_id`) with no create path, so a signed-in user was permanently pinned to it (Home / New chat always snapped back). Now an org can hold many operating models and each member has an **active model**.
+
+- **Schema:** `organization_members.preferred_operating_model_id` (migration **41**, `migration-member-preferred-model.sql`; FK → `operating_models`, `ON DELETE SET NULL` so deleting a model cleanly reverts affected members to the default).
+- **Resolution:** `resolveDefaultModelForUser` (`lib/operatingModel/auth.js`) returns the member's preferred model when set **and** still in the same org, else the org default. It's a **separate best-effort second query** — on a DB where migration 41 hasn't run the select 400s and it silently falls back to the default, so resolution never breaks pre-migration. Returns `{ modelId, organizationId, isAdmin, defaultModelId, isDefault }`. Every surface (workspace, chat agent `resolveActiveModelId`, artefacts, Home, New chat) follows because they all route through this resolver.
+- **API** `/api/me/operating-models`: `GET` → `{ models[], activeModelId, defaultModelId, organizationId, isAdmin }`; `POST { name }` → create a model in the caller's org and auto-activate it; `PUT { modelId|null }` → set the active model (org-validated; `null` resets to the org default). Helpers `listOrgModels` / `setMemberPreferredModel` / `createOperatingModel` in `lib/operatingModel/repo.js`.
+- **Switcher UI:** `components/workspace/WorkspaceModelsTab.jsx` (the Standard-scope model picker in `DiagnosticWorkspace`): lists org models with **Active** / **Default** badges, a **"+ New model"** action (prompt → POST → lands on the fresh model), and a model click persists the choice via `PUT` so it survives Home / New chat (not just in-canvas navigation).
+- **Operational gotcha:** migration 41 must be applied (`npm run migrate`) for switching to take effect. Pre-migration, GET/POST still work but `PUT` 502s and resolution stays on the org default (safe degrade, no breakage).
 
 ## API routes
 
@@ -936,13 +1113,15 @@ If you upload documents while `VOYAGE_API_KEY` is unset and add it later, re-tri
 
 ## Background workers (Inngest)
 
-Heavy work (parse + chunk + embed) runs in **Inngest** functions registered at `/api/inngest`. Synchronous routes stay snappy; async work survives timeouts and retries.
+Heavy work (deal-doc parse + chunk + embed; connector sync; **office-artefact builds**) runs in **Inngest** functions registered at `/api/inngest`. Synchronous routes stay snappy; async work survives timeouts and retries.
 
 ### Configured functions
 
 | Function id | Trigger event | What it does |
 |-------------|---------------|--------------|
 | `process-deal-document` | `deal-document.uploaded` | Downloads bytes from storage → extracts text (`mammoth` / `officeparser` / `xlsx`) → chunks (`lib/inngest/functions/chunker.js`) → inserts `deal_document_chunks` → embeds via Voyage in batches of 32 → marks `deal_documents.status = ready`. Each step is `step.run(...)`-wrapped for resumability. Concurrency limit 4, 3 retries. |
+| `sync-connector-binding` | `connector-binding.sync-requested` + `*/15 * * * *` cron | Pulls delta changes from a linked data-room source, upserts `deal_documents`, fans out `deal-document.uploaded`. Concurrency 5, 1 retry. |
+| `build-office-artefact` | `artefact/office.requested` | Async `.pptx`/`.docx`/`.xlsx` build (the user no longer waits — `emit_artefact` queues this and returns). One `step.run` calls `runOfficeArtefactBuild` (`lib/operatingModel/officeArtefactBuild.js`): generate (Sonnet 4.6 + code-execution sandbox) → upload bytes → set `meta.file` + `build.status='ready'`, or `'failed'` on any error. Concurrency 5, 1 retry. Because the build is one long single step, `app/api/inngest/route.js` `maxDuration` is **300s** (it must cover that step; a 60s-capped host would kill a multi-minute build mid-step and the row would stay `building`). `WorkspaceOutputsTab` polls every 9s while any row is `building`. |
 
 ### Env
 
@@ -952,7 +1131,7 @@ Heavy work (parse + chunk + embed) runs in **Inngest** functions registered at `
 | `INNGEST_SIGNING_KEY` | Required by the `/api/inngest` serve handler to verify cloud invocations. |
 | `INNGEST_DEV` | Set when running `npx inngest-cli@latest dev` locally — bypasses signing. |
 
-If neither key is configured, `lib/inngest/client.js`'s `sendEvent()` is a no-op — the document upload row stays at `pending` until manually retriggered. Useful for envs without queue infra.
+If neither key is configured, `lib/inngest/client.js`'s `sendEvent()` is a no-op — the document upload row stays at `pending` until manually retriggered. Office-artefact emission detects the skipped enqueue and **falls back to building inline** (synchronous, that path waits) so the file still completes without queue infra.
 
 ---
 
@@ -1420,7 +1599,7 @@ The chat-rail-driven `/workspace/map` surface replaced the earlier "portal dashb
 | File | Purpose |
 |------|---------|
 | `lib/agents/models.js` | `getFastModel`, `getChatModel`, `getDeepModel` |
-| `lib/agents/chat/graph.js` | Chat agent StateGraph + executor |
+| `lib/agents/chat/graph.js` | Chat agent Anthropic tool-use loop + executor |
 | `lib/agents/chat/tools.js` | 62 tool schemas (48 base + 14 deal-scoped) |
 | `lib/agents/redesign/graph.js` | Redesign planner + repair + summarizer |
 | `lib/agents/redesign/tools.js` | 3 redesign tools + `validateRedesign()` |

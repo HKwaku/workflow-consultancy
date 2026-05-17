@@ -35,13 +35,12 @@ const DealWorkspaceCanvasClient = dynamic(() => import('@/app/deals/[id]/workspa
 // renders when the user picks those scopes.
 import WorkspaceScopeNav from '@/components/workspace/WorkspaceScopeNav';
 import WorkspaceDealsTab from '@/components/workspace/WorkspaceDealsTab';
-import WorkspaceAnalyticsTab from '@/components/workspace/WorkspaceAnalyticsTab';
+import WorkspaceOutputsTab from '@/components/workspace/WorkspaceOutputsTab';
 import WorkspaceModelsTab from '@/components/workspace/WorkspaceModelsTab';
 import RecentProcessesRow from '@/components/diagnostic/chat/RecentProcessesRow';
 import SettingsRailButton from '@/components/diagnostic/chat/SettingsRailButton';
 import DocsRailButton from '@/components/diagnostic/chat/DocsRailButton';
 import AnalyticsRailButton from '@/components/diagnostic/chat/AnalyticsRailButton';
-import AnalyticsCanvasPanel from '@/components/workspace/AnalyticsCanvasPanel';
 import DealContextChip from '@/components/diagnostic/chat/DealContextChip';
 import FlowPresenceBar from '@/components/diagnostic/chat/FlowPresenceBar';
 import { useFlowPresence } from '@/lib/useFlowPresence';
@@ -1293,32 +1292,58 @@ function WorkspaceProposalCards({ proposals, accessToken }) {
   const [stateById, setStateById] = useState({});
   if (!proposals?.length) return null;
 
+  // Map a proposal kind to the REST call that commits it. add_* create
+  // (POST collection); Tier-1/2 also edit (PATCH item) and remove
+  // (DELETE item). Returns { method, url, body }.
+  const resolveCall = (p) => {
+    const base = `/api/operating-models/${p.operatingModelId}`;
+    const pl = p.payload || {};
+    switch (p.kind) {
+      case 'add_function':
+        return { method: 'POST', url: `${base}/functions`, body: {
+          name: pl.name, parent_function_id: pl.parent_function_id || null, description: pl.description || null,
+        } };
+      case 'add_role':
+        return { method: 'POST', url: `${base}/roles`, body: pl };
+      case 'add_system':
+        return { method: 'POST', url: `${base}/systems`, body: pl };
+      // Tier 1 — process lifecycle
+      case 'create_process':
+        return { method: 'POST', url: `${base}/processes`, body: { name: pl.name, function_id: pl.function_id || null } };
+      case 'duplicate_process':
+        return { method: 'POST', url: `${base}/processes`, body: { source_process_id: pl.source_process_id, name: pl.name || null } };
+      case 'file_process':
+        return { method: 'PATCH', url: `${base}/processes/${pl.process_id}`, body: { function_id: pl.function_id ?? null } };
+      case 'delete_process':
+        return { method: 'DELETE', url: `${base}/processes/${pl.process_id}`, body: null };
+      // Tier 2 — model edit / delete (move_function emits kind=update_function)
+      case 'update_function':
+        return { method: 'PATCH', url: `${base}/functions/${pl.function_id}`, body: pl.patch || {} };
+      case 'delete_function':
+        return { method: 'DELETE', url: `${base}/functions/${pl.function_id}`, body: null };
+      case 'update_role':
+        return { method: 'PATCH', url: `${base}/roles/${pl.role_id}`, body: pl.patch || {} };
+      case 'delete_role':
+        return { method: 'DELETE', url: `${base}/roles/${pl.role_id}`, body: null };
+      case 'update_system':
+        return { method: 'PATCH', url: `${base}/systems/${pl.system_id}`, body: pl.patch || {} };
+      case 'delete_system':
+        return { method: 'DELETE', url: `${base}/systems/${pl.system_id}`, body: null };
+      default:
+        throw new Error(`Unknown workspace proposal kind: ${p.kind}`);
+    }
+  };
+
   const apply = async (idx, p) => {
     setStateById((s) => ({ ...s, [idx]: { busy: true } }));
     try {
-      let url;
-      let body;
-      if (p.kind === 'add_function') {
-        url = `/api/operating-models/${p.operatingModelId}/functions`;
-        body = {
-          name: p.payload?.name,
-          parent_function_id: p.payload?.parent_function_id || null,
-          description: p.payload?.description || null,
-        };
-      } else if (p.kind === 'add_role') {
-        url = `/api/operating-models/${p.operatingModelId}/roles`;
-        body = p.payload || {};
-      } else if (p.kind === 'add_system') {
-        url = `/api/operating-models/${p.operatingModelId}/systems`;
-        body = p.payload || {};
-      } else {
-        throw new Error(`Unknown workspace proposal kind: ${p.kind}`);
+      const { method, url, body } = resolveCall(p);
+      const opts = { method, headers: {} };
+      if (body != null) {
+        opts.headers['Content-Type'] = 'application/json';
+        opts.body = JSON.stringify(body);
       }
-      const r = await apiFetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      }, accessToken);
+      const r = await apiFetch(url, opts, accessToken);
       if (!r.ok) {
         const data = await r.json().catch(() => ({}));
         throw new Error(data?.error || `Apply failed (${r.status})`);
@@ -1333,27 +1358,50 @@ function WorkspaceProposalCards({ proposals, accessToken }) {
     }
   };
 
+  const isDestructive = (k) => k === 'delete_process' || k === 'delete_function' || k === 'delete_role' || k === 'delete_system';
+
   const cancel = (idx) => setStateById((s) => ({ ...s, [idx]: { done: true, cancelled: true } }));
 
   const titleFor = (p) => {
-    if (p.kind === 'add_function') return `Add function: ${p.payload?.name || '?'}`;
-    if (p.kind === 'add_role')     return `Add role: ${p.payload?.name || '?'}`;
-    if (p.kind === 'add_system')   return `Add system: ${p.payload?.name || '?'}`;
-    return p.kind;
+    const pl = p.payload || {};
+    switch (p.kind) {
+      case 'add_function':       return `Add function: ${pl.name || '?'}`;
+      case 'add_role':           return `Add role: ${pl.name || '?'}`;
+      case 'add_system':         return `Add system: ${pl.name || '?'}`;
+      case 'create_process':     return `New process: ${pl.name || '?'}`;
+      case 'duplicate_process':  return `Duplicate process${pl.name ? `: ${pl.name}` : ''}`;
+      case 'file_process':       return pl.function_id ? 'File process under a function' : 'Unfile process';
+      case 'delete_process':     return `Delete process: ${pl.process_name || pl.process_id || '?'}`;
+      case 'update_function':    return pl.patch && 'parent_function_id' in pl.patch && Object.keys(pl.patch).length === 1
+        ? 'Move function' : `Edit function${pl.patch?.name ? `: → ${pl.patch.name}` : ''}`;
+      case 'delete_function':    return `Delete function: ${pl.function_name || pl.function_id || '?'}`;
+      case 'update_role':        return `Edit role${pl.patch?.name ? `: → ${pl.patch.name}` : ''}`;
+      case 'delete_role':        return `Delete role: ${pl.role_name || pl.role_id || '?'}`;
+      case 'update_system':      return `Edit system${pl.patch?.name ? `: → ${pl.patch.name}` : ''}`;
+      case 'delete_system':      return `Delete system: ${pl.system_name || pl.system_id || '?'}`;
+      default:                   return p.kind;
+    }
   };
 
   const subtitleFor = (p) => {
+    const pl = p.payload || {};
     const bits = [];
     if (p.kind === 'add_function') {
-      if (p.payload?.parent_function_id) bits.push('nested under existing function');
-      if (p.payload?.description) bits.push(p.payload.description);
+      if (pl.parent_function_id) bits.push('nested under existing function');
+      if (pl.description) bits.push(pl.description);
     } else if (p.kind === 'add_role') {
-      if (p.payload?.headcount != null) bits.push(`${p.payload.headcount} FTE`);
-      if (p.payload?.owner_email) bits.push(p.payload.owner_email);
+      if (pl.headcount != null) bits.push(`${pl.headcount} FTE`);
+      if (pl.owner_email) bits.push(pl.owner_email);
     } else if (p.kind === 'add_system') {
-      if (p.payload?.vendor) bits.push(`vendor: ${p.payload.vendor}`);
-      if (p.payload?.category) bits.push(p.payload.category);
-      if (p.payload?.layer) bits.push(p.payload.layer);
+      if (pl.vendor) bits.push(`vendor: ${pl.vendor}`);
+      if (pl.category) bits.push(pl.category);
+      if (pl.layer) bits.push(pl.layer);
+    } else if (p.kind === 'create_process' && pl.function_id) {
+      bits.push('filed under a function');
+    } else if (p.kind?.startsWith('update_') && pl.patch) {
+      bits.push(Object.keys(pl.patch).join(', '));
+    } else if (isDestructive(p.kind)) {
+      bits.push('This cannot be undone.');
     }
     return bits.join(' · ');
   };
@@ -1371,7 +1419,7 @@ function WorkspaceProposalCards({ proposals, accessToken }) {
             {st.error && <div className="s7-deal-proposal-error">{st.error}</div>}
             <div className="s7-deal-proposal-actions">
               {st.done
-                ? <span className="s7-deal-proposal-done">{st.cancelled ? 'Cancelled' : 'Added'}</span>
+                ? <span className="s7-deal-proposal-done">{st.cancelled ? 'Cancelled' : (isDestructive(p.kind) ? 'Deleted' : 'Applied')}</span>
                 : (
                   <>
                     <button
@@ -1380,7 +1428,7 @@ function WorkspaceProposalCards({ proposals, accessToken }) {
                       onClick={() => apply(idx, p)}
                       disabled={!!st.busy}
                     >
-                      {st.busy ? 'Adding…' : 'Confirm'}
+                      {st.busy ? 'Working…' : (isDestructive(p.kind) ? 'Confirm delete' : 'Confirm')}
                     </button>
                     <button
                       type="button"
@@ -1913,21 +1961,10 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     return () => { cancelled = true; };
   }, [accessToken, dealId, setDeal]);
 
-  // Mobile-only: when AnalyticsRailButton dispatches the event we mount
-  // the analytics embed inline in the canvas column. Tapping the Chat
-  // tab still hides it (data-mobile-view selectors), tapping the close
-  // button clears it.
-  const [mobileAnalyticsOpen, setMobileAnalyticsOpen] = useState(false);
   // (Per-device desktop-hint flags moved to the shared MobileViewGate
   // component — keys: vesno_mobile_view_acknowledged.)
-  useEffect(() => {
-    const onOpenAnalytics = () => {
-      setMobileAnalyticsOpen(true);
-      setMobileView('canvas');
-    };
-    window.addEventListener('vesno:open-analytics-canvas', onOpenAnalytics);
-    return () => window.removeEventListener('vesno:open-analytics-canvas', onOpenAnalytics);
-  }, []);
+  // Analytics is consolidated into the workspace Analysis tab; the rail
+  // button now opens that view, so there is no separate analytics embed.
 
   // Workspace teams + functions — fetched once when the chat is scoped
   // to an operating model. Powers the step-inspector "Team" picker so a
@@ -2046,6 +2083,14 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
         setCanvasScope('deals');
         const did = e?.detail?.dealId || dealId;
         if (did) setCanvasDealId(did);
+        return;
+      }
+      if (hint === 'outputs') {
+        // Rail Artefacts slider routed a generated artefact here. The
+        // Outputs tab resolves its own model + honours the pending
+        // selection (window.__vesnoPendingOutputArtefact) on mount.
+        overlaySeededRef.current = true;
+        setCanvasScope('outputs');
         return;
       }
       if (!overlaySeededRef.current) {
@@ -4182,6 +4227,10 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     // Bulk-setup proposals: a single SSE event carrying many items at once.
     // Rendered as a per-row review card with one "Apply all" action.
     const workspaceBulkForTurn = [];
+    // Schema-free artefacts the agent emitted this turn (saved server
+    // side). Surfaced as a chip on the message; the Artefacts panel
+    // shows the full content.
+    const artefactsForTurn = [];
 
     const incompleteSummary = steps
       .map((s, i) => {
@@ -4212,7 +4261,11 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       // frame her questions ("you're mapping a Finance / AR process").
       functionPath:     selectedFunctionPath     || undefined,
       operatingModelName: selectedOperatingModelName || undefined,
-      operatingModelId:   selectedOperatingModelId   || undefined,
+      // Active model = explicit Standard-tab pick, else the model open
+      // in the canvas overlay. (When neither is set the server resolves
+      // the process's model or the user's default — see
+      // resolveActiveModelId — so model-scoped tools always have a home.)
+      operatingModelId:   selectedOperatingModelId || effectiveCanvasModelId || undefined,
       // Explicit agent scope. Tells the server-side router which
       // agent to fire when both dealId AND operatingModelId are in
       // context (common: a chat session reused across surfaces, or
@@ -4305,6 +4358,15 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
               else if (event === 'workspace_bulk_proposal') {
                 if (parsed) workspaceBulkForTurn.push(parsed);
               }
+              else if (event === 'artefact') {
+                // The agent emitted a schema-free artefact (saved server
+                // side). Tell any mounted Artefacts panel to refetch so
+                // it shows up live, like a Claude artefacts panel.
+                if (parsed && parsed.id && typeof window !== 'undefined') {
+                  artefactsForTurn.push(parsed);
+                  window.dispatchEvent(new CustomEvent('vesno:artefact-created', { detail: parsed }));
+                }
+              }
               else if (event === 'done') data = parsed;
               else if (event === 'error') throw new Error(parsed.error || 'Chat failed');
             } catch (e) { if (e.message !== 'Chat failed' && !e.message.startsWith('Chat failed')) continue; throw e; }
@@ -4348,6 +4410,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
         ...(dealProposalsForTurn.length ? { dealProposals: dealProposalsForTurn } : {}),
         ...(workspaceProposalsForTurn.length ? { workspaceProposals: workspaceProposalsForTurn } : {}),
         ...(workspaceBulkForTurn.length ? { workspaceBulk: workspaceBulkForTurn } : {}),
+        ...(artefactsForTurn.length ? { artefacts: artefactsForTurn } : {}),
       });
       if (artefactForTurn) lastArtefactAtRef.current = Date.now();
       persistMessageToCloud({ role: 'assistant', content: data.reply, actions: data.actions, snapshot: buildLiveSnapshot(), artefact: artefactForTurn });
@@ -5379,6 +5442,55 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     return list;
   }, [chatMessages, dealId, dealName, dealCanonicalProcessName, dealProcessName, dealParticipantsForArtefacts, processData]);
 
+  // Persistent generated outputs (workspace_artefacts) merged into the
+  // rail Artefacts slider so every artefact — however it was produced
+  // (emit_artefact, manual create) — sits in one list. Selecting one
+  // opens the Outputs canvas focused on it. Fetched lazily when the
+  // panel opens; the Outputs tab owns its own live refresh.
+  const [outputsArtefacts, setOutputsArtefacts] = useState([]);
+  useEffect(() => {
+    if (!showArtefactsPanel || !accessToken) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        let mid = selectedOperatingModelId;
+        if (!mid) {
+          const meR = await apiFetch('/api/me/operating-model', {}, accessToken);
+          const me = meR.ok ? await meR.json() : null;
+          mid = me?.modelId || null;
+        }
+        if (!mid || cancelled) return;
+        const r = await apiFetch(`/api/operating-models/${mid}/artefacts`, { dedupe: false }, accessToken);
+        const d = r.ok ? await r.json() : null;
+        if (!cancelled && d) setOutputsArtefacts(Array.isArray(d.artefacts) ? d.artefacts : []);
+      } catch { /* slider falls back to session artefacts only */ }
+    })();
+    return () => { cancelled = true; };
+  }, [showArtefactsPanel, selectedOperatingModelId, accessToken]);
+
+  // Show only the latest of each version lineage (mirrors the Outputs tab).
+  const outputsTips = useMemo(() => {
+    const arr = outputsArtefacts || [];
+    const byId = new Map(arr.map((a) => [a.id, a]));
+    const superseded = new Set(
+      arr.map((a) => a.meta?.supersedes).filter((p) => p && byId.has(p)),
+    );
+    return arr.filter((a) => !superseded.has(a.id));
+  }, [outputsArtefacts]);
+
+  const artefactCount = sessionArtefacts.length + outputsTips.length;
+
+  // Open the Outputs canvas focused on a specific generated artefact.
+  const openOutputArtefact = (a) => () => {
+    setShowArtefactsPanel(false);
+    if (isMobile) setMobileView('canvas');
+    if (typeof window !== 'undefined') {
+      window.__vesnoPendingOutputArtefact = a.id;
+      window.dispatchEvent(new CustomEvent('vesno:open-workspace', { detail: { scope: 'outputs', artefactId: a.id } }));
+      window.dispatchEvent(new CustomEvent('vesno:open-output-artefact', { detail: { id: a.id } }));
+    }
+  };
+
   // Show chat history panel or regular chat. Artefacts opens as a slide-in
   // alongside the rail (see the RailSlidePanel below) so it doesn't displace
   // the conversation surface — same UX as Reports / Deals / Docs.
@@ -5848,9 +5960,9 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
               <button type="button" className={`s7-split-rail-btn${showChatHistory ? ' active' : ''}`} onClick={() => setShowChatHistory((v) => !v)} title="Chat history">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="13" y2="14"/></svg>
               </button>
-              <button ref={artefactsBtnRef} type="button" className={`s7-split-rail-btn${showArtefactsPanel ? ' active' : ''}${sessionArtefacts.length > 0 ? ' has-artefacts' : ''}`} onClick={() => setShowArtefactsPanel((v) => !v)} title={`Artefacts${sessionArtefacts.length ? ` (${sessionArtefacts.length})` : ''}`}>
+              <button ref={artefactsBtnRef} type="button" className={`s7-split-rail-btn${showArtefactsPanel ? ' active' : ''}${artefactCount > 0 ? ' has-artefacts' : ''}`} onClick={() => setShowArtefactsPanel((v) => !v)} title={`Artefacts${artefactCount ? ` (${artefactCount})` : ''}`}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-                {sessionArtefacts.length > 0 && <span className="s7-split-rail-count">{sessionArtefacts.length}</span>}
+                {artefactCount > 0 && <span className="s7-split-rail-count">{artefactCount}</span>}
               </button>
               {editingReportId && (
                 <button type="button" className="s7-split-rail-btn" onClick={handleSaveToReport} disabled={savingToReport} title={savingToReport ? 'Saving…' : 'Save changes'}>
@@ -5953,23 +6065,6 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
               </span>
             </div>
           )}
-          {isMobile && mobileAnalyticsOpen && (
-            <div className="s7-mobile-analytics-overlay">
-              <div className="s7-mobile-analytics-bar">
-                <span className="s7-mobile-analytics-title">Analytics</span>
-                <button
-                  type="button"
-                  className="chat-history-action-btn"
-                  onClick={() => setMobileAnalyticsOpen(false)}
-                  aria-label="Close analytics"
-                  title="Close"
-                >×</button>
-              </div>
-              <div className="s7-mobile-analytics-body" style={{ flex: 1, overflow: 'auto' }}>
-                <AnalyticsCanvasPanel />
-              </div>
-            </div>
-          )}
           {workspaceCanvasOpen && (
             <div className="s7-workspace-canvas-overlay">
               <div className="s7-workspace-canvas-bar">
@@ -6027,8 +6122,8 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                   <a
                     className="s7-workspace-canvas-link"
                     href={
-                      effectiveCanvasScope === 'analytics'
-                        ? '/workspace?view=analytics'
+                      effectiveCanvasScope === 'outputs'
+                        ? '/workspace?view=outputs'
                       : effectiveCanvasScope === 'standard'
                         ? (effectiveCanvasModelId
                             ? `/workspace?modelId=${encodeURIComponent(effectiveCanvasModelId)}`
@@ -6050,7 +6145,9 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
                 </div>
               </div>
               <div className="s7-workspace-canvas-body">
-                {effectiveCanvasScope === 'analytics' && <WorkspaceAnalyticsTab />}
+                {effectiveCanvasScope === 'outputs' && (
+                  <WorkspaceOutputsTab modelId={effectiveCanvasModelId || null} accessToken={accessToken} />
+                )}
                 {effectiveCanvasScope === 'standard' && (
                   effectiveCanvasModelId
                     ? <WorkspaceCanvasClient embedded modelId={effectiveCanvasModelId} />
@@ -6248,9 +6345,9 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
               <button type="button" className={`s7-split-rail-btn${showChatHistory ? ' active' : ''}`} onClick={() => setShowChatHistory((v) => !v)} title="Chat history">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="13" y2="14"/></svg>
               </button>
-              <button ref={artefactsBtnRef} type="button" className={`s7-split-rail-btn${showArtefactsPanel ? ' active' : ''}${sessionArtefacts.length > 0 ? ' has-artefacts' : ''}`} onClick={() => setShowArtefactsPanel((v) => !v)} title={`Artefacts${sessionArtefacts.length ? ` (${sessionArtefacts.length})` : ''}`}>
+              <button ref={artefactsBtnRef} type="button" className={`s7-split-rail-btn${showArtefactsPanel ? ' active' : ''}${artefactCount > 0 ? ' has-artefacts' : ''}`} onClick={() => setShowArtefactsPanel((v) => !v)} title={`Artefacts${artefactCount ? ` (${artefactCount})` : ''}`}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-                {sessionArtefacts.length > 0 && <span className="s7-split-rail-count">{sessionArtefacts.length}</span>}
+                {artefactCount > 0 && <span className="s7-split-rail-count">{artefactCount}</span>}
               </button>
               {editingReportId && (
                 <button type="button" className="s7-split-rail-btn" onClick={handleSaveToReport} disabled={savingToReport} title={savingToReport ? 'Saving…' : 'Save changes'}>
@@ -6309,31 +6406,11 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
             <CanvasActionOverlay />
             {activeChatContent}
           </div>
-          {/* Mobile-only: analytics embed + desktop hint (no-flow branch).
-              The Canvas tab in this branch normally only shows the empty
-              state, so we mount the analytics overlay here too. */}
-          {isMobile && mobileAnalyticsOpen && (
-            <div className="s7-mobile-analytics-overlay">
-              <div className="s7-mobile-analytics-bar">
-                <span className="s7-mobile-analytics-title">Analytics</span>
-                <button
-                  type="button"
-                  className="chat-history-action-btn"
-                  onClick={() => setMobileAnalyticsOpen(false)}
-                  aria-label="Close analytics"
-                  title="Close"
-                >×</button>
-              </div>
-              <div className="s7-mobile-analytics-body" style={{ flex: 1, overflow: 'auto' }}>
-                <AnalyticsCanvasPanel />
-              </div>
-            </div>
-          )}
           {/* Mobile-only empty state for the Canvas tab when there's
               nothing yet to render — without this the user picks
               Canvas and sees a blank screen. CSS shows it only when
               data-mobile-view='canvas' on the parent. */}
-          {isMobile && !mobileAnalyticsOpen && (
+          {isMobile && (
             <div className="s7-mobile-canvas-empty">
               <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>No canvas yet</div>
               <p style={{ fontSize: 13, color: 'var(--text-mid, #64748b)', maxWidth: 320, lineHeight: 1.5 }}>
@@ -6378,7 +6455,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
         open={showArtefactsPanel}
         onClose={() => setShowArtefactsPanel(false)}
         triggerRef={artefactsBtnRef}
-        title={`Artefacts${sessionArtefacts.length > 0 ? ` (${sessionArtefacts.length})` : ''}`}
+        title={`Artefacts${artefactCount > 0 ? ` (${artefactCount})` : ''}`}
         headerRight={(
           <button
             type="button"
@@ -6389,10 +6466,37 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
         )}
       >
         <div className="s7-rail-pane-body">
-          {sessionArtefacts.length === 0 ? (
-            <div className="s7-rail-pane-empty">
-              No artefacts in this chat yet. Redesigns, generated reports, and upload reshapes will appear here.
+          {outputsTips.length > 0 && (
+            <div className="s7-rail-out-group">
+              <div className="s7-rail-out-head">Outputs</div>
+              <ul className="s7-rail-out-list">
+                {outputsTips.map((a) => (
+                  <li key={a.id}>
+                    <button
+                      type="button"
+                      className="s7-rail-out-item"
+                      onClick={openOutputArtefact(a)}
+                      title={a.title || 'Untitled'}
+                    >
+                      <span className="s7-rail-out-badge">{a.type}</span>
+                      <span className="s7-rail-out-item-main">
+                        <span className="s7-rail-out-item-title">{a.title || 'Untitled'}</span>
+                        <span className="s7-rail-out-item-meta">
+                          {a.source === 'agent' ? 'Assistant' : 'You'}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
+          )}
+          {sessionArtefacts.length === 0 ? (
+            outputsTips.length === 0 ? (
+              <div className="s7-rail-pane-empty">
+                No artefacts yet. Generated outputs (tables, docs, code, plans), redesigns, and snapshots will appear here.
+              </div>
+            ) : null
           ) : (() => {
             // Build a 4-level tree from sessionArtefacts:
             //   Deal → Process → Variant (Current/Redesign/...) → leaves

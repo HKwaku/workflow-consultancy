@@ -18,13 +18,36 @@ AI-native operating-model + M&A diligence platform. Chat-first UI ("Reina" copil
 > - **Per-finding evidence drawer** — lazy-loads chunk text + neighbours so reviewers verify without leaving the workspace.
 > - **Workspace collaboration** — structured Q&A queue, threaded comments per finding, finding tags (deal_breaker / re_trade / disclose / mitigate / monitor), staleness flag when cited docs are reprocessed.
 > - **Auth perf** — `requireAuth` cached + coalesced, eliminating the per-request Supabase Auth round-trip.
+>
+> **Outputs panel & artefact generation (2026-05)**
+> - Persistent, model-scoped home for generated content that does not fit the canonical schema (tables, docs, code, datasets, diagrams, plans). The chat rail's **Artefacts** slider is the single list — persistent `workspace_artefacts` alongside session snapshots/reports, one unified list however produced. Selecting one opens the **Outputs** canvas, which is now render-only (its own list/sidebar was removed; the rail slider owns the list) with a single scroll region.
+> - Chat tool `emit_artefact` picks a skill and briefs a focused artefact sub-agent (`lib/agents/artefacts/`). **Per-skill model tier** for speed: most text/table/diagram/code skills run on Haiku 4.5, heavy-synthesis skills on Opus 4.7, office skills on Sonnet 4.6. Prompt-cached per-skill prompts; structured outputs with a validate→repair-once fallback. Skill registry in `lib/agents/artefacts/skills.js`.
+> - **Office files (`.pptx`/`.docx`/`.xlsx`) build asynchronously.** `emit_artefact` creates a placeholder Outputs row marked "Building…", returns to the chat immediately, and queues the `buildOfficeArtefact` Inngest worker (code-execution sandbox); the Outputs panel polls and the finished file appears on its own. A download is only ever offered for a real stored binary — a failed build shows an honest "regenerate" state, never a JSON file masquerading as `.pptx`. Without Inngest configured it falls back to an inline (synchronous) build.
+> - Stored in `workspace_artefacts` (member-scoped read/write, schema-light `type`, version lineage via `meta.supersedes`); helpers in `lib/operatingModel/artefacts.js`.
+> - Renderers by `type`: markdown/code, HTML tables, JSON, sandboxed `html`/`svg`, mermaid with pan/zoom, plus an interactive `GanttChart` (dependency-lineage highlighting, CPM critical path, today marker). Legacy mermaid Gantts auto-parsed into the interactive chart.
+> - Artefact + code-execution token spend is metered into `token_usage_ledger` and respects the org budget; `deleteArtefact` removes the backing Storage object, and the GDPR erasure cron purges a deleted user's artefact binaries.
+>
+> **Chat agent — full CRUD parity**
+> - `pickAgent` (`lib/agents/chat/router.js`) selects one of three toolsets per turn: process (`ALL_CHAT_TOOLS`, 70), model (`MODEL_AGENT_TOOLS`, 26), deal (`DEAL_AGENT_TOOLS`, 16). Counts are derived from `tools.js` — see [`DIAGNOSTICS_CAPABILITIES.md`](./DIAGNOSTICS_CAPABILITIES.md).
+> - **Process lifecycle (Tier 1):** `create_process`, `duplicate_process`, `file_process`, `delete_process` — the agent can now start, copy, file, and remove a process, not just edit an open one.
+> - **Operating-model edit/delete (Tier 2):** `propose_update/move/delete_function`, `propose_update/delete_role`, `propose_update/delete_system` — completes the add-only `propose_add_*` set into full CRUD. All stage a **Confirm** card; nothing is written until the user clicks.
+> - Org/account governance (model allowlist, BYO keys, token budget, membership, GDPR deletion) is deliberately **not** agent-accessible — a security boundary, not a gap.
+> - Migrations now run via `npm run migrate` (`scripts/run-migrations.mjs`): advisory-locked, transactional, idempotent, tracked in `public.schema_migrations` — see [`supabase/MIGRATIONS.md`](./supabase/MIGRATIONS.md).
+>
+> **Mobile / responsive**
+> - `app/layout.jsx` exports `viewport = { width:'device-width', initialScale:1, viewportFit:'cover' }`. Without it the existing responsive layer (~30 `@media` blocks, primary `max-width:768px`) was inert on phones (browsers assumed a ~980px viewport). `viewport-fit=cover` activates the `env(safe-area-inset-*)` notch handling already in the CSS.
+> - Mobile fixes extend the existing 768px block in `public/styles/diagnostic.css` (full-bleed rail panels, 40px touch targets, viewport-bounded modals). JS: `useIsMobile()` + `mobileView` chat/canvas toggle + `MobileViewGate` for flow surfaces.
+>
+> **Multiple operating models per org**
+> - An org is no longer one model. `organization_members.preferred_operating_model_id` (migration **41**) gives each member an **active model**; `resolveDefaultModelForUser` returns it (else the org default), so Home / New chat / the chat agent all follow the chosen model instead of snapping back.
+> - `/api/me/operating-models` (`GET` list, `POST {name}` create+activate, `PUT {modelId}` switch); switcher UI in `WorkspaceModelsTab` (Standard scope) with "+ New model" + Active badge. Requires migration 41 applied; degrades safely (stays on org default) until then.
 
 ## Tech Stack
 
 - **Framework**: Next.js 15 (App Router)
 - **Auth & DB**: Supabase (Postgres + RLS + Vault + Storage + pgvector)
 - **AI**: Anthropic Claude (chat agent, categorisation, diligence findings), Voyage AI (embeddings), Mistral Document OCR (optional dataroom OCR)
-- **Async work**: Inngest (deal-document processing)
+- **Async work**: Inngest (deal-document processing, connector sync, office-artefact builds)
 - **Automation**: n8n webhooks
 - **Hosting**: Vercel
 
@@ -146,12 +169,20 @@ Live endpoints (auth-protected unless noted):
 | `POST /api/send-diagnostic-report` | Submit a freshly-mapped process |
 | `POST /api/diagnostic-chat` | Chat with Reina (SSE) |
 | `GET /api/me/recent-processes` | Continue-mapping cards. `?operatingModelId=` / `?dealId=` narrow scope |
-| `GET /api/me/operating-model` | User's default operating model |
+| `GET /api/me/operating-model` | User's **active** operating model (per-member preferred → org default) |
+| `GET/POST/PUT /api/me/operating-models` | List org models (+ active/default); `POST {name}` create & activate; `PUT {modelId}` switch active |
 | `GET /api/operating-models/[id]` | Model + functions tree + rollups |
 | `GET /api/operating-models/[id]/processes` | Processes filed under a model |
+| `POST /api/operating-models/[id]/processes` | Create a process (or duplicate when `source_process_id` is sent) — backs the chat agent's `create_process`/`duplicate_process` |
+| `PATCH /api/operating-models/[id]/processes/[processId]` | File / unfile a process under a function |
+| `DELETE /api/operating-models/[id]/processes/[processId]` | Remove a process from the model (model-scoped) |
 | `GET /api/operating-models/[id]/processes/[processId]/detail` | One process + derived metrics |
 | `GET /api/operating-models/[id]/system-processes` | Processes touching a system |
 | `GET /api/operating-models/[id]/system-processes` | System inventory join |
+| `GET /api/operating-models/[id]/artefacts` | List Outputs artefacts (newest first; member access) |
+| `POST /api/operating-models/[id]/artefacts` | Manual artefact create |
+| `PATCH /api/operating-models/[id]/artefacts/[artefactId]` | Rename an artefact |
+| `DELETE /api/operating-models/[id]/artefacts/[artefactId]` | Delete an artefact |
 | `GET /api/deals/[id]` | Deal + participants + flows + summary |
 | `GET /api/deals/[id]/flows` | Flow list with derived metrics |
 | `GET /api/deals/[id]/findings` | Live diligence findings (deal-scoped) |
@@ -182,7 +213,7 @@ Removed in the living-workspace migration (the routes are physically deleted; re
 - [ ] Set `NEXT_PUBLIC_APP_URL` for CORS
 - [ ] Rate limiting is in-memory (resets on cold start); consider Redis for shared limits if needed
 - [ ] Ensure `.env.local` is never committed
-- [ ] Run the three living-workspace SQL migrations in order: `supabase/migration-living-workspace-1-schema.sql`, `-2-rls.sql`, `-3-drop-compat.sql`
+- [ ] Apply migrations with `DATABASE_URL=… npm run migrate` (idempotent; advisory-locked; records to `public.schema_migrations`). Preview with `npm run migrate:dry`. Order is the table in `supabase/MIGRATIONS.md`; this covers the three living-workspace files and `supabase/migration-workspace-artefacts.sql` (Outputs panel store). For an existing DB, seed `schema_migrations` with already-applied legacy `scripts/` filenames so the runner skips them.
 
 ## License
 

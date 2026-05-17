@@ -29,6 +29,7 @@ import {
 import { withCron } from '@/lib/cronWrapper';
 import { logger } from '@/lib/logger';
 import { auditLog } from '@/lib/auditLog';
+import { purgeArtefactsForUser } from '@/lib/operatingModel/artefacts';
 
 export const maxDuration = 120;
 
@@ -109,6 +110,11 @@ export const GET = withCron('expunge-deleted-accounts', async () => {
           body: JSON.stringify({ user_email: REDACTED }),
         },
       );
+
+      // 4b. Workspace artefacts the user generated — delete the backing
+      // Storage binaries and redact the creator email (the org's
+      // workspace continues; the user's generated files do not).
+      await purgeArtefactsForUser(email, REDACTED);
 
       // 5. Anonymise auth.users via Admin API
       try {

@@ -166,9 +166,9 @@ describe('computeFunctionHeatmap', () => {
     const fin = out.find((r) => r.function_id === 'cap_fin');
     assert.equal(fin.processCount, 2);
     assert.equal(fin.annualCost, 150_000);
-    // potentialSavings is now derived from the flow (step automation
-    // classifier × cost share). With no steps in these stub reports
-    // there is nothing to automate, so derived savings is 0.
+    // potentialSavings is decided-changes only (the report's
+    // potential_savings attributed by work-minutes share). These stub
+    // reports carry no potential_savings, so it's 0.
     assert.equal(fin.potentialSavings, 0);
     assert.equal(fin.avgAutomationPct, 50);
     assert.equal(fin.systemMentions, 3);
@@ -180,22 +180,21 @@ describe('computeFunctionHeatmap', () => {
     assert.equal(unfiled.name, '(unfiled)');
   });
 
-  test('potentialSavings is computed from flow steps (cost-share × automation rate)', () => {
-    // Two steps with workMinutes: at least one step ("Approve invoice")
-    // matches the automation classifier (human-loop, 40%). Verify that
-    // the derived savings > 0 and that the drill-through breakdown
-    // points back to the source process. We deliberately don't pin the
-    // exact figure here — it depends on classifier internals which can
-    // be tuned without breaking this contract.
+  test('potentialSavings = report decided savings, split by work-minutes share', () => {
+    // The report carries a decided-changes savings figure
+    // (potential_savings). It's attributed to functions by the same
+    // work-minutes share as cost. Both steps are untagged so they fall
+    // back to the owner (cap_fin) → all 20k lands on Finance.
     const out = cp.computeFunctionHeatmap({
       reports: [{
         id: 'r1', function_id: 'cap_fin', total_annual_cost: 100_000,
+        potential_savings: 20_000,
         diagnostic_data: {
           rawProcesses: [{
             processName: 'Cash collection',
             steps: [
               { name: 'Receive invoice', workMinutes: 60 },
-              { name: 'Approve invoice', workMinutes: 60 }, // matches classifier as human-loop
+              { name: 'Approve invoice', workMinutes: 60 },
             ],
           }],
         },
@@ -204,10 +203,9 @@ describe('computeFunctionHeatmap', () => {
       functions: [{ id: 'cap_fin', name: 'Finance' }],
     });
     const fin = out.find((r) => r.function_id === 'cap_fin');
-    assert.ok(fin.potentialSavings > 0, 'derived savings should be > 0 when at least one step is automatable');
-    assert.ok(fin.potentialSavings <= fin.annualCost, 'savings cannot exceed cost');
-    // Drill-through: the heatmap row carries one breakdown entry that
-    // points back to the source process for the savings figure.
+    assert.equal(fin.potentialSavings, 20_000);
+    assert.ok(fin.potentialSavings <= fin.annualCost, 'decided savings within cost here');
+    // Drill-through: one breakdown entry pointing back to the process.
     assert.equal(fin.savingsBreakdown.length, 1);
     assert.equal(fin.savingsBreakdown[0].processName, 'Cash collection');
     assert.equal(fin.savingsBreakdown[0].reportId, 'r1');

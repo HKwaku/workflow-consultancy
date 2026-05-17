@@ -398,6 +398,51 @@
     </div>
   </section>
 
+  <h2>Client journey</h2>
+  <div class="flow">
+    <p>End-to-end path a customer takes through the product, and the surfaces each stage touches. Each step maps onto the layers in the diagram below.</p>
+    <ol>
+      <li>
+        <div class="flow-title">1 · Discover &amp; sign in</div>
+        <div class="flow-detail">
+          Marketing site (<code>app/page.jsx</code> &rarr; <code>MarketingClient</code>, statically renderable for SEO) with a CTA into <code>/workspace/map</code>.
+          Auth is Supabase (<code>/signin</code>, <code>components/auth/SignInForm.jsx</code>). A returning signed-in user with an operating model is redirected straight past marketing into their <strong>active</strong> model (cheap <code>/api/me/operating-model</code> probe → <code>resolveDefaultModelForUser</code>: per-member preferred → org default; <code>?stay=1</code> opts out).
+        </div>
+      </li>
+      <li>
+        <div class="flow-title">2 · Map the first process (onboarding)</div>
+        <div class="flow-detail">
+          The chat-driven canvas (<code>/process-audit</code> / <code>/workspace/map</code>, <code>DiagnosticWorkspace.jsx</code>). Reina (process agent, <code>ALL_CHAT_TOOLS</code>) walks the user through capturing real steps, owners, systems, volumes, and costs.
+          Each turn upserts <code>processes.flow_data</code> via <code>PUT /api/update-diagnostic</code>; cost / savings / automation derive on read. No "generate report" step - the canvas IS the deliverable.
+        </div>
+      </li>
+      <li>
+        <div class="flow-title">3 · Build out the operating model</div>
+        <div class="flow-detail">
+          Processes are filed under <strong>functions</strong>; <strong>roles</strong> and <strong>systems</strong> form the inventory. The model agent (<code>MODEL_AGENT_TOOLS</code>) answers model-level questions and proposes function / role / system and process-lifecycle changes as <strong>Confirm</strong> cards (nothing writes until the user clicks). Analytics + Insights tabs roll the model up. An org can hold <strong>multiple operating models</strong>; the Standard-scope <code>WorkspaceModelsTab</code> creates / switches them and persists the member's <strong>active model</strong> (<code>organization_members.preferred_operating_model_id</code>, migration 41) so Home / New chat follow it.
+        </div>
+      </li>
+      <li>
+        <div class="flow-title">4 · Deal &amp; data room (M&amp;A / PE)</div>
+        <div class="flow-detail">
+          Create a deal, invite participants, upload documents (Inngest <code>processDealDocument</code>: parse &rarr; chunk &rarr; embed). The deal agent (<code>DEAL_AGENT_TOOLS</code>) searches the room with citations; findings hang on <code>deal_findings</code>, with Q&amp;A and threaded comments. Document visibility is role-scoped per participant.
+        </div>
+      </li>
+      <li>
+        <div class="flow-title">5 · Produce keepable outputs</div>
+        <div class="flow-detail">
+          The user asks Reina for a concrete deliverable; <code>emit_artefact</code> briefs the artefact sub-agent. It lands in <code>workspace_artefacts</code>, appears in the rail <strong>Artefacts</strong> slider (one unified list), and renders on the render-only <strong>Outputs</strong> canvas. Office files (.pptx/.docx/.xlsx) build asynchronously — they show as "Building…" and become downloadable on their own, so the user keeps working.
+        </div>
+      </li>
+      <li>
+        <div class="flow-title">6 · Live, ongoing</div>
+        <div class="flow-detail">
+          The workspace stays current. User and agent edits land as rows in the <code>changes</code> audit log and apply in place; metrics re-derive on every read, so the model never goes stale. GDPR data export and account erasure are available from rail settings (<code>/api/me/*</code> + the expunge cron).
+        </div>
+      </li>
+    </ol>
+  </div>
+
   <h2>Architecture diagram</h2>
   <div class="diagram-wrap">
     <svg class="arch-diagram" viewBox="0 0 1400 940" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vesno living-workspace architecture diagram">
@@ -486,10 +531,10 @@
       <rect class="node-services" x="40" y="498" width="160" height="150" rx="5"/>
       <text class="group-label t-services" x="120" y="516" text-anchor="middle">Chat agent (Reina)</text>
       <text class="node-sub t-services" font-family="ui-monospace,monospace" x="120" y="536" text-anchor="middle" font-size="10">agents/chat/graph</text>
-      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="120" y="552" text-anchor="middle" font-size="10">agents/chat/tools</text>
-      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="120" y="568" text-anchor="middle" font-size="10">agents/chat/router</text>
-      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="120" y="584" text-anchor="middle" font-size="10">prompts.js</text>
-      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="120" y="600" text-anchor="middle" font-size="10">agents/models.js</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="120" y="552" text-anchor="middle" font-size="10">tools+router (70/26/16)</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="120" y="568" text-anchor="middle" font-size="10" font-weight="600">agents/artefacts/generate</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="120" y="584" text-anchor="middle" font-size="10" font-weight="600">agents/artefacts/skills</text>
+      <text class="node-sub t-services" font-family="ui-monospace,monospace" x="120" y="600" text-anchor="middle" font-size="10">prompts.js · models.js</text>
       <text class="node-sub t-services" font-family="ui-monospace,monospace" x="120" y="616" text-anchor="middle" font-size="10">modelCatalogue</text>
       <text class="node-sub t-services" font-family="ui-monospace,monospace" x="120" y="632" text-anchor="middle" font-size="10">chatPersistence</text>
 
@@ -580,11 +625,10 @@
       <text class="node-sub t-data" font-family="ui-monospace,monospace" x="50" y="786" font-size="11">processes (flow_data JSONB)</text>
       <text class="node-sub t-data" font-family="ui-monospace,monospace" x="50" y="802" font-size="11">changes (audit log)</text>
       <text class="node-sub t-data" font-family="ui-monospace,monospace" x="50" y="818" font-size="11">operating_models</text>
-      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="50" y="834" font-size="11">model_functions</text>
-      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="50" y="850" font-size="11">model_roles</text>
-      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="50" y="866" font-size="11">model_systems</text>
-      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="50" y="882" font-size="11">process_systems</text>
-      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="50" y="898" font-size="11">discovery_sessions</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="50" y="834" font-size="11">model_functions / roles / systems</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="50" y="850" font-size="11">process_systems</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="50" y="866" font-size="11">discovery_sessions · schema_migrations</text>
+      <text class="node-sub t-data" font-family="ui-monospace,monospace" x="50" y="882" font-size="11" font-weight="600">workspace_artefacts (Outputs)</text>
 
       <!-- Deals + diligence -->
       <rect class="node-data" x="480" y="748" width="420" height="158" rx="5"/>
@@ -854,6 +898,7 @@
           <div class="group-head">Connectors</div>
           <div class="chips">
             <span class="chip bg-worker">syncConnectorBinding</span>
+            <span class="chip bg-worker">buildOfficeArtefact (async pptx/docx/xlsx)</span>
           </div>
         </div>
         <div class="group">
@@ -1036,9 +1081,21 @@
         <div class="flow-title">User chats with Reina</div>
         <div class="flow-detail">
           Browser opens an SSE stream to <code>POST /api/diagnostic-chat</code>.
-          The graph in <code>lib/agents/chat/graph.js</code> drives an Anthropic tool-use loop.
-          Mutation tools (canvas edits, workspace adds) stage a <code>change</code> row at <code>state=proposed</code> and emit a <code>deal_proposal</code>/<code>workspace_proposal</code> SSE event;
-          the client renders an <strong>Apply</strong> button. On click, the route handler transitions the change to <code>applied</code>.
+          <code>pickAgent</code> (<code>router.js</code>) selects one of three toolsets - process (<code>ALL_CHAT_TOOLS</code>, 70), model (<code>MODEL_AGENT_TOOLS</code>, 26), or deal (<code>DEAL_AGENT_TOOLS</code>, 16) - and the graph in <code>lib/agents/chat/graph.js</code> drives an Anthropic tool-use loop.
+          Open-process canvas edits apply inline. Everything outside the open canvas - workspace adds, <strong>process lifecycle</strong> (<code>create/duplicate/file/delete_process</code>, Tier 1) and <strong>operating-model edit/delete</strong> (<code>propose_update/move/delete_function|role|system</code>, Tier 2) - stages a proposal and emits a <code>deal_proposal</code>/<code>workspace_proposal</code> SSE event;
+          the client renders a <strong>Confirm</strong> card that, on click, fires the matching <code>POST</code>/<code>PATCH</code>/<code>DELETE</code> on <code>/api/operating-models/[id]/&hellip;</code>. Nothing is written server-side until that confirm.
+        </div>
+      </li>
+      <li>
+        <div class="flow-title">Reina produces a keepable deliverable</div>
+        <div class="flow-detail">
+          The agent calls the <code>emit_artefact</code> tool with a <code>skill</code> + brief
+          <span class="flow-arrow">&rarr;</span>
+          the executor delegates to the artefact sub-agent (<code>lib/agents/artefacts/generate.js</code>, per-skill model tier, prompt-cached skill prompt, structured outputs for schema-bearing skills)
+          <span class="flow-arrow">&rarr;</span>
+          text/structured: the validated body is written to <code>workspace_artefacts</code> synchronously; office (.pptx/.docx/.xlsx): a "building" placeholder row is written and the <code>buildOfficeArtefact</code> Inngest worker fills it in async
+          <span class="flow-arrow">&rarr;</span>
+          an <code>artefact</code> SSE event fires; the mounted <strong>Outputs</strong> panel refreshes live (and polls while anything is "building") and renders by <code>type</code> (interactive Gantt, diagram, table, doc, downloadable office file).
         </div>
       </li>
       <li>
@@ -1080,6 +1137,29 @@
     </ol>
   </div>
 
+  <h2>Outputs &amp; artefact generation</h2>
+  <div class="flow">
+    <p>
+      Generated content that has no place in the canonical schema - tables, docs, code, datasets, diagrams, project plans - is persistent and model-scoped. There is <strong>one list and one render surface</strong>. The chat rail's <strong>Artefacts</strong> slider is the single list: persistent outputs (latest of each <code>meta.supersedes</code> lineage) sit alongside session snapshots/reports, one unified list however produced. Selecting one fires <code>vesno:open-workspace</code> (<code>scope:'outputs'</code>) + <code>vesno:open-output-artefact</code> and the <strong>Outputs</strong> canvas (<code>/workspace?view=outputs</code>, <code>WorkspaceOutputsTab.jsx</code>, mounted when <code>effectiveCanvasScope==='outputs'</code>) renders just that artefact. The Outputs canvas is <strong>render-only</strong> - its old left-hand list/sidebar was removed (the rail slider owns the list) and it is a single flex column with one scroll region. A pending-selection ref covers the mount race when the tab opens from the same click. Emitting an artefact never mutates the model.
+    </p>
+    <p>
+      The chat <code>emit_artefact</code> tool does not write the body itself: it picks a <strong>skill</strong> and briefs a focused sub-agent (<code>lib/agents/artefacts/generate.js</code>) that runs one-shot on a <strong>per-skill model tier</strong> (most text/table/diagram/code → Haiku 4.5 for speed; heavy-synthesis skills → Opus 4.7; office → Sonnet 4.6), with the static per-skill system prompt prompt-cached and structured outputs (<code>output_config.format</code>) for skills that ship a <code>jsonSchema</code>; the rest use a validate&rarr;repair-once loop. Text/structured artefacts generate synchronously in the chat turn. <strong>Office skills</strong> (.pptx/.docx/.xlsx) build <strong>asynchronously</strong>: <code>emit_artefact</code> creates a placeholder row (<code>meta.build.status='building'</code>), returns to the chat immediately, and queues the <code>buildOfficeArtefact</code> Inngest worker, which builds the file in the code-execution sandbox (python-pptx / python-docx / openpyxl, base64-over-stdout) and stores the bytes in a private Supabase Storage bucket (migration #40) fronted by a member-gated <code>/file</code> route; the Outputs panel polls and the finished file appears on its own. A failed build flips to <code>build.status='failed'</code> and the UI offers regenerate — never a JSON body saved as <code>.pptx</code>. Without Inngest, <code>emit_artefact</code> falls back to an inline synchronous build. The skill registry is <code>lib/agents/artefacts/skills.js</code> (47 skills + the special <code>raw</code> = 48 enum values); text artefacts are stored in <code>workspace_artefacts</code> (migration #39, member RLS, version lineage via <code>meta.supersedes</code>, pointer to any binary in <code>meta.file</code>); helpers in <code>lib/operatingModel/artefacts.js</code>; CRUD at <code>/api/operating-models/[id]/artefacts</code>. Adding a skill is one registry entry + a validator - it auto-registers across every agent that has the tool.
+    </p>
+    <table>
+      <thead>
+        <tr><th style="width: 20%;">Family</th><th style="width: 14%;">Output</th><th>Skills / produces</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="path">Plans &amp; diagrams</td><td>gantt / mermaid</td><td><code>gantt</code>, <code>hundred_day_plan</code>, <code>automation_roadmap</code> (interactive Gantt, structured); <code>flow_diagram</code>, <code>kpi_tree</code>, <code>capability_map</code>, <code>swimlane</code>, <code>sequence_diagram</code>, <code>er_diagram</code>, <code>roadmap_timeline</code>, <code>quadrant_2x2</code> (mermaid).</td></tr>
+        <tr><td class="path">Docs &amp; memos</td><td>markdown</td><td><code>one_pager</code>, <code>policy</code>, <code>decision_memo</code>, <code>raci</code>, <code>project_charter</code>, <code>business_case</code>, <code>swot</code>, <code>board_pack</code>, <code>test_plan</code>, <code>qofe_summary</code>, <code>target_operating_model</code>, <code>cutover_runbook</code>, <code>status_report</code>, <code>custom</code>.</td></tr>
+        <tr><td class="path">Structured data</td><td>table / csv</td><td><code>comparison_table</code>, <code>risk_register</code>, <code>scenario_model</code>, <code>raid_log</code>, <code>stakeholder_map</code>, <code>okrs</code>, <code>comms_plan</code>, <code>data_dictionary</code>, <code>red_flag_register</code>, <code>dd_checklist</code>, <code>benefits_realisation</code>, <code>change_impact</code>, <code>decision_log</code>; <code>dataset</code> (csv).</td></tr>
+        <tr><td class="path">Analytical / code</td><td>code</td><td><code>sql</code> — a runnable, syntax-highlighted query.</td></tr>
+        <tr><td class="path">Office files</td><td>.pptx / .docx / .xlsx</td><td><code>deck</code>, <code>document</code>, <code>workbook</code>, <code>ic_memo</code>, <code>process_sop</code>, <code>synergy_model</code>, <code>cost_baseline</code> — built in the code-exec sandbox, downloadable from Outputs.</td></tr>
+        <tr><td class="path">Special</td><td>n/a</td><td><code>raw</code> — the agent supplies the content directly; the sub-agent is skipped.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
   <h2>Top-level directory map</h2>
   <table>
     <thead>
@@ -1096,18 +1176,20 @@
       <tr><td class="path">app/api/</td><td>Route handlers - process CRUD, chat SSE, deal CRUD, doc upload, ops admin.</td></tr>
       <tr><td class="path">components/diagnostic/</td><td>Chat shell + canvas (DiagnosticWorkspace, DiagnosticContext, message stream).</td></tr>
       <tr><td class="path">components/diagnostic/chat/</td><td>Deal workspace modal, rail buttons, context chip.</td></tr>
-      <tr><td class="path">components/workspace/</td><td>Operating-model panels (Graph, List, Insights, Analytics, Deals) - includes AnalyticsCanvasPanel.</td></tr>
+      <tr><td class="path">components/workspace/</td><td>Operating-model panels (Graph, List, Insights, Analytics, Deals, Outputs) - includes AnalyticsCanvasPanel, WorkspaceOutputsTab, and the interactive GanttChart.</td></tr>
       <tr><td class="path">components/org-admin/</td><td>OrgAdminClient + sub-panels (BYO key, usage, model allowlist, integrations, first-run onboarding) and admin stylesheets.</td></tr>
       <tr><td class="path">components/auth/</td><td>SignInForm (Supabase login/signup) - mounted by /signin, /org-admin, analytics auth gate, and TeamAuthGate.</td></tr>
       <tr><td class="path">components/flow/</td><td>InteractiveFlowCanvas (xyflow renderer).</td></tr>
       <tr><td class="path">lib/agents/chat/</td><td>Reina: tool registry, executor graph, prompt builder.</td></tr>
+      <tr><td class="path">lib/agents/artefacts/</td><td>Artefact sub-agent (<code>generate.js</code>) + skill registry (<code>skills.js</code>) behind the Outputs panel.</td></tr>
       <tr><td class="path">lib/changes/</td><td>Inline change-proposal repo (replaces redesigns).</td></tr>
       <tr><td class="path">lib/operatingModel/</td><td>Functions / roles / systems repo + rollups + cross-process inventory.</td></tr>
       <tr><td class="path">lib/processMetrics.js</td><td>Live derivation of cost / savings / automation from flow_data.</td></tr>
       <tr><td class="path">lib/deal-analysis/</td><td>Now just <code>chunkSearch.js</code> - hybrid vector + keyword RPC wrapper.</td></tr>
-      <tr><td class="path">lib/inngest/functions/</td><td>processDealDocument (parse + chunk + embed) and syncConnectorBinding.</td></tr>
+      <tr><td class="path">lib/inngest/functions/</td><td>processDealDocument (parse + chunk + embed), syncConnectorBinding, and buildOfficeArtefact (async .pptx/.docx/.xlsx build).</td></tr>
       <tr><td class="path">lib/auth.js</td><td>Cached + coalesced Supabase auth checks.</td></tr>
-      <tr><td class="path">supabase/migration-*.sql</td><td>Schema history. The three <code>migration-living-workspace-*</code> files are the most recent contract migration.</td></tr>
+      <tr><td class="path">supabase/migration-*.sql</td><td>Schema history. <code>migration-000-schema-migrations.sql</code> is the ledger; the three <code>migration-living-workspace-*</code> files are the most recent contract migration. Order is the table in <code>supabase/MIGRATIONS.md</code>.</td></tr>
+      <tr><td class="path">scripts/run-migrations.mjs</td><td>Migration runner (<code>npm run migrate</code> / <code>migrate:dry</code>): advisory-locked, transactional, idempotent; reads the ordered list from <code>MIGRATIONS.md</code> and records applied files in <code>public.schema_migrations</code>.</td></tr>
       <tr><td class="path">tests/</td><td>Node <code>node:test</code> unit suite + Playwright E2E.</td></tr>
     </tbody>
   </table>
@@ -1159,11 +1241,12 @@
   <h2>Production checklist</h2>
   <ol>
     <li>All required env vars set in Vercel; <code>NEXT_PUBLIC_APP_URL</code> set for CORS / Origin checks.</li>
-    <li>The three living-workspace migrations applied in order: <code>migration-living-workspace-1-schema.sql</code>, <code>-2-rls.sql</code>, <code>-3-drop-compat.sql</code>.</li>
+    <li>Migrations applied via <code>DATABASE_URL=&hellip; npm run migrate</code> (idempotent; records to <code>schema_migrations</code>). This covers the three living-workspace files (<code>migration-living-workspace-1-schema.sql</code>, <code>-2-rls.sql</code>, <code>-3-drop-compat.sql</code>) and the artefact store. Legacy <code>scripts/</code> files already applied on the original install should be inserted into <code>schema_migrations</code> manually so the runner skips them - see <code>supabase/MIGRATIONS.md</code>.</li>
     <li>Inngest project synced (<code>/api/inngest</code> reachable, <code>INNGEST_EVENT_KEY</code> set).</li>
     <li>RLS policies pass smoke tests (a non-member cannot read a deal or process they don't own).</li>
     <li>Rate limit defaults reviewed (<code>lib/rate-limit.js</code>); upgrade to Redis if you need shared limits across instances.</li>
     <li><code>.env.local</code> never committed; secrets only in Vercel.</li>
+    <li>Mobile: <code>app/layout.jsx</code> exports <code>viewport = { width:'device-width', initialScale:1, viewportFit:'cover' }</code> — without it the responsive layer (~30 <code>@media</code> blocks, primary <code>max-width:768px</code>, in <code>public/styles/diagnostic.css</code>) is inert on phones. <code>viewport-fit=cover</code> activates the existing <code>env(safe-area-inset-*)</code> notch handling.</li>
   </ol>
 
   <div class="footer">

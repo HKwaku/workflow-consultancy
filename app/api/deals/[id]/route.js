@@ -5,6 +5,8 @@ import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { resolveDealAccess, requireDealEditor, requireDealOwner } from '@/lib/dealAuth';
 import { logger } from '@/lib/logger';
 import { deriveProcessMetrics } from '@/lib/processMetrics';
+import { loadDecidedChangesByProcess } from '@/lib/changes/repo';
+import { decidedSavingsFromChanges } from '@/lib/changes/savings';
 
 function buildBaseUrl(request) {
   const proto = request.headers.get('x-forwarded-proto') || 'https';
@@ -129,7 +131,8 @@ export async function GET(request, { params }) {
       return {
         id: r.id,
         totalAnnualCost:     m.total_annual_cost,
-        potentialSavings:    m.potential_savings,
+        // Decided-changes only; enriched from the changes table below.
+        potentialSavings:    0,
         automationPercentage: m.automation_percentage,
         automationGrade:     m.automation_grade,
         processCount: dd.summary?.totalProcesses || dd.processes?.length || 0,
@@ -153,6 +156,14 @@ export async function GET(request, { params }) {
     }
     if (flowOnlyReportsResp?.ok) {
       for (const r of await flowOnlyReportsResp.json()) reportSummaries[r.id] = buildSummary(r);
+    }
+
+    // Potential savings = accepted/decided changes per underlying process.
+    // One batched query across every report on the deal; absent = £0.
+    const decidedByProcess = await loadDecidedChangesByProcess(Object.keys(reportSummaries));
+    for (const [pid, summary] of Object.entries(reportSummaries)) {
+      const changes = decidedByProcess.get(pid);
+      if (changes) summary.potentialSavings = decidedSavingsFromChanges(changes, summary.totalAnnualCost);
     }
 
     const enrichedParticipants = participants.map((p) => ({
