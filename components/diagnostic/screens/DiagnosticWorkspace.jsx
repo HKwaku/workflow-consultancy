@@ -1682,7 +1682,7 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     customDepartments, addCustomDepartment, removeCustomDepartment,
     teamMode, chatMessages, addChatMessage, setChatMessages,
     buildFullSnapshot, editingReportId, viewOnlyProcessId, editingSurface, contact, authUser, setContact,
-    selectedFunctionPath, selectedOperatingModelName, selectedOperatingModelId, setWorkspaceAnchors,
+    selectedFunctionPath, selectedFunctionId, selectedOperatingModelName, selectedOperatingModelId, setWorkspaceAnchors,
     addAuditEvent,
     moduleId, setModuleId, dealCanonicalProcessName, dealName, dealRole, dealId, setDeal, dealParticipants,
     completedProcesses, auditTrail, sendDiagnosticReport,
@@ -3135,6 +3135,15 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
         });
       } catch { /* best-effort */ }
       setInlineGenerateStatus('idle');
+      // Tell any mounted WorkspaceClient to re-fetch model / rollup /
+      // processes so the new process shows up in the graph, capability
+      // tree, process list and rollup metrics straight away. Same event
+      // the create_process Confirm-card path dispatches; without it the
+      // process is saved + filed but the workspace visuals stay stale
+      // until a manual reload.
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('vesno:workspace-changed', { detail: { kind: 'create_process' } }));
+      }
     } catch (err) {
       setInlineGenerateError(err.message || 'Something went wrong. Please try again.');
       setInlineGenerateStatus('error');
@@ -3259,6 +3268,45 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
     try { persistMessageToCloud({ role: 'assistant', content: msg, generateAction: true }); } catch { /* best-effort */ }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [steps, handoffs, editingReportId]);
+
+  // Auto-file a brand-new, agent-built process into the operating model.
+  //
+  // When Reina builds a process in the workspace chat (e.g. extracted
+  // from an uploaded doc/image, or a full spoken description) there is
+  // no editingReportId yet, so NOTHING persists it: the changes log is
+  // gated on editingReportId and the manual "Add to model" cue only
+  // appears once computePhaseState says overallComplete, which an
+  // image-extracted process (steps but no timings/costs) never is. The
+  // flow then lives only on the canvas and is lost on navigate, i.e.
+  // "I mapped a process but it's not in the operating model".
+  //
+  // The user explicitly asked to map it, so persist it now via the
+  // existing save path: sendDiagnosticReport mints the row and we flip
+  // editingReportId so every later edit autosaves and the changes log
+  // starts recording. The model link is set server-side:
+  // /api/send-diagnostic-report resolves the signed-in user's active
+  // operating model on create (the /workspace/map client context
+  // frequently has no selectedOperatingModelId, so we must NOT gate on
+  // it here or this never fires). Scoped to: signed-in user, no open
+  // process, not a deal flow, a substantive build. Anonymous intake
+  // (no accessToken) keeps its manual "Add to model" CTA unchanged;
+  // deal flows save through the deal path.
+  const autoFilingRef = useRef(false);
+  useEffect(() => {
+    if (editingReportId || autoFilingRef.current) return;
+    if (dealId || !accessToken) return;
+    if (inlineGenerateStatus === 'generating') return;
+    const namedCount = steps.filter((s) => (s.name || '').trim()).length;
+    if (namedCount < MIN_STEPS) return;
+    // Fire once. On success, runInlineGenerate sets editingReportId
+    // (early return keeps this inert thereafter). On failure it sets
+    // inlineGenerateStatus='error' and the existing inline Retry button
+    // re-runs runInlineGenerate, so we don't re-arm here (re-arming
+    // risks minting a duplicate row on the next keystroke).
+    autoFilingRef.current = true;
+    runInlineGenerate(processData);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [steps, editingReportId, dealId, accessToken, inlineGenerateStatus]);
 
   const pinCurrentFlow = useCallback(() => {
     const snap = snapshotCurrentFlow();
@@ -5787,10 +5835,18 @@ export default function DiagnosticWorkspace({ initialStepIdx: initialStepIdxProp
       // editingSurface (set in DiagnosticClient when it processed the
       // ?surface= URL param).
       const surface = editingSurface === 'target' ? 'target' : undefined;
+      // Pass the model the user is actually viewing so a brand-new
+      // process (first save mints the row) links to it. Deal-scoped
+      // edits skip this: those flows belong to the deal, not the
+      // standalone model. The server also resolves the active model as
+      // a fallback, so an older client still files new processes.
+      const anchor = (!dealId && selectedOperatingModelId)
+        ? { operatingModelId: selectedOperatingModelId, ...(selectedFunctionId ? { functionId: selectedFunctionId } : {}) }
+        : {};
       const resp = await apiFetch('/api/update-diagnostic', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reportId: editingReportId, updates, ...(surface ? { surface } : {}) }),
+        body: JSON.stringify({ reportId: editingReportId, updates, ...anchor, ...(surface ? { surface } : {}) }),
       }, accessToken);
       let data;
       try { data = await resp.json(); } catch (e) { alert('Invalid response from server. Please try again.'); return; }

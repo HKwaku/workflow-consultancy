@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getSupabaseHeaders, getSupabaseWriteHeaders, fetchWithTimeout, requireSupabase, isValidEmail, checkOrigin, getRequestId } from '@/lib/api-helpers';
 import { verifySupabaseSession } from '@/lib/auth';
+import { resolveDefaultModelForUser } from '@/lib/operatingModel/auth';
 import { SendDiagnosticReportInputSchema } from '@/lib/ai-schemas';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
@@ -252,6 +253,24 @@ export async function POST(request) {
         // The fields we keep on flow_data are the canvas state itself
         // (rawProcesses, processes, customDepartments), the contact +
         // segment metadata for routing, and the auditTrail tail.
+        // Server-side model fallback. A brand-new standalone process
+        // from a signed-in workspace user must land in their operating
+        // model even when the client didn't send one: the /workspace/map
+        // chat context frequently has no selectedOperatingModelId
+        // client-side, so without this the row is created unfiled and is
+        // invisible to the workspace ("I mapped a process but it's not in
+        // the model"). Mirrors the chat agent's resolveActiveModelId and
+        // the /api/update-diagnostic create path. Create only, only when
+        // no explicit model was sent and this is not a deal flow.
+        if (!isUpdate && !operatingModelId && !dealLink && resolvedEmail) {
+          try {
+            const rdm = await resolveDefaultModelForUser({ email: resolvedEmail });
+            if (rdm?.modelId) operatingModelId = rdm.modelId;
+          } catch (e) {
+            logger.warn('send-diagnostic-report: model resolve failed on create (process will be unfiled)', { requestId: getRequestId(request), error: e.message });
+          }
+        }
+
         const reportPayload = {
           id: reportId,
           contact_email: contact.email || '',

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getSupabaseHeaders, getSupabaseWriteHeaders, requireSupabase, fetchWithTimeout, getRequestId, checkOrigin } from '@/lib/api-helpers';
 import { requireAuth } from '@/lib/auth';
+import { resolveDefaultModelForUser } from '@/lib/operatingModel/auth';
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 import { transitionChangesForRedesign, recordChanges } from '@/lib/changes/repo';
@@ -81,12 +82,44 @@ export async function PUT(request) {
     let existing;
     if (isCreate) {
       const nowIso = new Date().toISOString();
+
+      // Attach the new process to the user's operating model. Without
+      // this it lands with operating_model_id = NULL and is invisible
+      // to the workspace (the list / rollup filter by operating_model_id):
+      // "I mapped a process but it's not in the model". The
+      // create_process Confirm-card path sets this already; this is the
+      // generic first-save path (the chat step-tools autosave a brand-new
+      // process here), so it has to resolve the model too. Prefer an
+      // explicit id from the client (the model the user is looking at);
+      // fall back to their active/default model server-side so the link
+      // is correct no matter which path minted the row. Deal-participant
+      // maps are created via the deal endpoints, not here, so a generic
+      // authenticated create is always the standalone-workspace case.
+      let createModelId =
+        (typeof body.operatingModelId === 'string' && uuidRegex.test(body.operatingModelId.trim()))
+          ? body.operatingModelId.trim()
+          : null;
+      const createFunctionId =
+        (typeof body.functionId === 'string' && uuidRegex.test(body.functionId.trim()))
+          ? body.functionId.trim()
+          : null;
+      if (!createModelId) {
+        try {
+          const resolved = await resolveDefaultModelForUser({ email });
+          if (resolved?.modelId) createModelId = resolved.modelId;
+        } catch (e) {
+          logger.warn('update-diagnostic: model resolve failed on create (process will be unfiled)', { requestId: getRequestId(request), error: e.message });
+        }
+      }
+
       const seedPayload = {
         id: reportIdTrimmed,
         contact_email: email,
         contact_name: updates?.contactName || updates?.contact?.name || '',
         company: updates?.company || updates?.contact?.company || '',
         flow_data: {},
+        operating_model_id: createModelId,
+        function_id: createModelId ? createFunctionId : null,
         created_at: nowIso,
         updated_at: nowIso,
       };
@@ -107,8 +140,8 @@ export async function PUT(request) {
         id: reportIdTrimmed,
         contact_email: email,
         flow_data: {},
-        operating_model_id: null,
-        function_id: null,
+        operating_model_id: createModelId,
+        function_id: createModelId ? createFunctionId : null,
       };
     } else {
       existing = rows[0];
@@ -128,6 +161,22 @@ export async function PUT(request) {
     if (updates.contactName) topLevelPatch.contact_name = updates.contactName;
     if (updates.contactEmail) topLevelPatch.contact_email = updates.contactEmail;
     if (updates.company !== undefined) topLevelPatch.company = updates.company;
+
+    // Self-heal: a process orphaned by the old create path (operating_
+    // model_id NULL → invisible to the workspace) gets adopted into the
+    // model the user is viewing the next time they save it. Strictly
+    // fill-only: we never move a process that already has a model, and
+    // only when the client explicitly sends the model it's looking at
+    // (not for deal flows, which don't send it). function_id is filled
+    // alongside only if the row also has none.
+    if (!isCreate && !existing.operating_model_id
+        && typeof body.operatingModelId === 'string' && uuidRegex.test(body.operatingModelId.trim())) {
+      topLevelPatch.operating_model_id = body.operatingModelId.trim();
+      if (!existing.function_id
+          && typeof body.functionId === 'string' && uuidRegex.test(body.functionId.trim())) {
+        topLevelPatch.function_id = body.functionId.trim();
+      }
+    }
     // lead_score / lead_grade columns dropped (lead-gen artefacts).
     // Silently swallow any client that still sends them.
 
